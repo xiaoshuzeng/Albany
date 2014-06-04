@@ -81,6 +81,9 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
       stk_discretization->getSTKMeshStruct()
   );
 
+  Teuchos::ArrayRCP<double> &
+  coordinates = stk_discretization->getCoordinates();
+
   Albany::WorksetArray<std::string>::type const &
   ws_eb_names = disc->getWsEBNames();
 
@@ -112,10 +115,32 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
   ns_number_nodes = ns_dof.size();
 
   std::vector< Intrepid::Vector<double> >
-  ns_points;
+  ns_points(ns_number_nodes);
 
   std::vector<double *> const &
   ns_coord = dirichlet_workset.nodeSetCoords->find(this->nodeSetID)->second;
+
+  typedef
+  Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type
+  WSELND;
+
+  WSELND const &
+  ws_el_2_nd = stk_discretization->getWsElNodeID();
+
+  std::vector< Intrepid::Vector<double> >
+  element_vertices(vertex_count);
+
+  for (size_t i = 0; i < vertex_count; ++i) {
+    element_vertices[i].set_dimension(dimension);
+  }
+
+  typedef std::pair<size_t, size_t> WorksetElement;
+
+  std::vector<WorksetElement>
+  WorksetElements(ns_number_nodes);
+
+  double const
+  tolerance = 1.0e-4;
 
   for (size_t ns_node = 0; ns_node < ns_number_nodes; ++ns_node) {
     double * const
@@ -127,7 +152,95 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
     point.set_dimension(dimension);
 
     point.fill(coord);
-  }
+
+    // Determine the element that cointains this point.
+    bool
+    found = false;
+
+    for (size_t workset = 0; workset < ws_el_2_nd.size(); ++workset) {
+
+      std::string const &
+      element_block = ws_eb_names[workset];
+
+      if (element_block != coupled_block) continue;
+
+      size_t const
+      elements_per_workset = ws_el_2_nd[workset].size();
+
+      for (size_t element = 0; element < elements_per_workset; ++element) {
+
+        for (size_t node = 0; node < vertex_count; ++node) {
+
+          size_t const
+          node_id = ws_el_2_nd[workset][element][node];
+
+          double * const
+          pcoord = &(coordinates[dimension * node_id]);
+
+          element_vertices[node].fill(pcoord);
+        }
+
+        bool
+        in_element = false;
+
+        switch (element_type) {
+
+        default:
+          std::cerr << "ERROR: " << __PRETTY_FUNCTION__ << '\n';
+          std::cerr << "Unknown element type: " << element_type << '\n';
+          exit(1);
+          break;
+
+        case Intrepid::ELEMENT::TETRAHEDRAL:
+          in_element = Intrepid::in_tetrahedron(
+              point,
+              element_vertices[0],
+              element_vertices[1],
+              element_vertices[2],
+              element_vertices[3],
+              tolerance);
+          break;
+
+        case Intrepid::ELEMENT::HEXAHEDRAL:
+          in_element = Intrepid::in_hexahedron(
+              point,
+              element_vertices[0],
+              element_vertices[1],
+              element_vertices[2],
+              element_vertices[3],
+              element_vertices[4],
+              element_vertices[5],
+              element_vertices[6],
+              element_vertices[7],
+              tolerance);
+          break;
+
+        }
+
+        if (in_element == true) {
+          found = true;
+          WorksetElements.push_back(std::make_pair(workset, element));
+          std::cout << "NS node: " << ns_node << ' ';
+          std::cout << "Workset: " << workset << ' ';
+          std::cout << "Element: " << element << '\n';
+          std::cout << "Point: " << point << '\n';
+          for (size_t n = 0; n < element_vertices.size(); ++n) {
+            std::cout << "Vertex " << n << " :" << element_vertices[n] << '\n';
+          }
+          break;
+        }
+
+      } // element loop
+
+      if (found == true) {
+        break;
+      }
+
+    } // workset loop
+
+    assert(found == true);
+
+  } // node in node set loop
 
   for (size_t ns_node = 0; ns_node < ns_number_nodes; ++ns_node) {
 
@@ -162,43 +275,6 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
     (*f)[z_dof] = z_val;
   }
 
-  typedef
-  Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type
-  WSELND;
-
-  WSELND const &
-  ws_el_2_nd = stk_discretization->getWsElNodeID();
-
-  for (size_t workset = 0; workset < ws_el_2_nd.size(); ++workset) {
-
-    std::string const &
-    element_block = ws_eb_names[workset];
-
-    if (element_block != coupled_block) continue;
-
-    size_t const
-    elements_per_workset = ws_el_2_nd[workset].size();
-
-    for (size_t element = 0; element < elements_per_workset; ++element) {
-
-      std::cout << workset << ' ' << element;
-
-      size_t const
-      nodes_per_element = ws_el_2_nd[workset][element].size();
-
-      for (size_t node = 0; node < nodes_per_element; ++node) {
-
-        size_t const
-        node_id = ws_el_2_nd[workset][element][node];
-
-        std::cout << ' ' << node_id;
-
-      }
-
-      std::cout << '\n';
-    }
-
-  }
   return;
 }
 
