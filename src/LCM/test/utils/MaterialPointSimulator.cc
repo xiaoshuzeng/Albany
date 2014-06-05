@@ -187,9 +187,12 @@ int main(int ac, char* av[])
   int number_steps = mpsParams.get<int>("Number of Steps",10);
   double step_size = mpsParams.get<double>("Step Size",1.0e-2);
 
+  // determine if temperature is being used
+  bool have_temperature = mpsParams.get<bool>("Use Temperature", false);
+
   //---------------------------------------------------------------------------
   // Temperature (optional)
-  if (mpsParams.get<bool>("Use Temperature", false)) {
+  if (have_temperature) {
     Teuchos::ArrayRCP<ScalarT> temperature(1);
     temperature[0] = mpsParams.get<double>("Temperature",1.0);
     // SetField evaluator, which will be used to manually assign a value
@@ -208,6 +211,10 @@ int main(int ac, char* av[])
   Teuchos::ParameterList cmpPL;
   paramList.set<Teuchos::RCP<std::map<std::string, std::string> > >("Name Map", fnm);
   cmpPL.set<Teuchos::ParameterList*>("Material Parameters", &paramList);
+  if (have_temperature) {
+    cmpPL.set<std::string>("Temperature Name","Temperature");
+    paramList.set<bool>("Have Temperature", true);
+  }
   Teuchos::RCP<LCM::ConstitutiveModelParameters<Residual, Traits> > CMP =
     Teuchos::rcp(new LCM::ConstitutiveModelParameters<Residual, Traits>(cmpPL,dl));
   fieldManager.registerEvaluator<Residual>(CMP);
@@ -217,6 +224,9 @@ int main(int ac, char* av[])
   // Constitutive Model Interface Evaluator
   Teuchos::ParameterList cmiPL;
   cmiPL.set<Teuchos::ParameterList*>("Material Parameters", &paramList);
+  if (have_temperature) {
+    cmiPL.set<std::string>("Temperature Name","Temperature");
+  }
   Teuchos::RCP<LCM::ConstitutiveModelInterface<Residual, Traits> > CMI =
     Teuchos::rcp(new LCM::ConstitutiveModelInterface<Residual, Traits>(cmiPL,dl));
   fieldManager.registerEvaluator<Residual>(CMI);
