@@ -15,10 +15,10 @@
 
 namespace AAdapt {
 
-typedef stk_classic::mesh::Entity Entity;
-typedef stk_classic::mesh::EntityRank EntityRank;
-typedef stk_classic::mesh::RelationIdentifier EdgeId;
-typedef stk_classic::mesh::EntityKey EntityKey;
+typedef stk::mesh::Entity Entity;
+typedef stk::mesh::EntityRank EntityRank;
+typedef stk::mesh::RelationIdentifier EdgeId;
+typedef stk::mesh::EntityKey EntityKey;
 
 //
 //
@@ -40,12 +40,6 @@ AAdapt::TopologyMod::TopologyMod(
 
   bulk_data_ = stk_mesh_struct_->bulkData;
   meta_data_ = stk_mesh_struct_->metaData;
-
-  // The entity ranks
-  node_rank_ = meta_data_->NODE_RANK;
-  edge_rank_ = meta_data_->EDGE_RANK;
-  face_rank_ = meta_data_->FACE_RANK;
-  element_rank_ = meta_data_->element_rank();
 
   num_dim_ = stk_mesh_struct_->numDim;
 
@@ -166,12 +160,12 @@ AAdapt::TopologyMod::getValidAdapterParameters() const {
 void
 AAdapt::TopologyMod::showRelations() {
   std::vector<Entity*> element_list;
-  stk_classic::mesh::get_entities(*(bulk_data_), element_rank_, element_list);
+  stk::mesh::get_entities(*(bulk_data_), element_rank_, element_list);
 
   // Remove extra relations from element
   for(int i = 0; i < element_list.size(); ++i) {
     Entity& element = *(element_list[i]);
-    stk_classic::mesh::PairIterRelation relations = element.relations();
+    stk::mesh::PairIterRelation relations = element.relations();
     std::cout << "Element " << element_list[i]->identifier()
               << " relations are :" << std::endl;
 
@@ -189,7 +183,7 @@ int
 AAdapt::TopologyMod::accumulateFractured(int num_fractured) {
   int total_fractured;
 
-  stk_classic::all_reduce_sum(bulk_data_->parallel(), &num_fractured, &total_fractured, 1);
+  stk::all_reduce_sum(bulk_data_->parallel(), &num_fractured, &total_fractured, 1);
 
   return total_fractured;
 }
@@ -216,8 +210,8 @@ getGlobalOpenList(std::map<EntityKey, bool>& local_entity_open,
 
     // Debugging
     /*
-      const unsigned entity_rank = stk_classic::mesh::entity_rank( me.first);
-      const stk_classic::mesh::EntityId entity_id = stk_classic::mesh::entity_id( me.first );
+      const unsigned entity_rank = stk::mesh::entity_rank( me.first);
+      const stk::mesh::EntityId entity_id = stk::mesh::entity_id( me.first );
       const std::string & entity_rank_name = metaData->entity_rank_name( entity_rank );
       Entity *entity = bulk_data_->get_entity(me.first);
       std::cout<<"Single proc fracture list contains "<<" "<<entity_rank_name<<" ["<<entity_id<<"] Proc:"
@@ -261,20 +255,20 @@ getGlobalOpenList(std::map<EntityKey, bool>& local_entity_open,
 
     // Debugging
     /*
-      const unsigned entity_rank = stk_classic::mesh::entity_rank( key);
-      const stk_classic::mesh::EntityId entity_id = stk_classic::mesh::entity_id( key );
+      const unsigned entity_rank = stk::mesh::entity_rank( key);
+      const stk::mesh::EntityId entity_id = stk::mesh::entity_id( key );
       const std::string & entity_rank_name = metaData->entity_rank_name( entity_rank );
       Entity *entity = bulk_data_->get_entity(key);
       if(!entity) { std::cout << "Error on this processor: Entity not addressible!!!!!!!!!!!!!" << std::endl;
 
       std::cout<<"Global proc fracture list contains "<<" "<<entity_rank_name<<" ["<<entity_id<<"]" << std::endl;
     std::vector<Entity*> element_lst;
-    stk_classic::mesh::get_entities(*(bulk_data_),elementRank,element_lst);
+    stk::mesh::get_entities(*(bulk_data_),elementRank,element_lst);
     for (int i = 0; i < element_lst.size(); ++i){
       std::cout << element_lst[i]->identifier() << std::endl;
       }
     std::vector<Entity*> entity_lst;
-    stk_classic::mesh::get_entities(*(bulk_data_),entity_rank,entity_lst);
+    stk::mesh::get_entities(*(bulk_data_),entity_rank,entity_lst);
     for (int i = 0; i < entity_lst.size(); ++i){
       std::cout << entity_lst[i]->identifier() << std::endl;
       }

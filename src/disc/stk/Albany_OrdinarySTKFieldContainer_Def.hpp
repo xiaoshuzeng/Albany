@@ -18,8 +18,8 @@
 template<bool Interleaved>
 Albany::OrdinarySTKFieldContainer<Interleaved>::OrdinarySTKFieldContainer(
   const Teuchos::RCP<Teuchos::ParameterList>& params_,
-  stk_classic::mesh::fem::FEMMetaData* metaData_,
-  stk_classic::mesh::BulkData* bulkData_,
+  stk::mesh::MetaData* metaData_,
+  stk::mesh::BulkData* bulkData_,
   const int neq_,
   const AbstractFieldContainer::FieldContainerRequirements& req,
   const int numDim_,
@@ -58,13 +58,13 @@ Albany::OrdinarySTKFieldContainer<Interleaved>::OrdinarySTKFieldContainer(
 #endif
 
   //Start STK stuff
-  this->coordinates_field = & metaData_->declare_field< VFT >("coordinates");
-  solution_field = & metaData_->declare_field< VFT >(
-                     params_->get<std::string>("Exodus Solution Name", "solution"));
+  this->coordinates_field = & metaData_->declare_field< VFT >(stk::topology::NODE_RANK, "coordinates");
+  solution_field = & metaData_->declare_field< VFT >(stk::topology::NODE_RANK,
+                                                     params_->get<std::string>("Exodus Solution Name", "solution"));
 
 #ifdef ALBANY_LCM
-  residual_field = & metaData_->declare_field< VFT >(
-                     params_->get<std::string>("Exodus Residual Name", "residual"));
+  residual_field = & metaData_->declare_field< VFT >(stk::topology::NODE_RANK,
+                                                     params_->get<std::string>("Exodus Residual Name", "residual"));
 #endif
 
 #ifdef ALBANY_FELIX
@@ -85,65 +85,65 @@ Albany::OrdinarySTKFieldContainer<Interleaved>::OrdinarySTKFieldContainer(
     this->velocityRMS_field = & metaData_->declare_field< VFT >("velocity_RMS");
 #endif
 
-  stk_classic::mesh::put_field(*this->coordinates_field , metaData_->node_rank() , metaData_->universal_part(), numDim_);
-  stk_classic::mesh::put_field(*solution_field , metaData_->node_rank() , metaData_->universal_part(), neq_);
+  stk::mesh::put_field(*this->coordinates_field , metaData_->universal_part(), numDim_);
+  stk::mesh::put_field(*solution_field , metaData_->universal_part(), neq_);
 
 #ifdef ALBANY_LCM
-  stk_classic::mesh::put_field(*residual_field , metaData_->node_rank() , metaData_->universal_part() , neq_);
+  stk::mesh::put_field(*residual_field , metaData_->universal_part() , neq_);
 #endif
 
 #ifdef ALBANY_FELIX
 
   if(buildSurfaceHeight)
-    stk_classic::mesh::put_field( *this->surfaceHeight_field , metaData_->node_rank() , metaData_->universal_part());
+    stk::mesh::put_field( *this->surfaceHeight_field , metaData_->node_rank() , metaData_->universal_part());
   if(buildTemperature)
-    stk_classic::mesh::put_field( *this->temperature_field , metaData_->element_rank() , metaData_->universal_part());
+    stk::mesh::put_field( *this->temperature_field , metaData_->element_rank() , metaData_->universal_part());
   if(buildBasalFriction)
-    stk_classic::mesh::put_field( *this->basalFriction_field , metaData_->node_rank() , metaData_->universal_part());//*metaData_->get_part("basalside","Mpas Interface"));
+    stk::mesh::put_field( *this->basalFriction_field , metaData_->node_rank() , metaData_->universal_part());//*metaData_->get_part("basalside","Mpas Interface"));
   if(buildThickness)
-    stk_classic::mesh::put_field( *this->thickness_field , metaData_->node_rank() , metaData_->universal_part());
+    stk::mesh::put_field( *this->thickness_field , metaData_->node_rank() , metaData_->universal_part());
   if(buildFlowFactor)
-    stk_classic::mesh::put_field( *this->flowFactor_field , metaData_->element_rank() , metaData_->universal_part());
+    stk::mesh::put_field( *this->flowFactor_field , metaData_->element_rank() , metaData_->universal_part());
   if(buildSurfaceVelocity)
-    stk_classic::mesh::put_field( *this->surfaceVelocity_field , metaData_->node_rank() , metaData_->universal_part(), neq_);
+    stk::mesh::put_field( *this->surfaceVelocity_field , metaData_->node_rank() , metaData_->universal_part(), neq_);
   if(buildVelocityRMS)
-    stk_classic::mesh::put_field( *this->velocityRMS_field , metaData_->node_rank() , metaData_->universal_part(), neq_);
+    stk::mesh::put_field( *this->velocityRMS_field , metaData_->node_rank() , metaData_->universal_part(), neq_);
 #endif
 
 #ifdef ALBANY_SEACAS
-  stk_classic::io::set_field_role(*this->coordinates_field, Ioss::Field::MESH);
-  stk_classic::io::set_field_role(*solution_field, Ioss::Field::TRANSIENT);
+  stk::io::set_field_role(*this->coordinates_field, Ioss::Field::MESH);
+  stk::io::set_field_role(*solution_field, Ioss::Field::TRANSIENT);
 #ifdef ALBANY_LCM
-  stk_classic::io::set_field_role(*residual_field, Ioss::Field::TRANSIENT);
+  stk::io::set_field_role(*residual_field, Ioss::Field::TRANSIENT);
 #endif
 
 #ifdef ALBANY_FELIX
 
   // ATTRIBUTE writes only once per file, but somehow did not work on restart.
-  //stk_classic::io::set_field_role(*surfaceHeight_field, Ioss::Field::ATTRIBUTE);
+  //stk::io::set_field_role(*surfaceHeight_field, Ioss::Field::ATTRIBUTE);
   if(buildSurfaceHeight)
-     stk_classic::io::set_field_role(*this->surfaceHeight_field, Ioss::Field::TRANSIENT);
+     stk::io::set_field_role(*this->surfaceHeight_field, Ioss::Field::TRANSIENT);
   if(buildTemperature)
-     stk_classic::io::set_field_role(*this->temperature_field, Ioss::Field::TRANSIENT);
+     stk::io::set_field_role(*this->temperature_field, Ioss::Field::TRANSIENT);
   if(buildBasalFriction)
-     stk_classic::io::set_field_role(*this->basalFriction_field, Ioss::Field::TRANSIENT);
+     stk::io::set_field_role(*this->basalFriction_field, Ioss::Field::TRANSIENT);
   if(buildThickness)
-     stk_classic::io::set_field_role(*this->thickness_field, Ioss::Field::TRANSIENT);
+     stk::io::set_field_role(*this->thickness_field, Ioss::Field::TRANSIENT);
   if(buildFlowFactor)
-     stk_classic::io::set_field_role(*this->flowFactor_field, Ioss::Field::TRANSIENT);
+     stk::io::set_field_role(*this->flowFactor_field, Ioss::Field::TRANSIENT);
   if(buildSurfaceVelocity)
-     stk_classic::io::set_field_role(*this->surfaceVelocity_field, Ioss::Field::TRANSIENT);
+     stk::io::set_field_role(*this->surfaceVelocity_field, Ioss::Field::TRANSIENT);
   if(buildVelocityRMS)
-     stk_classic::io::set_field_role(*this->velocityRMS_field, Ioss::Field::TRANSIENT);
+     stk::io::set_field_role(*this->velocityRMS_field, Ioss::Field::TRANSIENT);
 #endif
 #endif
 
 #ifdef ALBANY_LCM
   // sphere volume is a mesh attribute read from a genesis mesh file containing sphere element (used for peridynamics)
   if(buildSphereVolume){
-    this->sphereVolume_field = metaData_->get_field< stk_classic::mesh::Field<double> >("volume");
+    this->sphereVolume_field = metaData_->get_field< stk::mesh::Field<double> >("volume");
     TEUCHOS_TEST_FOR_EXCEPTION(this->sphereVolume_field == 0, std::logic_error, "\n**** Error:  Expected volume field for sphere elements, field not found.\n");
-    stk_classic::io::set_field_role(*this->sphereVolume_field, Ioss::Field::ATTRIBUTE);
+    stk::io::set_field_role(*this->sphereVolume_field, Ioss::Field::ATTRIBUTE);
   }
 #endif
 
@@ -173,20 +173,18 @@ void Albany::OrdinarySTKFieldContainer<Interleaved>::initializeSTKAdaptation() {
   typedef typename AbstractSTKFieldContainer::IntScalarFieldType ISFT;
 
   this->proc_rank_field =
-      & this->metaData->template declare_field< ISFT >("proc_rank");
+    & this->metaData->template declare_field< ISFT >(stk::topology::ELEMENT_RANK, "proc_rank");
 
   this->refine_field =
-      & this->metaData->template declare_field< ISFT >("refine_field");
+    & this->metaData->template declare_field< ISFT >(stk::topology::ELEMENT_RANK, "refine_field");
 
   // Processor rank field, a scalar
-  stk_classic::mesh::put_field(
+  stk::mesh::put_field(
       *this->proc_rank_field,
-      this->metaData->element_rank(),
       this->metaData->universal_part());
 
-  stk_classic::mesh::put_field(
+  stk::mesh::put_field(
       *this->refine_field,
-      this->metaData->element_rank(),
       this->metaData->universal_part());
 
 #ifdef ALBANY_LCM
@@ -195,11 +193,8 @@ void Albany::OrdinarySTKFieldContainer<Interleaved>::initializeSTKAdaptation() {
   this->fracture_state =
       & this->metaData->template declare_field< ISFT >("fracture_state");
 
-  stk_classic::mesh::EntityRank const
-  cell_rank = this->metaData->element_rank();
-
-  for (stk_classic::mesh::EntityRank rank = 0; rank < cell_rank; ++rank) {
-    stk_classic::mesh::put_field(
+  for (stk::mesh::EntityRank rank = stk::topology::NODE_RANK; rank < stk::topology::ELEMENT_RANK; ++rank) {
+    stk::mesh::put_field(
         *this->fracture_state,
         rank,
         this->metaData->universal_part());
@@ -208,10 +203,10 @@ void Albany::OrdinarySTKFieldContainer<Interleaved>::initializeSTKAdaptation() {
 #endif // ALBANY_LCM
 
 #ifdef ALBANY_SEACAS
-  stk_classic::io::set_field_role(*this->proc_rank_field, Ioss::Field::MESH);
-  stk_classic::io::set_field_role(*this->refine_field, Ioss::Field::MESH);
+  stk::io::set_field_role(*this->proc_rank_field, Ioss::Field::MESH);
+  stk::io::set_field_role(*this->refine_field, Ioss::Field::MESH);
 #ifdef ALBANY_LCM
-  stk_classic::io::set_field_role(*this->fracture_state, Ioss::Field::MESH);
+  stk::io::set_field_role(*this->fracture_state, Ioss::Field::MESH);
 #endif // ALBANY_LCM
 #endif
 
@@ -219,20 +214,19 @@ void Albany::OrdinarySTKFieldContainer<Interleaved>::initializeSTKAdaptation() {
 
 template<bool Interleaved>
 void Albany::OrdinarySTKFieldContainer<Interleaved>::fillSolnVector(Epetra_Vector& soln,
-    stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) {
+    stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) {
 
   typedef typename AbstractSTKFieldContainer::VectorFieldType VFT;
 
   // Iterate over the on-processor nodes by getting node buckets and iterating over each bucket.
-  stk_classic::mesh::BucketVector all_elements;
-  stk_classic::mesh::get_buckets(sel, this->bulkData->buckets(this->metaData->node_rank()), all_elements);
+  stk::mesh::BucketVector const& all_elements = this->bulkData->get_buckets(stk::topology::NODE_RANK, sel);
   this->numNodes = node_map->NumMyElements(); // Needed for the getDOF function to work correctly
   // This is either numOwnedNodes or numOverlapNodes, depending on
   // which map is passed in
 
-  for(stk_classic::mesh::BucketVector::const_iterator it = all_elements.begin() ; it != all_elements.end() ; ++it) {
+  for(stk::mesh::BucketVector::const_iterator it = all_elements.begin() ; it != all_elements.end() ; ++it) {
 
-    const stk_classic::mesh::Bucket& bucket = **it;
+    const stk::mesh::Bucket& bucket = **it;
 
     this->fillVectorHelper(soln, solution_field, node_map, bucket, 0);
 
@@ -242,20 +236,19 @@ void Albany::OrdinarySTKFieldContainer<Interleaved>::fillSolnVector(Epetra_Vecto
 
 template<bool Interleaved>
 void Albany::OrdinarySTKFieldContainer<Interleaved>::saveSolnVector(const Epetra_Vector& soln,
-    stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) {
+    stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) {
 
   typedef typename AbstractSTKFieldContainer::VectorFieldType VFT;
 
   // Iterate over the on-processor nodes by getting node buckets and iterating over each bucket.
-  stk_classic::mesh::BucketVector all_elements;
-  stk_classic::mesh::get_buckets(sel, this->bulkData->buckets(this->metaData->node_rank()), all_elements);
+  stk::mesh::BucketVector const& all_elements = this->bulkData->get_buckets(stk::topology::NODE_RANK, sel);
   this->numNodes = node_map->NumMyElements(); // Needed for the getDOF function to work correctly
   // This is either numOwnedNodes or numOverlapNodes, depending on
   // which map is passed in
 
-  for(stk_classic::mesh::BucketVector::const_iterator it = all_elements.begin() ; it != all_elements.end() ; ++it) {
+  for(stk::mesh::BucketVector::const_iterator it = all_elements.begin() ; it != all_elements.end() ; ++it) {
 
-    const stk_classic::mesh::Bucket& bucket = **it;
+    const stk::mesh::Bucket& bucket = **it;
 
     this->saveVectorHelper(soln, solution_field, node_map, bucket, 0);
 
@@ -265,20 +258,19 @@ void Albany::OrdinarySTKFieldContainer<Interleaved>::saveSolnVector(const Epetra
 
 template<bool Interleaved>
 void Albany::OrdinarySTKFieldContainer<Interleaved>::saveResVector(const Epetra_Vector& res,
-    stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) {
+    stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) {
 
   typedef typename AbstractSTKFieldContainer::VectorFieldType VFT;
 
   // Iterate over the on-processor nodes by getting node buckets and iterating over each bucket.
-  stk_classic::mesh::BucketVector all_elements;
-  stk_classic::mesh::get_buckets(sel, this->bulkData->buckets(this->metaData->node_rank()), all_elements);
+  stk::mesh::BucketVector const& all_elements = this->bulkData->get_buckets(stk::topology::NODE_RANK, sel);
   this->numNodes = node_map->NumMyElements(); // Needed for the getDOF function to work correctly
   // This is either numOwnedNodes or numOverlapNodes, depending on
   // which map is passed in
 
-  for(stk_classic::mesh::BucketVector::const_iterator it = all_elements.begin() ; it != all_elements.end() ; ++it) {
+  for(stk::mesh::BucketVector::const_iterator it = all_elements.begin() ; it != all_elements.end() ; ++it) {
 
-    const stk_classic::mesh::Bucket& bucket = **it;
+    const stk::mesh::Bucket& bucket = **it;
 
     this->saveVectorHelper(res, residual_field, node_map, bucket, 0);
 

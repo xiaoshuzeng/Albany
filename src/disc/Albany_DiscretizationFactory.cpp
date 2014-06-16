@@ -113,10 +113,10 @@ Albany::DiscretizationFactory::createMeshSpecs() {
       meshStruct2D->setFieldAndBulkData(epetra_comm, discParams, neq, req,
                                         sis, meshStruct2D->getMeshSpecs()[0]->worksetSize);
       Ioss::Init::Initializer io;
-      	    Teuchos::RCP<stk_classic::io::MeshData> mesh_data =Teuchos::rcp(new stk_classic::io::MeshData);
-      	    stk_classic::io::create_output_mesh("IceSheet.exo", MPI_COMM_WORLD, *meshStruct2D->bulkData, *mesh_data);
-      	    stk_classic::io::define_output_fields(*mesh_data, *meshStruct2D->metaData);
-      	    stk_classic::io::process_output_request(*mesh_data, *meshStruct2D->bulkData, 0.0);
+      Teuchos::RCP<stk::io::StkMeshIoBroker> mesh_data =Teuchos::rcp(new stk::io::StkMeshIoBroker(MPI_COMM_WORLD));
+      mesh_data->set_bulk_data(*meshStruct2D->bulkData);
+      size_t idx = mesh_data->create_output_mesh("IceSheet.exo", stk::io::WRITE_RESULTS);
+      mesh_data->process_output_request(idx, 0.0);
   }
   else if(method == "Extruded") {
   	  meshStruct = Teuchos::rcp(new Albany::ExtrudedSTKMeshStruct(discParams, epetra_comm));

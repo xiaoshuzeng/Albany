@@ -9,7 +9,7 @@
 #define ALBANY_IOSS_STKMESHSTRUCT_HPP
 
 #include "Albany_GenericSTKMeshStruct.hpp"
-#include <stk_io/MeshReadWriteUtils.hpp>
+#include <stk_io/StkMeshIoBroker.hpp>
 #include <stk_io/IossBridge.hpp>
 
 #include <Ionit_Initializer.h>
@@ -58,7 +58,7 @@ namespace Albany {
     bool usePamgen;
     bool useSerialMesh;
     bool periodic;
-    stk_classic::io::MeshData* mesh_data;
+    stk::io::StkMeshIoBroker* mesh_data;
 
     bool m_hasRestartSolution;
     double m_restartDataTime;
