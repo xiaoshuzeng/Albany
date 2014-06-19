@@ -202,7 +202,6 @@ evaluateFields(typename Traits::EvalData workset)
         }
       }
     }
-    // FIXME deal with Arrhenius temperature dependence, too
     if (have_temperature_) {
       if (temp_type_map_[it->first] == "Linear" ) {
         RealType dPdT = dparam_dtemp_map_[it->first];

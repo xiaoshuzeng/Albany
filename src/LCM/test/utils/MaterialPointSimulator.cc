@@ -189,7 +189,7 @@ int main(int ac, char* av[])
 
   // determine if temperature is being used
   bool have_temperature = mpsParams.get<bool>("Use Temperature", false);
-
+  std::cout << "have_temp: " << have_temperature << std::endl;
   //---------------------------------------------------------------------------
   // Temperature (optional)
   if (have_temperature) {
@@ -204,6 +204,8 @@ int main(int ac, char* av[])
     setTempP.set<Teuchos::ArrayRCP<ScalarT> >("Field Values", temperature);
     Teuchos::RCP<LCM::SetField<Residual, Traits> > setFieldTemperature =
       Teuchos::rcp(new LCM::SetField<Residual, Traits>(setTempP));
+    fieldManager.registerEvaluator<Residual>(setFieldTemperature);
+    stateFieldManager.registerEvaluator<Residual>(setFieldTemperature);
   }
 
   //---------------------------------------------------------------------------
