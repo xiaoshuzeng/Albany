@@ -364,6 +364,23 @@ ELSE()
   SET(ALBANY_HYDRIDE FALSE)
 ENDIF()
 
+# Add option for HMC work, defaults to disabled
+OPTION(ENABLE_HMC "Flag to turn on HMC source code" OFF)
+IF (ENABLE_HMC)
+  IF (NOT ENABLE_LCM)
+    ADD_DEFINITIONS(-DALBANY_LCM)
+    MESSAGE("-- HMC requires LCM... compiling with -DALBANY_LCM")
+    SET(ALBANY_LCM TRUE)
+  ENDIF()
+  ADD_DEFINITIONS(-DALBANY_HMC)
+  MESSAGE("-- HMC       is Enabled, compiling with -DALBANY_HMC")
+  SET(ALBANY_HMC TRUE)
+ELSE()
+  MESSAGE("-- HMC       is NOT Enabled.")
+  SET(ALBANY_HMC FALSE)
+ENDIF()
+
+
 # Set optional build of MOR (Model Order Reduction) defaults to ON
 OPTION(ENABLE_MOR "Flag to turn on MOR Source code" ON)
 IF (ENABLE_MOR)

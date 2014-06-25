@@ -56,6 +56,10 @@
 #include "FELIX/problems/FELIX_StokesL1L2.hpp"
 #endif
 
+#ifdef ALBANY_HMC
+#include "HMC/problems/HMCProblem.hpp"
+#endif
+
 #ifdef ALBANY_AERAS
 #include "Aeras/problems/Aeras_ShallowWaterProblem.hpp"
 #include "Aeras/problems/Aeras_XZScalarAdvectionProblem.hpp"
@@ -281,6 +285,17 @@ Albany::ProblemFactory::create()
   }
   else if (method == "LaplaceBeltrami 3D") {
     strategy = rcp(new Albany::LaplaceBeltramiProblem(problemParams, paramLib, 3, comm));
+  }
+#endif
+#ifdef ALBANY_HMC
+  else if (method == "HMC 1D") {
+    strategy = rcp(new Albany::HMCProblem(problemParams, paramLib, 1));
+  }
+  else if (method == "HMC 2D") {
+    strategy = rcp(new Albany::HMCProblem(problemParams, paramLib, 2));
+  }
+  else if (method == "HMC 3D") {
+    strategy = rcp(new Albany::HMCProblem(problemParams, paramLib, 3));
   }
 #endif
 #ifdef ALBANY_FELIX
