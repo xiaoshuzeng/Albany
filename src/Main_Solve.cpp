@@ -26,6 +26,8 @@
 
 // Uncomment for run time nan checking
 // This is set in the toplevel CMakeLists.txt file
+//
+#define ENABLE_CHECK_FPE
 
 #ifdef ENABLE_CHECK_FPE
 #include <math.h>

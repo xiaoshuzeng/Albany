@@ -4,8 +4,8 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-#ifndef PHAL_GATHER_SOLUTION_HPP
-#define PHAL_GATHER_SOLUTION_HPP
+#ifndef HMC_SCATTER_RESIDUAL_HPP
+#define HMC_SCATTER_RESIDUAL_HPP
 
 #include "Phalanx_ConfigDefs.hpp"
 #include "Phalanx_Evaluator_WithBaseImpl.hpp"
@@ -17,57 +17,43 @@
 #include "Teuchos_ParameterList.hpp"
 #include "Epetra_Vector.h"
 
-namespace PHAL {
-/** \brief Gathers solution values from the Newton solution vector into
-    the nodal fields of the field manager
-
-    Currently makes an assumption that the stride is constant for dofs
-    and that the nmber of dofs is equal to the size of the solution
-    names vector.
+namespace HMC {
+/** \brief Scatters result from the residual fields into the
+    global (epetra) data structurs.  This includes the
+    post-processing of the AD data type for all evaluation
+    types besides Residual.
 
 */
 // **************************************************************
-// Base Class with Generic Implementations: Specializations for
-// Automatic Differentiation Below
+// Base Class for code that is independent of evaluation type
 // **************************************************************
 
-template<typename EvalT, typename Traits>
-class GatherSolutionBase
+template<typename EvalT, typename Traits> 
+class ScatterResidualBase
   : public PHX::EvaluatorWithBaseImpl<Traits>,
     public PHX::EvaluatorDerived<EvalT, Traits>  {
-
+  
 public:
-
-  GatherSolutionBase(const Teuchos::ParameterList& p,
+  
+  ScatterResidualBase(const Teuchos::ParameterList& p,
                               const Teuchos::RCP<Albany::Layouts>& dl);
-
+  
   void postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& vm);
-
-  // This function requires template specialization, in derived class below
-  virtual void evaluateFields(typename Traits::EvalData d) = 0;
-
+  
+  virtual void evaluateFields(typename Traits::EvalData d)=0;
+  
 protected:
 
   typedef typename EvalT::ScalarT ScalarT;
-  std::vector< PHX::MDField<ScalarT,Cell,Node> > val;
-  std::vector< PHX::MDField<ScalarT,Cell,Node> > val_dot;
-  std::vector< PHX::MDField<ScalarT,Cell,Node> > val_dotdot;
-  std::vector< PHX::MDField<ScalarT,Cell,Node,VecDim> > valVec;
-  std::vector< PHX::MDField<ScalarT,Cell,Node,VecDim> > valVec_dot;
-  std::vector< PHX::MDField<ScalarT,Cell,Node,VecDim> > valVec_dotdot;
-  std::vector< PHX::MDField<ScalarT,Cell,Node,VecDim,VecDim> > valTensor;
-  std::vector< PHX::MDField<ScalarT,Cell,Node,VecDim,VecDim> > valTensor_dot;
-  std::vector< PHX::MDField<ScalarT,Cell,Node,VecDim,VecDim> > valTensor_dotdot;
+  Teuchos::RCP<PHX::FieldTag> scatter_operation;
+  PHX::MDField<ScalarT,Cell,Node,Dim,Dim> val;
   std::size_t numNodes;
-  std::size_t numFieldsBase; // Number of fields gathered in this call
+  std::size_t numDimsBase; // Number of fields gathered in this call
   std::size_t offset; // Offset of first DOF being gathered when numFields<neq
-  unsigned short int tensorRank;
-  bool enableTransient;
-  bool enableAcceleration;
 };
 
-template<typename EvalT, typename Traits> class GatherSolution;
+template<typename EvalT, typename Traits> class ScatterResidual;
 
 // **************************************************************
 // **************************************************************
@@ -77,180 +63,139 @@ template<typename EvalT, typename Traits> class GatherSolution;
 
 
 // **************************************************************
-// Residual
+// Residual 
 // **************************************************************
 template<typename Traits>
-class GatherSolution<PHAL::AlbanyTraits::Residual,Traits>
-   : public GatherSolutionBase<PHAL::AlbanyTraits::Residual, Traits>  {
-
+class ScatterResidual<PHAL::AlbanyTraits::Residual,Traits>
+  : public ScatterResidualBase<PHAL::AlbanyTraits::Residual, Traits>  {
 public:
-  GatherSolution(const Teuchos::ParameterList& p,
+  ScatterResidual(const Teuchos::ParameterList& p,
                               const Teuchos::RCP<Albany::Layouts>& dl);
-  // Old constructor, still needed by BCs that use PHX Factory
-  GatherSolution(const Teuchos::ParameterList& p);
   void evaluateFields(typename Traits::EvalData d);
 private:
   typedef typename PHAL::AlbanyTraits::Residual::ScalarT ScalarT;
-  const std::size_t numFields;
+  const std::size_t numDims;
 };
 
 // **************************************************************
 // Jacobian
 // **************************************************************
 template<typename Traits>
-class GatherSolution<PHAL::AlbanyTraits::Jacobian,Traits>
-   : public GatherSolutionBase<PHAL::AlbanyTraits::Jacobian, Traits>  {
-
+class ScatterResidual<PHAL::AlbanyTraits::Jacobian,Traits>
+  : public ScatterResidualBase<PHAL::AlbanyTraits::Jacobian, Traits>  {
 public:
-  GatherSolution(const Teuchos::ParameterList& p,
+  ScatterResidual(const Teuchos::ParameterList& p,
                               const Teuchos::RCP<Albany::Layouts>& dl);
-  GatherSolution(const Teuchos::ParameterList& p);
   void evaluateFields(typename Traits::EvalData d);
 private:
   typedef typename PHAL::AlbanyTraits::Jacobian::ScalarT ScalarT;
-  const std::size_t numFields;
+  const std::size_t numDims;
 };
 
-
 // **************************************************************
-// Tangent (Jacobian mat-vec + parameter derivatives)
+// Tangent
 // **************************************************************
 template<typename Traits>
-class GatherSolution<PHAL::AlbanyTraits::Tangent,Traits>
-   : public GatherSolutionBase<PHAL::AlbanyTraits::Tangent, Traits>  {
-
+class ScatterResidual<PHAL::AlbanyTraits::Tangent,Traits>
+  : public ScatterResidualBase<PHAL::AlbanyTraits::Tangent, Traits>  {
 public:
-  GatherSolution(const Teuchos::ParameterList& p,
+  ScatterResidual(const Teuchos::ParameterList& p,
                               const Teuchos::RCP<Albany::Layouts>& dl);
-  GatherSolution(const Teuchos::ParameterList& p);
   void evaluateFields(typename Traits::EvalData d);
 private:
   typedef typename PHAL::AlbanyTraits::Tangent::ScalarT ScalarT;
-  const std::size_t numFields;
+  const std::size_t numDims;
 };
 
 // **************************************************************
-// Distributed Parameter Derivative
+// Stochastic Galerkin Residual 
 // **************************************************************
-template<typename Traits>
-class GatherSolution<PHAL::AlbanyTraits::DistParamDeriv,Traits>
-   : public GatherSolutionBase<PHAL::AlbanyTraits::DistParamDeriv, Traits>  {
-
-public:
-  GatherSolution(const Teuchos::ParameterList& p,
-                 const Teuchos::RCP<Albany::Layouts>& dl);
-  GatherSolution(const Teuchos::ParameterList& p);
-  void evaluateFields(typename Traits::EvalData d);
-private:
-  typedef typename PHAL::AlbanyTraits::DistParamDeriv::ScalarT ScalarT;
-  const std::size_t numFields;
-};
-
-// **************************************************************
-// Stochastic Galerkin Residual
-// **************************************************************
-
 #ifdef ALBANY_SG_MP
 template<typename Traits>
-class GatherSolution<PHAL::AlbanyTraits::SGResidual,Traits>
-   : public GatherSolutionBase<PHAL::AlbanyTraits::SGResidual, Traits>  {
-
+class ScatterResidual<PHAL::AlbanyTraits::SGResidual,Traits>
+  : public ScatterResidualBase<PHAL::AlbanyTraits::SGResidual, Traits>  {
 public:
-  GatherSolution(const Teuchos::ParameterList& p,
+  ScatterResidual(const Teuchos::ParameterList& p,
                               const Teuchos::RCP<Albany::Layouts>& dl);
-  GatherSolution(const Teuchos::ParameterList& p);
   void evaluateFields(typename Traits::EvalData d);
 private:
   typedef typename PHAL::AlbanyTraits::SGResidual::ScalarT ScalarT;
-  const std::size_t numFields;
+  const std::size_t numDims;
 };
-
 
 // **************************************************************
 // Stochastic Galerkin Jacobian
 // **************************************************************
 template<typename Traits>
-class GatherSolution<PHAL::AlbanyTraits::SGJacobian,Traits>
-   : public GatherSolutionBase<PHAL::AlbanyTraits::SGJacobian, Traits>  {
-
+class ScatterResidual<PHAL::AlbanyTraits::SGJacobian,Traits>
+  : public ScatterResidualBase<PHAL::AlbanyTraits::SGJacobian, Traits>  {
 public:
-  GatherSolution(const Teuchos::ParameterList& p,
+  ScatterResidual(const Teuchos::ParameterList& p,
                               const Teuchos::RCP<Albany::Layouts>& dl);
-  GatherSolution(const Teuchos::ParameterList& p);
   void evaluateFields(typename Traits::EvalData d);
 private:
   typedef typename PHAL::AlbanyTraits::SGJacobian::ScalarT ScalarT;
-  const std::size_t numFields;
+  const std::size_t numDims;
 };
 
 // **************************************************************
-// Stochastic Galerkin Tangent (Jacobian mat-vec + parameter derivatives)
+// Stochastic Galerkin Tangent
 // **************************************************************
 template<typename Traits>
-class GatherSolution<PHAL::AlbanyTraits::SGTangent,Traits>
-   : public GatherSolutionBase<PHAL::AlbanyTraits::SGTangent, Traits>  {
-
+class ScatterResidual<PHAL::AlbanyTraits::SGTangent,Traits>
+  : public ScatterResidualBase<PHAL::AlbanyTraits::SGTangent, Traits>  {
 public:
-  GatherSolution(const Teuchos::ParameterList& p,
+  ScatterResidual(const Teuchos::ParameterList& p,
                               const Teuchos::RCP<Albany::Layouts>& dl);
-  GatherSolution(const Teuchos::ParameterList& p);
   void evaluateFields(typename Traits::EvalData d);
 private:
   typedef typename PHAL::AlbanyTraits::SGTangent::ScalarT ScalarT;
-  const std::size_t numFields;
+  const std::size_t numDims;
 };
 
 // **************************************************************
-// Multi-point Residual
+// Multi-point Residual 
 // **************************************************************
-
 template<typename Traits>
-class GatherSolution<PHAL::AlbanyTraits::MPResidual,Traits>
-   : public GatherSolutionBase<PHAL::AlbanyTraits::MPResidual, Traits>  {
-
+class ScatterResidual<PHAL::AlbanyTraits::MPResidual,Traits>
+  : public ScatterResidualBase<PHAL::AlbanyTraits::MPResidual, Traits>  {
 public:
-  GatherSolution(const Teuchos::ParameterList& p,
+  ScatterResidual(const Teuchos::ParameterList& p,
                               const Teuchos::RCP<Albany::Layouts>& dl);
-  GatherSolution(const Teuchos::ParameterList& p);
   void evaluateFields(typename Traits::EvalData d);
 private:
   typedef typename PHAL::AlbanyTraits::MPResidual::ScalarT ScalarT;
-  const std::size_t numFields;
+  const std::size_t numDims;
 };
-
 
 // **************************************************************
 // Multi-point Jacobian
 // **************************************************************
 template<typename Traits>
-class GatherSolution<PHAL::AlbanyTraits::MPJacobian,Traits>
-   : public GatherSolutionBase<PHAL::AlbanyTraits::MPJacobian, Traits>  {
-
+class ScatterResidual<PHAL::AlbanyTraits::MPJacobian,Traits>
+  : public ScatterResidualBase<PHAL::AlbanyTraits::MPJacobian, Traits>  {
 public:
-  GatherSolution(const Teuchos::ParameterList& p,
+  ScatterResidual(const Teuchos::ParameterList& p,
                               const Teuchos::RCP<Albany::Layouts>& dl);
-  GatherSolution(const Teuchos::ParameterList& p);
   void evaluateFields(typename Traits::EvalData d);
 private:
   typedef typename PHAL::AlbanyTraits::MPJacobian::ScalarT ScalarT;
-  const std::size_t numFields;
+  const std::size_t numDims;
 };
 
 // **************************************************************
-// Multi-point Tangent (Jacobian mat-vec + parameter derivatives)
+// Multi-point Tangent
 // **************************************************************
 template<typename Traits>
-class GatherSolution<PHAL::AlbanyTraits::MPTangent,Traits>
-   : public GatherSolutionBase<PHAL::AlbanyTraits::MPTangent, Traits>  {
-
+class ScatterResidual<PHAL::AlbanyTraits::MPTangent,Traits>
+  : public ScatterResidualBase<PHAL::AlbanyTraits::MPTangent, Traits>  {
 public:
-  GatherSolution(const Teuchos::ParameterList& p,
+  ScatterResidual(const Teuchos::ParameterList& p,
                               const Teuchos::RCP<Albany::Layouts>& dl);
-  GatherSolution(const Teuchos::ParameterList& p);
   void evaluateFields(typename Traits::EvalData d);
 private:
   typedef typename PHAL::AlbanyTraits::MPTangent::ScalarT ScalarT;
-  const std::size_t numFields;
+  const std::size_t numDims;
 };
 #endif //ALBANY_SG_MP
 

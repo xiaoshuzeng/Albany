@@ -517,12 +517,14 @@ include_directories (${Trilinos_INCLUDE_DIRS}
                      ./LCM/models
                      ./LCM/utils
                      ./LCM/utils/topology
+                     ./HMC/evaluators
                      ./FELIX/problems
                      ./FELIX/evaluators
                      ./Aeras/problems
                      ./Aeras/evaluators
                      ./Hydride/problems
                      ./Hydride/evaluators
+                     ./HMC/problems
                      ./QCAD
                      ./QCAD/problems
                      ./QCAD/evaluators
@@ -706,6 +708,14 @@ IF (ALBANY_LCM)
     #Hydride requires LCM
     add_subdirectory(Hydride)
     SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} hydride LCM)
+  ELSE()
+    SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} LCM)
+  ENDIF()
+
+  IF (ALBANY_LCM)
+    #HMC requires LCM
+    add_subdirectory(HMC)
+    SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} HMC LCM)
   ELSE()
     SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} LCM)
   ENDIF()
