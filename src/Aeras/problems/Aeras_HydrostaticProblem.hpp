@@ -35,6 +35,9 @@
 #include "Aeras_XZHydrostatic_UTracer.hpp"
 #include "Aeras_XZHydrostatic_VirtualT.hpp"
 
+#include "Aeras_ComputeBasisFunctions.hpp"
+#include "Aeras_GatherCoordinateVector.hpp"
+
 namespace Aeras {
 
   /*!
@@ -107,7 +110,9 @@ namespace Aeras {
 }
 
 #include "Intrepid_FieldContainer.hpp"
-#include "Intrepid_DefaultCubatureFactory.hpp"
+#include "Intrepid_CubaturePolylib.hpp"
+#include "Intrepid_CubatureTensor.hpp"
+
 #include "Shards_CellTopology.hpp"
 
 #include "Albany_Utils.hpp"
@@ -144,8 +149,9 @@ Aeras::HydrostaticProblem::constructEvaluators(
   const int numNodes = intrepidBasis->getCardinality();
   const int worksetSize = meshSpecs.worksetSize;
   
-  Intrepid::DefaultCubatureFactory<RealType> cubFactory;
-  RCP <Intrepid::Cubature<RealType> > cubature = cubFactory.create(*cellType, meshSpecs.cubatureDegree);
+  RCP <Intrepid::CubaturePolylib<RealType> > polylib = rcp(new Intrepid::CubaturePolylib<RealType>(meshSpecs.cubatureDegree, meshSpecs.cubatureRule));
+  std::vector< Teuchos::RCP<Intrepid::Cubature<RealType> > > cubatures(2, polylib); 
+  RCP <Intrepid::Cubature<RealType> > cubature = rcp( new Intrepid::CubatureTensor<RealType>(cubatures));
   
   const int numQPts = cubature->getNumPoints();
   const int numVertices = cellType->getNodeCount();
@@ -156,7 +162,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
        << ", QuadPts   = " << numQPts
        << ", Dim       = " << numDim 
        << ", Neq       = " << neq 
-       << ", VecDim    = " << 1 
+       << ", VecDim    = " << numDim
        << ", numLevels = " << numLevels 
        << ", numTracers= " << numTracers << std::endl;
   
@@ -211,7 +217,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
  
   {
     RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation "+dof_names_nodes[0]));
-    p->set<string>("Variable Name", dof_names_nodes[0]);
+    p->set<string>("Variable Name",                                   dof_names_nodes[0]);
     p->set<Teuchos::RCP<PHX::DataLayout> >("Nodal Variable Layout",     dl->node_scalar);
     p->set<Teuchos::RCP<PHX::DataLayout> >("Quadpoint Variable Layout", dl->qp_scalar);
     p->set<string>("BF Name", "BF");
@@ -273,14 +279,53 @@ Aeras::HydrostaticProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
-  fm0.template registerEvaluator<EvalT>
-    (evalUtils.constructGatherCoordinateVectorEvaluator());
+  if (numDim == 2) {
+    RCP<ParameterList> p = rcp(new ParameterList("Gather Coordinate Vector"));
+    // Input:
+    
+    // Output:: Coordindate Vector at vertices
+    p->set<string>("Coordinate Vector Name", "Coord Vec");
+    
+    ev = rcp(new Aeras::GatherCoordinateVector<EvalT,AlbanyTraits>(*p,dl));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+  //Planar case: 
+  else {
+    fm0.template registerEvaluator<EvalT>
+      (evalUtils.constructGatherCoordinateVectorEvaluator());
+  }
 
-  fm0.template registerEvaluator<EvalT>
-    (evalUtils.constructMapToPhysicalFrameEvaluator(cellType, cubature));
+  if (numDim == 2)
+  {
+    RCP<ParameterList> p = rcp(new ParameterList("Compute Basis Functions"));
 
-  fm0.template registerEvaluator<EvalT>
-    (evalUtils.constructComputeBasisFunctionsEvaluator(cellType, intrepidBasis, cubature));
+    // Inputs: X, Y at nodes, Cubature, and Basis
+    p->set< RCP<Intrepid::Cubature<RealType> > >("Cubature", cubature);
+ 
+    p->set< RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > > > 
+        ("Intrepid Basis", intrepidBasis);
+ 
+    p->set<RCP<shards::CellTopology> >("Cell Type", cellType);
+    // Outputs: BF, weightBF, Grad BF, weighted-Grad BF, all in physical space
+    p->set<string>("Spherical Coord Name",       "Lat-Long");
+    p->set<string>("Coordinate Vector Name",     "Coord Vec");
+    p->set<string>("Weights Name",               "Weights");
+    p->set<string>("BF Name",                    "BF");
+    p->set<string>("Weighted BF Name",           "wBF");
+    p->set<string>("Gradient BF Name",           "Grad BF");
+    p->set<string>("Weighted Gradient BF Name",  "wGrad BF");
+    p->set<string>("Jacobian Det Name",          "Jacobian Det");
+    p->set<string>("Jacobian Name",              "Jacobian");
+    p->set<string>("Jacobian Inv Name",          "Jacobian Inv");
+    p->set<std::size_t>("spatialDim",            3);
+
+    ev = rcp(new Aeras::ComputeBasisFunctions<EvalT,AlbanyTraits>(*p,dl));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+  else {
+    fm0.template registerEvaluator<EvalT>
+      (evalUtils.constructComputeBasisFunctionsEvaluator(cellType, intrepidBasis, cubature));
+  }
 
   { // Hydrostatic SPressure Resid
     RCP<ParameterList> p = rcp(new ParameterList("Hydrostatic SPressure Resid"));
@@ -297,7 +342,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
 
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Output
     p->set<std::string>("Residual Name", dof_names_nodes_resid[0]);
@@ -376,7 +421,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
 
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
 
     //Output
@@ -404,7 +449,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
 
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Output
     p->set<std::string>("Residual Name", dof_names_levels_resid[1]);
@@ -417,7 +462,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
 
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Input
     p->set<std::string>("Pressure Level 0",   dof_names_nodes[0]);
@@ -479,7 +524,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
 
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Input
     p->set<string>("Velx"                  , dof_names_levels[0]);
@@ -509,7 +554,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
 
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Input
     p->set<std::string>("Pressure",           "Pressure");
@@ -534,7 +579,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
 
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Input
     p->set<std::string>("Density",            "Density");
@@ -552,7 +597,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
 
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Input
     p->set<std::string>("Density",             "Density" );
@@ -582,7 +627,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
 
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Input
     p->set<std::string>("Pi",            "Pi");
@@ -609,7 +654,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
 
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Input
     p->set<std::string>("Gradient QP PiVelx",     "Gradient QP PiVelx");
@@ -635,7 +680,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
     RCP<ParameterList> p = rcp(new ParameterList("Hydrostatic_Atmosphere_Moisture"));
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
    
     //Input
     p->set<std::string>("Weighted BF Name",              "wBF");
@@ -692,7 +737,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
 
     Teuchos::ParameterList& paramList = params->sublist("Hydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Output
 

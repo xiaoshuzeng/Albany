@@ -73,11 +73,11 @@ evaluateFields(typename Traits::EvalData workset)
     for (int node=0; node < numNodes; ++node) {
       for (int level=0; level < numLevels; ++level) {
 
-        Phi(cell,node,level) = Phi0 + 0.5*density(cell,node,level)*Pi(cell,node,level)*DeltaEta(cell,node,level);
+        Phi(cell,node,level) = Phi0 + 0.5*(1/density(cell,node,level))*Pi(cell,node,level)*DeltaEta(cell,node,level);
         ScalarT sum = 0.0;
  
         for (int j=level+1; j < numLevels; ++j) {
-          sum += density(cell,node,level)*Pi(cell,node,level)*DeltaEta(cell,node,level);
+          sum += (1/density(cell,node,level))*Pi(cell,node,level)*DeltaEta(cell,node,level);
         }
         Phi(cell,node,level) += sum;
       }

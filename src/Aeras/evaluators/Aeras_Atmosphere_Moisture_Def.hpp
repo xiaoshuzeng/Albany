@@ -26,7 +26,6 @@ template<typename EvalT, typename Traits>
 Atmosphere_Moisture<EvalT, Traits>::
 Atmosphere_Moisture(Teuchos::ParameterList& p,
            const Teuchos::RCP<Aeras::Layouts>& dl) :
-  coordVec        (p.get<std::string> ("QP Coordinate Vector Name"),     dl->qp_vector     ),
   Velx            (p.get<std::string> ("QP Velx"),                       dl->qp_scalar_level),
   Temp            (p.get<std::string> ("QP Temperature"),                dl->qp_scalar_level),
   Density         (p.get<std::string> ("QP Density"),                    dl->qp_scalar_level),
@@ -42,17 +41,16 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
 {  
   Teuchos::ArrayRCP<std::string> RequiredTracers(3);
   RequiredTracers[0] = "Vapor";
-  RequiredTracers[1] = "Rain";
-  RequiredTracers[2] = "Snow";
+  RequiredTracers[1] = "Cloud";
+  RequiredTracers[2] = "Rain";
   for (int i=0; i<3; ++i) {
     bool found = false;
     for (int j=0; j<3 && !found; ++j)
       if (RequiredTracers[i] == tracerNames[j]) found = true;
     TEUCHOS_TEST_FOR_EXCEPTION(!found, std::logic_error,
-      "Aeras::Atmosphere_Moisture requires Vapor, Rain and Snow tracers.");
+      "Aeras::Atmosphere_Moisture requires Vapor, Cloud and Rain tracers.");
   }
 
-  this->addDependentField(coordVec);
   this->addDependentField(Velx);
   this->addDependentField(Density);
   this->addDependentField(Eta);
@@ -78,7 +76,6 @@ template<typename EvalT, typename Traits>
 void Atmosphere_Moisture<EvalT, Traits>::postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& fm)
 {
-  this->utils.setFieldData(coordVec,fm);
   this->utils.setFieldData(Velx,    fm);
   this->utils.setFieldData(Temp,    fm);
   this->utils.setFieldData(Density, fm);
@@ -128,8 +125,8 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
         exner[level] = pow( (p[level]/1000.0),(0.286) );
         rho[level]   = Albany::ADValue( Density(cell,qp,level) );
         qv[level]    = Albany::ADValue( TracerIn["Vapor"](cell,qp,level) );
-        qc[level]    = Albany::ADValue( TracerIn["Rain"](cell,qp,level) );
-        qr[level]    = Albany::ADValue( TracerIn["Snow"](cell,qp,level) );
+        qc[level]    = Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
+        qr[level]    = Albany::ADValue( TracerIn["Rain"](cell,qp,level) );
         z[level]     = (1.0-Albany::ADValue( Eta(cell,qp,level)) ) * ztop + zbot;
         dz8w[level]  = z[level];
       }
@@ -142,8 +139,8 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
 
       for (int level=0; level < numLevels; ++level) { 
         TracerSrc[namesToSrc["Vapor"]](cell,qp,level) += 0 * TracerIn["Vapor"] (cell,qp,level);
+        TracerSrc[namesToSrc["Cloud"]] (cell,qp,level) += 0 * TracerIn["Cloud"]  (cell,qp,level);
         TracerSrc[namesToSrc["Rain"]] (cell,qp,level) += 0 * TracerIn["Rain"]  (cell,qp,level);
-        TracerSrc[namesToSrc["Snow"]] (cell,qp,level) += 0 * TracerIn["Snow"]  (cell,qp,level);
       }
     }
   }
