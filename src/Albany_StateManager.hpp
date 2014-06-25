@@ -19,19 +19,23 @@
 #include "Albany_AbstractDiscretization.hpp"
 #include "Albany_StateInfoStruct.hpp"
 #include "Albany_EigendataInfoStruct.hpp"
+#include "Adapt_NodalDataBlock.hpp"
 
 namespace Albany {
 
-//! Class to manage saved state data. 
+//! Class to manage saved state data.
 /* \brief The usage is to register state variables that will be saved
  * during problem construction, where they are described by a string
- * and a DataLayout. One time, the allocate method is called, which 
+ * and a DataLayout. One time, the allocate method is called, which
  * creates the memory for a vector of worksets of these states, which
  * are stored as MDFields.
 */
 
 class StateManager {
 public:
+
+  enum SAType {ELEM, NODE};
+
   StateManager ();
 
   ~StateManager () { };
@@ -39,7 +43,7 @@ public:
   typedef std::map<std::string, Teuchos::RCP<PHX::DataLayout> >  RegisteredStates;
 
   //! Method to call multiple times (before allocate) to register which states will be saved.
-  void registerStateVariable(const std::string &stateName, 
+  void registerStateVariable(const std::string &stateName,
 			     const Teuchos::RCP<PHX::DataLayout> &dl,
                              const std::string &ebName,
 			     const std::string &init_type="scalar",
@@ -51,7 +55,7 @@ public:
   //! Method to call multiple times (before allocate) to register which states will be saved.
   //! Returns param vector with all info to build a SaveStateField or LoadStateField evaluator
   Teuchos::RCP<Teuchos::ParameterList>
-  registerStateVariable(const std::string &name, const Teuchos::RCP<PHX::DataLayout> &dl, 
+  registerStateVariable(const std::string &name, const Teuchos::RCP<PHX::DataLayout> &dl,
                         const Teuchos::RCP<PHX::DataLayout> &dummy,
                         const std::string &ebName,
                         const std::string &init_type="scalar",
@@ -60,7 +64,7 @@ public:
 
   //! If field name to save/load is different from state name
   Teuchos::RCP<Teuchos::ParameterList>
-  registerStateVariable(const std::string &stateName, const Teuchos::RCP<PHX::DataLayout> &dl, 
+  registerStateVariable(const std::string &stateName, const Teuchos::RCP<PHX::DataLayout> &dl,
 			const Teuchos::RCP<PHX::DataLayout> &dummy,
                         const std::string &ebName,
 			const std::string &init_type,
@@ -70,7 +74,7 @@ public:
 
   //! If you want to give more control over whether or not to output to Exodus
   Teuchos::RCP<Teuchos::ParameterList>
-  registerStateVariable(const std::string &stateName, const Teuchos::RCP<PHX::DataLayout> &dl, 
+  registerStateVariable(const std::string &stateName, const Teuchos::RCP<PHX::DataLayout> &dl,
 			const Teuchos::RCP<PHX::DataLayout> &dummy,
                         const std::string &ebName,
 			const std::string &init_type,
@@ -78,12 +82,17 @@ public:
                         const bool registerOldState,
 			const bool outputToExodus);
 
+  //! Very basic
+  void
+  registerStateVariable(const std::string &stateName, const Teuchos::RCP<PHX::DataLayout> &dl,
+			const std::string &init_type);
+
 
   //! Method to re-initialize state variables, which can be called multiple times after allocating
   void importStateData(Albany::StateArrays& statesToCopyFrom);
 
   //! Method to get the Names of the state variables
-  std::map<std::string, RegisteredStates>& getRegisteredStates(){return statesToStore;};
+  std::map<std::string, RegisteredStates>& getRegisteredStates(){return statesToStore;}
 
   //! Method to get the ResponseIDs for states which have been registered and (should)
   //!  have a SaveStateField evaluator associated with them that evaluates the responseID
@@ -102,10 +111,12 @@ public:
   Teuchos::RCP<Albany::AbstractDiscretization> getDiscretization();
 
   //! Method to get state information for a specific workset
-  Albany::StateArray& getStateArray(int ws) const;
+  Albany::StateArray& getStateArray(SAType type, int ws) const;
   //! Method to get state information for all worksets
   Albany::StateArrays& getStateArrays() const;
-  
+
+  Teuchos::RCP<Adapt::NodalDataBlock> getNodalDataBlock(){ return stateInfo->createNodalDataBlock(); }
+
   //! Methods to get/set the EigendataStruct which holds eigenvalue / eigenvector data
   Teuchos::RCP<Albany::EigendataStruct> getEigenData();
   void setEigenData(const Teuchos::RCP<Albany::EigendataStruct>& eigdata);
@@ -114,15 +125,12 @@ public:
   Teuchos::RCP<Epetra_MultiVector> getAuxData();
   void setAuxData(const Teuchos::RCP<Epetra_MultiVector>& aux_data);
 
-
 private:
   //! Private to prohibit copying
   StateManager(const StateManager&);
 
   //! Private to prohibit copying
   StateManager& operator=(const StateManager&);
-
-private:
 
   //! boolean to enforce that allocate gets called once, and after registration and befor gets
   bool stateVarsAreAllocated;
@@ -138,9 +146,6 @@ private:
   Teuchos::RCP<EigendataStruct> eigenData;
   Teuchos::RCP<Epetra_MultiVector> auxData;
 
-  // Experiment in dealing with Time
-  double time;
-  double timeOld;
 };
 
 }

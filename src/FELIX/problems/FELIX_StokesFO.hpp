@@ -16,6 +16,9 @@
 #include "PHAL_Workset.hpp"
 #include "PHAL_Dimension.hpp"
 
+//uncomment the following line if you want debug output to be printed to screen
+//#define OUTPUT_TO_SCREEN
+
 namespace FELIX {
 
   /*!
@@ -98,6 +101,7 @@ namespace FELIX {
 #include "PHAL_Neumann.hpp"
 #include "PHAL_Source.hpp"
 
+
 template <typename EvalT>
 Teuchos::RCP<const PHX::FieldTag>
 FELIX::StokesFO::constructEvaluators(
@@ -131,12 +135,14 @@ FELIX::StokesFO::constructEvaluators(
   const int numVertices = cellType->getNodeCount();
   int vecDim = neq;
   
+#ifdef OUTPUT_TO_SCREEN
   *out << "Field Dimensions: Workset=" << worksetSize 
        << ", Vertices= " << numVertices
        << ", Nodes= " << numNodes
        << ", QuadPts= " << numQPts
        << ", Dim= " << numDim 
        << ", vecDim= " << vecDim << std::endl;
+#endif
   
    dl = rcp(new Albany::Layouts(worksetSize,numVertices,numNodes,numQPts,numDim, vecDim));
    Albany::EvaluatorUtils<EvalT, PHAL::AlbanyTraits> evalUtils(dl);
@@ -252,6 +258,13 @@ FELIX::StokesFO::constructEvaluators(
     ev = rcp(new FELIX::StokesFOBodyForce<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
+
+  RCP<ParameterList> paramList = rcp(new ParameterList("Param List"));
+  { // response
+    RCP<const Albany::MeshSpecsStruct> meshSpecsPtr = Teuchos::rcpFromRef(meshSpecs);
+    paramList->set<RCP<const Albany::MeshSpecsStruct> >("Mesh Specs Struct", meshSpecsPtr);
+  }
+
   if (fieldManagerChoice == Albany::BUILD_RESID_FM)  {
     PHX::Tag<typename EvalT::ScalarT> res_tag("Scatter Stokes", dl->dummy);
     fm0.requireField<EvalT>(res_tag);
@@ -263,7 +276,7 @@ FELIX::StokesFO::constructEvaluators(
           (evalUtils.constructGatherVelocityRMSEvaluator());
 
     Albany::ResponseUtilities<EvalT, PHAL::AlbanyTraits> respUtils(dl);
-    return respUtils.constructResponses(fm0, *responseList, Teuchos::null, stateMgr);
+    return respUtils.constructResponses(fm0, *responseList, paramList, stateMgr);
   }
 
   return Teuchos::null;

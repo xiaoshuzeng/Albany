@@ -39,6 +39,7 @@
 #include "Sacado_ParameterRegistration.hpp"
 
 #include "PHAL_AlbanyTraits.hpp"
+#include "PHAL_Workset.hpp"
 #include "Phalanx.hpp"
 
 #include "Stokhos_OrthogPolyExpansion.hpp"
@@ -63,11 +64,11 @@ namespace Albany {
 
     enum SolutionMethod {Steady, Transient, Continuation, Eigensolve};
 
-    //! Constructor 
+    //! Constructor
     Application(const Teuchos::RCP<const Epetra_Comm>& comm,
-		const Teuchos::RCP<Teuchos::ParameterList>& params,
-		const Teuchos::RCP<const Epetra_Vector>& initial_guess = 
-		Teuchos::null);
+                const Teuchos::RCP<Teuchos::ParameterList>& params,
+                const Teuchos::RCP<const Epetra_Vector>& initial_guess =
+                Teuchos::null);
 
     //! Destructor
     ~Application();
@@ -95,6 +96,9 @@ namespace Albany {
 
     //! Get parameter library
     Teuchos::RCP<ParamLib> getParamLib();
+
+    //! Get distributed parameter library
+    Teuchos::RCP<DistParamLib> getDistParamLib();
 
     //! Get solution method
     SolutionMethod getSolutionMethod() const {return solMethod; }
@@ -126,55 +130,69 @@ namespace Albany {
      * Set xdot to NULL for steady-state problems
      */
     void computeGlobalResidual(const double current_time,
-			       const Epetra_Vector* xdot,
-			       const Epetra_Vector* xdotdot,
-			       const Epetra_Vector& x,
-			       const Teuchos::Array<ParamVec>& p,
-			       Epetra_Vector& f);
+                               const Epetra_Vector* xdot,
+                               const Epetra_Vector* xdotdot,
+                               const Epetra_Vector& x,
+                               const Teuchos::Array<ParamVec>& p,
+                               Epetra_Vector& f);
 
     //! Compute global Jacobian
     /*!
      * Set xdot to NULL for steady-state problems
      */
-    void computeGlobalJacobian(const double alpha, 
-			       const double beta,  
-			       const double omega, 
-			       const double current_time,
-			       const Epetra_Vector* xdot,
-			       const Epetra_Vector* xdotdot,
-			       const Epetra_Vector& x,
-			       const Teuchos::Array<ParamVec>& p,
-			       Epetra_Vector* f,
-			       Epetra_CrsMatrix& jac);
+    void computeGlobalJacobian(const double alpha,
+                               const double beta,
+                               const double omega,
+                               const double current_time,
+                               const Epetra_Vector* xdot,
+                               const Epetra_Vector* xdotdot,
+                               const Epetra_Vector& x,
+                               const Teuchos::Array<ParamVec>& p,
+                               Epetra_Vector* f,
+                               Epetra_CrsMatrix& jac);
 
     //! Compute global Preconditioner
     /*!
      * Set xdot to NULL for steady-state problems
      */
     void computeGlobalPreconditioner(const Teuchos::RCP<Epetra_CrsMatrix>& jac,
-				     const Teuchos::RCP<Epetra_Operator>& prec);
+                                     const Teuchos::RCP<Epetra_Operator>& prec);
 
     //! Compute global Tangent
     /*!
      * Set xdot to NULL for steady-state problems
      */
-    void computeGlobalTangent(const double alpha, 
-			      const double beta,
-			       const double omega, 
-			      const double current_time,
-			      bool sum_derivs,
-			      const Epetra_Vector* xdot,
-			      const Epetra_Vector* xdotdot,
-			      const Epetra_Vector& x,
-			      const Teuchos::Array<ParamVec>& p,
-			      ParamVec* deriv_p,
-			      const Epetra_MultiVector* Vx,
-			      const Epetra_MultiVector* Vxdot,
-			      const Epetra_MultiVector* Vxdotdot,
-			      const Epetra_MultiVector* Vp,
-			      Epetra_Vector* f,
-			      Epetra_MultiVector* JV,
-			      Epetra_MultiVector* fp);
+    void computeGlobalTangent(const double alpha,
+                              const double beta,
+                               const double omega,
+                              const double current_time,
+                              bool sum_derivs,
+                              const Epetra_Vector* xdot,
+                              const Epetra_Vector* xdotdot,
+                              const Epetra_Vector& x,
+                              const Teuchos::Array<ParamVec>& p,
+                              ParamVec* deriv_p,
+                              const Epetra_MultiVector* Vx,
+                              const Epetra_MultiVector* Vxdot,
+                              const Epetra_MultiVector* Vxdotdot,
+                              const Epetra_MultiVector* Vp,
+                              Epetra_Vector* f,
+                              Epetra_MultiVector* JV,
+                              Epetra_MultiVector* fp);
+
+    //! Compute df/dp*V or (df/dp)^T*V for distributed parameter p
+    /*!
+     * Set xdot to NULL for steady-state problems
+     */
+    void applyGlobalDistParamDeriv(const double current_time,
+                                   const Epetra_Vector* xdot,
+                                   const Epetra_Vector* xdotdot,
+                                   const Epetra_Vector& x,
+                                   const Teuchos::Array<ParamVec>& p,
+                                   const std::string& dist_param_name,
+                                   const bool trans,
+                                   const Epetra_MultiVector& V,
+                                   Epetra_MultiVector& fpV);
 
     //! Evaluate response functions
     /*!
@@ -188,16 +206,16 @@ namespace Albany {
       const Epetra_Vector& x,
       const Teuchos::Array<ParamVec>& p,
       Epetra_Vector& g);
-    
+
     //! Evaluate tangent = alpha*dg/dx*Vx + beta*dg/dxdot*Vxdot + dg/dp*Vp
     /*!
      * Set xdot, dxdot_dp to NULL for steady-state problems
      */
     void evaluateResponseTangent(
       int response_index,
-      const double alpha, 
+      const double alpha,
       const double beta,
-      const double omega, 
+      const double omega,
       const double current_time,
       bool sum_derivs,
       const Epetra_Vector* xdot,
@@ -251,9 +269,9 @@ namespace Albany {
      * Set xdot to NULL for steady-state problems
      */
     void computeGlobalSGJacobian(
-      const double alpha, 
+      const double alpha,
       const double beta,
-      const double omega, 
+      const double omega,
       const double current_time,
       const Stokhos::EpetraVectorOrthogPoly* sg_xdot,
       const Stokhos::EpetraVectorOrthogPoly* sg_xdotdot,
@@ -269,9 +287,9 @@ namespace Albany {
      * Set xdot to NULL for steady-state problems
      */
     void computeGlobalSGTangent(
-      const double alpha, 
-      const double beta, 
-      const double omega, 
+      const double alpha,
+      const double beta,
+      const double omega,
       const double current_time,
       bool sum_derivs,
       const Stokhos::EpetraVectorOrthogPoly* sg_xdot,
@@ -308,12 +326,12 @@ namespace Albany {
     /*!
      * Set xdot, dxdot_dp to NULL for steady-state problems
      */
-    void 
+    void
     evaluateSGResponseTangent(
       int response_index,
-      const double alpha, 
-      const double beta, 
-      const double omega, 
+      const double alpha,
+      const double beta,
+      const double omega,
       const double current_time,
       bool sum_derivs,
       const Stokhos::EpetraVectorOrthogPoly* sg_xdot,
@@ -335,7 +353,7 @@ namespace Albany {
     /*!
      * Set xdot, dg_dxdot to NULL for steady-state problems
      */
-    void 
+    void
     evaluateSGResponseDerivative(
       int response_index,
       const double current_time,
@@ -371,9 +389,9 @@ namespace Albany {
      * Set xdot to NULL for steady-state problems
      */
     void computeGlobalMPJacobian(
-      const double alpha, 
+      const double alpha,
       const double beta,
-      const double omega, 
+      const double omega,
       const double current_time,
       const Stokhos::ProductEpetraVector* mp_xdot,
       const Stokhos::ProductEpetraVector* mp_xdotdot,
@@ -389,9 +407,9 @@ namespace Albany {
      * Set xdot to NULL for steady-state problems
      */
     void computeGlobalMPTangent(
-      const double alpha, 
-      const double beta, 
-      const double omega, 
+      const double alpha,
+      const double beta,
+      const double omega,
       const double current_time,
       bool sum_derivs,
       const Stokhos::ProductEpetraVector* mp_xdot,
@@ -428,12 +446,12 @@ namespace Albany {
     /*!
      * Set xdot, dxdot_dp to NULL for steady-state problems
      */
-    void 
+    void
     evaluateMPResponseTangent(
       int response_index,
-      const double alpha, 
-      const double beta, 
-      const double omega, 
+      const double alpha,
+      const double beta,
+      const double omega,
       const double current_time,
       bool sum_derivs,
       const Stokhos::ProductEpetraVector* mp_xdot,
@@ -455,7 +473,7 @@ namespace Albany {
     /*!
      * Set xdot, dg_dxdot to NULL for steady-state problems
      */
-    void 
+    void
     evaluateMPResponseDerivative(
       int response_index,
       const double current_time,
@@ -481,12 +499,12 @@ namespace Albany {
 
     //! Evaluate state field manager
     void evaluateStateFieldManager(const double current_time,
-				   const Epetra_Vector* xdot,
-				   const Epetra_Vector* xdotdot,
-				   const Epetra_Vector& x);
+                                   const Epetra_Vector* xdot,
+                                   const Epetra_Vector* xdotdot,
+                                   const Epetra_Vector& x);
 
     //! Access to number of worksets - needed for working with StateManager
-    int getNumWorksets() { 
+    int getNumWorksets() {
         return disc->getWsElNodeEqID().size();
     }
 
@@ -513,7 +531,7 @@ namespace Albany {
 
   public:
 
-    //! Routine to get workset (bucket) sized info needed by all Evaluation types
+    //! Routine to get workset (bucket) size info needed by all Evaluation types
     template <typename EvalT>
     void loadWorksetBucketInfo(PHAL::Workset& workset, const int& ws);
 
@@ -534,8 +552,8 @@ namespace Albany {
     void setupBasicWorksetInfo(
       PHAL::Workset& workset,
       double current_time,
-      const Epetra_Vector* xdot, 
-      const Epetra_Vector* xdotdot, 
+      const Epetra_Vector* xdot,
+      const Epetra_Vector* xdotdot,
       const Epetra_Vector* x,
       const Teuchos::Array<ParamVec>& p);
 
@@ -543,8 +561,8 @@ namespace Albany {
     void setupBasicWorksetInfo(
       PHAL::Workset& workset,
       double current_time,
-      const Stokhos::EpetraVectorOrthogPoly* sg_xdot, 
-      const Stokhos::EpetraVectorOrthogPoly* sg_xdotdot, 
+      const Stokhos::EpetraVectorOrthogPoly* sg_xdot,
+      const Stokhos::EpetraVectorOrthogPoly* sg_xdotdot,
       const Stokhos::EpetraVectorOrthogPoly* sg_x,
       const Teuchos::Array<ParamVec>& p,
       const Teuchos::Array<int>& sg_p_index,
@@ -553,8 +571,8 @@ namespace Albany {
     void setupBasicWorksetInfo(
       PHAL::Workset& workset,
       double current_time,
-      const Stokhos::ProductEpetraVector* mp_xdot, 
-      const Stokhos::ProductEpetraVector* mp_xdotdot, 
+      const Stokhos::ProductEpetraVector* mp_xdot,
+      const Stokhos::ProductEpetraVector* mp_xdotdot,
       const Stokhos::ProductEpetraVector* mp_x,
       const Teuchos::Array<ParamVec>& p,
       const Teuchos::Array<int>& mp_p_index,
@@ -562,11 +580,11 @@ namespace Albany {
 #endif //ALBANY_SG_MP
 
     void setupTangentWorksetInfo(
-      PHAL::Workset& workset, 
+      PHAL::Workset& workset,
       double current_time,
       bool sum_derivs,
-      const Epetra_Vector* xdot, 
-      const Epetra_Vector* xdotdot, 
+      const Epetra_Vector* xdot,
+      const Epetra_Vector* xdotdot,
       const Epetra_Vector* x,
       const Teuchos::Array<ParamVec>& p,
       ParamVec* deriv_p,
@@ -577,11 +595,11 @@ namespace Albany {
 
 #ifdef ALBANY_SG_MP
     void setupTangentWorksetInfo(
-      PHAL::Workset& workset, 
+      PHAL::Workset& workset,
       double current_time,
       bool sum_derivs,
-      const Stokhos::EpetraVectorOrthogPoly* sg_xdot, 
-      const Stokhos::EpetraVectorOrthogPoly* sg_xdotdot, 
+      const Stokhos::EpetraVectorOrthogPoly* sg_xdot,
+      const Stokhos::EpetraVectorOrthogPoly* sg_xdotdot,
       const Stokhos::EpetraVectorOrthogPoly* sg_x,
       const Teuchos::Array<ParamVec>& p,
       ParamVec* deriv_p,
@@ -593,11 +611,11 @@ namespace Albany {
       const Epetra_MultiVector* Vp);
 
     void setupTangentWorksetInfo(
-      PHAL::Workset& workset, 
+      PHAL::Workset& workset,
       double current_time,
       bool sum_derivs,
-      const Stokhos::ProductEpetraVector* mp_xdot, 
-      const Stokhos::ProductEpetraVector* mp_xdotdot, 
+      const Stokhos::ProductEpetraVector* mp_xdot,
+      const Stokhos::ProductEpetraVector* mp_xdotdot,
       const Stokhos::ProductEpetraVector* mp_x,
       const Teuchos::Array<ParamVec>& p,
       ParamVec* deriv_p,
@@ -608,7 +626,7 @@ namespace Albany {
       const Epetra_MultiVector* Vx,
       const Epetra_MultiVector* Vp);
 #endif //ALBANY_SG_MP
-      
+
     void postRegSetup(std::string eval);
 
 #ifdef ALBANY_MOR
@@ -631,6 +649,9 @@ namespace Albany {
 
     //! Parameter library
     Teuchos::RCP<ParamLib> paramLib;
+
+    //! Distributed parameter library
+    Teuchos::RCP<DistParamLib> distParamLib;
 
     //! Solution memory manager
     Teuchos::RCP<AAdapt::AdaptiveSolutionManager> solMgr;
@@ -697,13 +718,13 @@ namespace Albany {
 
     //! Type of solution method
     SolutionMethod solMethod;
-    
+
     //! Integer specifying whether user wants to write Jacobian to MatrixMarket file
     // writeToMatrixMarketJac = 0: no writing to MatrixMarket (default)
-    // writeToMatrixMarketJac =-1: write to MatrixMarket every time a Jacobian arises 
-    // writeToMatrixMarketJac = N: write N^th Jacobian to MatrixMarket 
-    // ...and similarly for writeToMatrixMarketRes (integer specifying whether user wants to write 
-    // residual to MatrixMarket file)  
+    // writeToMatrixMarketJac =-1: write to MatrixMarket every time a Jacobian arises
+    // writeToMatrixMarketJac = N: write N^th Jacobian to MatrixMarket
+    // ...and similarly for writeToMatrixMarketRes (integer specifying whether user wants to write
+    // residual to MatrixMarket file)
     int writeToMatrixMarketJac;
     int writeToMatrixMarketRes;
     //! Integer specifying whether user wants to write Jacobian and residual to Standard output (cout)
@@ -748,8 +769,8 @@ namespace Albany {
 }
 
 template <typename EvalT>
-void Albany::Application::loadWorksetBucketInfo(PHAL::Workset& workset, 
-						const int& ws)
+void Albany::Application::loadWorksetBucketInfo(PHAL::Workset& workset,
+                                                const int& ws)
 {
 
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > > >::type&
@@ -760,25 +781,28 @@ void Albany::Application::loadWorksetBucketInfo(PHAL::Workset& workset,
         coords = disc->getCoords();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
         sHeight = disc->getSurfaceHeight();
-  const WorksetArray<Teuchos::ArrayRCP<double> >::type& 
+  const WorksetArray<Teuchos::ArrayRCP<double> >::type&
         temperature  = disc->getTemperature();
-  const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type& 
+  const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
         basalFriction  = disc->getBasalFriction();
-  const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type& 
+  const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
         thickness = disc->getThickness();
-  const WorksetArray<Teuchos::ArrayRCP<double> >::type& 
+  const WorksetArray<Teuchos::ArrayRCP<double> >::type&
         flowFactor  = disc->getFlowFactor();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         surfaceVelocity = disc->getSurfaceVelocity();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         velocityRMS = disc->getVelocityRMS();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
+  const WorksetArray<Teuchos::ArrayRCP<double> >::type&
+        sphereVolume = disc->getSphereVolume();
 
   workset.numCells = wsElNodeEqID[ws].size();
   workset.wsElNodeEqID = wsElNodeEqID[ws];
   workset.wsElNodeID = wsElNodeID[ws];
   workset.wsCoords = coords[ws];
   workset.wsSHeight = sHeight[ws];
+  workset.wsSphereVolume = sphereVolume[ws];
   workset.wsTemperature = temperature[ws];
   workset.wsBasalFriction = basalFriction[ws];
   workset.wsThickness = thickness[ws];
@@ -788,12 +812,15 @@ void Albany::Application::loadWorksetBucketInfo(PHAL::Workset& workset,
   workset.EBName = wsEBNames[ws];
   workset.wsIndex = ws;
 
+  workset.local_Vp.resize(workset.numCells);
+  workset.dist_param_index.resize(workset.numCells);
+
 //  workset.print(*out);
 
   // Sidesets are integrated within the Cells
   loadWorksetSidesetInfo(workset, ws);
 
-  workset.stateArrayPtr = &stateMgr.getStateArray(ws);
+  workset.stateArrayPtr = &stateMgr.getStateArray(Albany::StateManager::ELEM, ws);
   workset.eigenDataPtr = stateMgr.getEigenData();
   workset.auxDataPtr = stateMgr.getAuxData();
 

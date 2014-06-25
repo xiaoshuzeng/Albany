@@ -200,7 +200,7 @@ namespace LCM {
   	      Intrepid::Vector<ScalarT> C_grad_in_ref_ = Intrepid::dot(C_inv_tensor_, C_grad_ );
 
          for (std::size_t j=0; j<numDims; j++){
-  	    Hflux(cell,qp,j) = (1.0 -stabilizedDL(cell,qp))*C_grad_in_ref_(j)*dt;
+        	 Hflux(cell,qp,j) = (1.0 -stabilizedDL(cell,qp))*C_grad_in_ref_(j)*dt;
         }
       }
     }
@@ -240,14 +240,11 @@ namespace LCM {
     ScalarT vol(0);
 
     for (std::size_t cell=0; cell < workset.numCells; ++cell){
-
       CLPbar = 0.0;
       vol = 0.0;
-
       for (std::size_t qp=0; qp < numQPs; ++qp) {
-        CLPbar += weights(cell,qp)*(
-                                    Clattice(cell,qp) - Clattice_old(cell, qp)
-                                    );
+        CLPbar += weights(cell,qp)*
+                           (Clattice(cell,qp) - Clattice_old(cell, qp)  );
         vol  += weights(cell,qp);
       }
       CLPbar /= vol;
@@ -257,13 +254,13 @@ namespace LCM {
       }
 
       for (std::size_t node=0; node < numNodes; ++node) {
-        trialPbar = 0.0;
+    	  trialPbar = 0.0;
         for (std::size_t qp=0; qp < numQPs; ++qp) {
           trialPbar += wBF(cell,node,qp);
         }
         trialPbar /= vol;
         for (std::size_t qp=0; qp < numQPs; ++qp) {
-          tpterm(cell,node,qp) = trialPbar;
+        	tpterm(cell,node,qp) = trialPbar;
         }
       }
     }
@@ -271,17 +268,16 @@ namespace LCM {
     for (std::size_t cell=0; cell < workset.numCells; ++cell) {
       for (std::size_t node=0; node < numNodes; ++node) {
         for (std::size_t qp=0; qp < numQPs; ++qp) {
-          TResidual(cell,node) -=
-            stab_param_
-            *Dstar(cell, qp)*temp
-            *(-Clattice(cell,qp) + Clattice_old(cell, qp)+pterm(cell,qp)   )
-            *(wBF(cell, node, qp));
+          temp =  1.0/ ( DL(cell,qp)  + artificalDL(cell,qp)  );
+          TResidual(cell,node) -=  stab_param_*Dstar(cell, qp)*temp*
+                                                   (-Clattice(cell,qp) + Clattice_old(cell, qp)+pterm(cell,qp))*
+                                                    wBF(cell, node, qp);
         }
       }
     }
 
-  }
 
+}
   //**********************************************************************
 }
 

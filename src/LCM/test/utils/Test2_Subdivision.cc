@@ -8,9 +8,12 @@
 // Restricted to simplicial complexes.
 //
 
-#include "topology/Topology.h"
 #include "time.h"
-typedef stk::mesh::Entity Entity;
+
+#include "topology/Topology.h"
+#include "topology/Topology_Utils.h"
+
+typedef stk_classic::mesh::Entity Entity;
 
 /*
  * Returns a vector with the number of entities of the current
@@ -74,7 +77,7 @@ int main(int ac, char* av[])
   std::cout << "***********************" << std::endl;
   std::cout << "Before mesh subdivision" << std::endl;
   std::cout << "***********************" << std::endl;
-  LCM::display_connectivity(topology);
+  LCM::display_connectivity(topology.getBulkData(), topology.getCellRank());
   //Request the number of entities of the input mesh
   std::vector<int> vector_initial_entities = return_number_entities(topology);
   // Start the mesh update process
@@ -94,7 +97,7 @@ int main(int ac, char* av[])
   // Must be called each time at conclusion of mesh modification
 
   topology.restoreElementToNodeConnectivity();
-  LCM::display_connectivity(topology);
+  LCM::display_connectivity(topology.getBulkData(), topology.getCellRank());
 
   //
   // Generate the output (exodus) file
@@ -134,7 +137,7 @@ return_number_entities(LCM::Topology & topology_){
 	//Vector with output info
 	std::vector<int> output_vector;
 	//Push back number of nodes
-	stk::mesh::BulkData* bulkData_ = topology_.getBulkData();
+	stk_classic::mesh::BulkData* bulkData_ = topology_.getBulkData();
 	std::vector<Entity*> initial_entities_D0 = topology_.getEntitiesByRank(
 			*(bulkData_), 0);
 	output_vector.push_back(initial_entities_D0.size());

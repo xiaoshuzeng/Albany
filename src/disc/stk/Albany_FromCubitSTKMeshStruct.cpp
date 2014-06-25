@@ -48,18 +48,18 @@ Albany::FromCubitSTKMeshStruct::FromCubitSTKMeshStruct(
 
   solution_field = & metaData->declare_field< VectorFieldType >( "solution" );
   residual_field = & metaData->declare_field< VectorFieldType >( "residual" );
-  stk::mesh::put_field( *solution_field , metaData->node_rank() , metaData->universal_part(), neq );
-  stk::mesh::put_field( *residual_field , metaData->node_rank() , metaData->universal_part() , neq );
+  stk_classic::mesh::put_field( *solution_field , metaData->node_rank() , metaData->universal_part(), neq );
+  stk_classic::mesh::put_field( *residual_field , metaData->node_rank() , metaData->universal_part() , neq );
 
   // Construct nsPartVec from similar stkMeshData struct
-  std::map<int, stk::mesh::Part*> nsList= stkMeshData->get_nodeset_list();
-  std::map<int, stk::mesh::Part*>::iterator ns = nsList.begin();
+  std::map<int, stk_classic::mesh::Part*> nsList= stkMeshData->get_nodeset_list();
+  std::map<int, stk_classic::mesh::Part*>::iterator ns = nsList.begin();
   while ( ns != nsList.end() ) {
     // Name chosen to be same as Ioss default "nodelist_" + <int>
     std::stringstream ss; ss << "nodelist_" << ns->first;
     nsPartVec[ss.str()] = ns->second;
 #ifdef ALBANY_SEACAS
-   stk::io::put_io_part_attribute(*ns->second);
+   stk_classic::io::put_io_part_attribute(*ns->second);
 #endif
     ns++;
   }
@@ -73,17 +73,17 @@ Albany::FromCubitSTKMeshStruct::FromCubitSTKMeshStruct(
 /*
   // set all top rank parts as IO parts
   int id=0;
-  stk::mesh::Part* eb;
+  stk_classic::mesh::Part* eb;
   do {
     if (numDim==2) eb = stkMeshData->surface_part(id++);
     else           eb = stkMeshData->volume_part(id++);
-    stk::io::put_io_part_attribute(*eb);
+    stk_classic::io::put_io_part_attribute(*eb);
   } while (eb!=NULL);
 */
 
-  stk::io::set_field_role(*coordinates_field, Ioss::Field::TRANSIENT);
-  stk::io::set_field_role(*solution_field, Ioss::Field::TRANSIENT);
-  stk::io::set_field_role(*residual_field, Ioss::Field::TRANSIENT);
+  stk_classic::io::set_field_role(*coordinates_field, Ioss::Field::TRANSIENT);
+  stk_classic::io::set_field_role(*solution_field, Ioss::Field::TRANSIENT);
+  stk_classic::io::set_field_role(*residual_field, Ioss::Field::TRANSIENT);
 #endif
 
   // This calls metaData->commit()
@@ -106,6 +106,11 @@ Albany::FromCubitSTKMeshStruct::FromCubitSTKMeshStruct(
   exoOutput = params->isType<string>("Exodus Output File Name");
   if (exoOutput)
     exoOutFile = params->get<string>("Exodus Output File Name");
+  cdfOutput = params->isType<string>("NetCDF Output File Name");
+  if (cdfOutput) 
+    cdfOutFile = params->get<string>("NetCDF Output File Name");
+  nLat       =  params->get("NetCDF Output Number of Latitudes",100);
+  nLon       =  params->get("NetCDF Output Number of Longitudes",100);
   
   //get the type of transformation of STK mesh (for FELIX problems)
   transformType = params->get("Transform Type", "None"); //get the type of transformation of STK mesh (for FELIX problems)
@@ -133,6 +138,12 @@ Albany::FromCubitSTKMeshStruct::getValidDiscretizationParameters() const
   validPL->set<int>("Morph Method", 0, "Integer flag so select CUTR MeshMover Morph Method");
   validPL->set<std::string>("Exodus Output File Name", "",
     "Request exodus output to given file name. Requires SEACAS build");
+  validPL->set<std::string>("NetCDF Output File Name", "",
+    "Request netcdf output to given file name. Requires SEACAS build");
+  validPL->set<int>("NetCDF Output Number of Latitudes", 1, 
+    "Number of samples in Latitude direction for NetCDF output. Default is 100.");
+  validPL->set<int>("NetCDF Output Number of Longitudes", 1, 
+    "Number of samples in Longitude direction for NetCDF output. Default is 100.");
   validPL->set<std::string>("Method", "",
     "The discretization method, parsed in the Discretization Factory");
   validPL->set<int>("Cubature Degree", 3, "Integration order sent to Intrepid");

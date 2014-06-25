@@ -9,8 +9,6 @@
 #include <boost/mpi/collectives/all_gather.hpp>
 #include <boost/mpi/collectives/all_reduce.hpp>
 #include "AlbPUMI_FMDBMeshStruct.hpp"
-#include "mMesh.h"
-#include "maCallback.h"
 
 #include "Teuchos_VerboseObject.hpp"
 #include "Albany_Utils.hpp"
@@ -18,71 +16,23 @@
 #include "Teuchos_TwoDArray.hpp"
 #include <Shards_BasicTopologies.hpp>
 
-#include "SCUtil.h"
+#include <apfSTK.h>
+#include <apfShape.h>
+#include <ma.h>
 
-#include "AdaptTypes.h"
-#include "MeshAdapt.h"
-#include "PWLinearSField.h"
-
-#define DEBUG 1
-
-struct unique_string {
-   std::vector<std::string> operator()(std::vector<std::string> sveca, const std::vector<std::string> svecb){
-      std::vector<std::string> outvec;
-
-      sveca.insert(sveca.end(), svecb.begin(), svecb.end());
-
-      std::sort(sveca.begin(), sveca.end());
-      std::vector<std::string>::iterator new_end = std::unique(sveca.begin(), sveca.end());
-      for(std::vector<std::string>::iterator it = sveca.begin(); it != new_end; ++it)
-        outvec.push_back(*it);
-
-      return outvec;
-
-   }
+class SizeFunction : public ma::IsotropicFunction {
+  public:
+    SizeFunction(double s) {size = s;}
+    double getValue(ma::Entity*) {return size;}
+  private:
+    double size;
 };
-
-static double element_size = 0.0;
-
-int sizefieldfunc(pPart part, pSField field, void *vp){
-
-  pMeshEnt vtx;
-  double h[3], dirs[3][3], xyz[3];
-
-  std::cout << element_size << std::endl;
-
-  pPartEntIter vtx_iter;
-  FMDB_PartEntIter_Init(part, FMDB_VERTEX, FMDB_ALLTOPO, vtx_iter);
-  while (FMDB_PartEntIter_GetNext(vtx_iter, vtx)==SCUtil_SUCCESS)
-  {
-    h[0] = element_size;
-    h[1] = element_size;
-    h[2] = element_size;
-
-    dirs[0][0]=1.0;
-    dirs[0][1]=0.;
-    dirs[0][2]=0.;
-    dirs[1][0]=0.;
-    dirs[1][1]=1.0;
-    dirs[1][2]=0.;
-    dirs[2][0]=0.;
-    dirs[2][1]=0.;
-    dirs[2][2]=1.0;
-
-    ((PWLsfield *)field)->setSize(vtx,dirs,h);
-  }
-  FMDB_PartEntIter_Del(vtx_iter);
-
-  double beta[]={1.5,1.5,1.5};
-  ((PWLsfield *)field)->anisoSmooth(beta);
-
-  return 1;
-}
 
 AlbPUMI::FMDBMeshStruct::FMDBMeshStruct(
           const Teuchos::RCP<Teuchos::ParameterList>& params,
 		  const Teuchos::RCP<const Epetra_Comm>& comm) :
-  out(Teuchos::VerboseObjectBase::getDefaultOStream())
+  out(Teuchos::VerboseObjectBase::getDefaultOStream()),
+  apfMesh(0)
 {
   // fmdb skips mpi initialization if it's already initialized
   SCUTIL_Init(Albany::getMpiCommFromEpetraComm(*comm));
@@ -97,18 +47,6 @@ AlbPUMI::FMDBMeshStruct::FMDBMeshStruct(
     useDistributedMesh=true;
 
   compositeTet = params->get<bool>("Use Composite Tet 10", false);
-
-
-#if 0
-  *out<<"************************************************************************\n";
-  *out<<"[INPUT]\n";
-  *out<<"\tdistributed mesh? ";
-  if (useDistributedMesh) *out<<"YES\n";
-  else *out<<"NO\n";
-  *out<<"\t#parts per proc: "<<numPart<<std::endl;
-  SCUTIL_DspSysInfo();
-  *out<<"************************************************************************\n\n";
-#endif
 
   // create a model and load
   model = NULL; // default is no model
@@ -135,44 +73,15 @@ AlbPUMI::FMDBMeshStruct::FMDBMeshStruct(
     PUMI_Geom_LoadFromFile(model, model_file.c_str());
   }
 
-  if ( model == NULL && SCUTIL_CommRank() == 0 ) {
-
-    fprintf(stderr, "ERROR: Null model is not supported\n");
-    exit(1);
-  }
+  TEUCHOS_TEST_FOR_EXCEPTION(model==NULL,std::logic_error,"FMDBMeshStruct: no model" << std::endl);
 
   FMDB_Mesh_Create (model, mesh);
-  FMDB_Mesh_GetGeomMdl(mesh, model); // this is needed for null model
 
-#if 0
-  int i, processid = getpid();
-  if (!SCUTIL_CommRank())
-  {
-    cout<<"Proc "<<SCUTIL_CommRank()<<">> pid "<<processid<<" Enter any digit...\n";
-    cin>>i;
-  }
-  else
-    cout<<"Proc "<<SCUTIL_CommRank()<<">> pid "<<processid<<" Waiting...\n";
-  SCUTIL_Sync();
-#endif
+  int rc = FMDB_Mesh_LoadFromFile (mesh, &mesh_file[0], useDistributedMesh);
+  TEUCHOS_TEST_FOR_EXCEPTION(rc,std::logic_error,
+      "FAILED MESH LOADING - check mesh file or number of input files" << std::endl)
 
-  SCUTIL_DspCurMem("INITIAL COST: ");
-  SCUTIL_ResetRsrc();
-
-  if (FMDB_Mesh_LoadFromFile (mesh, &mesh_file[0], useDistributedMesh))
-  {
-    *out<<"FAILED MESH LOADING - check mesh file or if number if input files are correct\n";
-    FMDB_Mesh_Del(mesh);
-    // SCUTIL_Finalize();
-    ParUtil::Instance()->Finalize(0); // skip MPI_finalize
-    throw SCUtil_FAILURE;
-  }
-
-  *out << std::endl;
-  SCUTIL_DspRsrcDiff("MESH LOADING: ");
   FMDB_Mesh_DspSize(mesh);
-
-//  FMDB_Mesh_GetGeomMdl(mesh, model); // this is needed for null model
 
   if(params->isParameter("Element Block Associations")){ // User has specified associations in the input file
 
@@ -192,17 +101,16 @@ AlbPUMI::FMDBMeshStruct::FMDBMeshStruct(
            << EBAssociations(0, eb).c_str() << std::endl;
     }
 
-    FMDB_Mesh_GetGeomMdl (mesh, model);
-    GRIter gr_iter = GM_regionIter(model);
+    pumi::GRIter gr_iter = pumi::GM_regionIter(model);
     pGeomEnt geom_rgn;
-    while ((geom_rgn = GRIter_next(gr_iter)) != NULL)
+    while ((geom_rgn = pumi::GRIter_next(gr_iter)) != NULL)
     {
       for(size_t eblock = 0; eblock < nEBAssoc; eblock++){
         if (GEN_tag(geom_rgn) == atoi(EBAssociations(0, eblock).c_str()))
           PUMI_Exodus_CreateElemBlk(geom_rgn, EBAssociations(1, eblock).c_str());
       }
     }
-    GRIter_delete(gr_iter);
+    pumi::GRIter_delete(gr_iter);
   }
 
 
@@ -214,19 +122,19 @@ AlbPUMI::FMDBMeshStruct::FMDBMeshStruct(
     NSAssociations = params->get<Teuchos::TwoDArray<std::string> >("Node Set Associations");
 
     TEUCHOS_TEST_FOR_EXCEPTION( !(2 == NSAssociations.getNumRows()),
-			      Teuchos::Exceptions::InvalidParameter,
-			      "Error in specifying node set associations in input file" );
+        Teuchos::Exceptions::InvalidParameter,
+        "Error in specifying node set associations in input file" );
 
     int nNSAssoc = NSAssociations.getNumCols();
 
     for(size_t ns = 0; ns < nNSAssoc; ns++){
-      *out << "Node set \"" << NSAssociations(1, ns).c_str() << "\" matches geometric entity : "
-           << NSAssociations(0, ns).c_str() << std::endl;
+      *out << "Node set \"" << NSAssociations(1, ns).c_str() << "\" matches geometric face : "
+        << NSAssociations(0, ns).c_str() << std::endl;
     }
 
-    GFIter gf_iter=GM_faceIter(model);
+    pumi::GFIter gf_iter=pumi::GM_faceIter(model);
     pGeomEnt geom_face;
-    while ((geom_face=GFIter_next(gf_iter)) != NULL)
+    while ((geom_face=pumi::GFIter_next(gf_iter)) != NULL)
     {
       for(size_t ns = 0; ns < nNSAssoc; ns++){
         if (GEN_tag(geom_face) == atoi(NSAssociations(0, ns).c_str())){
@@ -234,34 +142,72 @@ AlbPUMI::FMDBMeshStruct::FMDBMeshStruct(
         }
       }
     }
-    GFIter_delete(gf_iter);
-    
-    GEIter ge_iter=GM_edgeIter(model);
-    pGeomEnt geom_edge;
-    while (geom_edge=GEIter_next(ge_iter))
-    {
-      for (size_t ns = 0; ns < nNSAssoc; ns++){
-	if (GEN_tag(geom_edge) == atoi(NSAssociations(0, ns).c_str())){
-	  PUMI_Exodus_CreateNodeSet(geom_edge, NSAssociations(1, ns).c_str());
-	}
-      }
-    }
-    GEIter_delete(ge_iter);
+    pumi::GFIter_delete(gf_iter);
 
-    GVIter gv_iter=GM_vertexIter(model);
-    pGeomEnt geom_vertex;
-    while (geom_vertex=GVIter_next(gv_iter))
+  }
+
+  if(params->isParameter("Edge Node Set Associations")){ // User has specified associations in the input file
+
+    // Get node set associations from input file
+    Teuchos::TwoDArray< std::string > EdgeNSAssociations;
+
+    EdgeNSAssociations = params->get<Teuchos::TwoDArray<std::string> >("Edge Node Set Associations");
+
+    TEUCHOS_TEST_FOR_EXCEPTION( !(2 == EdgeNSAssociations.getNumRows()),
+        Teuchos::Exceptions::InvalidParameter,
+        "Error in specifying node set associations in input file" );
+
+    int nEdgeNSAssoc = EdgeNSAssociations.getNumCols();
+
+    for(size_t ns = 0; ns < nEdgeNSAssoc; ns++){
+      *out << "Node set \"" << EdgeNSAssociations(1, ns).c_str() << "\" matches geometric edge : "
+        << EdgeNSAssociations(0, ns).c_str() << std::endl;
+    }
+
+    pumi::GEIter ge_iter=pumi::GM_edgeIter(model);
+    pGeomEnt geom_edge;
+    while ((geom_edge=pumi::GEIter_next(ge_iter)) != NULL)
     {
-      for (size_t ns = 0; ns < nNSAssoc; ns++){
-	if (GEN_tag(geom_vertex) == atoi(NSAssociations(0, ns).c_str())){
-	  PUMI_Exodus_CreateNodeSet(geom_vertex, NSAssociations(1, ns).c_str());
-	}
+      for(size_t ns = 0; ns < nEdgeNSAssoc; ns++){
+        if (GEN_tag(geom_edge) == atoi(EdgeNSAssociations(0, ns).c_str())){
+          PUMI_Exodus_CreateNodeSet(geom_edge, EdgeNSAssociations(1, ns).c_str());
+        }
       }
     }
-    GVIter_delete(gv_iter);
-    
+    pumi::GEIter_delete(ge_iter);
   }
-  
+
+  if(params->isParameter("Vertex Node Set Associations")){ // User has specified associations in the input file
+
+    // Get node set associations from input file
+    Teuchos::TwoDArray< std::string > VertexNSAssociations;
+
+    VertexNSAssociations = params->get<Teuchos::TwoDArray<std::string> >("Vertex Node Set Associations");
+
+    TEUCHOS_TEST_FOR_EXCEPTION( !(2 == VertexNSAssociations.getNumRows()),
+        Teuchos::Exceptions::InvalidParameter,
+        "Error in specifying node set associations in input file" );
+
+    int nVertexNSAssoc = VertexNSAssociations.getNumCols();
+
+    for(size_t ns = 0; ns < nVertexNSAssoc; ns++){
+      *out << "Node set \"" << VertexNSAssociations(1, ns).c_str() << "\" matches geometric vertex : "
+        << VertexNSAssociations(0, ns).c_str() << std::endl;
+    }
+
+    pumi::GVIter gv_iter=pumi::GM_vertexIter(model);
+    pGeomEnt geom_vertex;
+    while ((geom_vertex=pumi::GVIter_next(gv_iter)) != NULL)
+    {
+      for(size_t ns = 0; ns < nVertexNSAssoc; ns++){
+        if (GEN_tag(geom_vertex) == atoi(VertexNSAssociations(0, ns).c_str())){
+          PUMI_Exodus_CreateNodeSet(geom_vertex, VertexNSAssociations(1, ns).c_str());
+        }
+      }
+    }
+    pumi::GVIter_delete(gv_iter);
+  }
+
   if(params->isParameter("Side Set Associations")){ // User has specified associations in the input file
 
     // Get side set block associations from input file
@@ -281,69 +227,40 @@ AlbPUMI::FMDBMeshStruct::FMDBMeshStruct(
     }
 
 
-    GFIter gf_iter=GM_faceIter(model);
+    pumi::GFIter gf_iter=pumi::GM_faceIter(model);
     pGeomEnt geom_face;
-    while ((geom_face = GFIter_next(gf_iter)) != NULL)
+    while ((geom_face = pumi::GFIter_next(gf_iter)) != NULL)
     {
       for(size_t ss = 0; ss < nSSAssoc; ss++){
         if (GEN_tag(geom_face) == atoi(SSAssociations(0, ss).c_str()))
           PUMI_Exodus_CreateSideSet(geom_face, SSAssociations(1, ss).c_str());
       }
     }
-    GFIter_delete(gf_iter);
+    pumi::GFIter_delete(gf_iter);
+  }
+
+  apfMesh = apf::createMesh(mesh);
+  bool isQuadMesh = params->get<bool>("2nd Order Mesh",false);
+  if ((isQuadMesh) && (apfMesh->getShape() != apf::getLagrange(2)))
+  {
+    *out << "Converting straight-sided mesh to quadratic" << std::endl;
+    changeMeshShape(apfMesh,apf::getLagrange(2));
   }
 
   // Resize mesh after input if indicated in the input file
   if(params->isParameter("Resize Input Mesh Element Size")){ // User has indicated a desired element size in input file
-
-    element_size = params->get<double>("Resize Input Mesh Element Size", 0.1);
-    int num_iters = params->get<int>("Max Number of Mesh Adapt Iterations", 1);
-
-      // Do basic uniform refinement
-      /** Type of the size field:
-          - Application - the size field will be provided by the application (default).
-          - TagDriven - tag driven size field.
-          - Analytical - analytical size field.  */
-      /** Type of model:
-          - 0 - no model (not snap), 1 - mesh model (always snap), 2 - solid model (always snap)
-      */
-
-      meshAdapt *rdr = new meshAdapt(mesh, /*size field type*/ Application, /*model type*/ 0 );
-
-      /** void meshAdapt::run(int niter,    // specify the maximum number of iterations
-                        int flag,           // indicate if a size field function call is available
-                        adaptSFunc sizefd)  // the size field function call  */
-
-      ma::AlbanyCallback *callback = new ma::AlbanyCallback(rdr, mesh);
-
-      rdr->run (num_iters, 1, sizefieldfunc);
+      SizeFunction sizeFunction(params->get<double>("Resize Input Mesh Element Size", 0.1));
+      int num_iters = params->get<int>("Max Number of Mesh Adapt Iterations", 1);
+      ma::Input* input = ma::configure(apfMesh,&sizeFunction);
+      input->maximumIterations = num_iters;
+      input->shouldSnap = false;
+      ma::adapt(input);
       FMDB_Mesh_DspSize(mesh);
-      delete rdr;
-      delete callback;
   }
-
-  // generate node/element id for exodus compatibility
-  PUMI_Exodus_Init(mesh);
 
   //get mesh dim
   FMDB_Mesh_GetDim(mesh, &numDim);
 
-/* mesh verification overwrites mesh entity id so commented out temporarily
-   FMDB will be updated to use different id for validity check
-#ifdef DEBUG
-  // check mesh validity
-  int isValid=0;
-  FMDB_Mesh_Verify(mesh, &isValid);
-  if (!isValid)
-  {
-    PUMI_Exodus_Finalize(mesh); // should be called before mesh is deleted
-    FMDB_Mesh_Del(mesh);
-    // SCUTIL_Finalize();
-    ParUtil::Instance()->Finalize(0); // skip MPI_finalize
-    throw SCUtil_FAILURE;
-  }
-#endif
-*/
   std::vector<pElemBlk> elem_blocks;
   PUMI_Exodus_GetElemBlk(mesh, elem_blocks);
 
@@ -363,7 +280,7 @@ AlbPUMI::FMDBMeshStruct::FMDBMeshStruct(
 
   // Set defaults for cubature and workset size, overridden in input file
 
-  int cub = params->get("Cubature Degree", 3);
+  cubatureDegree = params->get("Cubature Degree", 1);
   int worksetSizeMax = params->get("Workset Size", 50);
   interleavedOrdering = params->get("Interleaved Ordering",true);
   allElementBlocksHaveSamePhysics = true;
@@ -387,78 +304,39 @@ AlbPUMI::FMDBMeshStruct::FMDBMeshStruct(
   std::vector<pNodeSet> node_sets;
   PUMI_Exodus_GetNodeSet(mesh, node_sets);
 
-  std::vector<std::string> localNsNames;
-
   for(int ns = 0; ns < node_sets.size(); ns++)
   {
     std::string NS_name;
     PUMI_NodeSet_GetName(node_sets[ns], NS_name);
-    localNsNames.push_back(NS_name);
+    nsNames.push_back(NS_name);
   }
-
-  // Allreduce the node set names
-  boost::mpi::all_reduce<std::vector<std::string> >(
-                 boost::mpi::communicator(Albany::getMpiCommFromEpetraComm(*comm), boost::mpi::comm_attach),
-                 localNsNames, nsNames, unique_string());
 
   // Side sets
   std::vector<pSideSet> side_sets;
   PUMI_Exodus_GetSideSet(mesh, side_sets);
 
-  std::vector<std::string> localSsNames;
   int status;
 
   for(int ss = 0; ss < side_sets.size(); ss++)
   {
     std::string SS_name;
-    status = PUMI_SideSet_GetName(side_sets[ss], SS_name);
-    if(status != PUMI_SUCCESS){
-       *out << "Warning: found a side set in the mesh/geom file, but cannot determine its name." << std::endl;
-       *out << "     Something is probably wrong, but ignoring the side set and continuing anyway!" << std::endl;
-       continue;
-    }
-    localSsNames.push_back(SS_name);
+    PUMI_SideSet_GetName(side_sets[ss], SS_name);
+    ssNames.push_back(SS_name);
   }
-
-  // Allreduce the side set names
-  boost::mpi::all_reduce<std::vector<std::string> >(
-                 boost::mpi::communicator(Albany::getMpiCommFromEpetraComm(*comm), boost::mpi::comm_attach),
-                 localSsNames, ssNames, unique_string());
-
-  // compute topology of the first element of the part
-  FMDB_EntTopo entTopo;
-  pPartEntIter elem_iter;
-  pMeshEnt elem;
-  pPart part;
-  FMDB_Mesh_GetPart(mesh, 0, part);
-  FMDB_PartEntIter_Init(part, numDim, FMDB_ALLTOPO, elem_iter);
-  FMDB_PartEntIter_GetNext(elem_iter, elem); // get the first element of the part
-  FMDB_PartEntIter_Del(elem_iter);
-  FMDB_Ent_GetTopo(elem, (int*)(&entTopo));
-  const CellTopologyData *ctd = getCellTopologyData(entTopo);
-
-  // Allreduce the side set names
-  boost::mpi::all_reduce<std::vector<std::string> >(
-                 boost::mpi::communicator(Albany::getMpiCommFromEpetraComm(*comm), boost::mpi::comm_attach),
-                 localSsNames, ssNames, unique_string());
 
   // Construct MeshSpecsStruct
   std::vector<pMeshEnt> elements;
+  const CellTopologyData* ctd = getCellTopology(apfMesh);
   if (!params->get("Separate Evaluators by Element Block",false))
   {
     // get elements in the first element block
-    PUMI_ElemBlk_GetElem (mesh, elem_blocks[0], elements);
-    if (elements.size())
-    {
-      FMDB_Ent_GetTopo(elements[0], (int*)(&entTopo)); // get topology of first element in element block[eb]
-      ctd = getCellTopologyData(entTopo);              // otherwise, the use the topology of the first element in the part
-    }
     std::string EB_name;
     PUMI_ElemBlk_GetName(elem_blocks[0], EB_name);
-    this->meshSpecs[0] = Teuchos::rcp(new Albany::MeshSpecsStruct(*ctd, numDim, cub,
-                               nsNames, ssNames, worksetSize, EB_name,
-                               this->ebNameToIndex, this->interleavedOrdering));
-
+    this->meshSpecs[0] = Teuchos::rcp(
+        new Albany::MeshSpecsStruct(
+          *ctd, numDim, cubatureDegree,
+          nsNames, ssNames, worksetSize, EB_name,
+          this->ebNameToIndex, this->interleavedOrdering));
   }
   else
   {
@@ -469,20 +347,11 @@ AlbPUMI::FMDBMeshStruct::FMDBMeshStruct(
     std::string eb_name;
     for (int eb=0; eb<numEB; eb++)
     {
-      elements.clear();
-      PUMI_ElemBlk_GetElem (mesh, elem_blocks[eb], elements);
-      if (elements.size())
-      {
-        FMDB_Ent_GetTopo(elements[0], (int*)(&entTopo)); // get topology of first element in element block[eb]
-        ctd = getCellTopologyData(entTopo);
-      }
       std::string EB_name;
       PUMI_ElemBlk_GetName(elem_blocks[eb], EB_name);
-      this->meshSpecs[eb] = Teuchos::rcp(new Albany::MeshSpecsStruct(*ctd, numDim, cub,
+      this->meshSpecs[eb] = Teuchos::rcp(new Albany::MeshSpecsStruct(*ctd, numDim, cubatureDegree,
                                               nsNames, ssNames, worksetSize, EB_name,
                                               this->ebNameToIndex, this->interleavedOrdering));
-      PUMI_ElemBlk_GetSize(mesh, elem_blocks[eb], &eb_size);
-      PUMI_ElemBlk_GetName(elem_blocks[eb], eb_name);
     } // for
   } // else
 
@@ -490,68 +359,9 @@ AlbPUMI::FMDBMeshStruct::FMDBMeshStruct(
 
 AlbPUMI::FMDBMeshStruct::~FMDBMeshStruct()
 {
-  // turn off auto-migration and delete residual, solution field tags
-  if ( FMDB_Mesh_FindTag(mesh,"residual",residual_field_tag) == 0 ) {
-    FMDB_Tag_SetAutoMigrOff (mesh, residual_field_tag, FMDB_VERTEX);
-    FMDB_Mesh_DelTag (mesh, residual_field_tag, 1);
-  }  
-  if ( FMDB_Mesh_FindTag(mesh,"solution",solution_field_tag) == 0 ) {
-    FMDB_Tag_SetAutoMigrOff (mesh, solution_field_tag, FMDB_VERTEX);
-    FMDB_Mesh_DelTag (mesh,  solution_field_tag, 1);
-  }
-
-  // delete exodus data
-  PUMI_Exodus_Finalize(mesh);
-  // delete mesh and finalize
-  FMDB_Mesh_Del (mesh);
+  apfMesh->destroyNative();
+  apf::destroyMesh(apfMesh);
   ParUtil::Instance()->Finalize(0); // skip MPI_finalize
-}
-
-const CellTopologyData *
-AlbPUMI::FMDBMeshStruct::getCellTopologyData(const FMDB_EntTopo topo){
-
-  switch(topo){
-
-  case FMDB_POINT:
-
-    return shards::getCellTopologyData< shards::Particle >();
-
-  case FMDB_LINE:
-
-    return shards::getCellTopologyData< shards::Line<2> >();
-
-  case FMDB_TRI:
-
-    return shards::getCellTopologyData< shards::Triangle<3> >();
-
-  case FMDB_QUAD:
-
-    return shards::getCellTopologyData< shards::Quadrilateral<4> >();
-
-  case FMDB_TET:
-
-    return shards::getCellTopologyData< shards::Tetrahedron<4> >();
-
-  case FMDB_PYRAMID:
-
-    return shards::getCellTopologyData< shards::Pyramid<5> >();
-
-  case FMDB_HEX:
-
-    return shards::getCellTopologyData< shards::Hexahedron<8> >();
-
-// Not supported right now
-  case FMDB_POLYGON:
-  case FMDB_POLYHEDRON:
-  case FMDB_PRISM:
-  case FMDB_SEPTA:
-  case FMDB_ALLTOPO:
-  default:
-
-    TEUCHOS_TEST_FOR_EXCEPTION(true, Teuchos::Exceptions::InvalidParameter,
-                  std::endl << "Error FMDB mesh cell topology:  " <<
-                  "Unsupported topology encountered " << topo << std::endl);
-  }
 }
 
 void
@@ -564,95 +374,143 @@ AlbPUMI::FMDBMeshStruct::setFieldAndBulkData(
                   const unsigned int worksetSize_)
 {
 
+  using Albany::StateStruct;
+
   // Set the number of equation present per node. Needed by AlbPUMI_FMDBDiscretization.
 
   neq = neq_;
 
-  // create residual, solution field tags and turn on auto migration
-  FMDB_Mesh_CreateTag (mesh, "residual", SCUtil_DBL, neq, residual_field_tag);
-  FMDB_Mesh_CreateTag (mesh, "solution", SCUtil_DBL, neq, solution_field_tag);
-  FMDB_Tag_SetAutoMigrOn (mesh, residual_field_tag, FMDB_VERTEX);
-  FMDB_Tag_SetAutoMigrOn (mesh, solution_field_tag, FMDB_VERTEX);
+  Teuchos::Array<std::string> defaultLayout;
+  solVectorLayout = 
+    params->get<Teuchos::Array<std::string> >("Solution Vector Components", defaultLayout);
+
+  if (solVectorLayout.size() == 0) { 
+    int valueType;
+    if (neq==1)
+      valueType = apf::SCALAR;
+    else if (neq==3)
+      valueType = apf::VECTOR;
+    else
+    {
+      assert(neq==9);
+      valueType = apf::MATRIX;
+    }
+    apf::createFieldOn(apfMesh,"residual",valueType);
+    apf::createFieldOn(apfMesh,"solution",valueType);
+  }
+  else 
+    splitFields(solVectorLayout);
+
+  solutionInitialized = false;
+  residualInitialized = false;
 
   // Code to parse the vector of StateStructs and save the information
 
-  // dim[0] is the number of cells
+  // dim[0] is the number of cells in this workset
   // dim[1] is the number of QP per cell
   // dim[2] is the number of dimensions of the field
   // dim[3] is the number of dimensions of the field
 
+  std::set<std::string> nameSet;
+
   for (std::size_t i=0; i<sis->size(); i++) {
-    Albany::StateStruct& st = *((*sis)[i]);
+    StateStruct& st = *((*sis)[i]);
+
+    if ( ! nameSet.insert(st.name).second)
+      continue; //ignore duplicates
+
     std::vector<int>& dim = st.dim;
+
+    if(st.entity == StateStruct::NodalData) { // Data at the node points
+
+       const Teuchos::RCP<Albany::NodeFieldContainer>& nodeContainer
+               = sis->getNodalDataBlock()->getNodeContainer();
+
+        (*nodeContainer)[st.name] = AlbPUMI::buildPUMINodeField(st.name, dim, st.output);
+
+    }
 
     // qpscalars
 
-    if (dim.size() == 2){
-      if(st.entity == Albany::StateStruct::QuadPoint) {
+    else if (dim.size() == 2){
+      if(st.entity == StateStruct::QuadPoint || st.entity == StateStruct::ElemNode) {
 
-        qpscalar_states.push_back(Teuchos::rcp(new QPData<2>(st.name, dim)));
+        qpscalar_states.push_back(Teuchos::rcp(new QPData<double, 2>(st.name, dim, st.output)));
 
-        std::cout << "NNNN qps field name " << st.name << " size : " << dim[1] << std::endl;
-      }
-      else if(st.entity == Albany::StateStruct::NodePoint) {
-
-        scalar_states.push_back(Teuchos::rcp(new NodeData<2>(st.name, dim)));
-
-        std::cout << "NNNN Node scalar field name " << st.name << " size : " << dim[1] << std::endl;
+        if ( ! PCU_Comm_Self())
+          std::cout << "AlbPUMI::FMDBMeshStruct qps field name " << st.name
+            << " size : " << dim[1] << std::endl;
       }
     }
 
     // qpvectors
 
     else if (dim.size() == 3){
-      if(st.entity == Albany::StateStruct::QuadPoint) {
+      if(st.entity == StateStruct::QuadPoint || st.entity == StateStruct::ElemNode) {
 
-        qpvector_states.push_back(Teuchos::rcp(new QPData<3>(st.name, dim)));
+        qpvector_states.push_back(Teuchos::rcp(new QPData<double, 3>(st.name, dim, st.output)));
 
-        std::cout << "NNNN qpv field name " << st.name << " dim[1] : " << dim[1] << " dim[2] : " << dim[2] << std::endl;
-      }
-      else if(st.entity == Albany::StateStruct::NodePoint) {
-
-        vector_states.push_back(Teuchos::rcp(new NodeData<3>(st.name, dim)));
-
-        std::cout << "NNNN Node vector field name " << st.name << " dim[1] : " << dim[1] << " dim[2] : " << dim[2] << std::endl;
+        if ( ! PCU_Comm_Self())
+          std::cout << "AlbPUMI::FMDBMeshStruct qpv field name " << st.name
+            << " dim[1] : " << dim[1] << " dim[2] : " << dim[2] << std::endl;
       }
     }
 
     // qptensors
 
     else if (dim.size() == 4){
-      if(st.entity == Albany::StateStruct::QuadPoint) {
+      if(st.entity == StateStruct::QuadPoint || st.entity == StateStruct::ElemNode) {
 
-        qptensor_states.push_back(Teuchos::rcp(new QPData<4>(st.name, dim)));
+        qptensor_states.push_back(Teuchos::rcp(new QPData<double, 4>(st.name, dim, st.output)));
 
-        std::cout << "NNNN qpt field name " << st.name << " dim[1] : " << dim[1] << " dim[2] : " << dim[2] << " dim[3] : " << dim[3] << std::endl;
-      }
-      else if(st.entity == Albany::StateStruct::NodePoint) {
-
-        tensor_states.push_back(Teuchos::rcp(new NodeData<4>(st.name, dim)));
-
-        std::cout << "NNNN Node tensor field name " << st.name << " dim[1] : " << dim[1] << " dim[2] : " << dim[2] << " dim[3] : " << dim[3] << std::endl;
+        if ( ! PCU_Comm_Self())
+          std::cout << "AlbPUMI::FMDBMeshStruct qpt field name " << st.name
+            << " dim[1] : " << dim[1] << " dim[2] : " << dim[2] << " dim[3] : " << dim[3] << std::endl;
       }
     }
 
     // just a scalar number
 
-    else if ( dim.size() == 1 && st.entity == Albany::StateStruct::ScalarValue) {
+    else if ( dim.size() == 1 && st.entity == Albany::StateStruct::WorksetValue) {
       // dim not used or accessed here
-      scalarValue_states.push_back(Teuchos::rcp(new QPData<1>(st.name, dim)));
+      scalarValue_states.push_back(Teuchos::rcp(new QPData<double, 1>(st.name, dim, st.output)));
     }
 
     // anything else is an error!
 
     else TEUCHOS_TEST_FOR_EXCEPT_MSG(true, "dim.size() < 2 || dim.size()>4 || " <<
          "st.entity != Albany::StateStruct::QuadPoint || " <<
-         "st.entity != Albany::StateStruct::NodePoint" << std::endl);
+         "st.entity != Albany::StateStruct::ElemNode || " <<
+         "st.entity != Albany::StateStruct::NodalData" << std::endl);
 
   }
 
 }
 
+void
+AlbPUMI::FMDBMeshStruct::splitFields(Teuchos::Array<std::string> fieldLayout)
+{ // user is breaking up or renaming solution & residual fields
+
+  TEUCHOS_TEST_FOR_EXCEPTION((fieldLayout.size() % 2), std::logic_error,
+      "Error in input file: specification of solution vector layout is incorrect\n");
+
+  int valueType;
+
+  for (std::size_t i=0; i < fieldLayout.size(); i+=2) {
+
+    if (fieldLayout[i+1] == "S")
+      valueType = apf::SCALAR;
+    else if (fieldLayout[i+1] == "V")
+      valueType = apf::VECTOR;
+    else
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
+          "Error in input file: specification of solution vector layout is incorrect\n");
+
+    apf::createFieldOn(apfMesh,fieldLayout[i].c_str(),valueType);
+    apf::createFieldOn(apfMesh,fieldLayout[i].append("Res").c_str(),valueType);
+  }
+
+}
 
 Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >&
 AlbPUMI::FMDBMeshStruct::getMeshSpecs()
@@ -705,9 +563,6 @@ void
 AlbPUMI::FMDBMeshStruct::loadSolutionFieldHistory(int step)
 {
   TEUCHOS_TEST_FOR_EXCEPT(step < 0 || step >= solutionFieldHistoryDepth);
-
-  const int index = step + 1; // 1-based step indexing
-//  stk::io::process_input_request(*mesh_data, *bulkData, index);
 }
 
 void AlbPUMI::FMDBMeshStruct::setupMeshBlkInfo()
@@ -726,9 +581,6 @@ void AlbPUMI::FMDBMeshStruct::setupMeshBlkInfo()
 
 }
 
-
-
-
 Teuchos::RCP<const Teuchos::ParameterList>
 AlbPUMI::FMDBMeshStruct::getValidDiscretizationParameters() const
 {
@@ -743,15 +595,18 @@ AlbPUMI::FMDBMeshStruct::getValidDiscretizationParameters() const
   validPL->set<int>("FMDB Write Interval", 3, "Step interval to write solution data to output file");
   validPL->set<std::string>("Method", "",
     "The discretization method, parsed in the Discretization Factory");
-  validPL->set<int>("Cubature Degree", 3, "Integration order sent to Intrepid");
+  validPL->set<int>("Cubature Degree", 1, "Integration order sent to Intrepid");
   validPL->set<int>("Workset Size", 50, "Upper bound on workset (bucket) size");
   validPL->set<bool>("Interleaved Ordering", true, "Flag for interleaved or blocked unknown ordering");
   validPL->set<bool>("Separate Evaluators by Element Block", false,
                      "Flag for different evaluation trees for each Element Block");
   Teuchos::Array<std::string> defaultFields;
   validPL->set<Teuchos::Array<std::string> >("Restart Fields", defaultFields,
-                     "Fields to pick up from the restart file when restarting");
-
+      "Fields to pick up from the restart file when restarting");
+  validPL->set<Teuchos::Array<std::string> >("Solution Vector Components", defaultFields,
+      "Names and layouts of solution vector components");
+  validPL->set<bool>("2nd Order Mesh", false, "Flag to indicate 2nd order Lagrange shape functions");
+  
   validPL->set<std::string>("FMDB Input File Name", "", "File Name For FMDB Mesh Input");
   validPL->set<std::string>("FMDB Output File Name", "", "File Name For FMDB Mesh Output");
 
@@ -782,7 +637,11 @@ AlbPUMI::FMDBMeshStruct::getValidDiscretizationParameters() const
   validPL->set<Teuchos::TwoDArray<std::string> >("Element Block Associations", defaultData,
       "Association between region ID and element block string");
   validPL->set<Teuchos::TwoDArray<std::string> >("Node Set Associations", defaultData,
-      "Association between face ID and node set string");
+      "Association between geometric face ID and node set string");
+  validPL->set<Teuchos::TwoDArray<std::string> >("Edge Node Set Associations", defaultData,
+      "Association between geometric edge ID and node set string");
+  validPL->set<Teuchos::TwoDArray<std::string> >("Vertex Node Set Associations", defaultData,
+      "Association between geometric edge ID and node set string");
   validPL->set<Teuchos::TwoDArray<std::string> >("Side Set Associations", defaultData,
       "Association between face ID and side set string");
 

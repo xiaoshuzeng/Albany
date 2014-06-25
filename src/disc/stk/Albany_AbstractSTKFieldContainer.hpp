@@ -15,7 +15,6 @@
 
 #include "Albany_StateInfoStruct.hpp"
 #include "Albany_AbstractFieldContainer.hpp"
-#include "Albany_AbstractNodeFieldContainer.hpp"
 
 #include <stk_mesh/base/Field.hpp>
 #include <stk_mesh/base/FieldTraits.hpp>
@@ -33,21 +32,21 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
 
 
     // Tensor per Node  - (Node, Dim, Dim)
-    typedef stk::mesh::Field<double, stk::mesh::Cartesian, stk::mesh::Cartesian> TensorFieldType ;
+    typedef stk_classic::mesh::Field<double, stk_classic::mesh::Cartesian, stk_classic::mesh::Cartesian> TensorFieldType ;
     // Vector per Node  - (Node, Dim)
-    typedef stk::mesh::Field<double, stk::mesh::Cartesian> VectorFieldType ;
+    typedef stk_classic::mesh::Field<double, stk_classic::mesh::Cartesian> VectorFieldType ;
     // One double scalar per Node  - (Node)
-    typedef stk::mesh::Field<double>                      ScalarFieldType ;
+    typedef stk_classic::mesh::Field<double>                      ScalarFieldType ;
     // One int scalar per Node  - (Node)
-    typedef stk::mesh::Field<int>                         IntScalarFieldType ;
+    typedef stk_classic::mesh::Field<int>                         IntScalarFieldType ;
 
-    typedef stk::mesh::Cartesian QPTag; // need to invent shards::ArrayDimTag
+    typedef stk_classic::mesh::Cartesian QPTag; // need to invent shards::ArrayDimTag
     // Tensor per QP   - (Cell, QP, Dim, Dim)
-    typedef stk::mesh::Field<double, QPTag, stk::mesh::Cartesian, stk::mesh::Cartesian> QPTensorFieldType ;
+    typedef stk_classic::mesh::Field<double, QPTag, stk_classic::mesh::Cartesian, stk_classic::mesh::Cartesian> QPTensorFieldType ;
     // Vector per QP   - (Cell, QP, Dim)
-    typedef stk::mesh::Field<double, QPTag, stk::mesh::Cartesian > QPVectorFieldType ;
+    typedef stk_classic::mesh::Field<double, QPTag, stk_classic::mesh::Cartesian > QPVectorFieldType ;
     // One scalar per QP   - (Cell, QP)
-    typedef stk::mesh::Field<double, QPTag>                      QPScalarFieldType ;
+    typedef stk_classic::mesh::Field<double, QPTag>                      QPScalarFieldType ;
 
     typedef std::vector<std::string> ScalarValueState;
     typedef std::vector<QPScalarFieldType*> QPScalarState;
@@ -74,19 +73,12 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     ScalarFieldType* getFlowFactorField(){ return flowFactor_field; }
     VectorFieldType* getSurfaceVelocityField(){ return surfaceVelocity_field; }
     VectorFieldType* getVelocityRMSField(){ return velocityRMS_field; }
+    ScalarFieldType* getSphereVolumeField(){ return sphereVolume_field; }
 
     ScalarValueState getScalarValueStates(){ return scalarValue_states;}
     QPScalarState getQPScalarStates(){return qpscalar_states;}
     QPVectorState getQPVectorStates(){return qpvector_states;}
     QPTensorState getQPTensorStates(){return qptensor_states;}
-
-    Teuchos::RCP<Albany::NodeFieldContainer> getNodeStates(){ return nodeContainer; }
-
-    ScalarState getScalarStates(){return scalar_states;}
-    VectorState getVectorStates(){return vector_states;}
-    TensorState getTensorStates(){return tensor_states;}
-
-    
 
     virtual bool hasResidualField() = 0;
     virtual bool hasSurfaceHeightField() = 0;
@@ -96,14 +88,15 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     virtual bool hasFlowFactorField() = 0;
     virtual bool hasSurfaceVelocityField() = 0;
     virtual bool hasVelocityRMSField() = 0;
+    virtual bool hasSphereVolumeField() = 0;
 
-    double& getTime() {
+    std::map<std::string, double>& getTime() {
       return time;
     }
 
-    virtual void fillSolnVector(Epetra_Vector& soln, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
-    virtual void saveSolnVector(const Epetra_Vector& soln, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
-    virtual void saveResVector(const Epetra_Vector& res, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
+    virtual void fillSolnVector(Epetra_Vector& soln, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
+    virtual void saveSolnVector(const Epetra_Vector& soln, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
+    virtual void saveResVector(const Epetra_Vector& res, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
 
     virtual void transferSolutionToCoords() = 0;
 
@@ -122,19 +115,14 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     ScalarFieldType* flowFactor_field; // Required for FELIX
     VectorFieldType* surfaceVelocity_field; // Required for FELIX
     VectorFieldType* velocityRMS_field; // Required for FELIX
+    ScalarFieldType* sphereVolume_field; // Required for Peridynamics in LCM
 
     ScalarValueState scalarValue_states;
     QPScalarState qpscalar_states;
     QPVectorState qpvector_states;
     QPTensorState qptensor_states;
 
-    ScalarState scalar_states;
-    VectorState vector_states;
-    TensorState tensor_states;
-
-    Teuchos::RCP<Albany::NodeFieldContainer> nodeContainer;
-
-    double time;
+    std::map<std::string, double> time;
 
 };
 

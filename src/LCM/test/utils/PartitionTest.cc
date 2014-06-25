@@ -13,7 +13,7 @@
 #include <iomanip>
 #include <Teuchos_CommandLineProcessor.hpp>
 
-#include <Partition.h>
+#include <LCMPartition.h>
 
 int main(int ac, char* av[])
 {
@@ -68,7 +68,7 @@ int main(int ac, char* av[])
       "kdtree"};
 
   LCM::PARTITION::Scheme
-  partition_scheme = LCM::PARTITION::GEOMETRIC;
+  partition_scheme = LCM::PARTITION::KDTREE;
 
   command_line_processor.setOption(
       "scheme",
@@ -126,7 +126,7 @@ int main(int ac, char* av[])
       "hypergraph"};
 
   LCM::PARTITION::Scheme
-  initializer_scheme = LCM::PARTITION::HYPERGRAPH;
+  initializer_scheme = LCM::PARTITION::GEOMETRIC;
 
   command_line_processor.setOption(
       "initializer",
@@ -192,10 +192,10 @@ int main(int ac, char* av[])
   int
   element = 0;
 
-  Albany::StateArrays
-  state_arrays = stk_discretization.getStateArrays();
+  Albany::StateArrayVec
+  state_arrays = stk_discretization.getStateArrays().elemStateArrays;
 
-  for (Albany::StateArrays::size_type i = 0; i < state_arrays.size(); ++i) {
+  for (Albany::StateArrayVec::size_type i = 0; i < state_arrays.size(); ++i) {
 
     Albany::StateArray
     state_array = state_arrays[i];

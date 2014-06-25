@@ -17,6 +17,7 @@ SET(SOURCES
     AAdapt_ThyraAdaptiveModelEvaluator.cpp
     AAdapt_AdaptiveModelFactory.cpp
     AAdapt_SolutionObserver.cpp
+#    AAdapt_StratSolver.cpp
    )
 
 SET(HEADERS
@@ -29,6 +30,7 @@ SET(HEADERS
     AAdapt_ThyraAdaptiveModelEvaluator.hpp
     AAdapt_AdaptiveModelFactory.hpp
     AAdapt_SolutionObserver.hpp
+    AAdapt_StratSolver.hpp
    )
 
 # Topology Modification & Stress Fracture depend on LCM
@@ -47,6 +49,19 @@ SET(HEADERS ${HEADERS}
     AAdapt_RandomCriterion.hpp
     AAdapt_TopologyModification.hpp
     AAdapt_StressFracture.hpp
+   )
+
+ENDIF()
+
+# Topology Modification depends on LCM
+IF(ALBANY_LCM)
+
+SET(SOURCES ${SOURCES}
+    AAdapt_TopologyModification.cpp
+   )
+
+SET(HEADERS ${HEADERS}
+    AAdapt_TopologyModification.hpp
    )
 
 ENDIF()

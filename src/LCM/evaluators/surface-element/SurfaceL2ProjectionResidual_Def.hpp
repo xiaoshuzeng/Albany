@@ -10,6 +10,7 @@
 
 #include <Intrepid_MiniTensor.h>
 
+// THESE NEED TO BE REMOVED!!!
 #include "Intrepid_FunctionSpaceTools.hpp"
 #include "Intrepid_RealSpaceTools.hpp"
 
@@ -100,6 +101,7 @@ namespace LCM {
   void SurfaceL2ProjectionResidual<EvalT, Traits>::
   evaluateFields(typename Traits::EvalData workset)
   {
+    // THESE NEED TO BE REMOVED!!!
     typedef Intrepid::FunctionSpaceTools FST;
     typedef Intrepid::RealSpaceTools<ScalarT> RST;
 
@@ -125,7 +127,7 @@ namespace LCM {
 
         	  projection_residual_(cell, node) += refValues(node,pt)*
                 	       	                            (projected_tau_(cell,pt) -  tau)*
-                                                               refArea(cell,pt)*thickness;
+                                                               refArea(cell,pt);
 
         	 }
         	 projection_residual_(cell, topNode) =  projection_residual_(cell, node);

@@ -19,8 +19,8 @@ class MultiSTKFieldContainer : public GenericSTKFieldContainer<Interleaved> {
   public:
 
     MultiSTKFieldContainer(const Teuchos::RCP<Teuchos::ParameterList>& params_,
-                           stk::mesh::fem::FEMMetaData* metaData_,
-                           stk::mesh::BulkData* bulkData_,
+                           stk_classic::mesh::fem::FEMMetaData* metaData_,
+                           stk_classic::mesh::BulkData* bulkData_,
                            const int neq_,
                            const AbstractFieldContainer::FieldContainerRequirements& req,
                            const int numDim_,
@@ -38,10 +38,11 @@ class MultiSTKFieldContainer : public GenericSTKFieldContainer<Interleaved> {
     bool hasFlowFactorField(){ return false; }
     bool hasSurfaceVelocityField(){ return false; }
     bool hasVelocityRMSField(){ return false; }
+    bool hasSphereVolumeField(){ return buildSphereVolume; }
 
-    void fillSolnVector(Epetra_Vector& soln, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
-    void saveSolnVector(const Epetra_Vector& soln, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
-    void saveResVector(const Epetra_Vector& res, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
+    void fillSolnVector(Epetra_Vector& soln, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
+    void saveSolnVector(const Epetra_Vector& soln, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
+    void saveResVector(const Epetra_Vector& res, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
 
     void transferSolutionToCoords();
 
@@ -50,6 +51,8 @@ class MultiSTKFieldContainer : public GenericSTKFieldContainer<Interleaved> {
     void initializeSTKAdaptation();
 
     bool haveResidual;
+
+    bool buildSphereVolume;
 
     // Containers for residual and solution
 

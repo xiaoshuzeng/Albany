@@ -12,6 +12,9 @@
 #include "Intrepid_FunctionSpaceTools.hpp"
 #include "Albany_Layouts.hpp"
 
+//uncomment the following line if you want debug output to be printed to screen
+//#define OUTPUT_TO_SCREEN
+
 namespace FELIX {
 
 const double pi = 3.1415926535897932385;
@@ -27,47 +30,70 @@ ViscosityFO(const Teuchos::ParameterList& p,
   flowFactorA(p.get<std::string> ("Flow Factor Name"), dl->cell_scalar2),
   homotopyParam (1.0), 
   A(1.0), 
-  n(3.0)
+  n(3.0),
+  flowRate_type(UNIFORM)
 {
   Teuchos::ParameterList* visc_list = 
    p.get<Teuchos::ParameterList*>("Parameter List");
 
   std::string viscType = visc_list->get("Type", "Constant");
   std::string flowRateType = visc_list->get("Flow Rate Type", "Uniform");
-  homotopyParam = visc_list->get("Glen's Law Homotopy Parameter", 0.2);
+  homotopyParam = visc_list->get("Glen's Law Homotopy Parameter", 1.0);
   A = visc_list->get("Glen's Law A", 1.0); 
   n = visc_list->get("Glen's Law n", 3.0);  
 
   Teuchos::RCP<Teuchos::FancyOStream> out(Teuchos::VerboseObjectBase::getDefaultOStream());
   if (viscType == "Constant"){ 
+#ifdef OUTPUT_TO_SCREEN
     *out << "Constant viscosity!" << std::endl;
+#endif
     visc_type = CONSTANT;
   }
   else if (viscType == "ExpTrig") {
-   *out << "Exp trig viscosity!" << std::endl; 
+#ifdef OUTPUT_TO_SCREEN
+   *out << "Exp trig viscosity!" << std::endl;
+#endif 
     visc_type = EXPTRIG; 
   }
   else if (viscType == "Glen's Law"){
     visc_type = GLENSLAW; 
+#ifdef OUTPUT_TO_SCREEN
     *out << "Glen's law viscosity!" << std::endl;
+#endif
     if (flowRateType == "Uniform")
     {
     	flowRate_type = UNIFORM;
+#ifdef OUTPUT_TO_SCREEN
     	*out << "Uniform Flow Rate A: " << A << std::endl;
+#endif
     }
     else if (flowRateType == "From File")
     {
     	flowRate_type = FROMFILE;
     	this->addDependentField(flowFactorA);
-    	*out << "Flow Rate read in from file (exodus or ascii)" << std::endl;
+#ifdef OUTPUT_TO_SCREEN
+    	*out << "Flow Rate read in from file (exodus or ascii)." << std::endl;
+#endif
+    }
+    else if (flowRateType == "From CISM")
+    {
+    	flowRate_type = FROMCISM;
+    	this->addDependentField(flowFactorA);
+#ifdef OUTPUT_TO_SCREEN
+    	*out << "Flow Rate passed in from CISM." << std::endl;
+#endif
     }
     else if (flowRateType == "Temperature Based")
     {
     	flowRate_type = TEMPERATUREBASED;
     	this->addDependentField(temperature);
-    	*out << "Flow Rate computed using Temperature field" << std::endl;
+#ifdef OUTPUT_TO_SCREEN
+    	*out << "Flow Rate computed using Temperature field." << std::endl;
+#endif
     }
-    *out << "n: " << n << std::endl;  
+#ifdef OUTPUT_TO_SCREEN
+    *out << "n: " << n << std::endl; 
+#endif 
   }
   coordVec = PHX::MDField<MeshScalarT,Cell,QuadPoint,Dim>(
             p.get<std::string>("Coordinate Vector Name"),dl->qp_gradient);
@@ -99,7 +125,7 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(coordVec,fm); 
   if (flowRate_type == TEMPERATUREBASED)
 	  this->utils.setFieldData(temperature,fm);
-  if (flowRate_type == FROMFILE)
+  if (flowRate_type == FROMFILE || flowRate_type == FROMCISM)
 	  this->utils.setFieldData(flowFactorA,fm);
 }
 
@@ -147,8 +173,9 @@ evaluateFields(typename Traits::EvalData workset)
           for (std::size_t cell=0; cell < workset.numCells; ++cell) 
 	    flowFactorVec[cell] = 1.0/2.0*pow(flowRate(temperature(cell)), -1.0/n);
           break;
-        case FROMFILE: 
-          for (std::size_t cell=0; cell < workset.numCells; ++cell) 
+        case FROMFILE:
+        case FROMCISM: 
+          for (std::size_t cell=0; cell < workset.numCells; ++cell)  
 	    flowFactorVec[cell] = 1.0/2.0*pow(flowFactorA(cell), -1.0/n);
           break;
       }

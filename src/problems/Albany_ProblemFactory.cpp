@@ -39,6 +39,8 @@
 #include "LCM/problems/ThermoMechanicalProblem.hpp"
 #include "LCM/problems/ProjectionProblem.hpp"
 #include "LCM/problems/ConcurrentMultiscaleProblem.hpp"
+#include "LCM/problems/SchwarzMultiscaleProblem.hpp"
+#include "LCM/problems/PeridigmProblem.hpp"
 #if defined(ALBANY_LAME) || defined(ALBANY_LAMENT)
 #include "LCM/problems/lame/LameProblem.hpp"
 #endif
@@ -63,6 +65,9 @@
 #ifdef ALBANY_AERAS
 #include "Aeras/problems/Aeras_ShallowWaterProblem.hpp"
 #include "Aeras/problems/Aeras_XZScalarAdvectionProblem.hpp"
+#include "Aeras/problems/Aeras_XScalarAdvectionProblem.hpp"
+#include "Aeras/problems/Aeras_XZHydrostaticProblem.hpp"
+#include "Aeras/problems/Aeras_HydrostaticProblem.hpp"
 #endif
 
 Albany::ProblemFactory::ProblemFactory(
@@ -257,6 +262,9 @@ Albany::ProblemFactory::create()
   else if (method == "Concurrent Multiscale 3D") {
     strategy =   rcp(new Albany::ConcurrentMultiscaleProblem(problemParams, paramLib, 3, comm));
   }
+  else if (method == "Schwarz Multiscale 3D") {
+    strategy =   rcp(new Albany::SchwarzMultiscaleProblem(problemParams, paramLib, 3, comm));
+  }
   else if (method == "GradientDamage") {
     strategy = rcp(new Albany::GradientDamageProblem(problemParams, paramLib, 3));
   }
@@ -325,7 +333,23 @@ Albany::ProblemFactory::create()
   else if (method == "Aeras XZ Scalar Advection" ) {
     strategy = rcp(new Aeras::XZScalarAdvectionProblem(problemParams, paramLib, 2));
   }
+  else if (method == "Aeras X Scalar Advection" ) {
+    strategy = rcp(new Aeras::XScalarAdvectionProblem(problemParams, paramLib, 1));
+  }
+  else if (method == "Aeras XZ Hydrostatic" ) {
+    strategy = rcp(new Aeras::XZHydrostaticProblem(problemParams, paramLib, 1));
+  }
+  else if (method == "Aeras Hydrostatic" ) {
+    strategy = rcp(new Aeras::HydrostaticProblem(problemParams, paramLib, 2));
+  }
 #endif
+  else if (method == "Peridigm Code Coupling" ) {
+#ifdef ALBANY_PERIDIGM
+    strategy = rcp(new Albany::PeridigmProblem(problemParams, paramLib, 3, comm));
+#else
+    TEUCHOS_TEST_FOR_EXCEPTION(true, std::runtime_error, " **** Peridigm code coupling not enabled, recompile with -DENABLE_PERIDIGM ****\n");
+#endif
+  }
   else {
     TEUCHOS_TEST_FOR_EXCEPTION(true, Teuchos::Exceptions::InvalidParameter,
                        std::endl <<

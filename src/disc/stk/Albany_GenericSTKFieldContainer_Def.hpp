@@ -10,6 +10,7 @@
 #include "Albany_STKNodeFieldContainer.hpp"
 
 #include "Albany_Utils.hpp"
+#include "Albany_StateInfoStruct.hpp"
 #include <stk_mesh/base/GetBuckets.hpp>
 
 #ifdef ALBANY_SEACAS
@@ -19,8 +20,8 @@
 template<bool Interleaved>
 Albany::GenericSTKFieldContainer<Interleaved>::GenericSTKFieldContainer(
   const Teuchos::RCP<Teuchos::ParameterList>& params_,
-  stk::mesh::fem::FEMMetaData* metaData_,
-  stk::mesh::BulkData* bulkData_,
+  stk_classic::mesh::fem::FEMMetaData* metaData_,
+  stk_classic::mesh::BulkData* bulkData_,
   const int neq_,
   const int numDim_)
   : metaData(metaData_),
@@ -28,8 +29,6 @@ Albany::GenericSTKFieldContainer<Interleaved>::GenericSTKFieldContainer(
     params(params_),
     neq(neq_),
     numDim(numDim_) {
-
-    nodeContainer = Teuchos::rcp(new Albany::NodeFieldContainer);
 }
 
 template<bool Interleaved>
@@ -39,13 +38,9 @@ Albany::GenericSTKFieldContainer<Interleaved>::~GenericSTKFieldContainer() {
 
 template<bool Interleaved>
 void
-Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::RCP<Albany::StateInfoStruct>& sis) {
+Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::RCP<Albany::StateInfoStruct>& sis){
 
-  // NodePoint fields
-  // dim[0] = nNodes, dim[1] = nVec dim[2] = nVec
-  typedef typename AbstractSTKFieldContainer::ScalarFieldType SFT;
-  typedef typename AbstractSTKFieldContainer::VectorFieldType VFT;
-  typedef typename AbstractSTKFieldContainer::TensorFieldType TFT;
+  using namespace Albany;
 
   // QuadPoint fields
   // dim[0] = nCells, dim[1] = nQP, dim[2] = nVec dim[3] = nVec
@@ -55,109 +50,70 @@ Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::
 
   // Code to parse the vector of StateStructs and create STK fields
   for(std::size_t i = 0; i < sis->size(); i++) {
-    Albany::StateStruct& st = *((*sis)[i]);
-    std::vector<int>& dim = st.dim;
+    StateStruct& st = *((*sis)[i]);
+    StateStruct::FieldDims& dim = st.dim;
 
-    if(st.entity == Albany::StateStruct::QuadPoint) {
-      if(dim.size() == 2){
-        qpscalar_states.push_back(& metaData->declare_field< QPSFT >(st.name));
-        stk::mesh::put_field(*qpscalar_states.back() , metaData->element_rank(),
+    if(st.entity == StateStruct::QuadPoint || st.entity == StateStruct::ElemNode){
+
+        if(dim.size() == 2){ // Scalar at QPs
+          qpscalar_states.push_back(& metaData->declare_field< QPSFT >(st.name));
+          stk_classic::mesh::put_field(*qpscalar_states.back() , metaData->element_rank(),
                            metaData->universal_part(), dim[1]);
         //Debug
         //      cout << "Allocating qps field name " << qpscalar_states.back()->name() <<
         //            " size: (" << dim[0] << ", " << dim[1] << ")" <<endl;
 #ifdef ALBANY_SEACAS
 
-        if(st.output) stk::io::set_field_role(*qpscalar_states.back(), Ioss::Field::TRANSIENT);
+          if(st.output) stk_classic::io::set_field_role(*qpscalar_states.back(), Ioss::Field::TRANSIENT);
 
 #endif
-      }
-      else if(dim.size() == 3){
-        qpvector_states.push_back(& metaData->declare_field< QPVFT >(st.name));
-        // Multi-dim order is Fortran Ordering, so reversed here
-        stk::mesh::put_field(*qpvector_states.back() , metaData->element_rank(),
+        }
+        else if(dim.size() == 3){ // Vector at QPs
+          qpvector_states.push_back(& metaData->declare_field< QPVFT >(st.name));
+          // Multi-dim order is Fortran Ordering, so reversed here
+          stk_classic::mesh::put_field(*qpvector_states.back() , metaData->element_rank(),
                            metaData->universal_part(), dim[2], dim[1]);
-        //Debug
-        //      cout << "Allocating qpv field name " << qpvector_states.back()->name() <<
-        //            " size: (" << dim[0] << ", " << dim[1] << ", " << dim[2] << ")" <<endl;
+          //Debug
+          //      cout << "Allocating qpv field name " << qpvector_states.back()->name() <<
+          //            " size: (" << dim[0] << ", " << dim[1] << ", " << dim[2] << ")" <<endl;
 #ifdef ALBANY_SEACAS
 
-        if(st.output) stk::io::set_field_role(*qpvector_states.back(), Ioss::Field::TRANSIENT);
+          if(st.output) stk_classic::io::set_field_role(*qpvector_states.back(), Ioss::Field::TRANSIENT);
 
 #endif
-      }
-      else if(dim.size() == 4){
-        qptensor_states.push_back(& metaData->declare_field< QPTFT >(st.name));
-        // Multi-dim order is Fortran Ordering, so reversed here
-        stk::mesh::put_field(*qptensor_states.back() , metaData->element_rank(),
+        }
+        else if(dim.size() == 4){ // Tensor at QPs
+          qptensor_states.push_back(& metaData->declare_field< QPTFT >(st.name));
+          // Multi-dim order is Fortran Ordering, so reversed here
+          stk_classic::mesh::put_field(*qptensor_states.back() , metaData->element_rank(),
                            metaData->universal_part(), dim[3], dim[2], dim[1]);
-        //Debug
-        //      cout << "Allocating qpt field name " << qptensor_states.back()->name() <<
-        //            " size: (" << dim[0] << ", " << dim[1] << ", " << dim[2] << ", " << dim[3] << ")" <<endl;
+          //Debug
+          //      cout << "Allocating qpt field name " << qptensor_states.back()->name() <<
+          //            " size: (" << dim[0] << ", " << dim[1] << ", " << dim[2] << ", " << dim[3] << ")" <<endl;
 #ifdef ALBANY_SEACAS
 
-        if(st.output) stk::io::set_field_role(*qptensor_states.back(), Ioss::Field::TRANSIENT);
+          if(st.output) stk_classic::io::set_field_role(*qptensor_states.back(), Ioss::Field::TRANSIENT);
 
 #endif
-      }
-      else TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
+        }
+        // Something other than a scalar, vector, or tensor at the QPs is an error
+        else TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
             "Error: GenericSTKFieldContainer - cannot match QPData");
-    }
-    else if(st.entity == Albany::StateStruct::NodePoint) { // scalar per node
-      if(dim.size() == 1){
-
-        (*this->nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, dim, metaData, bulkData, st.output);
-/*
-        scalar_states.push_back(& metaData->declare_field< SFT >(st.name));
-        stk::mesh::put_field(*scalar_states.back() , metaData->node_rank(),
-                           metaData->universal_part());
-#ifdef ALBANY_SEACAS
-
-        if(st.output) stk::io::set_field_role(*scalar_states.back(), Ioss::Field::TRANSIENT);
-
-#endif
-*/
-      }
-      else if(dim.size() == 2){
-
-        (*this->nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, dim, metaData, bulkData, st.output);
-
-/*
-        vector_states.push_back(& metaData->declare_field< VFT >(st.name));
-        // Multi-dim order is Fortran Ordering, so reversed here
-        stk::mesh::put_field(*vector_states.back() , metaData->node_rank(),
-                           metaData->universal_part(), dim[1]);
-
-#ifdef ALBANY_SEACAS
-
-        if(st.output) stk::io::set_field_role(*vector_states.back(), Ioss::Field::TRANSIENT);
-
-#endif
-*/
-      }
-      else if(dim.size() == 3){
-
-        (*this->nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, dim, metaData, bulkData, st.output);
-/*
-        tensor_states.push_back(& metaData->declare_field< TFT >(st.name));
-        // Multi-dim order is Fortran Ordering, so reversed here
-        stk::mesh::put_field(*tensor_states.back() , metaData->node_rank(),
-                           metaData->universal_part(), dim[2], dim[1]);
-#ifdef ALBANY_SEACAS
-
-        if(st.output) stk::io::set_field_role(*tensor_states.back(), Ioss::Field::TRANSIENT);
-
-#endif
-*/
-      }
-      else TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
-            "Error: GenericSTKFieldContainer - cannot match NodeData");
-    }
-    else if(dim.size() == 1 && st.entity == Albany::StateStruct::ScalarValue) {
+    } // end QuadPoint
+    // Single scalar at center of the workset
+    else if(dim.size() == 1 && st.entity == StateStruct::WorksetValue) { // A single value that applies over the entire workset (time)
       scalarValue_states.push_back(st.name);
-    }
+    } // End scalar at center of element
+    else if(st.entity == StateStruct::NodalData) { // Data at the node points
+
+        const Teuchos::RCP<Albany::NodeFieldContainer>& nodeContainer 
+               = sis->getNodalDataBlock()->getNodeContainer();
+
+        (*nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, dim, metaData, bulkData, st.output);
+ 
+    } // end Node class - anything else is an error
     else TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
-            "Error: GenericSTKFieldContainer - cannot match unknown data");
+            "Error: GenericSTKFieldContainer - cannot match unknown entity : " << st.entity << std::endl);
 
   }
 }
@@ -169,7 +125,7 @@ typename boost::disable_if< boost::is_same<T, Albany::AbstractSTKFieldContainer:
 Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vector& soln,
     T* solution_field,
     const Teuchos::RCP<Epetra_Map>& node_map,
-    const stk::mesh::Bucket& bucket, int offset) {
+    const stk_classic::mesh::Bucket& bucket, int offset) {
 
   // Fill the result vector
   // Create a multidimensional array view of the
@@ -177,7 +133,7 @@ Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vector& s
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
-  stk::mesh::BucketArray<T>
+  stk_classic::mesh::BucketArray<T>
   solution_array(*solution_field, bucket);
 
   const int num_vec_components = solution_array.dimension(0);
@@ -202,7 +158,7 @@ template<bool Interleaved>
 void Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vector& soln,
     ScalarFieldType* solution_field,
     const Teuchos::RCP<Epetra_Map>& node_map,
-    const stk::mesh::Bucket& bucket, int offset) {
+    const stk_classic::mesh::Bucket& bucket, int offset) {
 
   // Fill the result vector
   // Create a multidimensional array view of the
@@ -210,7 +166,7 @@ void Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vect
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
-  stk::mesh::BucketArray<ScalarFieldType>
+  stk_classic::mesh::BucketArray<ScalarFieldType>
   solution_array(*solution_field, bucket);
 
   const int num_nodes_in_bucket = solution_array.dimension(0);
@@ -232,7 +188,7 @@ typename boost::disable_if< boost::is_same<T, Albany::AbstractSTKFieldContainer:
 Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetra_Vector& soln,
     T* solution_field,
     const Teuchos::RCP<Epetra_Map>& node_map,
-    const stk::mesh::Bucket& bucket, int offset) {
+    const stk_classic::mesh::Bucket& bucket, int offset) {
 
   // Fill the result vector
   // Create a multidimensional array view of the
@@ -240,7 +196,7 @@ Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetra_Vec
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
-  stk::mesh::BucketArray<T>
+  stk_classic::mesh::BucketArray<T>
   solution_array(*solution_field, bucket);
 
   const int num_vec_components = solution_array.dimension(0);
@@ -263,7 +219,7 @@ template<bool Interleaved>
 void Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetra_Vector& soln,
     ScalarFieldType* solution_field,
     const Teuchos::RCP<Epetra_Map>& node_map,
-    const stk::mesh::Bucket& bucket, int offset) {
+    const stk_classic::mesh::Bucket& bucket, int offset) {
 
   // Fill the result vector
   // Create a multidimensional array view of the
@@ -271,7 +227,7 @@ void Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetr
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
-  stk::mesh::BucketArray<ScalarFieldType>
+  stk_classic::mesh::BucketArray<ScalarFieldType>
   solution_array(*solution_field, bucket);
 
   const int num_nodes_in_bucket = solution_array.dimension(0);
@@ -292,15 +248,15 @@ template<class T>
 typename boost::disable_if< boost::is_same<T, Albany::AbstractSTKFieldContainer::ScalarFieldType>, void >::type
 Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const T* source, T* target) {
 
-  const stk::mesh::BucketVector& bv = this->bulkData->buckets(this->metaData->node_rank());
+  const stk_classic::mesh::BucketVector& bv = this->bulkData->buckets(this->metaData->node_rank());
 
-  for(stk::mesh::BucketVector::const_iterator it = bv.begin() ; it != bv.end() ; ++it) {
+  for(stk_classic::mesh::BucketVector::const_iterator it = bv.begin() ; it != bv.end() ; ++it) {
 
-    const stk::mesh::Bucket& bucket = **it;
+    const stk_classic::mesh::Bucket& bucket = **it;
 
-    stk::mesh::BucketArray<T>
+    stk_classic::mesh::BucketArray<T>
     source_array(*source, bucket);
-    stk::mesh::BucketArray<T>
+    stk_classic::mesh::BucketArray<T>
     target_array(*target, bucket);
 
     const int num_source_components = source_array.dimension(0);
@@ -337,15 +293,15 @@ Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const T* source, T* 
 template<bool Interleaved>
 void Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const ScalarFieldType* source, ScalarFieldType* target) {
 
-  const stk::mesh::BucketVector& bv = this->bulkData->buckets(this->metaData->node_rank());
+  const stk_classic::mesh::BucketVector& bv = this->bulkData->buckets(this->metaData->node_rank());
 
-  for(stk::mesh::BucketVector::const_iterator it = bv.begin() ; it != bv.end() ; ++it) {
+  for(stk_classic::mesh::BucketVector::const_iterator it = bv.begin() ; it != bv.end() ; ++it) {
 
-    const stk::mesh::Bucket& bucket = **it;
+    const stk_classic::mesh::Bucket& bucket = **it;
 
-    stk::mesh::BucketArray<ScalarFieldType>
+    stk_classic::mesh::BucketArray<ScalarFieldType>
     source_array(*source, bucket);
-    stk::mesh::BucketArray<ScalarFieldType>
+    stk_classic::mesh::BucketArray<ScalarFieldType>
     target_array(*target, bucket);
 
     const int num_nodes_in_bucket = source_array.dimension(0);

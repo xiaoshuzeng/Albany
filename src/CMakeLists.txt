@@ -43,6 +43,9 @@ SET(HEADERS
   Albany_SaveEigenData.hpp
   Albany_ObserverImpl.hpp
   Albany_DummyParameterAccessor.hpp
+  Albany_DistributedParameterLibrary.hpp
+  Albany_DistributedParameterDerivativeOp.hpp
+  Albany_DistributedParameterLibrary_Epetra.hpp
   )
 
 #problems
@@ -172,7 +175,6 @@ SET(SOURCES ${SOURCES}
   evaluators/QCAD_ResponseFieldIntegral.cpp
   evaluators/QCAD_ResponseFieldValue.cpp
   evaluators/QCAD_ResponseFieldAverage.cpp
-  evaluators/FELIX_ResponseSurfaceVelocityMismatch.cpp
   evaluators/QCAD_ResponseSaveField.cpp
   evaluators/QCAD_ResponseCenterOfMass.cpp
   evaluators/QCAD_MeshRegion.cpp
@@ -187,9 +189,11 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_GatherBasalFriction.cpp
   evaluators/PHAL_GatherThickness.cpp
   evaluators/PHAL_GatherFlowFactor.cpp
-  evaluators/Adapt_IsotropicSizeField.cpp
+  evaluators/Adapt_ElementSizeField.cpp
+  evaluators/PHAL_SaveNodalField.cpp
   evaluators/PHAL_GatherSurfaceVelocity.cpp
   evaluators/PHAL_GatherVelocityRMS.cpp
+  evaluators/PHAL_GatherScalarNodalParameter.cpp
   )
 SET(PDE_SRCS ${PDE_SRCS}
   evaluators/PHAL_Constant.cpp
@@ -269,8 +273,6 @@ SET(HEADERS ${HEADERS}
   evaluators/QCAD_ResponseFieldValue_Def.hpp
   evaluators/QCAD_ResponseFieldAverage.hpp
   evaluators/QCAD_ResponseFieldAverage_Def.hpp
-  evaluators/FELIX_ResponseSurfaceVelocityMismatch.hpp
-  evaluators/FELIX_ResponseSurfaceVelocityMismatch_Def.hpp
   evaluators/QCAD_ResponseSaveField.hpp
   evaluators/QCAD_ResponseSaveField_Def.hpp
   evaluators/QCAD_ResponseCenterOfMass.hpp
@@ -299,12 +301,16 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_GatherThickness_Def.hpp
   evaluators/PHAL_GatherFlowFactor.hpp
   evaluators/PHAL_GatherFlowFactor_Def.hpp
-  evaluators/Adapt_IsotropicSizeField.hpp
-  evaluators/Adapt_IsotropicSizeField_Def.hpp
+  evaluators/Adapt_ElementSizeField.hpp
+  evaluators/Adapt_ElementSizeField_Def.hpp
+  evaluators/PHAL_SaveNodalField.hpp
+  evaluators/PHAL_SaveNodalField_Def.hpp
   evaluators/PHAL_GatherSurfaceVelocity.hpp
   evaluators/PHAL_GatherSurfaceVelocity_Def.hpp
   evaluators/PHAL_GatherVelocityRMS.hpp
   evaluators/PHAL_GatherVelocityRMS_Def.hpp
+  evaluators/PHAL_GatherScalarNodalParameter.hpp
+  evaluators/PHAL_GatherScalarNodalParameter_Def.hpp
   )
 
 SET(PDE_HDRS ${PDE_HDRS}
@@ -361,6 +367,17 @@ SET(PDE_HDRS ${PDE_HDRS}
   evaluators/PNP_ConcentrationResid.hpp
   evaluators/PNP_ConcentrationResid_Def.hpp
   )
+
+# FELIX
+IF (ALBANY_FELIX)
+  SET(SOURCES ${SOURCES}
+    evaluators/FELIX_ResponseSurfaceVelocityMismatch.cpp
+  )
+  SET(HEADERS ${HEADERS}
+    evaluators/FELIX_ResponseSurfaceVelocityMismatch.hpp
+    evaluators/FELIX_ResponseSurfaceVelocityMismatch_Def.hpp
+  )
+ENDIF()
 
 # ASCR
 IF(ALBANY_ASCR)
@@ -524,6 +541,14 @@ ELSE()
   set(LAMENT_LIB )
 ENDIF()
 
+# PERIDIGM
+IF(ALBANY_PERIDIGM)
+  include_directories (${Peridigm_INCLUDE_DIRS})
+  link_directories (${Peridigm_LIBRARY_DIRS})
+ELSE()
+  set(Peridigm_LIBRARIES )
+ENDIF()
+
 # Albany CI (Configuration Interaction)
 IF(ALBANY_CI)
   include_directories (${ALBANY_CI_INCLUDE_DIR})
@@ -578,7 +603,7 @@ if (ALBANY_ASCR)
   add_executable(AlbanySGAdjoint Main_SGAdjoint.cpp)
   add_executable(AlbanyCoupled Main_Coupled.cpp)
   add_executable(AlbanySGCoupled Main_SGCoupled.cpp)
-SET(ALBANY_EXECUTABLES ${ALBANY_EXECUTABLES} 
+SET(ALBANY_EXECUTABLES ${ALBANY_EXECUTABLES}
     AlbanyAdjoint
     AlbanySGAdjoint
     AlbanyCoupled
@@ -612,6 +637,7 @@ set(ALL_LIBRARIES
   ${ALB_CUBIT_LIBS}
   ${LAME_LIB}
   ${LAMENT_LIB}
+  ${Peridigm_LIBRARIES}
   ${SCOREC_LIB}
   ${Trilinos_EXTRA_LD_FLAGS}
   ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}
@@ -702,15 +728,16 @@ IF (INSTALL_ALBANY)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/AlbanyConfig.cmake
     DESTINATION ${LIB_INSTALL_DIR}/Albany/cmake )
   # Install each binary in the list
-  FOREACH(ALB_TGT ${ALBANY_EXECUTABLES})
-    install(TARGETS ${ALB_TGT} RUNTIME DESTINATION
-       ${BINARY_INSTALL_DIR})
-  ENDFOREACH()
+  install(TARGETS ${ALBANY_EXECUTABLES} RUNTIME DESTINATION
+     ${BINARY_INSTALL_DIR})
   install(TARGETS albanyLib EXPORT albany-export
     LIBRARY DESTINATION ${LIB_INSTALL_DIR}
     ARCHIVE DESTINATION ${LIB_INSTALL_DIR})
-  FILE(WRITE "${CMAKE_BINARY_DIR}/albany-targets.cmake"
-    "set(Albany_LIBRARIES ${ALBANY_LIBRARIES})")
-  FILE(INSTALL "${CMAKE_BINARY_DIR}/albany-targets.cmake"
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}/Albany/cmake)
+  IF (ENABLE_DEMO_PDES)
+    install(TARGETS albanyPDEs EXPORT albany-export
+      LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+      ARCHIVE DESTINATION ${LIB_INSTALL_DIR})
+  ENDIF()
+  INSTALL(EXPORT albany-export DESTINATION ${LIB_INSTALL_DIR}/Albany/cmake  FILE "albany-targets.cmake")
+
 ENDIF()

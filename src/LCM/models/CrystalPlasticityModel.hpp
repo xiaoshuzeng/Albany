@@ -66,6 +66,22 @@ private:
   CrystalPlasticityModel& operator=(const CrystalPlasticityModel&);
 
   ///
+  /// helper
+  ///
+  void 
+  computeStress(Intrepid::Tensor<ScalarT> const & F,
+                Intrepid::Tensor<ScalarT> const & Fp,
+                Intrepid::Tensor<ScalarT>       & T,
+                Intrepid::Tensor<ScalarT>       & S);
+
+  ///
+  /// Crystal elasticity parameters
+  ///
+  RealType c11_,c12_,c44_;
+  Intrepid::Tensor4<RealType> C_;
+  Intrepid::Tensor<RealType> orientation_;
+ 
+  ///
   /// Number of slip systems
   ///
   int num_slip_;
@@ -97,6 +113,11 @@ private:
   std::vector<SlipSystemStruct> slip_systems_;
 
 
+  ///
+  /// Workspace
+  ///
+  Intrepid::Tensor<ScalarT> F_, Fpinv_, Fe_, E_; 
+  Intrepid::Tensor<RealType> I_;
   };
 
 

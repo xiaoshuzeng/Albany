@@ -55,9 +55,6 @@ template<class Output>
     //! Get Node map
     Teuchos::RCP<const Epetra_Map> getNodeMap() const;
 
-    //! Get Nodal block data
-    Teuchos::RCP<Adapt::NodalDataBlock> getNodalDataBlock();
-
     //! Get Overlap Node map
     Teuchos::RCP<const Epetra_Map> getOverlapNodeMap() const;
 
@@ -91,10 +88,12 @@ template<class Output>
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type& getThickness() const;
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type& getSurfaceVelocity() const;
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type& getVelocityRMS() const;
+    const Albany::WorksetArray<Teuchos::ArrayRCP<double> >::type& getSphereVolume() const;
     const Albany::WorksetArray<Teuchos::ArrayRCP<double> >::type& getFlowFactor() const;
 
     //! Print coords for debugging
     void printCoords() const;
+    void debugMeshWriteNative(const Epetra_Vector& sol, const char* filename);
     void debugMeshWrite(const Epetra_Vector& sol, const char* filename);
 
    //! Get number of spatial dimensions
@@ -112,7 +111,6 @@ template<class Output>
     //! Retrieve Vector (length num worksets) of physics set index
     const Albany::WorksetArray<int>::type&  getWsPhysIndex() const;
 
-    //
     void writeSolution(const Epetra_Vector& soln, const double time, const bool overlapped = false);
 
     Teuchos::RCP<Epetra_Vector> getSolutionField() const;
@@ -132,8 +130,14 @@ template<class Output>
     //! FMDB does not support MOR
     virtual bool supportsMOR() const { return false; }
 
+    // Before mesh modification, qp data may needed for solution transfer
+    void attachQPData();
+
+    // After mesh modification, qp data needs to be detached
+    void detachQPData();
+
     // After mesh modification, need to update the element connectivity and nodal coordinates
-    void updateMesh();
+    void updateMesh(bool shouldTransferIPData);
 
     //! Accessor function to get coordinates for ML. Memory controlled here.
     void getOwned_xyz(double **x, double **y, double **z, double **rbm,
@@ -143,23 +147,47 @@ template<class Output>
     // not supported in FMDB now
     void transformMesh(){}
 
-    inline int getOwnedDOF(const int inode, const int eq) const
+    int getDOF(const int inode, const int eq) const
     {
       if (interleavedOrdering) return inode*neq + eq;
       else  return inode + numOwnedNodes*eq;
     }
 
-    inline int getOverlapDOF(const int inode, const int eq) const
+    int getOwnedDOF(const int inode, const int eq) const
     {
-      if (interleavedOrdering) return inode*neq + eq;
-      else  return inode + numOverlapNodes*eq;
+      return getDOF(inode,eq);
     }
 
-    inline int getGlobalDOF(const int inode, const int eq) const
+    int getOverlapDOF(const int inode, const int eq) const
     {
-      if (interleavedOrdering) return inode*neq + eq;
-      else  return inode + numGlobalNodes*eq;
+      return getDOF(inode,eq);
     }
+
+    int getGlobalDOF(const int inode, const int eq) const
+    {
+      return getDOF(inode,eq);
+    }
+
+    // Copy field data from Epetra_Vector to APF
+    void setField(
+        const char* name,
+        const Epetra_Vector& data,
+        bool overlapped,
+        int offset = 0);
+    void setSplitFields(std::vector<std::string> names, std::vector<int> indices, 
+        const Epetra_Vector& data, bool overlapped);
+
+    // Copy field data from APF to Epetra_Vector
+    void getField(
+        const char* name,
+        Epetra_Vector& data,
+        bool overlapped,
+        int offset = 0) const;
+    void getSplitFields(std::vector<std::string> names, std::vector<int> indices,
+        Epetra_Vector& data, bool overlapped) const;
+
+    // Rename exodus output file when the problem is resized
+    void reNameExodusOutput(const std::string& str){ meshOutput.setFileName(str);}
 
   private:
 
@@ -172,10 +200,6 @@ template<class Output>
     // Copy solution vector from Epetra_Vector into FMDB Mesh
     // Here soln is the local (non overlapped) solution
     void setSolutionField(const Epetra_Vector& soln);
-
-    // Copy solution vector from Epetra_Vector into FMDB Mesh
-    // Here soln is the local + neighbor (overlapped) solution
-    void setOvlpSolutionField(const Epetra_Vector& soln);
 
     int nonzeroesPerRow(const int neq) const;
     double monotonicTimeLabel(const double time);
@@ -192,8 +216,25 @@ template<class Output>
     void computeNodeSets();
     //! Process FMDB mesh for SideSets
     void computeSideSets();
-    //! Find the local side id number within parent element
-//    unsigned determine_local_side_id( const stk::mesh::Entity & elem , stk::mesh::Entity & side );
+
+    //! Transfer QPData to APF
+    void copyQPScalarToAPF(unsigned nqp, QPData<double, 2>& state, apf::Field* f);
+    void copyQPVectorToAPF(unsigned nqp, QPData<double, 3>& state, apf::Field* f);
+    void copyQPTensorToAPF(unsigned nqp, QPData<double, 4>& state, apf::Field* f);
+    void copyQPStatesToAPF(apf::Field* f, apf::FieldShape* fs);
+    void removeQPStatesFromAPF();
+
+    //! Transfer QP Fields from APF to QPData
+    void copyQPScalarFromAPF(unsigned nqp, QPData<double, 2>& state, apf::Field* f);
+    void copyQPVectorFromAPF(unsigned nqp, QPData<double, 3>& state, apf::Field* f);
+    void copyQPTensorFromAPF(unsigned nqp, QPData<double, 4>& state, apf::Field* f);
+    void copyQPStatesFromAPF();
+
+    // ! Split Solution fields
+    std::vector<std::string> solNames;
+    std::vector<std::string> resNames;
+    std::vector<int> solIndex;
+
     //! Call stk_io for creating exodus output file
     Teuchos::RCP<Teuchos::FancyOStream> out;
 
@@ -229,14 +270,8 @@ template<class Output>
     //! Overlapped Jacobian matrix graph
     Teuchos::RCP<Epetra_CrsGraph> overlap_graph;
 
-    //! Processor ID
-    unsigned int myPID;
-
     //! Number of equations (and unknowns) per node
     const unsigned int neq;
-
-    //! Number of elements on this processor
-    unsigned int numMyElements;
 
     //! node sets stored as std::map(string ID, int vector of GIDs)
     Albany::NodeSetList nodeSets;
@@ -263,6 +298,7 @@ template<class Output>
     Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type surfaceVelocity;
     Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type velocityRMS;
     Albany::WorksetArray<Teuchos::ArrayRCP<double> >::type flowFactor;
+    Albany::WorksetArray<Teuchos::ArrayRCP<double> >::type sphereVolume;
 
     //! Connectivity map from elementGID to workset and LID in workset
     Albany::WsLIDList  elemGIDws;
@@ -270,12 +306,8 @@ template<class Output>
     // States: vector of length num worksets of a map from field name to shards array
     Albany::StateArrays stateArrays;
 
-    //! list of all owned nodes, saved for setting solution
-//    std::vector< stk::mesh::Entity * > ownednodes ;
-//    std::vector< stk::mesh::Entity * > cells ;
-
-    //! list of all overlap nodes, saved for getting coordinates for mesh motion
-//    std::vector< stk::mesh::Entity * > overlapnodes ;
+    //! list of all overlap nodes, saved for setting solution
+    apf::DynamicArray<apf::Node> nodes;
 
     //! Number of elements on this processor
     int numOwnedNodes;
@@ -286,14 +318,11 @@ template<class Output>
     double *xx, *yy, *zz, *rr;
     bool allocated_xyz;
 
-    // Storage used in periodic BCs to un-roll coordinates. Pointers saved for destructor.
-    std::vector<double*>  toDelete;
-
     Teuchos::RCP<AlbPUMI::FMDBMeshStruct> fmdbMeshStruct;
 
     bool interleavedOrdering;
 
-    std::vector< std::vector<pMeshEnt> > buckets; // bucket of elements
+    std::vector< std::vector<apf::MeshEntity*> > buckets; // bucket of elements
 
     // storage to save the node coordinates of the nodesets visible to this PE
     std::map<std::string, std::vector<double> > nodeset_node_coords;
@@ -303,8 +332,6 @@ template<class Output>
 
     // counter for limiting data writes to output file
     int outputInterval;
-
-    Teuchos::RCP<Adapt::NodalDataBlock> nodal_data_block;
 
   };
 

@@ -18,16 +18,21 @@ namespace AlbPUMI {
     //! Destructor
     virtual ~AbstractPUMIDiscretization(){}
 
-
     // Retrieve mesh struct
     virtual Teuchos::RCP<AlbPUMI::FMDBMeshStruct> getFMDBMeshStruct() = 0;
 
-    // After mesh modification, need to update the element connectivity and nodal coordinates
-    virtual void updateMesh() = 0;
+    virtual void attachQPData() = 0; 
+    virtual void detachQPData() = 0;
 
+    // After mesh modification, need to update the element connectivity and nodal coordinates
+    virtual void updateMesh(bool shouldTransferIPData) = 0;
+
+    virtual void debugMeshWriteNative(const Epetra_Vector& sol, const char* filename) = 0;
     virtual void debugMeshWrite(const Epetra_Vector& sol, const char* filename) = 0;
 
     virtual Teuchos::RCP<const Epetra_Comm> getComm() const = 0;
+
+    virtual void reNameExodusOutput(const std::string& str) = 0;
 
   };
 

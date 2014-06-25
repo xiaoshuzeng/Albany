@@ -8,6 +8,7 @@
 // Test of topology manipulation.
 //
 #include "topology/Topology.h"
+#include "topology/Topology_Utils.h"
 
 int main(int ac, char* av[])
 {
@@ -21,17 +22,19 @@ int main(int ac, char* av[])
   input_file = "input.e";
 
   command_line_processor.setOption(
-                                   "input",
-                                   &input_file,
-                                   "Input File Name");
+      "input",
+      &input_file,
+      "Input File Name"
+  );
 
   std::string
   output_file = "output.e";
 
   command_line_processor.setOption(
-                                   "output",
-                                   &output_file,
-                                   "Output File Name");
+      "output",
+      &output_file,
+      "Output File Name"
+  );
 
   // Throw a warning and not error for unrecognized options
   command_line_processor.recogniseAllOptions(true);
@@ -58,14 +61,35 @@ int main(int ac, char* av[])
   mpiSession(&ac,&av);
 
   LCM::Topology
-  topology(input_file,output_file);
+  topology(input_file, output_file);
 
-  topology.createBoundary();
-  topology.outputBoundary();
+  //topology.createBoundary();
+  //topology.outputBoundary();
 
+  topology.setEntitiesOpen();
+
+#if defined(LCM_GRAPHVIZ)
   std::string
-  gviz_filename = LCM::parallelize_string("output") + ".dot";
-  topology.outputToGraphviz(gviz_filename);
+  gviz_filename = LCM::parallelize_string("before") + ".dot";
+
+  LCM::Topology::OutputType const
+  type = LCM::Topology::UNIDIRECTIONAL_UNILEVEL;
+
+  topology.outputToGraphviz(gviz_filename, type);
+#endif
+  std::string
+  boundary_filename = LCM::parallelize_string("before") + ".vtk";
+  topology.outputBoundary(boundary_filename);
+
+
+  topology.splitOpenFaces();
+
+#if defined(LCM_GRAPHVIZ)
+  gviz_filename = LCM::parallelize_string("after") + ".dot";
+  topology.outputToGraphviz(gviz_filename, type);
+#endif
+  boundary_filename = LCM::parallelize_string("after") + ".vtk";
+  topology.outputBoundary(boundary_filename);
 
   Teuchos::RCP<Albany::AbstractDiscretization>
   discretization_ptr = topology.getDiscretization();
@@ -73,6 +97,8 @@ int main(int ac, char* av[])
   Albany::STKDiscretization &
   stk_discretization =
       static_cast<Albany::STKDiscretization &>(*discretization_ptr);
+
+  stk_discretization.updateMesh();
 
   // Need solution for output call
   Teuchos::RCP<Epetra_Vector>

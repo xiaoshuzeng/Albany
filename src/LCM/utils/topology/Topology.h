@@ -3,7 +3,6 @@
 //    This Software is released under the BSD license detailed     //
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
-
 #if !defined(LCM_Topology_Topology_h)
 #define LCM_Topology_Topology_h
 
@@ -13,6 +12,7 @@
 
 #include "Topology_Types.h"
 #include "Topology_FractureCriterion.h"
+#include "Topology_Utils.h"
 
 namespace LCM {
 
@@ -38,41 +38,14 @@ public:
   Topology(RCP<Albany::AbstractDiscretization> & discretization);
 
   ///
-  /// \brief Create mesh data structure
-  ///
-  /// \param[in] Albany discretization object
-  /// \param[in] Fracture criterion object
-  ///
-  /// Use if already have an Albany mesh object, and want to
-  /// fracture the mesh based on a criterion.
-  ///
-  Topology(RCP<Albany::AbstractDiscretization> & discretization,
-      RCP<AbstractFractureCriterion> & fracture_criterion);
-
-  ///
   /// \brief Iterates over the boundary entities of the mesh of (all entities
   /// of rank dimension-1) and checks fracture criterion.
-  ///
-  /// \param map of entity and boolean value is entity open
   ///
   /// If fracture_criterion is met, the entity and all lower order entities
   /// associated with it are marked as open.
   ///
-  void
-  setEntitiesOpen(std::map<EntityKey, bool> & open_entity_map);
-
-  ///
-  /// \brief Iterates over the boundary entities contained in the passed-in
-  /// vector and opens each edge traversed.
-  ///
-  /// \param vector of faces to open, map of entity and boolean value is entity opened
-  ///
-  /// If entity is in the vector, the entity and all lower order entities
-  /// associated with it are marked as open.
-  ///
-  void
-  setEntitiesOpen(EntityVector const & fractured_faces,
-      std::map<EntityKey, bool>& open_entity_map);
+  size_t
+  setEntitiesOpen();
 
   ///
   /// \brief Output the graph associated with the mesh to graphviz .dot
@@ -83,8 +56,17 @@ public:
   /// To create final output figure, run command below from terminal:
   ///   dot -Tpng <gviz_output>.dot -o <gviz_output>.png
   ///
+  enum OutputType {
+    UNIDIRECTIONAL_UNILEVEL,
+    UNIDIRECTIONAL_MULTILEVEL,
+    BIDIRECTIONAL_UNILEVEL,
+    BIDIRECTIONAL_MULTILEVEL
+  };
+
   void
-  outputToGraphviz(std::string const & output_filename);
+  outputToGraphviz(
+      std::string const & output_filename,
+      OutputType const output_type = UNIDIRECTIONAL_UNILEVEL);
 
   ///
   /// \brief Initializes the default stk mesh object needed by class.
@@ -100,21 +82,6 @@ public:
   ///
   void
   graphInitialization();
-
-  ///
-  /// \brief Removes unneeded relations from the mesh.
-  ///
-  /// stk::mesh::create_adjacent_entities creates full mesh representation of
-  /// the mesh instead of the default of only the elements and nodes. All
-  /// entities created by the function are connected through relationships.
-  /// Graph algorithms require relationships to only exist between entities
-  /// separated by one degree, e.g. elements and faces in a 3D graph.
-  /// Function removes all other relationships.
-  ///
-  /// \note Valid for 2D and 3D meshes.
-  ///
-  void
-  removeExtraRelations();
 
   ///
   /// \brief Creates temporary nodal connectivity for the elements
@@ -146,17 +113,10 @@ public:
   getElementToNodeConnectivity();
 
   ///
-  /// \brief Returns array of pointers to Entities for the element to
-  ///        node relations
-  ///
-  void
-  removeElementToNodeConnectivity(std::vector<EntityVector> & v);
-
-  ///
   /// \brief After mesh manipulations are complete, need to recreate
   ///        a stk mesh understood by Albany_STKDiscretization.
   ///
-  /// Recreates the nodal connectivity using connectivity_temp_.
+  /// Recreates the nodal connectivity using connectivity_.
   ///
   /// \attention must be called before mesh modification has ended
   ///
@@ -164,15 +124,9 @@ public:
   restoreElementToNodeConnectivity();
 
   ///
-  /// \brief After mesh manipulations are complete, need to recreate
-  ///        a stk mesh understood by Albany_STKDiscretization.
-  void
-  restoreElementToNodeConnectivity(std::vector<EntityVector> & v);
-
+  /// \brief Determine the nodes associated with a boundary entity (face).
   ///
-  /// \brief Determine the nodes associated with a face.
-  ///
-  /// \param[in] Face entity
+  /// \param[in] Boundary entity
   ///
   /// \return vector of nodes for the face
   ///
@@ -183,16 +137,16 @@ public:
   /// \attention Assumes all mesh elements are same type.
   ///
   EntityVector
-  getFaceNodes(Entity * entity);
-
-  EntityVector
   getBoundaryEntityNodes(Entity const & boundary_entity);
+
+  std::vector<Intrepid::Vector<double> >
+  getNodalCoordinates();
 
   ///
   /// \brief Output boundary
   ///
   void
-  outputBoundary();
+  outputBoundary(std::string const & output_filename);
 
   ///
   /// \brief Create boundary mesh
@@ -201,10 +155,16 @@ public:
   createBoundary();
 
   ///
+  /// \brief Get a connectivity list of the boundary
+  ///
+  std::vector<std::vector<EntityId> >
+  getBoundary();
+
+  ///
   /// \brief Create surface element connectivity
   ///
-  /// \param[in] Face 1
-  /// \param[in] Face 2
+  /// \param[in] Face top
+  /// \param[in] Face bottom
   /// \return Cohesive connectivity
   ///
   /// Given the two faces after insertion process, create the
@@ -213,7 +173,8 @@ public:
   /// \attention Assumes that all elements have the same topology
   ////
   EntityVector
-  createSurfaceElementConnectivity(Entity const & face1, Entity const & face2);
+  createSurfaceElementConnectivity(
+      Entity const & face_top, Entity const & face_bottom);
 
   ///
   /// \brief Create vectors describing the vertices and edges of the
@@ -249,15 +210,6 @@ public:
   ///
   void
   splitOpenFaces();
-
-  void
-  splitOpenFaces(std::map<EntityKey, bool> & open_entity_map);
-
-  void
-  splitOpenFaces(
-      std::map<EntityKey, bool> & open_entity_map,
-      std::vector<EntityVector>& old_connectivity,
-      std::vector<EntityVector>& new_connectivity);
 
   ///
   /// \brief Adds a new entity of rank 3 to the mesh
@@ -326,7 +278,8 @@ public:
   ///        returned entities.
   ///
   EntityVector
-  getDirectlyConnectedEntities(Entity const & entity,
+  getDirectlyConnectedEntities(
+      Entity const & entity,
       EntityRank entity_rank);
 
   ///
@@ -349,7 +302,8 @@ public:
   getBoundaryEntities(Entity const & entity, EntityRank entity_rank);
 
   ///
-  /// \brief Checks if a segment is connected to an input node. Returns "true" if the segment connects to the node.
+  /// \brief Checks if a segment is connected to an input node.
+  /// Returns "true" if the segment connects to the node.
   ///
   bool
   segmentIsConnected(Entity const & segment, Entity * node);
@@ -571,7 +525,7 @@ public:
   /// \brief Practice creating the barycentric subdivision
   ///
   void
-  barycentricSubdivision_();
+  barycentricSubdivisionAlt();
 
   ///
   /// \brief Divide former mesh segments by half
@@ -580,62 +534,20 @@ public:
   divideSegmentsHalf();
 
   void
-  addcentroid();
+  addCentroid();
 
   void
-  connectcentroid();
+  connectCentroid();
 
   void
-  addnewfaces();
+  addNewFaces();
 
   void
-  connectnewfaces();
+  connectNewFaces();
 
   ///
   /// Accessors and mutators
   ///
-  void
-  setSpaceDimension(int const sd) {space_dimension_ = sd;}
-
-  int
-  getSpaceDimension() const {return space_dimension_;}
-
-  void
-  setNodeRank(EntityRank const nr) {node_rank_ = nr;}
-
-  EntityRank
-  getNodeRank() const {return node_rank_;}
-
-  void
-  setEdgeRank(EntityRank const er) {edge_rank_ = er;}
-
-  EntityRank
-  getEdgeRank() const {return edge_rank_;}
-
-  void
-  setFaceRank(EntityRank const fr) {face_rank_ = fr;}
-
-  EntityRank
-  getFaceRank() const {return face_rank_;}
-
-  void
-  setCellRank(EntityRank const cr) {cell_rank_ = cr;}
-
-  EntityRank
-  getCellRank() const {return cell_rank_;}
-
-  IntScalarFieldType &
-  getFractureState()
-  {return *(stk_mesh_struct_->getFieldContainer()->getFractureState());}
-
-  void
-  setFractureCriterion(RCP<AbstractFractureCriterion> const & fc)
-  {fracture_criterion_ = fc;}
-
-  RCP<AbstractFractureCriterion> &
-  getFractureCriterion()
-  {return fracture_criterion_;}
-
   void
   setSTKMeshStruct(RCP<Albany::AbstractSTKMeshStruct> const & sms)
   {stk_mesh_struct_ = sms;}
@@ -652,11 +564,15 @@ public:
   getDiscretization()
   {return discretization_;}
 
+  Albany::STKDiscretization *
+  getSTKDiscretization()
+  {return static_cast<Albany::STKDiscretization*>(discretization_.get());}
+
   BulkData *
   getBulkData()
   {return stk_mesh_struct_->bulkData;}
 
-  stk::mesh::fem::FEMMetaData *
+  stk_classic::mesh::fem::FEMMetaData *
   getMetaData()
   {return stk_mesh_struct_->metaData;}
 
@@ -667,6 +583,31 @@ public:
   shards::CellTopology &
   getCellTopology()
   {return cell_topology_;}
+
+  size_t const
+  getSpaceDimension() {return static_cast<size_t>(getSTKMeshStruct()->numDim);}
+
+  EntityRank const
+  getCellRank() {return getMetaData()->element_rank();}
+
+  EntityRank const
+  getBoundaryRank()
+  {
+    assert(getCellRank() > 0);
+    return getCellRank() - 1;
+  }
+
+  IntScalarFieldType &
+  getFractureState()
+  {return *(stk_mesh_struct_->getFieldContainer()->getFractureState());}
+
+  void
+  setFractureCriterion(RCP<AbstractFractureCriterion> const & fc)
+  {fracture_criterion_ = fc;}
+
+  RCP<AbstractFractureCriterion> &
+  getFractureCriterion()
+  {return fracture_criterion_;}
 
   bool
   isLocalEntity(Entity const & e)
@@ -679,7 +620,7 @@ public:
   setFractureState(Entity const & e, FractureState const fs)
   {
     if (e.entity_rank() < getCellRank()) {
-      *(stk::mesh::field_data(getFractureState(), e)) = static_cast<int>(fs);
+      *(stk_classic::mesh::field_data(getFractureState(), e)) = static_cast<int>(fs);
     }
   }
 
@@ -691,7 +632,39 @@ public:
   {
     return e.entity_rank() >= getCellRank() ?
     CLOSED :
-    static_cast<FractureState>(*(stk::mesh::field_data(getFractureState(), e)));
+    static_cast<FractureState>(*(stk_classic::mesh::field_data(getFractureState(), e)));
+  }
+
+  bool
+  isInternal(Entity const & e) {
+
+    assert(e.entity_rank() == getBoundaryRank());
+
+    PairIterRelation
+    relations = relations_one_up(e);
+
+    size_t const
+    number_in_edges = std::distance(relations.begin(), relations.end());
+
+    assert(number_in_edges == 1 || number_in_edges == 2);
+
+    return number_in_edges == 2;
+  }
+
+  bool
+  isOpen(Entity const & e) {
+    return getFractureState(e) == OPEN;
+  }
+
+  bool
+  isInternalAndOpen(Entity const & e) {
+    return isInternal(e) == true && isOpen(e) == true;
+  }
+
+  bool
+  checkOpen(Entity const & e)
+  {
+    return fracture_criterion_->check(e);
   }
 
   ///
@@ -715,27 +688,17 @@ private:
   void
   setHighestIds();
 
-  ///
-  /// Ranks of all entities of the mesh.
-  ///
-  EntityRank node_rank_;
-  EntityRank edge_rank_;
-  EntityRank face_rank_;
-  EntityRank cell_rank_;
-
-  int space_dimension_;
-
   //
   //
   RCP<Albany::AbstractDiscretization> discretization_;
 
   RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct_;
 
-  std::vector<EntityVector> connectivity_temp_;
+  std::vector<EntityVector> connectivity_;
 
   std::map<int, int> element_global_to_local_ids_;
 
-  std::set<std::pair<Entity*, Entity*> > fractured_faces_;
+  std::set<EntityPair> fractured_faces_;
 
   std::vector<int> highest_ids_;
 
@@ -754,230 +717,6 @@ protected:
   Topology();
 };
 // class Topology
-
-///
-/// \brief Output the mesh connectivity
-///
-/// Outputs the nodal connectivity of the elements as stored by
-/// bulkData. Assumes that relationships between the elements and
-/// nodes exist.
-///
-inline
-void
-display_connectivity(Topology & topology)
-{
-  // Create a list of element entities
-  EntityVector
-  elements;
-
-  stk::mesh::get_entities(
-      *(topology.getBulkData()),
-      topology.getCellRank(),
-      elements);
-
-  typedef EntityVector::size_type size_type;
-
-  // Loop over the elements
-  size_type const
-  number_of_elements = elements.size();
-
-  for (size_type i = 0; i < number_of_elements; ++i) {
-
-    PairIterRelation
-    relations = elements[i]->relations(topology.getNodeRank());
-
-    EntityId const
-    element_id = elements[i]->identifier();
-
-    std::cout << std::setw(16) << element_id << ":";
-
-    size_t const
-    nodes_per_element = relations.size();
-
-    for (size_t j = 0; j < nodes_per_element; ++j) {
-
-      Entity const &
-      node = *(relations[j].entity());
-
-      EntityId const
-      node_id = node.identifier();
-
-      std::cout << std::setw(16) << node_id;
-    }
-
-    std::cout << '\n';
-  }
-
-  return;
-}
-
-///
-/// \brief Output relations associated with entity
-///        The entity may be of any rank
-///
-/// \param[in] entity
-///
-inline
-void
-display_relation(Entity const & entity)
-{
-  std::cout << "Relations for entity (identifier,rank): ";
-  std::cout << entity.identifier() << "," << entity.entity_rank();
-  std::cout << '\n';
-
-  PairIterRelation
-  relations = entity.relations();
-
-  for (size_t i = 0; i < relations.size(); ++i) {
-    std::cout << "entity:\t";
-    std::cout << relations[i].entity()->identifier() << ",";
-    std::cout << relations[i].entity()->entity_rank();
-    std::cout << "\tlocal id: ";
-    std::cout << relations[i].identifier();
-    std::cout << '\n';
-  }
-  return;
-}
-
-///
-/// \brief Output relations of a given rank associated with entity
-///
-/// \param[in] entity
-/// \param[in] the rank of the entity
-///
-inline
-void
-display_relation(Entity const & entity, EntityRank const rank)
-{
-  std::cout << "Relations of rank ";
-  std::cout << rank;
-  std::cout << " for entity (identifier,rank): ";
-  std::cout << entity.identifier() << "," << entity.entity_rank();
-  std::cout << '\n';
-
-  PairIterRelation
-  relations = entity.relations(rank);
-
-  for (size_t i = 0; i < relations.size(); ++i) {
-    std::cout << "entity:\t";
-    std::cout << relations[i].entity()->identifier() << ",";
-    std::cout << relations[i].entity()->entity_rank();
-    std::cout << "\tlocal id: ";
-    std::cout << relations[i].identifier();
-    std::cout << '\n';
-  }
-  return;
-}
-
-inline
-bool
-is_one_down(Entity const & source_entity, Relation const & relation)
-{
-  EntityRank const
-  source_rank = source_entity.entity_rank();
-
-  EntityRank const
-  target_rank = relation.entity_rank();
-
-  return source_rank - target_rank == 1;
-}
-
-inline
-bool
-is_one_up(Entity const & source_entity, Relation const & relation)
-{
-  EntityRank const
-  source_rank = source_entity.entity_rank();
-
-  EntityRank const
-  target_rank = relation.entity_rank();
-
-  return target_rank - source_rank == 1;
-}
-
-///
-/// Test whether a given source entity and relation are
-/// valid in the sense of the graph representation.
-/// Multilevel relations are not valid.
-///
-inline
-bool
-is_graph_relation(Entity const & source_entity, Relation const & relation)
-{
-  return is_one_down(source_entity, relation);
-}
-
-///
-/// Test whether a given source entity and relation are
-/// needed in STK to maintain connectivity information.
-/// These are relations that connect cells to points.
-///
-inline
-bool
-is_needed_for_stk(
-    Entity const & source_entity,
-    Relation const & relation,
-    EntityRank const cell_rank)
-{
-  EntityRank const
-  source_rank = source_entity.entity_rank();
-
-  EntityRank const
-  target_rank = relation.entity_rank();
-
-  return (source_rank == cell_rank) && (target_rank == 0);
-}
-
-///
-/// Iterators to relations one level up.
-///
-inline
-PairIterRelation
-relations_one_up(Entity const & entity)
-{
-  return entity.relations(entity.entity_rank() + 1);
-}
-
-///
-/// Iterators to relations one level down.
-///
-inline
-PairIterRelation
-relations_one_down(Entity const & entity)
-{
-  return entity.relations(entity.entity_rank() - 1);
-}
-
-///
-/// Add a dash and processor rank to a string. Useful for output
-/// file names.
-///
-inline
-std::string
-parallelize_string(std::string const & string)
-{
-  std::ostringstream
-  oss;
-
-  oss << string;
-
-  int const
-  number_processors = Teuchos::GlobalMPISession::getNProc();
-
-  if (number_processors > 1) {
-
-    int const
-    number_digits = static_cast<int>(std::log10(number_processors));
-
-    int const
-    processor_id = Teuchos::GlobalMPISession::getRank();
-
-    oss << "-";
-    oss << std::setfill('0') << std::setw(number_digits) << processor_id;
-  }
-
-  return oss.str();
-}
 
 }// namespace LCM
 

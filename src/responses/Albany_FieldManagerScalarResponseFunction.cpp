@@ -96,7 +96,6 @@ evaluateResponse(const double current_time,
   PHAL::Workset workset;
   application->setupBasicWorksetInfo(workset, current_time, xdot, xdotdot, &x, p);
   workset.g = Teuchos::rcp(&g,false);
-  workset.node_data = stateMgr->getDiscretization()->getNodalDataBlock();
 
   // Perform fill via field manager
   int numWorksets = application->getNumWorksets();
@@ -133,8 +132,8 @@ evaluateTangent(const double alpha,
 
   // Set data in Workset struct
   PHAL::Workset workset;
-  application->setupTangentWorksetInfo(workset, sum_derivs, 
-				       current_time, xdot, xdotdot, &x, p, 
+  application->setupTangentWorksetInfo(workset, current_time, 
+                       sum_derivs, xdot, xdotdot, &x, p, 
 				       deriv_p, Vxdot, Vxdotdot, Vx, Vp);
   workset.g = Teuchos::rcp(g, false);
   workset.dgdx = Teuchos::rcp(gx, false);

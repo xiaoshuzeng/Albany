@@ -48,12 +48,12 @@ namespace Albany {
 
     msType meshSpecsType(){ return STK_MS; }
 
-    stk::mesh::fem::FEMMetaData* metaData;
-    stk::mesh::BulkData* bulkData;
+    stk_classic::mesh::fem::FEMMetaData* metaData;
+    stk_classic::mesh::BulkData* bulkData;
 
-    std::map<int, stk::mesh::Part*> partVec;    //Element blocks
-    std::map<std::string, stk::mesh::Part*> nsPartVec;  //Node Sets
-    std::map<std::string, stk::mesh::Part*> ssPartVec;  //Side Sets
+    std::map<int, stk_classic::mesh::Part*> partVec;    //Element blocks
+    std::map<std::string, stk_classic::mesh::Part*> nsPartVec;  //Node Sets
+    std::map<std::string, stk_classic::mesh::Part*> ssPartVec;  //Side Sets
 
     Teuchos::RCP<Albany::AbstractSTKFieldContainer> getFieldContainer(){return fieldContainer; }
     AbstractSTKFieldContainer::VectorFieldType* getCoordinatesField(){ return fieldContainer->getCoordinatesField(); }
@@ -65,6 +65,11 @@ namespace Albany {
     bool exoOutput;
     std::string exoOutFile;
     int exoOutputInterval;
+    std::string cdfOutFile;
+    bool cdfOutput;
+    unsigned nLat;
+    unsigned nLon;
+    int cdfOutputInterval;
 
     bool transferSolutionToCoords;
 

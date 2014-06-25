@@ -242,7 +242,7 @@ namespace LCM {
 
           // If there is no diffusion, then the residual defines only on the mid-plane value
 
-            temp = 1.0/dL_(cell,pt) + artificalDL(cell,pt)*thickness;
+            temp = 1.0/dL_(cell,pt) + artificalDL(cell,pt);
 
           // Local rate of change volumetric constraint term
             transientTerm = refValues(node,pt)*
@@ -268,17 +268,15 @@ namespace LCM {
             	// hydrostatic stress term
         		for (std::size_t dim=0; dim < numDims; ++dim) {
 
-        			    transport_residual_(cell, node) -= refValues(node,pt)*
-        			    						                         surface_Grad_BF(cell, node, pt, dim)*
+        			    transport_residual_(cell, node) -= surface_Grad_BF(cell, node, pt, dim)*
         			    						  	  	                 convection_coefficient_(cell,pt)*transport_(cell,pt)*
         			    				                                 hydro_stress_gradient_(cell,pt, dim)*dt*
         			    				       	   	   	   	   	   	   	 refArea(cell,pt)*temp;
 
-        				transport_residual_(cell, topNode) -= refValues(node,pt)*
-        						                                          surface_Grad_BF(cell, topNode, pt, dim)*
+        				transport_residual_(cell, topNode) -= surface_Grad_BF(cell, topNode, pt, dim)*
         				                                                  convection_coefficient_(cell,pt)*transport_(cell,pt)*
         				                                                  hydro_stress_gradient_(cell,pt, dim)*dt*
-        		                                                         refArea(cell,pt)*temp;
+        		                                                          refArea(cell,pt)*temp;
         		}
             }
         } // end integrartion point loop
@@ -295,10 +293,9 @@ namespace LCM {
       vol = 0.0;
       for (std::size_t qp=0; qp < numQPs; ++qp) {
         CLPbar += refArea(cell,qp)*
-        		          (transport_(cell,qp) - transportold(cell, qp));
+        		           (transport_(cell,qp) - transportold(cell, qp));
         vol  += refArea(cell,qp);
       }
-
       CLPbar /= vol;
       for (std::size_t qp=0; qp < numQPs; ++qp) {
         pterm(cell,qp) = CLPbar;
@@ -312,7 +309,7 @@ namespace LCM {
 
     	  for (std::size_t qp=0; qp < numQPs; ++qp) {
 
-    		  temp = 1.0/dL_(cell,qp) + artificalDL(cell,qp) ;
+    		  temp = 1.0/dL_(cell,qp) + artificalDL(cell,qp);
 
     		  stabilizationTerm= stab_param_*eff_diff_(cell, qp)*
                                               (-transport_(cell, qp)+transportold(cell, qp)+

@@ -9,21 +9,25 @@
 #include <stk_util/parallel/ParallelReduce.hpp>
 
 #include "AAdapt_TopologyModification.hpp"
-#include "AAdapt_StressFracture.hpp"
+//#include "AAdapt_StressFracture.hpp"
+#include "LCM/utils/topology/Topology_FractureCriterion.h"
+#include <boost/foreach.hpp>
 
 namespace AAdapt {
 
-typedef stk::mesh::Entity Entity;
-typedef stk::mesh::EntityRank EntityRank;
-typedef stk::mesh::RelationIdentifier EdgeId;
-typedef stk::mesh::EntityKey EntityKey;
+typedef stk_classic::mesh::Entity Entity;
+typedef stk_classic::mesh::EntityRank EntityRank;
+typedef stk_classic::mesh::RelationIdentifier EdgeId;
+typedef stk_classic::mesh::EntityKey EntityKey;
 
-//----------------------------------------------------------------------------
-AAdapt::TopologyMod::
-TopologyMod(const Teuchos::RCP<Teuchos::ParameterList>& params,
-            const Teuchos::RCP<ParamLib>& param_lib,
-            Albany::StateManager& state_mgr,
-            const Teuchos::RCP<const Epetra_Comm>& comm) :
+//
+//
+//
+AAdapt::TopologyMod::TopologyMod(
+    Teuchos::RCP<Teuchos::ParameterList> const & params,
+    Teuchos::RCP<ParamLib> const & param_lib,
+    Albany::StateManager & state_mgr,
+    Teuchos::RCP<const Epetra_Comm> const & comm) :
   AAdapt::AbstractAdapter(params, param_lib, state_mgr, comm),
   remesh_file_index_(1) {
 
@@ -48,83 +52,51 @@ TopologyMod(const Teuchos::RCP<Teuchos::ParameterList>& params,
   // Save the initial output file name
   base_exo_filename_ = stk_mesh_struct_->exoOutFile;
 
-  double critical_stress_ = params->get<double>("Fracture Stress");
+  std::string const
+  stress_name = "nodal_Cauchy_Stress";
+
+  double const
+  critical_traction = params->get<double>("Critical Traction");
+
+  double const
+  beta = params->get<double>("beta");
+
+  topology_ =
+    Teuchos::rcp(new LCM::Topology(discretization_));
 
   fracture_criterion_ =
-    Teuchos::rcp(new AAdapt::StressFracture(num_dim_,
-                                         element_rank_,
-                                         avg_stresses_,
-                                         critical_stress_,
-                                         *stk_discretization_));
+    Teuchos::rcp(
+        new LCM::FractureCriterionTraction(
+            *topology_, stress_name, critical_traction, beta)
+  );
 
-  // Modified by GAH from LCM::NodeUpdate.cc
-  topology_ =
-    Teuchos::rcp(new LCM::Topology(discretization_, fracture_criterion_));
+  topology_->setFractureCriterion(fracture_criterion_);
 }
 
-//----------------------------------------------------------------------------
-AAdapt::TopologyMod::
-~TopologyMod() {
+//
+//
+//
+AAdapt::TopologyMod::~TopologyMod() {
 }
 
-//----------------------------------------------------------------------------
+//
+//
+//
 bool
 AAdapt::TopologyMod::queryAdaptationCriteria() {
-  // FIXME Dumb criteria
+  size_t
+  number_fractured_faces = topology_->setEntitiesOpen();
 
-  if(iter == 5 || iter == 10 || iter == 15) { // fracture at iter = 5, 10, 15
-
-    // First, check and see if the mesh fracture criteria is met
-    // anywhere before messing with things.
-
-    // Get a vector containing the edge set of the mesh where
-    // fractures can occur
-
-    std::vector<stk::mesh::Entity*> face_list;
-    stk::mesh::Selector select_owned = meta_data_->locally_owned_part();
-    stk::mesh::get_selected_entities(select_owned,
-                                     bulk_data_->buckets(num_dim_ - 1),
-                                     face_list);
-
-    //    *out << "Num faces : " << face_list.size() << std::endl;
-    std::cout << "Num faces : " << face_list.size() << std::endl;
-
-    // Probability that fracture_criterion will return true.
-    double p = iter;
-    int total_fractured;
-
-    // Iterate over the boundary entities
-    for(int i = 0; i < face_list.size(); ++i) {
-
-      stk::mesh::Entity& face = *(face_list[i]);
-
-      if(fracture_criterion_->computeFractureCriterion(face, p))
-
-        fractured_faces_.push_back(face_list[i]);
-
-    }
-
-    //    if(fractured_edges.size() == 0) return false; // nothing to do
-    if((total_fractured = accumulateFractured(fractured_faces_.size())) == 0) {
-
-      fractured_faces_.clear();
-
-      return false; // nothing to do
-    }
-
-    *output_stream_ << "TopologyModification: Need to split \""
-                    << total_fractured << "\" mesh elements." << std::endl;
-
-
-    return true;
-  }
-
-  return false;
+  return number_fractured_faces > 0;
 }
 
-//----------------------------------------------------------------------------
+//
+//
+//
 bool
-AAdapt::TopologyMod::adaptMesh(const Epetra_Vector& solution, const Epetra_Vector& ovlp_solution) {
+AAdapt::TopologyMod::adaptMesh(
+    Epetra_Vector const & solution,
+    Epetra_Vector const & ovlp_solution) {
 
   *output_stream_
       << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
@@ -133,13 +105,14 @@ AAdapt::TopologyMod::adaptMesh(const Epetra_Vector& solution, const Epetra_Vecto
 
   // Save the current results and close the exodus file
 
-  // Create a remeshed output file naming convention by adding the remesh_file_index_ ahead of the period
+  // Create a remeshed output file naming convention by
+  // adding the remesh_file_index_ ahead of the period
   std::ostringstream ss;
   std::string str = base_exo_filename_;
   ss << "_" << remesh_file_index_ << ".";
   str.replace(str.find('.'), 1, ss.str());
 
-  *output_stream_ << "Remeshing: renaming output file to - " << str << std::endl;
+  *output_stream_ << "Remeshing: renaming output file to - " << str << '\n';
 
   // Open the new exodus file for results
   stk_discretization_->reNameExodusOutput(str);
@@ -158,24 +131,17 @@ AAdapt::TopologyMod::adaptMesh(const Epetra_Vector& solution, const Epetra_Vecto
   // Modifies mesh for graph algorithm
   // Function must be called each time before there are changes to the mesh
 
-  topology_->removeElementToNodeConnectivity(old_elem_to_node_);
-
   // Check for failure criterion
-  std::map<EntityKey, bool> local_entity_open;
-  std::map<EntityKey, bool> global_entity_open;
-  topology_->setEntitiesOpen(fractured_faces_, local_entity_open);
+  // std::map<EntityKey, bool> local_entity_open;
+  // std::map<EntityKey, bool> global_entity_open;
+  topology_->setEntitiesOpen();
 
-  getGlobalOpenList(local_entity_open, global_entity_open);
+  // getGlobalOpenList(local_entity_open, global_entity_open);
 
   // begin mesh update
 
-  topology_->splitOpenFaces(global_entity_open);
+  topology_->splitOpenFaces();
 
-  // Clear the list of fractured edges in preparation for the next
-  // fracture event
-  fractured_faces_.clear();
-
-  topology_->restoreElementToNodeConnectivity(new_elem_to_node_);
   // Throw away all the Albany data structures and re-build them from the mesh
 
   stk_discretization_->updateMesh();
@@ -199,9 +165,14 @@ AAdapt::TopologyMod::getValidAdapterParameters() const {
     this->getGenericAdapterParams("ValidTopologyModificationParams");
 
   valid_pl_->
-  set<double>("Fracture Stress",
+  set<double>("Critical Traction",
               1.0,
-              "Fracture stress value at which two elements separate");
+              "Critical traction at which two elements separate t_eff >= t_cr");
+
+  valid_pl_->
+  set<double>("beta",
+              1.0,
+              "Weight factor t_eff = sqrt[(t_s/beta)^2 + t_n^2]");
 
   return valid_pl_;
 }
@@ -211,12 +182,12 @@ AAdapt::TopologyMod::getValidAdapterParameters() const {
 void
 AAdapt::TopologyMod::showRelations() {
   std::vector<Entity*> element_list;
-  stk::mesh::get_entities(*(bulk_data_), element_rank_, element_list);
+  stk_classic::mesh::get_entities(*(bulk_data_), element_rank_, element_list);
 
   // Remove extra relations from element
   for(int i = 0; i < element_list.size(); ++i) {
     Entity& element = *(element_list[i]);
-    stk::mesh::PairIterRelation relations = element.relations();
+    stk_classic::mesh::PairIterRelation relations = element.relations();
     std::cout << "Element " << element_list[i]->identifier()
               << " relations are :" << std::endl;
 
@@ -234,7 +205,7 @@ int
 AAdapt::TopologyMod::accumulateFractured(int num_fractured) {
   int total_fractured;
 
-  stk::all_reduce_sum(bulk_data_->parallel(), &num_fractured, &total_fractured, 1);
+  stk_classic::all_reduce_sum(bulk_data_->parallel(), &num_fractured, &total_fractured, 1);
 
   return total_fractured;
 }
@@ -261,8 +232,8 @@ getGlobalOpenList(std::map<EntityKey, bool>& local_entity_open,
 
     // Debugging
     /*
-      const unsigned entity_rank = stk::mesh::entity_rank( me.first);
-      const stk::mesh::EntityId entity_id = stk::mesh::entity_id( me.first );
+      const unsigned entity_rank = stk_classic::mesh::entity_rank( me.first);
+      const stk_classic::mesh::EntityId entity_id = stk_classic::mesh::entity_id( me.first );
       const std::string & entity_rank_name = metaData->entity_rank_name( entity_rank );
       Entity *entity = bulk_data_->get_entity(me.first);
       std::cout<<"Single proc fracture list contains "<<" "<<entity_rank_name<<" ["<<entity_id<<"] Proc:"
@@ -290,6 +261,10 @@ getGlobalOpenList(std::map<EntityKey, bool>& local_entity_open,
 
   int total_number_of_open_entities = count;
 
+// Needed for backward compatibility with older MPI versions.
+#ifndef MPI_UINT64_T
+#define MPI_UINT64_T MPI_UNSIGNED_LONG_LONG
+#endif
   EntityKey::raw_key_type* result_array = new EntityKey::raw_key_type[total_number_of_open_entities];
   MPI_Allgatherv(&v[0], num_open_on_pe, MPI_UINT64_T, result_array,
                  sizes, offsets, MPI_UINT64_T, bulk_data_->parallel());
@@ -302,20 +277,20 @@ getGlobalOpenList(std::map<EntityKey, bool>& local_entity_open,
 
     // Debugging
     /*
-      const unsigned entity_rank = stk::mesh::entity_rank( key);
-      const stk::mesh::EntityId entity_id = stk::mesh::entity_id( key );
+      const unsigned entity_rank = stk_classic::mesh::entity_rank( key);
+      const stk_classic::mesh::EntityId entity_id = stk_classic::mesh::entity_id( key );
       const std::string & entity_rank_name = metaData->entity_rank_name( entity_rank );
       Entity *entity = bulk_data_->get_entity(key);
       if(!entity) { std::cout << "Error on this processor: Entity not addressible!!!!!!!!!!!!!" << std::endl;
 
       std::cout<<"Global proc fracture list contains "<<" "<<entity_rank_name<<" ["<<entity_id<<"]" << std::endl;
     std::vector<Entity*> element_lst;
-    stk::mesh::get_entities(*(bulk_data_),elementRank,element_lst);
+    stk_classic::mesh::get_entities(*(bulk_data_),elementRank,element_lst);
     for (int i = 0; i < element_lst.size(); ++i){
       std::cout << element_lst[i]->identifier() << std::endl;
       }
     std::vector<Entity*> entity_lst;
-    stk::mesh::get_entities(*(bulk_data_),entity_rank,entity_lst);
+    stk_classic::mesh::get_entities(*(bulk_data_),entity_rank,entity_lst);
     for (int i = 0; i < entity_lst.size(); ++i){
       std::cout << entity_lst[i]->identifier() << std::endl;
       }

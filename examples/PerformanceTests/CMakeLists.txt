@@ -12,7 +12,7 @@ message("-- Performance Test Machine Name = " ${machineName})
 set(performanceTestScript  
     python ${CMAKE_CURRENT_SOURCE_DIR}/perfScript.py
      -machine ${machineName}
-     -executable ${SerialAlbany.exe})
+     -executable "${AlbanyPath}")
 
 # Heat Transfer Problems ###############
   add_subdirectory(SteadyHeat2D)
@@ -26,7 +26,7 @@ IF(ALBANY_DEMO_PDES)
 
   # These require exodus, Ioss, stk_io, to read meshes
   IF(ALBANY_SEACAS)
-    #add_subdirectory(NSVortexShedding2D)
+    add_subdirectory(NSVortexShedding)
   ENDIF()
 
   if (ALBANY_ASCR)
@@ -40,7 +40,7 @@ IF(ALBANY_LCM)
   add_subdirectory(TLPoroElasticity3D)
 
   IF(ALBANY_SEACAS)
-    #add_subdirectory(MechanicsWithHydrogen)
+    add_subdirectory(Necking3D)
   ENDIF()
 
   IF(ALBANY_HYDRIDE)

@@ -7,6 +7,8 @@
 #if !defined(LCM_Topology_Subgraph_h)
 #define LCM_Topology_Subgraph_h
 
+#include <stk_mesh/base/FieldData.hpp>
+
 #include "Topology_Types.h"
 
 namespace LCM {
@@ -30,12 +32,11 @@ public:
   /// changes to the subgraph are automatically mirrored in the stk
   /// mesh.
   ///
-  Subgraph(BulkData * bulk_data,
+  Subgraph(RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct,
       std::set<EntityKey>::iterator first_vertex,
       std::set<EntityKey>::iterator last_vertex,
       std::set<stkEdge>::iterator first_edge,
-      std::set<stkEdge>::iterator last_edge,
-      int dimension);
+      std::set<stkEdge>::iterator last_edge);
 
   ///
   ///\brief Map a vertex in the subgraph to a entity in the stk mesh.
@@ -74,9 +75,6 @@ public:
   Vertex
   addVertex(EntityRank vertex_rank);
 
-  Vertex
-  cloneVertex(Vertex & old_vertex);
-
   ///
   /// \brief Remove vertex in subgraph
   ///
@@ -90,7 +88,7 @@ public:
   /// remain, will be removed before the vertex/entity deletion.
   ///
   void
-  removeVertex(Vertex vertex);
+  removeVertex(Vertex const vertex);
 
   ///
   /// \brief Add edge to local graph.
@@ -106,8 +104,10 @@ public:
   /// subgraph.
   ///
   std::pair<Edge, bool>
-  addEdge(const EdgeId edge_id, const Vertex local_source_vertex,
-      const Vertex local_target_vertex);
+  addEdge(
+      EdgeId const edge_id,
+      Vertex const local_source_vertex,
+      Vertex const local_target_vertex);
 
   ///
   /// \brief Remove edge from graph
@@ -119,16 +119,17 @@ public:
   ///
   ///
   void
-  removeEdge(const Vertex & local_source_vertex,
-      const Vertex & local_target_vertex);
+  removeEdge(
+      Vertex const & local_source_vertex,
+      Vertex const & local_target_vertex);
 
   ///
   /// \param[in] Vertex in subgraph
   ///
   /// \return Rank of vertex
   ///
-  EntityRank &
-  getVertexRank(const Vertex vertex);
+  EntityRank
+  getVertexRank(Vertex const vertex);
 
   ///
   /// \param[in] Edge in subgraph
@@ -138,8 +139,8 @@ public:
   /// representing the correct ordering. Need this information to create
   /// or delete relations in the stk mesh.
   ///
-  EdgeId &
-  getEdgeId(const Edge edge);
+  EdgeId
+  getEdgeId(Edge const edge);
 
   ///
   /// \brief Function determines whether the input vertex is an
@@ -158,16 +159,17 @@ public:
   /// vertex in the subgraph and the component number.
   ///
   void
-  testArticulationPoint(Vertex input_vertex, int & numComponents,
-      std::map<Vertex, int> & subComponent);
+  testArticulationPoint(
+      Vertex const input_vertex,
+      size_t & number_components,
+      ComponentMap & component_map);
 
   ///
-  /// \brief Clones a boundary entity from the subgraph and separates the in-edges
-  /// of the entity.
+  /// \brief Clones a boundary entity from the subgraph and separates
+  /// the in-edges of the entity.
   ///
-  /// \param[in] Boundary vertex
-  /// \param[out] New boundary vertex
-  /// \param Map of entity and boolean value is open
+  /// \param Boundary vertex
+  /// \return New boundary vertex
   ///
   /// Boundary entities are on boundary of the elements in the mesh. They
   /// will thus have either 1 or 2 in-edges to elements.
@@ -180,15 +182,21 @@ public:
   /// Entity must have satisfied the fracture criterion and be labeled open
   /// in map is_open. If not open: Return.
   ///
+  Vertex
+  cloneBoundaryEntity(Vertex vertex);
+
+  ///
+  /// Restore element to node connectivity needed by STK.
+  /// The map contains a list of elements for which the point
+  /// was replaced by a new point.
+  ///
   void
-  cloneBoundaryEntity(Vertex & vertex, Vertex & newVertex,
-      std::map<EntityKey, bool> & entity_open);
+  updateElementNodeConnectivity(Entity & point, ElementNodeMap & map);
 
   ///
   /// \brief Splits an articulation point.
   ///
   /// \param[in] Input vertex
-  /// \param Map of entity and boolean value is open
   /// \return Map of element and new node
   ///
   /// An articulation point is defined as a vertex which if removed
@@ -206,13 +214,12 @@ public:
   /// change, do not add to the map.
   ///
   std::map<Entity*, Entity*>
-  splitArticulationPoint(Vertex vertex,
-      std::map<EntityKey, bool> & entity_open);
+  splitArticulationPoint(Vertex vertex);
 
   ///
   /// \brief Clone all out edges of a vertex to a new vertex.
   ///
-  /// \param[in] Original vertex
+  /// \param[in] Old vertex
   /// \param[in] New vertex
   ///
   /// The global graph must remain consistent when new vertices are added. In
@@ -224,16 +231,15 @@ public:
   /// to the global graph only.
   ///
   void
-  cloneOutEdges(Vertex & originalVertex, Vertex & newVertex);
+  cloneOutEdges(Vertex old_vertex, Vertex new_vertex);
 
   ///
-  /// \brief Output the graph associated with the mesh to graphviz
-  ///        .dot file for visualization purposes.
+  /// \brief Output the graph associated with the mesh to graphviz .dot
+  /// file for visualization purposes.
   ///
   /// \param[in] output file
-  /// \param[in] map of entity and boolean value is open
   ///
-  /// Similar to output_to_graphviz function in Topology class.
+  /// Similar to outputToGraphviz function in Topology class.
   /// If fracture criterion for entity is satisfied, the entity and all
   /// associated lower order entities are marked open. All open entities are
   /// displayed as such in output file.
@@ -242,8 +248,87 @@ public:
   ///   dot -Tpng <gviz_output>.dot -o <gviz_output>.png
   ///
   void
-  outputToGraphviz(std::string & gviz_output,
-      std::map<EntityKey, bool> entity_open);
+  outputToGraphviz(std::string const & output_filename);
+
+  ///
+  /// Accessors and mutators
+  ///
+  size_t const
+  getSpaceDimension() {return static_cast<size_t>(getSTKMeshStruct()->numDim);}
+
+  RCP<Albany::AbstractSTKMeshStruct> &
+  getSTKMeshStruct()
+  {return stk_mesh_struct_;}
+
+  BulkData *
+  getBulkData()
+  {return stk_mesh_struct_->bulkData;}
+
+  stk_classic::mesh::fem::FEMMetaData *
+  getMetaData()
+  {return stk_mesh_struct_->metaData;}
+
+  EntityRank const
+  getCellRank() {return getMetaData()->element_rank();}
+
+  EntityRank const
+  getBoundaryRank()
+  {
+    assert(getCellRank() > 0);
+    return getCellRank() - 1;
+  }
+
+  IntScalarFieldType &
+  getFractureState()
+  {return *(stk_mesh_struct_->getFieldContainer()->getFractureState());}
+
+  //
+  // Set fracture state. Do nothing for cells (elements).
+  //
+  void
+  setFractureState(Entity const & e, FractureState const fs)
+  {
+    if (e.entity_rank() < getCellRank()) {
+      *(stk_classic::mesh::field_data(getFractureState(), e)) = static_cast<int>(fs);
+    }
+  }
+
+  //
+  // Get fracture state. Return CLOSED for cells (elements).
+  //
+  FractureState
+  getFractureState(Entity const & e)
+  {
+    return e.entity_rank() >= getCellRank() ?
+    CLOSED :
+    static_cast<FractureState>(*(stk_classic::mesh::field_data(getFractureState(), e)));
+  }
+
+  bool
+  isInternal(Entity const & e) {
+
+    assert(e.entity_rank() == getBoundaryRank());
+
+    Vertex
+    vertex = globalToLocal(e.key());
+
+    boost::graph_traits<Graph>::degree_size_type
+    number_in_edges = boost::in_degree(vertex, *this);
+
+    assert(number_in_edges == 1 || number_in_edges == 2);
+
+    return number_in_edges == 2;
+  }
+
+  bool
+  isOpen(Entity const & e) {
+    return getFractureState(e) == OPEN;
+  }
+
+  bool
+  isInternalAndOpen(Entity const & e) {
+    return isInternal(e) == true && isOpen(e) == true;
+  }
 
 private:
 
@@ -254,14 +339,9 @@ private:
   Subgraph& operator=(const Subgraph&);
 
   ///
-  /// Number of dimensions
-  ///
-  int dimension_;
-
-  ///
   /// stk mesh data
   ///
-  BulkData* bulk_data_;
+  RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct_;
 
   ///
   /// map local vertex -> global entity key
@@ -272,15 +352,6 @@ private:
   /// map global entity key -> local vertex
   ///
   std::map<EntityKey, Vertex> global_local_vertex_map_;
-
-  void
-  communicate_and_create_shared_entities(Entity   & node,
-      EntityKey   new_node_key);
-
-  void
-  bcast_key(unsigned root, EntityKey&   node_key);
-
-
 };
 // class Subgraph
 

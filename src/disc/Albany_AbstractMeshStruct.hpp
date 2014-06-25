@@ -18,6 +18,7 @@
 #include "Albany_ProblemUtils.hpp"
 #include "Intrepid_DefaultCubatureFactory.hpp"
 #include "Intrepid_FunctionSpaceTools.hpp"
+#include "Adapt_NodalDataBlock.hpp"
 
 
 namespace Albany {
@@ -50,7 +51,7 @@ class CellSpecs {
      static Intrepid::DefaultCubatureFactory<RealType> cubFactory;
 
      const CellTopologyData &cellTopologyData; // Information about the topology of the elements contained in the workset
-     const shards::CellTopology &cellType; // the topology of the elements contained in the workset
+     const shards::CellTopology cellType; // the topology of the elements contained in the workset
      const Teuchos::RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > > intrepidBasis; // The basis
      const Teuchos::RCP<Intrepid::Cubature<RealType> > cellCubature; // The cubature of the cells in the workset
      // Make sure this appears after the above, as it depends on the above being initialized prior to
@@ -67,7 +68,11 @@ struct AbstractMeshStruct {
   public:
 
     //! Internal mesh specs type needed
+#ifdef ALBANY_SCOREC
     enum msType { STK_MS, FMDB_VTK_MS, FMDB_EXODUS_MS };
+#else
+    enum msType { STK_MS };
+#endif
 
     virtual void setFieldAndBulkData(
       const Teuchos::RCP<const Epetra_Comm>& comm,
@@ -82,6 +87,8 @@ struct AbstractMeshStruct {
     virtual const Albany::DynamicDataArray<Albany::CellSpecs>::type& getMeshDynamicData() const = 0;
 
     virtual msType meshSpecsType() = 0;
+
+    Teuchos::RCP<Adapt::NodalDataBlock> nodal_data_block;
 
 };
 }

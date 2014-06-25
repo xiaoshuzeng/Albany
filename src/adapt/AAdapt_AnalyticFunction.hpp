@@ -160,6 +160,36 @@ class AerasScharDensity : public AnalyticFunction {
     Teuchos::Array<double> data;
 };
 
+class AerasXScalarAdvection : public AnalyticFunction {
+  public:
+    AerasXScalarAdvection(int neq_, int numDim_, Teuchos::Array<double> data_);
+    void compute(double* x, const double* X);
+  private:
+    int numDim; // size of coordinate vector X
+    int neq;    // size of solution vector x
+    Teuchos::Array<double> data;
+};
+
+class AerasXZHydrostatic : public AnalyticFunction {
+  public:
+    AerasXZHydrostatic(int neq_, int numDim_, Teuchos::Array<double> data_);
+    void compute(double* x, const double* X);
+  private:
+    int numDim; // size of coordinate vector X
+    int neq;    // size of solution vector x
+    Teuchos::Array<double> data;
+};
+
+class AerasHydrostatic : public AnalyticFunction {
+  public:
+    AerasHydrostatic(int neq_, int numDim_, Teuchos::Array<double> data_);
+    void compute(double* x, const double* X);
+  private:
+    int numDim; // size of coordinate vector X
+    int neq;    // size of solution vector x
+    Teuchos::Array<double> data;
+};
+
 class AerasHeaviside : public AnalyticFunction {
   public:
     AerasHeaviside(int neq_, int numDim_, Teuchos::Array<double> data_);
@@ -172,11 +202,32 @@ class AerasHeaviside : public AnalyticFunction {
 
 class AerasCosineBell : public AnalyticFunction {
   public:
-    AerasCosineBell(int neq_, int numDim_, Teuchos::Array<double> data_);
+    AerasCosineBell(int neq_, int spatialDim_, Teuchos::Array<double> data_);
     void compute(double* x, const double* X);
   private:
-    int numDim; // size of coordinate vector X
+    int spatialDim; // size of coordinate vector X
     int neq;    // size of solution vector x
+    Teuchos::Array<double> data;
+};
+
+class AerasZonalFlow : public AnalyticFunction {
+  public:
+     AerasZonalFlow(int neq_, int spatialDim_, Teuchos::Array<double> data_);
+    void compute(double* x, const double* X);
+  private:
+    int spatialDim; // size of coordinate vector X
+    int neq;    // size of solution vector x
+
+    Teuchos::Array<double> data;
+};
+class AerasTC5Init : public AnalyticFunction {
+  public:
+     AerasTC5Init(int neq_, int spatialDim_, Teuchos::Array<double> data_);
+    void compute(double* x, const double* X);
+  private:
+    int spatialDim; // size of coordinate vector X
+    int neq;    // size of solution vector x
+
     Teuchos::Array<double> data;
 };
 
@@ -187,6 +238,17 @@ class AerasPlanarCosineBell : public AnalyticFunction {
   private:
     int numDim; // size of coordinate vector X
     int neq;    // size of solution vector x
+    Teuchos::Array<double> data;
+};
+
+class AerasRossbyHaurwitzWave : public AnalyticFunction {
+  public:
+    AerasRossbyHaurwitzWave(int neq_, int spatialDim_, Teuchos::Array<double> data_);
+    void compute(double* x, const double* X);
+  private:
+    int spatialDim; // size of coordinate vector X
+    int neq;    // size of solution vector x
+
     Teuchos::Array<double> data;
 };
 

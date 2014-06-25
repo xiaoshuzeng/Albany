@@ -27,6 +27,10 @@
 #include "pumi_geom_parasolid.h"
 #endif
 
+#include <apf.h>
+#include <apfMesh2.h>
+#include <apfPUMI.h>
+
 #define NG_EX_ENTITY_TYPE_MAX 15
 #define ENT_DIMS 4
 
@@ -50,18 +54,14 @@ namespace AlbPUMI {
                   const Teuchos::RCP<Albany::StateInfoStruct>& sis,
                   const unsigned int worksetSize);
 
+    void splitFields(Teuchos::Array<std::string> fieldLayout);
+
     Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >& getMeshSpecs();
 
-//    std::vector<std::string> scalarValue_states;
-    std::vector<Teuchos::RCP<QPData<1> > > scalarValue_states;
-    std::vector<Teuchos::RCP<QPData<2> > > qpscalar_states;
-    std::vector<Teuchos::RCP<QPData<3> > > qpvector_states;
-    std::vector<Teuchos::RCP<QPData<4> > > qptensor_states;
-
-//    std::vector<Teuchos::RCP<NodeData<1> > > scalarValue_states;
-    std::vector<Teuchos::RCP<NodeData<2> > > scalar_states;
-    std::vector<Teuchos::RCP<NodeData<3> > > vector_states;
-    std::vector<Teuchos::RCP<NodeData<4> > > tensor_states;
+    std::vector<Teuchos::RCP<QPData<double, 1> > > scalarValue_states;
+    std::vector<Teuchos::RCP<QPData<double, 2> > > qpscalar_states;
+    std::vector<Teuchos::RCP<QPData<double, 3> > > qpvector_states;
+    std::vector<Teuchos::RCP<QPData<double, 4> > > qptensor_states;
 
     std::vector<std::string> nsNames;
     std::vector<std::string> ssNames;
@@ -86,9 +86,14 @@ namespace AlbPUMI {
     double restartDataTime;
     int neq;
     int numDim;
+    int cubatureDegree;
     bool interleavedOrdering;
-    pTag residual_field_tag;
-    pTag solution_field_tag;
+    apf::Mesh2* apfMesh;
+    bool solutionInitialized;
+    bool residualInitialized;
+
+    Teuchos::Array<std::string> solVectorLayout;
+    Teuchos::Array<std::string> resVectorLayout;
 
     double time;
 
@@ -126,7 +131,7 @@ private:
 
 #ifndef SCOREC_ACIS
     int PUMI_Geom_RegisterAcis() {
-      fprintf(stderr,"ERROR: FMDB Discretization -> Cannot find Acis\n"); 
+      fprintf(stderr,"ERROR: FMDB Discretization -> Cannot find Acis\n");
       exit(1);
     }
 #endif

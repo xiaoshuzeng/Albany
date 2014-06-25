@@ -10,50 +10,41 @@ cmake_minimum_required(VERSION 2.7)
 include(CMakeDependentOption)
 
 # Error check up front
-IF (NOT DEFINED ALBANY_TRILINOS_DIR)
-  MESSAGE(FATAL_ERROR "\nAlbany Error: cmake must define ALBANY_TRILINOS_DIR:
-  (-D ALBANY_TRILINOS_DIR:FILEPATH=<trilinos_install_prefix>)!")
-ENDIF()
+#IF (NOT DEFINED ALBANY_TRILINOS_DIR)
+#  MESSAGE(FATAL_ERROR "\nAlbany Error: cmake must define ALBANY_TRILINOS_DIR:
+#  (-D ALBANY_TRILINOS_DIR:FILEPATH=<trilinos_install_prefix>)!")
+#ENDIF()
 
 # Advertise that we support shared libs
 SET_PROPERTY(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS TRUE)
 
 # Get Trilinos as one entity
-SET(CMAKE_PREFIX_PATH ${ALBANY_TRILINOS_DIR} ${CMAKE_PREFIX_PATH})
+IF (DEFINED ALBANY_TRILINOS_DIR)
+  SET(CMAKE_PREFIX_PATH ${ALBANY_TRILINOS_DIR} ${CMAKE_PREFIX_PATH})
+ENDIF()
 FIND_PACKAGE(Trilinos REQUIRED)
 
 # Trilinos_BIN_DIRS probably should be defined in the Trilinos config. Until it is, set it here.
 # This is needed to find SEACAS tools used during testing (epu, etc).
 
 SET(Trilinos_BIN_DIRS "${Trilinos_DIR}/../../../bin")
+SET(Trilinos_LIB_DIRS "${Trilinos_DIR}/../../../lib")
 
 MESSAGE("\nFound Trilinos!  Here are the details: ")
 MESSAGE("   Trilinos_DIR = ${Trilinos_DIR}")
 MESSAGE("   Trilinos_VERSION = ${Trilinos_VERSION}")
-MESSAGE("   Trilinos_PACKAGE_LIST = ${Trilinos_PACKAGE_LIST}")
-MESSAGE("   Trilinos_LIBRARIES = ${Trilinos_LIBRARIES}")
+#MESSAGE("   Trilinos_PACKAGE_LIST = ${Trilinos_PACKAGE_LIST}")
+#MESSAGE("   Trilinos_LIBRARIES = ${Trilinos_LIBRARIES}")
 MESSAGE("   Trilinos_BIN_DIRS = ${Trilinos_BIN_DIRS}")
-MESSAGE("   Trilinos_INCLUDE_DIRS = ${Trilinos_INCLUDE_DIRS}")
-MESSAGE("   Trilinos_LIBRARY_DIRS = ${Trilinos_LIBRARY_DIRS}")
+#MESSAGE("   Trilinos_INCLUDE_DIRS = ${Trilinos_INCLUDE_DIRS}")
+#MESSAGE("   Trilinos_LIBRARY_DIRS = ${Trilinos_LIBRARY_DIRS}")
 MESSAGE("   Trilinos_TPL_LIST = ${Trilinos_TPL_LIST}")
-MESSAGE("   Trilinos_TPL_INCLUDE_DIRS = ${Trilinos_TPL_INCLUDE_DIRS}")
-MESSAGE("   Trilinos_TPL_LIBRARIES = ${Trilinos_TPL_LIBRARIES}")
+#MESSAGE("   Trilinos_TPL_INCLUDE_DIRS = ${Trilinos_TPL_INCLUDE_DIRS}")
+#MESSAGE("   Trilinos_TPL_LIBRARIES = ${Trilinos_TPL_LIBRARIES}")
 MESSAGE("   Trilinos_TPL_LIBRARY_DIRS = ${Trilinos_TPL_LIBRARY_DIRS}")
 MESSAGE("   Trilinos_BUILD_SHARED_LIBS = ${Trilinos_BUILD_SHARED_LIBS}")
 MESSAGE("   Trilinos_CXX_COMPILER_FLAGS = ${Trilinos_CXX_COMPILER_FLAGS}")
 MESSAGE("End of Trilinos details\n")
-
-IF(ENABLE_PERIDIGM)
-  SET(CMAKE_PREFIX_PATH ${PERIDIGM_DIR} ${CMAKE_PREFIX_PATH})
-  FIND_PACKAGE(Peridigm REQUIRED)
-  MESSAGE("\nFound Peridigm!  Here are the details: ")
-  MESSAGE("   Peridigm_DIR = ${Peridigm_DIR}")
-  MESSAGE("   Peridigm_LIBRARIES = ${Peridigm_LIBRARIES}")
-  MESSAGE("   Peridigm_INCLUDE_DIRS = ${Peridigm_INCLUDE_DIRS}")
-  MESSAGE("   Peridigm_LIBRARY_DIRS = ${Peridigm_LIBRARY_DIRS}")
-  MESSAGE("End of Peridigm details\n")
-  SET(ALBANY_PERIDIGM TRUE)
-ENDIF()
 
 # Optional Installation helpers
 # Note that some of this functionality depends on CMAKE > 2.8.8
@@ -175,10 +166,10 @@ ELSE()
   SET(ALBANY_SEACAS FALSE)
 
 # Warning message for 8/15/11 trilinos change -- remove after dust settles
-  LIST(FIND Trilinos_PACKAGE_LIST SEACAS SEACAS_List_ID)
-  IF (SEACAS_List_ID GREATER -1)
-     MESSAGE("TRILINOS HAS CHANGED! Configure with Trilinos_ENABLE_SEACASIoss:BOOL=ON")
-  ENDIF()
+#  LIST(FIND Trilinos_PACKAGE_LIST SEACAS SEACAS_List_ID)
+#  IF (SEACAS_List_ID GREATER -1)
+#     MESSAGE("TRILINOS HAS CHANGED! Configure with Trilinos_ENABLE_SEACASIoss:BOOL=ON")
+#  ENDIF()
 
 ENDIF()
 
@@ -241,6 +232,24 @@ ELSE()
   SET(ALBANY_LCM FALSE)
 ENDIF()
 
+# set optional dependency on Peridigm peridynamics code, defaults to Disabled
+OPTION(ENABLE_PERIDIGM "Flag to turn on Albany-Peridigm code coupling" OFF)
+IF(ENABLE_PERIDIGM)
+  SET(CMAKE_PREFIX_PATH ${PERIDIGM_DIR} ${CMAKE_PREFIX_PATH})
+  FIND_PACKAGE(Peridigm REQUIRED)
+  MESSAGE("\nFound Peridigm!  Here are the details: ")
+  MESSAGE("   Peridigm_DIR = ${Peridigm_DIR}")
+  MESSAGE("   Peridigm_LIBRARIES = ${Peridigm_LIBRARIES}")
+  MESSAGE("   Peridigm_INCLUDE_DIRS = ${Peridigm_INCLUDE_DIRS}")
+  MESSAGE("   Peridigm_LIBRARY_DIRS = ${Peridigm_LIBRARY_DIRS}")
+  MESSAGE("End of Peridigm details\n")
+  ADD_DEFINITIONS(-DALBANY_PERIDIGM)
+  SET(ALBANY_PERIDIGM TRUE)
+ELSE()
+  MESSAGE("-- PERIDIGM  is NOT Enabled.")
+  SET(ALBANY_PERIDIGM FALSE)
+ENDIF()
+
 # Set optional build of QCAD (Quantum Device Modeling and Design) defaults to ON
 OPTION(ENABLE_QCAD "Flag to turn on QCAD Source code" ON)
 IF (ENABLE_QCAD)
@@ -265,6 +274,7 @@ ENDIF()
 
 # Set optional build of CISM Interface for FELIX (Land Ice SciDAC project),
 # defaults to Disabled
+
 OPTION(ENABLE_CISM_INTERFACE "Flag to turn on FELIX Source code" OFF)
 IF (ENABLE_CISM_INTERFACE AND ENABLE_FELIX)
   ADD_DEFINITIONS(-DCISM_HAS_FELIX)
@@ -283,7 +293,6 @@ ELSE()
   SET(CISM_HAS_FELIX FALSE)
 ENDIF()
 
-
 # Set optional build of Aeras (Atmosphere Dynamics LDRD), defaults to Disabled
 OPTION(ENABLE_AERAS "Flag to turn on Aeras Source code" OFF)
 IF (ENABLE_AERAS)
@@ -296,7 +305,7 @@ ELSE()
 ENDIF()
 
 # optional dependency on LAME, defaults to FALSE
-OPTION(ENABLE_LAME "Flag to turn on LAME lmaterial library source code" OFF)
+OPTION(ENABLE_LAME "Flag to turn on LAME material library source code" OFF)
 IF(ENABLE_LAME)
   MESSAGE("-- LAME      is enabled, compiling with -DALBANY_LAME")
   ADD_DEFINITIONS(-DALBANY_LAME)
@@ -451,12 +460,12 @@ IF(ENABLE_SCOREC AND SCOREC_List_ID GREATER -1)
     ADD_DEFINITIONS(-DSCOREC_ACIS)
     SET(ENABLE_ACIS TRUE)
   ENDIF()
-  IF (EXISTS ${Trilinos_LIBRARY_DIRS}/libpumi_geom_meshmodel.a)
+  IF (EXISTS ${Trilinos_LIB_DIRS}/libpumi_geom_meshmodel.a)
     MESSAGE("----> Mesh Model is enabled")
     ADD_DEFINITIONS(-DSCOREC_MESHMODEL)
     SET(ENABLE_MESHMODEL TRUE)
   ENDIF()
-  IF (EXISTS ${Trilinos_LIBRARY_DIRS}/libspr.a)
+  IF (EXISTS ${Trilinos_LIB_DIRS}/libspr.a)
     MESSAGE("----> SPR is enabled")
     ADD_DEFINITIONS(-DSCOREC_SPR)
     SET(ENABLE_SPR TRUE)
@@ -491,7 +500,6 @@ ELSE()
     MESSAGE(FATAL_ERROR "\nError:  ASCR code requires ENABLE_SG_MP to be ON\n")
   ENDIF()
 ENDIF()
-
 
 ## Other Miscellaneous Albany Options here:
 MESSAGE("\nMiscellaneous Albany Options:")
@@ -578,11 +586,42 @@ ELSE (ENABLE_DAKOTA_RESTART_EXAMPLES)
   SET (ALBANY_DAKOTA_RESTART_EXAMPLES FALSE)
 ENDIF (ENABLE_DAKOTA_RESTART_EXAMPLES)
 
+# add a target to generate API documentation with Doxygen
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doc/doxygen/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/doc/doxygen/albanyMainPage.doc ${CMAKE_CURRENT_BINARY_DIR}/albanyMainPage.doc)
+add_custom_target(doc
+${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+COMMENT "Generating API documentation with Doxygen" VERBATIM
+)
+endif(DOXYGEN_FOUND)
+
 ## End of CMake options to Albany
 
 add_subdirectory(src)
 
 enable_testing()
+
+#  Timeout real long running tests
+
+IF(ALBANY_CTEST_TIMEOUT)
+    MESSAGE("-- Setting maximum test run time to be       ${ALBANY_CTEST_TIMEOUT} seconds")
+ELSE()
+    MESSAGE("-- No limits are set on maximum test run time")
+ENDIF()
+
+# Make a clean build target for convenience
+
+ADD_CUSTOM_TARGET( cmake_clean
+    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/CMakeCache.txt
+    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/Makefile
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles
+    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/cmake_install.cmake
+    COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_BINARY_DIR}/CTestTestfile.cmake
+)
+
 IF(ALBANY_MPI)
   IF(ALBANY_MPI_OPTIONS)
     SET(MPIEX  ${ALBANY_MPI_EXEC})

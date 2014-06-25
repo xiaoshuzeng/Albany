@@ -22,8 +22,7 @@ StokesFO( const Teuchos::RCP<Teuchos::ParameterList>& params_,
   Albany::AbstractProblem(params_, paramLib_),
   numDim(numDim_)
 {
-  // Get number of species equations from Problem specifications
-  neq = params_->get("Number of PDE Equations", numDim);
+  neq = 2; //FELIX FO Stokes system is a system of 2 PDEs
 
   // Set the num PDEs for the null space object to pass to ML
   this->rigidBodyModes->setNumPDEs(neq);
@@ -143,7 +142,7 @@ FELIX::StokesFO::constructNeumannEvaluators(const Teuchos::RCP<Albany::MeshSpecs
 
    // Construct BC evaluators for all possible names of conditions
    // Should only specify flux vector components (dCdx, dCdy, dCdz), or dCdn, not both
-   std::vector<std::string> condNames(5); //(dCdx, dCdy, dCdz), dCdn, basal, P
+   std::vector<std::string> condNames(6); //(dCdx, dCdy, dCdz), dCdn, basal, P, lateral, basal_scalar_field
    Teuchos::ArrayRCP<std::string> dof_names(1);
      dof_names[0] = "Velocity";
 
@@ -160,6 +159,7 @@ FELIX::StokesFO::constructNeumannEvaluators(const Teuchos::RCP<Albany::MeshSpecs
    condNames[2] = "basal";
    condNames[3] = "P";
    condNames[4] = "lateral";
+   condNames[5] = "basal_scalar_field";
 
    nfm.resize(1); // FELIX problem only has one element block
 
@@ -176,7 +176,6 @@ FELIX::StokesFO::getValidProblemParameters() const
   Teuchos::RCP<Teuchos::ParameterList> validPL =
     this->getGenericProblemParams("ValidStokesFOProblemParams");
 
-  validPL->set("Number of PDE Equations", 1, "Number of equations in Stokes equation set");
   validPL->sublist("FELIX Viscosity", false, "");
   validPL->sublist("Equation Set", false, "");
   validPL->sublist("Body Force", false, "");
