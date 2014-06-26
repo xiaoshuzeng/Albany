@@ -16,10 +16,10 @@ public:
   typedef typename EvalT::ScalarT     ScalarT;
   typedef typename EvalT::MeshScalarT MeshScalarT;
 
-  static const Eta<EvalT> &self(const ScalarT p0=0,
-                                const ScalarT ptop=0,
+  static const Eta<EvalT> &self(const ScalarT ptop=0,
+                                const ScalarT p0=0,
                                 const int     L=0) {
-    static const Eta swc(p0,ptop,L);
+    static const Eta swc(ptop,p0,L);
     return swc;
   }
 
@@ -39,9 +39,11 @@ public:
   ScalarT   ptop() const { return Ptop;}
   ScalarT etatop() const { return Etatop;}
 
-  ScalarT     W(const double level) const { return  (eta(level)-Etatop)/(1-Etatop); }
-  ScalarT     B(const double level) const { return   eta(level)*   W(level);        }
-  ScalarT     A(const double level) const { return   eta(level)*(1-W(level));       }
+  ScalarT     W(const int level) const { return  (eta(level)-Etatop)/(1-Etatop); }
+  ScalarT     A(const int level) const { return   eta(level)*(1-W(level));       }
+  ScalarT     B(const int level) const { return   eta(level)*   W(level);        }
+
+  ScalarT     B(const double half_step) const { return  eta(half_step)*(eta(half_step)-Etatop)/(1-Etatop);}
 
 private:
   const ScalarT P0;
@@ -49,17 +51,18 @@ private:
   const ScalarT Etatop;
   const int     numLevels;
 
-  Eta(const ScalarT p0, const ScalarT ptop, const int L) :
+  Eta(const ScalarT ptop, const ScalarT p0, const int L) :
     P0(p0),
     Ptop(ptop),
     Etatop(ptop/p0),
     numLevels(L)
   {}
   ScalarT   eta(const double half_step) const {
+    const ScalarT L = numLevels - half_step - 1;
     ScalarT e;
-    if      (half_step < -.25)          e = Etatop;
-    else if (numLevels < half_step+.75) e = 1;
-    else                                e = Etatop + (1-Etatop)*(ScalarT(half_step)+.5)/numLevels;
+    if      (L         <  -.25) e = Etatop;
+    else if (numLevels < L+.75) e = 1;
+    else                        e = Etatop + (1-Etatop)*(ScalarT(L)+.5)/numLevels;
     return e;
   }
 
