@@ -53,6 +53,12 @@ AAdapt::TopologyMod::TopologyMod(
   base_exo_filename_ = stk_mesh_struct_->exoOutFile;
 
   std::string const
+  bulk_block_name = params->get<std::string>("Bulk Block Name");
+
+  std::string const
+  interface_block_name = params->get<std::string>("Interface Block Name");
+
+  std::string const
   stress_name = "nodal_Cauchy_Stress";
 
   double const
@@ -67,7 +73,12 @@ AAdapt::TopologyMod::TopologyMod(
   fracture_criterion_ =
     Teuchos::rcp(
         new LCM::FractureCriterionTraction(
-            *topology_, stress_name, critical_traction, beta)
+            *topology_,
+            bulk_block_name,
+            interface_block_name,
+            stress_name,
+            critical_traction,
+            beta)
   );
 
   topology_->setFractureCriterion(fracture_criterion_);
