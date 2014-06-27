@@ -98,7 +98,7 @@ Albany::IossSTKMeshStruct::IossSTKMeshStruct(
       file_name = params->get<std::string>("Pamgen Input File Name");
     }
 
-    mesh_data->add_mesh_database(mesh_type, file_name, stk::io::READ_MESH);
+    mesh_data->add_mesh_database(file_name, mesh_type, stk::io::READ_MESH);
     mesh_data->create_input_mesh();
 #ifdef ALBANY_ZOLTAN
   }
@@ -263,9 +263,8 @@ Albany::IossSTKMeshStruct::readSerialMesh(const Teuchos::RCP<const Epetra_Comm>&
    */
 
   mesh_data->set_rank_name_vector(entity_rank_names);
-  mesh_data->add_mesh_database("exodusII",
-                               params->get<std::string>("Exodus Input File Name"),
-                               stk::io::READ_MESH);
+  mesh_data->add_mesh_database( params->get<std::string>("Exodus Input File Name"),
+                                "exodusII", stk::io::READ_MESH);
   mesh_data->create_input_mesh();
 
   // Here, all PEs have read the metaData from the input file, and have a pointer to in_region in mesh_data
