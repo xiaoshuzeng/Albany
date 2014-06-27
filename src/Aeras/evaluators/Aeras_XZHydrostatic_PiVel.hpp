@@ -39,9 +39,9 @@ public:
 
 private:
   // Output:
-  PHX::MDField<ScalarT,Cell,Node> pi;
-  PHX::MDField<ScalarT,Cell,Node> velx;
-  PHX::MDField<ScalarT,Cell,Node> dvelx;
+  PHX::MDField<ScalarT,Cell,Node,Node> pi;
+  PHX::MDField<ScalarT,Cell,Node,Node> velx;
+  PHX::MDField<ScalarT,Cell,Node,Node> dvelx;
 
   const int numNodes;
   const int numLevels;

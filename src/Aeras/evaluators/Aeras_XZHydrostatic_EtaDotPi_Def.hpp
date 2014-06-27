@@ -89,8 +89,8 @@ evaluateFields(typename Traits::EvalData workset)
     for (int qp=0; qp < numQPs; ++qp) {
       for (int level=0; level < numLevels; ++level) {
         ScalarT integral = 0;
-        for (int j=0; j<level; ++j) integral += gradpivelx(cell,qp,j) * E.delta(j);
-        etadotpi[level] = -E.B(level+.5)*pdotP0(cell,qp) - integral;
+        for (int j=level; j<numLevels; ++j) integral += gradpivelx(cell,qp,j) * E.delta(j);
+        etadotpi[level] = -E.B(level-.5)*pdotP0(cell,qp) - integral;
       }
       etadotpi[0] = etadotpi[numLevels] = 0;
 
@@ -102,17 +102,17 @@ evaluateFields(typename Traits::EvalData workset)
         const ScalarT etadotpi_p = etadotpi[level+1];
         const ScalarT etadotpi_m = etadotpi[level  ];
 
-        const ScalarT dT_p       = Temperature(cell,qp,level_p) - Temperature(cell,qp,level);
-        const ScalarT dT_m       = Temperature(cell,qp,level)   - Temperature(cell,qp,level_m);
+        const ScalarT dT_m       = Temperature(cell,qp,level_m) - Temperature(cell,qp,level);
+        const ScalarT dT_p       = Temperature(cell,qp,level)   - Temperature(cell,qp,level_p);
         etadotdT(cell,qp,level) = factor * ( etadotpi_p*dT_p + etadotpi_m*dT_m );
 
-        const ScalarT dVx_p      = Velx(cell,qp,level_p) - Velx(cell,qp,level);
-        const ScalarT dVx_m      = Velx(cell,qp,level)   - Velx(cell,qp,level_m);
+        const ScalarT dVx_m      = Velx(cell,qp,level_m) - Velx(cell,qp,level);
+        const ScalarT dVx_p      = Velx(cell,qp,level)   - Velx(cell,qp,level_p);
         etadotdVelx(cell,qp,level) = factor * ( etadotpi_p*dVx_p + etadotpi_m*dVx_m );
 
         for (int i = 0; i < tracerNames.size(); ++i) {
-          const ScalarT dq_p = Tracer[tracerNames[i]](cell,qp,level_p) - Tracer[tracerNames[i]](cell,qp,level);
-          const ScalarT dq_m = Tracer[tracerNames[i]](cell,qp,level)   - Tracer[tracerNames[i]](cell,qp,level_m);
+          const ScalarT dq_m = Tracer[tracerNames[i]](cell,qp,level_m) - Tracer[tracerNames[i]](cell,qp,level);
+          const ScalarT dq_p = Tracer[tracerNames[i]](cell,qp,level)   - Tracer[tracerNames[i]](cell,qp,level_p);
           etadotdTracer[tracerNames[i]](cell,qp,level) = factor * ( etadotpi_p*dq_p + etadotpi_m*dq_m );
         }
       }
