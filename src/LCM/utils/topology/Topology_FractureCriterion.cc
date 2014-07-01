@@ -11,10 +11,12 @@ namespace LCM{
 
 FractureCriterionTraction::FractureCriterionTraction(
     Topology & topology,
+    std::string const & bulk_block_name,
+    std::string const & interface_block_name,
     std::string const & stress_name,
     double const critical_traction,
     double const beta) :
-AbstractFractureCriterion(),
+AbstractFractureCriterion(bulk_block_name, interface_block_name),
 topology_(topology),
 stk_discretization_(*(topology.getSTKDiscretization())),
 stk_mesh_struct_(*(stk_discretization_.getSTKMeshStruct())),
@@ -23,7 +25,9 @@ meta_data_(*(stk_mesh_struct_.metaData)),
 dimension_(stk_mesh_struct_.numDim),
 stress_field_(*(meta_data_.get_field<TensorFieldType>(stress_name))),
 critical_traction_(critical_traction),
-beta_(beta)
+beta_(beta),
+bulk_part_(*(meta_data_.get_part(bulk_block_name))),
+interface_part_(*(meta_data_.get_part(interface_block_name)))
 {
   if (&stress_field_ == 0) {
     std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
@@ -38,15 +42,41 @@ beta_(beta)
 
 
 bool
-FractureCriterionTraction::check(Entity const & entity)
+FractureCriterionTraction::check(Entity const & interface)
 {
+  // Check first whether this interface is in the relevant block
+  stk_classic::mesh::Bucket const &
+  interface_bucket = interface.bucket();
+
+  if (interface_bucket.member(interface_part_) == false) return false;
+
+  // Now check the adjacent bulk elements. Proceed if at least
+  // one is part of the bulk block.
   stk_classic::mesh::PairIterRelation const
-  relations_up = relations_one_up(entity);
+  relations_up = relations_one_up(interface);
 
   assert(relations_up.size() == 2);
 
+  Entity const &
+  element_0 = *(relations_up[0].entity());
+
+  Entity const &
+  element_1 = *(relations_up[1].entity());
+
+  stk_classic::mesh::Bucket const &
+  bucket_0 = element_0.bucket();
+
+  stk_classic::mesh::Bucket const &
+  bucket_1 = element_1.bucket();
+
+  bool const
+  is_embedded = bucket_0.member(bulk_part_) || bucket_1.member(bulk_part_);
+
+  if (is_embedded == false) return false;
+
+  // Now traction check
   EntityVector
-  nodes = topology_.getBoundaryEntityNodes(entity);
+  nodes = topology_.getBoundaryEntityNodes(interface);
 
   EntityVector::size_type const
   number_nodes = nodes.size();
@@ -77,7 +107,7 @@ FractureCriterionTraction::check(Entity const & entity)
   stress /= static_cast<double>(number_nodes);
 
   Intrepid::Index const
-  face_index = entity.identifier() - 1;
+  face_index = interface.identifier() - 1;
 
   Intrepid::Vector<double> const &
   normal = normals_[face_index];
