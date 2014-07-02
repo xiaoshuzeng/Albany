@@ -19,10 +19,11 @@ GatherSolutionBase(const Teuchos::ParameterList& p,
 {
   
   tensorRank = 0; // scalar field unless told otherwise
-  if (p.isType<bool>("Vector Field"))
-    tensorRank = 1;
-  else if (p.isType<bool>("Tensor Field"))
-    tensorRank = 2;
+  if(p.isType<bool>("Vector Field")){
+    if(p.get<bool>("Vector Field")) tensorRank = 1;
+  } else if (p.isType<bool>("Tensor Field")){
+    if(p.get<bool>("Tensor Field")) tensorRank = 2;
+  }
 
   if (p.isType<bool>("Disable Transient"))
     enableTransient = !p.get<bool>("Disable Transient");
@@ -463,7 +464,7 @@ evaluateFields(typename Traits::EvalData workset)
   Teuchos::RCP<const Epetra_Vector> xdot = workset.xdot;
   Teuchos::RCP<const Epetra_Vector> xdotdot = workset.xdotdot;
 
-  if (this->vectorField) {
+  if (this->tensorRank == 1) {
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
       const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
 
@@ -478,6 +479,26 @@ evaluateFields(typename Traits::EvalData workset)
         if (workset.accelerationTerms && this->enableAcceleration) {
           for (std::size_t eq = 0; eq < numFields; eq++)
             (this->valVec_dotdot[0])(cell,node,eq) = (*xdotdot)[eqID[this->offset + eq]];
+        }
+      }
+    } 
+  } else
+  if (this->tensorRank == 2) {
+    int numDim = this->valTensor[0].dimension(2);
+    for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
+      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
+
+      for (std::size_t node = 0; node < this->numNodes; ++node) {
+      const Teuchos::ArrayRCP<int>& eqID  = nodeID[node];
+        for (std::size_t eq = 0; eq < numFields; eq++)
+          (this->valTensor[0])(cell,node,eq/numDim,eq%numDim) = (*x)[eqID[this->offset + eq]];
+        if (workset.transientTerms && this->enableTransient) {
+          for (std::size_t eq = 0; eq < numFields; eq++)
+            (this->valTensor_dot[0])(cell,node,eq/numDim,eq%numDim) = (*xdot)[eqID[this->offset + eq]];
+        }
+        if (workset.accelerationTerms && this->enableAcceleration) {
+          for (std::size_t eq = 0; eq < numFields; eq++)
+            (this->valTensor_dotdot[0])(cell,node,eq/numDim,eq%numDim) = (*xdotdot)[eqID[this->offset + eq]];
         }
       }
     }

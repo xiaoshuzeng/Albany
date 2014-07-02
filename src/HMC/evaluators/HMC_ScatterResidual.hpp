@@ -108,6 +108,21 @@ private:
 };
 
 // **************************************************************
+// Distributed parameter derivative
+// **************************************************************
+template<typename Traits>
+class ScatterResidual<PHAL::AlbanyTraits::DistParamDeriv,Traits>
+  : public ScatterResidualBase<PHAL::AlbanyTraits::DistParamDeriv, Traits>  {
+public:
+  ScatterResidual(const Teuchos::ParameterList& p,
+                      const Teuchos::RCP<Albany::Layouts>& dl);
+  void evaluateFields(typename Traits::EvalData d);
+private:
+  typedef typename PHAL::AlbanyTraits::DistParamDeriv::ScalarT ScalarT;
+  const std::size_t numDims;
+};
+
+// **************************************************************
 // Stochastic Galerkin Residual 
 // **************************************************************
 #ifdef ALBANY_SG_MP

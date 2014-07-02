@@ -690,6 +690,13 @@ IF(ALBANY_CATALYST)
   SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} albanyCatalyst)
 endif()
 
+IF (ALBANY_HMC)
+  #HMC requires LCM
+  SET(ALBANY_LCM ON)
+  add_subdirectory(HMC)
+  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} HMC)
+ENDIF()
+
 IF (ALBANY_LCM)
   add_subdirectory(LCM)
 
@@ -700,16 +707,9 @@ IF (ALBANY_LCM)
   ELSE()
     SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} LCM)
   ENDIF()
-
-  IF (ALBANY_LCM)
-    #HMC requires LCM
-    add_subdirectory(HMC)
-    SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} HMC LCM)
-  ELSE()
-    SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} LCM)
-  ENDIF()
-
 ENDIF()
+
+
 
 # Repeat libraries twice to catch circular dependencies
 SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ${ALBANY_LIBRARIES})
