@@ -2944,10 +2944,10 @@ Albany::Application::determinePiroSolver(const Teuchos::RCP<Teuchos::ParameterLi
     TEUCHOS_TEST_FOR_EXCEPTION(
         secondOrder != "No" &&
         secondOrder != "Velocity Verlet" &&
-        secondOrder != "Newmark Beta" &&
+        secondOrder != "Newmark" &&
         secondOrder != "Trapezoid Rule",
         std::logic_error,
-        "Invalid value for Second Order: (No, Velocity Verlet, Newmark Beta, Trapezoid Rule): " <<
+        "Invalid value for Second Order: (No, Velocity Verlet, Newmark, Trapezoid Rule): " <<
         secondOrder <<
         "\n");
 

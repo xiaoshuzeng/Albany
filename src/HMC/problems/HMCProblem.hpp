@@ -18,9 +18,11 @@
 #include "PHAL_AlbanyTraits.hpp"
 
 // To do:
-// 1.  Add transient support
-// 2.  Add multiblock support (See mechanics example problem)
-// 3.  
+// --  Add multiblock support (See mechanics example problem)
+// --  Add density as input.  Currently hardwired to implicit value of 1.0.
+// --  Add Currant limit.  Newmark integrator only seems to work for beta=0.25.  
+// --  Add artificial viscosity.
+// --  Add hourglass stabilization for single point integration.
 
 
 /*\begin{text}
@@ -186,7 +188,10 @@ Albany::HMCProblem::constructEvaluators(
 
    Albany::HMCEvaluatorUtils<EvalT, PHAL::AlbanyTraits> evalUtilsHMC(dl);
    Albany::EvaluatorUtils<EvalT, PHAL::AlbanyTraits> evalUtils(dl);
-   bool supportsTransient=false;
+
+
+   // remove this 
+   bool supportsTransient=true;
 
    const int numMacroScales = 1;
 
@@ -439,7 +444,8 @@ Albany::HMCProblem::constructEvaluators(
    if(supportsTransient) 
      for(int i=0;i<numMicroScales;i++)
        fm0.template registerEvaluator<EvalT>
-         (evalUtils.constructDOFVecInterpolationEvaluator(micro_dof_names_dotdot[i][0]));
+         (evalUtilsHMC.constructDOFTensorInterpolationEvaluator(micro_dof_names_dotdot[i][0],
+          dof_offset+i*dof_stride));
 
 // 3.5  Project nodal coordinates to Gauss points
 /*\begin{text}
@@ -710,8 +716,6 @@ Albany::HMCProblem::constructEvaluators(
   { // Displacement Resid
     RCP<ParameterList> p = rcp(new ParameterList("Displacement Resid"));
 
-    p->set<bool>("Disable Transient", true);
-
     //Input
     p->set<std::string>("Stress Name", "Total Stress");
     p->set< RCP<DataLayout> >("QP Tensor Data Layout", dl->qp_tensor);
@@ -722,7 +726,7 @@ Albany::HMCProblem::constructEvaluators(
     // extra input for time dependent term
     p->set<std::string>("Weighted BF Name", "wBF");
     p->set< RCP<DataLayout> >("Node QP Scalar Data Layout", dl->node_qp_scalar);
-    p->set<std::string>("Time Dependent Variable Name", "Displacement_dotdot");
+    p->set<std::string>("Time Dependent Variable Name", macro_dof_names_dotdot[0]);
     p->set< RCP<DataLayout> >("QP Vector Data Layout", dl->qp_vector);
 
     //Output
@@ -734,8 +738,6 @@ Albany::HMCProblem::constructEvaluators(
   }
   for(int i=0;i<numMicroScales;i++){ // Microstrain Residuals 
     RCP<ParameterList> p = rcp(new ParameterList("Microstrain Resid"));
-
-    p->set<bool>("Disable Transient", true);
 
     //Input: Micro stresses
     std::string ms = Albany::strint("Micro Stress",i);

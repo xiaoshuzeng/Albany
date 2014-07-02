@@ -211,6 +211,86 @@ evaluateFields(typename Traits::EvalData workset)
   }
 }
 
+
+// **********************************************************************
+// Specialization: DistParamDeriv
+// **********************************************************************
+
+template<typename Traits>
+ScatterResidual<PHAL::AlbanyTraits::DistParamDeriv, Traits>::
+ScatterResidual(const Teuchos::ParameterList& p,
+                const Teuchos::RCP<Albany::Layouts>& dl)
+  : ScatterResidualBase<PHAL::AlbanyTraits::DistParamDeriv,Traits>(p,dl),
+  numDims(ScatterResidualBase<PHAL::AlbanyTraits::DistParamDeriv,Traits>::numDimsBase)
+{
+}
+
+// **********************************************************************
+template<typename Traits>
+void ScatterResidual<PHAL::AlbanyTraits::DistParamDeriv, Traits>::
+evaluateFields(typename Traits::EvalData workset)
+{
+  Teuchos::RCP<Epetra_MultiVector> fpV = workset.fpV;
+  bool trans = workset.transpose_dist_param_deriv;
+  int num_cols = workset.Vp->NumVectors();
+  ScalarT *valptr;
+
+  if (trans) {
+
+    for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
+      const Teuchos::ArrayRCP<int>& dist_param_index =
+        workset.dist_param_index[cell];
+      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> >& local_Vp =
+        workset.local_Vp[cell];
+      const int num_deriv = local_Vp.size();
+
+      for (int i=0; i<num_deriv; i++) {
+        for (int col=0; col<num_cols; col++) {
+          double val = 0.0;
+          for (std::size_t node = 0; node < this->numNodes; ++node) {
+            for (std::size_t j = 0; j < numDims; j++) {
+              for (std::size_t k = 0; k < numDims; k++) {
+                valptr = &(this->val)(cell,node,j,k);
+                val += valptr->dx(i)*local_Vp[col][i];
+              }
+            }
+          }
+          const int row = dist_param_index[i];
+          fpV->SumIntoMyValue(row, col, val);
+        }
+      }
+    }
+
+  }
+
+  else {
+
+    for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
+      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID =
+        workset.wsElNodeEqID[cell];
+      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> >& local_Vp =
+        workset.local_Vp[cell];
+      const int num_deriv = local_Vp.size();
+
+      for (std::size_t node = 0; node < this->numNodes; ++node) {
+        for (std::size_t i = 0; i < numDims; i++) {
+          for (std::size_t j = 0; j < numDims; j++) {
+            valptr = &(this->val)(cell,node,i,j);
+            const int row = nodeID[node][this->offset + i*numDims + j];
+            for (int col=0; col<num_cols; col++) {
+              double val = 0.0;
+              for (int k=0; k<num_deriv; ++k)
+                val += valptr->dx(k)*local_Vp[col][k];
+              fpV->SumIntoMyValue(row, col, val);
+            }
+          }
+        }
+      }
+    }
+
+  }
+}
+
 // **********************************************************************
 // Specialization: Stochastic Galerkin Residual
 // **********************************************************************
