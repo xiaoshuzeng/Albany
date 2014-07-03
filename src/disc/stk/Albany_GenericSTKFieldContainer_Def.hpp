@@ -21,11 +21,9 @@ template<bool Interleaved>
 Albany::GenericSTKFieldContainer<Interleaved>::GenericSTKFieldContainer(
   const Teuchos::RCP<Teuchos::ParameterList>& params_,
   stk::mesh::MetaData* metaData_,
-  stk::mesh::BulkData* bulkData_,
   const int neq_,
   const int numDim_)
   : metaData(metaData_),
-    bulkData(bulkData_),
     params(params_),
     neq(neq_),
     numDim(numDim_) {
@@ -109,7 +107,7 @@ Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::
         const Teuchos::RCP<Albany::NodeFieldContainer>& nodeContainer 
                = sis->getNodalDataBlock()->getNodeContainer();
 
-        (*nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, dim, metaData, bulkData, st.output);
+        (*nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, dim, metaData, st.output);
  
     } // end Node class - anything else is an error
     else TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
@@ -137,11 +135,12 @@ Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vector& s
 
   const size_t num_vec_components  = stk::mesh::field_scalars_per_entity(*solution_field, bucket);
   const size_t num_nodes_in_bucket = bucket.size();
+  stk::mesh::BulkData& mesh = solution_field->get_mesh();
 
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
     //      const unsigned node_gid = bucket[i].identifier();
-    const int node_gid = bulkData->identifier(bucket[i]) - 1;
+    const int node_gid = mesh.identifier(bucket[i]) - 1;
     int node_lid = node_map->LID(node_gid);
 
     for(std::size_t j = 0; j < num_vec_components; j++)
@@ -166,13 +165,13 @@ void Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vect
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
   double* raw_data = stk::mesh::field_data(*solution_field, bucket);
-
+  stk::mesh::BulkData& mesh = solution_field->get_mesh();
   const size_t num_nodes_in_bucket = bucket.size();
 
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
     //      const unsigned node_gid = bucket[i].identifier();
-    const int node_gid = bulkData->identifier(bucket[i]) - 1;
+    const int node_gid = mesh.identifier(bucket[i]) - 1;
     int node_lid = node_map->LID(node_gid);
 
     soln[getDOF(node_lid, offset)] = raw_data[i];
@@ -195,13 +194,13 @@ Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetra_Vec
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
   double* raw_data = stk::mesh::field_data(*solution_field, bucket);
-
+  stk::mesh::BulkData& mesh = solution_field->get_mesh();
   const size_t num_vec_components  = stk::mesh::field_scalars_per_entity(*solution_field, bucket);
   const size_t num_nodes_in_bucket = bucket.size();
 
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
-    const int node_gid = bulkData->identifier(bucket[i]) - 1;
+    const int node_gid = mesh.identifier(bucket[i]) - 1;
     int node_lid = node_map->LID(node_gid);
 
     for(std::size_t j = 0; j < num_vec_components; j++)
@@ -226,13 +225,13 @@ void Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetr
 
 
   double* raw_data = stk::mesh::field_data(*solution_field, bucket);
-
+  stk::mesh::BulkData& mesh = solution_field->get_mesh();
   const size_t num_nodes_in_bucket = bucket.size();
 
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
     //      const unsigned node_gid = bucket[i].identifier();
-    const int node_gid = bulkData->identifier(bucket[i]) - 1;
+    const int node_gid = mesh.identifier(bucket[i]) - 1;
     int node_lid = node_map->LID(node_gid);
 
     raw_data[i] = soln[getDOF(node_lid, offset)];
@@ -245,7 +244,8 @@ template<class T>
 typename boost::disable_if< boost::is_same<T, Albany::AbstractSTKFieldContainer::ScalarFieldType>, void >::type
 Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const T* source, T* target) {
 
-  const stk::mesh::BucketVector& bv = this->bulkData->buckets(stk::topology::NODE_RANK);
+  stk::mesh::BulkData& mesh = source->get_mesh();
+  const stk::mesh::BucketVector& bv = mesh.buckets(stk::topology::NODE_RANK);
 
   for(stk::mesh::BucketVector::const_iterator it = bv.begin() ; it != bv.end() ; ++it) {
 
@@ -285,7 +285,8 @@ Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const T* source, T* 
 template<bool Interleaved>
 void Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const ScalarFieldType* source, ScalarFieldType* target) {
 
-  const stk::mesh::BucketVector& bv = this->bulkData->buckets(stk::topology::NODE_RANK);
+  stk::mesh::BulkData& mesh = source->get_mesh();
+  const stk::mesh::BucketVector& bv = mesh.buckets(stk::topology::NODE_RANK);
 
   for(stk::mesh::BucketVector::const_iterator it = bv.begin() ; it != bv.end() ; ++it) {
 

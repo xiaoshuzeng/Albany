@@ -52,9 +52,8 @@ void LCM::PeridigmManager::initialize(const Teuchos::RCP<Teuchos::ParameterList>
   stk::mesh::PartVector stkElementBlocks;
   for(stk::mesh::PartVector::const_iterator it = stkParts.begin(); it != stkParts.end(); ++it){
     stk::mesh::Part* const part = *it;
-    if(part->name()[0] == '{')
-      continue;
-    if(part->primary_entity_rank() == metaData.element_rank()){
+    if(!stk::mesh::is_auto_declared_part(*part) && 
+       part->primary_entity_rank() == stk::topology::ELEMENT_RANK){
       stkElementBlocks.push_back(part);
       partCellTopologyData[part->name()] = *metaData.get_cell_topology(*part).getCellTopologyData();
     }

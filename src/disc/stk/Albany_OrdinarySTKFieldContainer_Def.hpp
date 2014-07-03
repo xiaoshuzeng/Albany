@@ -19,12 +19,11 @@ template<bool Interleaved>
 Albany::OrdinarySTKFieldContainer<Interleaved>::OrdinarySTKFieldContainer(
   const Teuchos::RCP<Teuchos::ParameterList>& params_,
   stk::mesh::MetaData* metaData_,
-  stk::mesh::BulkData* bulkData_,
   const int neq_,
   const AbstractFieldContainer::FieldContainerRequirements& req,
   const int numDim_,
   const Teuchos::RCP<Albany::StateInfoStruct>& sis)
-  : GenericSTKFieldContainer<Interleaved>(params_, metaData_, bulkData_, neq_, numDim_),
+  : GenericSTKFieldContainer<Interleaved>(params_, metaData_, neq_, numDim_),
       buildSurfaceHeight(false),
       buildTemperature(false),
       buildBasalFriction(false),
@@ -219,7 +218,8 @@ void Albany::OrdinarySTKFieldContainer<Interleaved>::fillSolnVector(Epetra_Vecto
   typedef typename AbstractSTKFieldContainer::VectorFieldType VFT;
 
   // Iterate over the on-processor nodes by getting node buckets and iterating over each bucket.
-  stk::mesh::BucketVector const& all_elements = this->bulkData->get_buckets(stk::topology::NODE_RANK, sel);
+  stk::mesh::BulkData& mesh = solution_field->get_mesh();
+  stk::mesh::BucketVector const& all_elements = mesh.get_buckets(stk::topology::NODE_RANK, sel);
   this->numNodes = node_map->NumMyElements(); // Needed for the getDOF function to work correctly
   // This is either numOwnedNodes or numOverlapNodes, depending on
   // which map is passed in
@@ -241,7 +241,8 @@ void Albany::OrdinarySTKFieldContainer<Interleaved>::saveSolnVector(const Epetra
   typedef typename AbstractSTKFieldContainer::VectorFieldType VFT;
 
   // Iterate over the on-processor nodes by getting node buckets and iterating over each bucket.
-  stk::mesh::BucketVector const& all_elements = this->bulkData->get_buckets(stk::topology::NODE_RANK, sel);
+  stk::mesh::BulkData& mesh = solution_field->get_mesh();
+  stk::mesh::BucketVector const& all_elements = mesh.get_buckets(stk::topology::NODE_RANK, sel);
   this->numNodes = node_map->NumMyElements(); // Needed for the getDOF function to work correctly
   // This is either numOwnedNodes or numOverlapNodes, depending on
   // which map is passed in
@@ -263,7 +264,8 @@ void Albany::OrdinarySTKFieldContainer<Interleaved>::saveResVector(const Epetra_
   typedef typename AbstractSTKFieldContainer::VectorFieldType VFT;
 
   // Iterate over the on-processor nodes by getting node buckets and iterating over each bucket.
-  stk::mesh::BucketVector const& all_elements = this->bulkData->get_buckets(stk::topology::NODE_RANK, sel);
+  stk::mesh::BulkData& mesh = solution_field->get_mesh();
+  stk::mesh::BucketVector const& all_elements = mesh.get_buckets(stk::topology::NODE_RANK, sel);
   this->numNodes = node_map->NumMyElements(); // Needed for the getDOF function to work correctly
   // This is either numOwnedNodes or numOverlapNodes, depending on
   // which map is passed in

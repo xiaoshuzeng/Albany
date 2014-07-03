@@ -22,21 +22,21 @@
 
 Teuchos::RCP<Albany::AbstractNodeFieldContainer>
 Albany::buildSTKNodeField(const std::string& name, const std::vector<int>& dim,
-                          stk::mesh::MetaData* metaData, stk::mesh::BulkData* bulkData,
+                          stk::mesh::MetaData* metaData,
                           const bool output){
 
   switch(dim.size()){
 
   case 1: // scalar
-    return Teuchos::rcp(new STKNodeField<double, 1>(name, dim, metaData, bulkData, output));
+    return Teuchos::rcp(new STKNodeField<double, 1>(name, dim, metaData, output));
     break;
 
   case 2: // vector
-    return Teuchos::rcp(new STKNodeField<double, 2>(name, dim, metaData, bulkData, output));
+    return Teuchos::rcp(new STKNodeField<double, 2>(name, dim, metaData, output));
     break;
 
   case 3: // tensor
-    return Teuchos::rcp(new STKNodeField<double, 3>(name, dim, metaData, bulkData, output));
+    return Teuchos::rcp(new STKNodeField<double, 3>(name, dim, metaData, output));
     break;
 
   default:
@@ -47,12 +47,11 @@ Albany::buildSTKNodeField(const std::string& name, const std::vector<int>& dim,
 
 template<typename DataType, unsigned ArrayDim, class traits>
 Albany::STKNodeField<DataType, ArrayDim, traits>::STKNodeField(const std::string& name_,
-     const std::vector<int>& dims_, stk::mesh::MetaData* metaData_, stk::mesh::BulkData* bulkData_,
+     const std::vector<int>& dims_, stk::mesh::MetaData* metaData_,
      const bool output) :
   name(name_),
   dims(dims_),
-  metaData(metaData_),
-  bulkData(bulkData_)
+  metaData(metaData_)
 {
 
   node_field = traits_type::createField(name, dims, metaData_);
@@ -75,7 +74,8 @@ Albany::STKNodeField<DataType, ArrayDim, traits>::saveField(const Teuchos::RCP<c
  stk::mesh::Selector select_owned_or_shared = metaData->locally_owned_part() | metaData->globally_shared_part();
 
  // Iterate over the overlap nodes by getting node buckets and iterating over each bucket.
- stk::mesh::BucketVector const& all_elements = bulkData->get_buckets(stk::topology::NODE_RANK, select_owned_or_shared);
+ stk::mesh::BulkData& mesh = node_field->get_mesh();
+ stk::mesh::BucketVector const& all_elements = mesh.get_buckets(stk::topology::NODE_RANK, select_owned_or_shared);
 
  traits_type::saveFieldData(block_mv, all_elements, node_field, offset, blocksize);
 

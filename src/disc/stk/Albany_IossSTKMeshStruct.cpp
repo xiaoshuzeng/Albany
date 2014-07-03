@@ -62,11 +62,12 @@ Albany::IossSTKMeshStruct::IossSTKMeshStruct(
 
   usePamgen = (params->get("Method","Exodus") == "Pamgen");
 
-  std::vector<std::string> entity_rank_names;
+  std::vector<std::string> entity_rank_names = stk::mesh::entity_rank_names();
 
   // eMesh needs "FAMILY_TREE" entity
-  if(buildEMesh)
+  if(buildEMesh) {
     entity_rank_names.push_back("FAMILY_TREE");
+  }
 
 #ifdef ALBANY_ZOLTAN  // rebalance requires Zoltan
 
@@ -100,6 +101,9 @@ Albany::IossSTKMeshStruct::IossSTKMeshStruct(
 
     mesh_data->add_mesh_database(file_name, mesh_type, stk::io::READ_MESH);
     mesh_data->create_input_mesh();
+
+    delete metaData;
+    metaData = &mesh_data->meta_data();
 #ifdef ALBANY_ZOLTAN
   }
 #endif
@@ -130,23 +134,20 @@ Albany::IossSTKMeshStruct::IossSTKMeshStruct(
 
     stk::mesh::Part * const part = *i ;
 
-    if ( part->primary_entity_rank() == stk::topology::ELEMENT_RANK) {
-      if (part->name()[0] != '{') {
+    if (!stk::mesh::is_auto_declared_part(*part)) {
+      if ( part->primary_entity_rank() == stk::topology::ELEMENT_RANK) {
+
         //*out << "IOSS-STK: Element part \"" << part->name() << "\" found " << std::endl;
         partVec[numEB] = part;
         numEB++;
       }
-    }
-    else if ( part->primary_entity_rank() == stk::topology::NODE_RANK) {
-      if (part->name()[0] != '{') {
+      else if ( part->primary_entity_rank() == stk::topology::NODE_RANK) {
         //*out << "Mesh has Node Set ID: " << part->name() << std::endl;
         nsPartVec[part->name()]=part;
         nsNames.push_back(part->name());
       }
-    }
-    else if ( part->primary_entity_rank() == metaData->side_rank()) {
-      if (part->name()[0] != '{') {
-//        print(*out, "Found side_rank entity:\n", *part);
+      else if ( part->primary_entity_rank() == metaData->side_rank()) {
+        //print(*out, "Found side_rank entity:\n", *part);
         ssPartVec[part->name()]=part;
       }
     }
@@ -219,6 +220,8 @@ Albany::IossSTKMeshStruct::IossSTKMeshStruct(
 
 Albany::IossSTKMeshStruct::~IossSTKMeshStruct()
 {
+  metaData = NULL; // prevent deletion
+  bulkData = NULL; // prevent deletion
   delete mesh_data;
 }
 
@@ -346,7 +349,8 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
 
   { // running in Serial or Parallel read from Nemspread files
     mesh_data->populate_bulk_data();
-    stk::mesh::BulkData& bulkData = mesh_data->bulk_data();
+    delete bulkData;
+    bulkData = &mesh_data->bulk_data();
     if (!usePamgen)  {
 
       // Read solution from exodus file.
@@ -369,7 +373,7 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
       }
     }
 
-    bulkData.modification_end();
+    bulkData->modification_end();
 
   } // End Parallel Read - or running in serial
 

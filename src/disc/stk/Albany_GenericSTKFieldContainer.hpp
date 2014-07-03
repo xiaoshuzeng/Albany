@@ -30,7 +30,6 @@ class GenericSTKFieldContainer : public AbstractSTKFieldContainer {
 
     GenericSTKFieldContainer(const Teuchos::RCP<Teuchos::ParameterList>& params_,
                              stk::mesh::MetaData* metaData_,
-                             stk::mesh::BulkData* bulkData_,
                              const int neq_,
                              const int numDim_);
 
@@ -82,7 +81,6 @@ class GenericSTKFieldContainer : public AbstractSTKFieldContainer {
     void copySTKField(const ScalarFieldType* source, ScalarFieldType* target);
 
     stk::mesh::MetaData* metaData;
-    stk::mesh::BulkData* bulkData;
     Teuchos::RCP<Teuchos::ParameterList> params;
 
     int numNodes; // used to implement getDOF function when ! interleaved

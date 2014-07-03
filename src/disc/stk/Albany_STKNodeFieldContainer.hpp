@@ -41,7 +41,7 @@ class AbstractSTKNodeFieldContainer : public AbstractNodeFieldContainer {
 Teuchos::RCP<Albany::AbstractNodeFieldContainer>
 buildSTKNodeField(const std::string& name, const std::vector<int>& dim,
                     stk::mesh::MetaData* metaData,
-                    stk::mesh::BulkData* bulkData, const bool output);
+                    const bool output);
 
 
   // Helper class for NodeData
@@ -61,7 +61,7 @@ buildSTKNodeField(const std::string& name, const std::vector<int>& dim,
 
 
     STKNodeField(const std::string& name, const std::vector<int>& dim,
-                 stk::mesh::MetaData* metaData, stk::mesh::BulkData* bulkData,
+                 stk::mesh::MetaData* metaData,
                  const bool output = false);
 
     virtual ~STKNodeField(){}
@@ -76,8 +76,6 @@ buildSTKNodeField(const std::string& name, const std::vector<int>& dim,
     field_type *node_field;  // stk::mesh::field
     std::vector<int> dims;
     stk::mesh::MetaData* metaData;
-    stk::mesh::BulkData* bulkData;
-
   };
 
 // Explicit template definitions in support of the above

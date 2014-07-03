@@ -919,12 +919,11 @@ void Albany::STKDiscretization::computeWorksetInfo()
     stk::mesh::PartVector const& bpv = buckets[i]->supersets();
 
     for (std::size_t j=0; j<bpv.size(); j++) {
-      if (bpv[j]->primary_entity_rank() == stk::topology::ELEMENT_RANK) {
-        if (bpv[j]->name()[0] != '{') {
-	  // *out << "Bucket " << i << " is in Element Block:  " << bpv[j]->name()
-	  //      << "  and has " << buckets[i]->size() << " elements." << std::endl;
-          wsEBNames[i]=bpv[j]->name();
-        }
+      if (bpv[j]->primary_entity_rank() == stk::topology::ELEMENT_RANK &&
+          !stk::mesh::is_auto_declared_part(*bpv[j])) {
+        // *out << "Bucket " << i << " is in Element Block:  " << bpv[j]->name()
+        //      << "  and has " << buckets[i]->size() << " elements." << std::endl;
+        wsEBNames[i]=bpv[j]->name();
       }
     }
   }

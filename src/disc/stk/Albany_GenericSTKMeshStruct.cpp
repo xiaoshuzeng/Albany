@@ -153,10 +153,10 @@ void Albany::GenericSTKMeshStruct::SetupFieldData(
 
       if(interleavedOrdering)
         this->fieldContainer = Teuchos::rcp(new Albany::OrdinarySTKFieldContainer<true>(params,
-            metaData, bulkData, neq_, req, numDim, sis));
+            metaData, neq_, req, numDim, sis));
       else
         this->fieldContainer = Teuchos::rcp(new Albany::OrdinarySTKFieldContainer<false>(params,
-            metaData, bulkData, neq_, req, numDim, sis));
+            metaData, neq_, req, numDim, sis));
 
   }
 
@@ -164,10 +164,10 @@ void Albany::GenericSTKMeshStruct::SetupFieldData(
 
       if(interleavedOrdering)
         this->fieldContainer = Teuchos::rcp(new Albany::MultiSTKFieldContainer<true>(params,
-            metaData, bulkData, neq_, req, numDim, sis, solution_vector, residual_vector));
+            metaData, neq_, req, numDim, sis, solution_vector, residual_vector));
       else
         this->fieldContainer = Teuchos::rcp(new Albany::MultiSTKFieldContainer<false>(params,
-            metaData, bulkData, neq_, req, numDim, sis, solution_vector, residual_vector));
+            metaData, neq_, req, numDim, sis, solution_vector, residual_vector));
 
   }
 
