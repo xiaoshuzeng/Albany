@@ -1276,7 +1276,7 @@ Albany::STKDiscretization::determine_local_side_id( const stk::mesh::Entity elem
 
   int side_id = -1 ;
 
-  if(num_elem_nodes == 0 || num_side_nodes){ // Node relations are not present, look at elem->face
+  if(num_elem_nodes == 0 || num_side_nodes == 0){ // Node relations are not present, look at elem->face
 
     const unsigned num_sides = bulkData.num_connectivity(elem, side_rank);
     stk::mesh::Entity const* elem_sides = bulkData.begin(elem, side_rank);
