@@ -458,12 +458,12 @@ void
 Topology::createBoundary()
 {
   stk_classic::mesh::Part &
-  boundary_part = *(getMetaData()->get_part("boundary"));
+  interface_part = *(getMetaData()->get_part("interface"));
 
   stk_classic::mesh::PartVector
   add_parts;
 
-  add_parts.push_back(&boundary_part);
+  add_parts.push_back(&interface_part);
 
   stk_classic::mesh::PartVector const
   part_vector = getMetaData()->get_parts();

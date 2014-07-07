@@ -29,6 +29,12 @@ beta_(beta),
 bulk_part_(*(meta_data_.get_part(bulk_block_name))),
 interface_part_(*(meta_data_.get_part(interface_block_name)))
 {
+  Intrepid::Index const
+  interface_ordinal = interface_part_.mesh_meta_data_ordinal();
+
+  CellTopologyData const * const
+  top = meta_data_.get_cell_topology(interface_part_).getCellTopologyData();
+
   if (&stress_field_ == 0) {
     std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
     std::cerr << '\n';
@@ -48,7 +54,7 @@ FractureCriterionTraction::check(Entity const & interface)
   stk_classic::mesh::Bucket const &
   interface_bucket = interface.bucket();
 
-  if (interface_bucket.member(interface_part_) == false) return false;
+  //if (interface_bucket.member(interface_part_) == false) return false;
 
   // Now check the adjacent bulk elements. Proceed if at least
   // one is part of the bulk block.
