@@ -5,7 +5,7 @@
 //*****************************************************************//
 
 #include "Albany_STKNodeFieldContainer.hpp"
-
+#include "Albany_BucketArray.hpp"
 
 #ifdef ALBANY_SEACAS
 #   include <stk_io/IossBridge.hpp>
@@ -85,11 +85,8 @@ template<typename DataType, unsigned ArrayDim, class traits>
 Albany::MDArray
 Albany::STKNodeField<DataType, ArrayDim, traits>::getMDA(const stk::mesh::Bucket& buck){
 
- Albany::MDArray array(stk::mesh::field_data(*node_field, buck),
-                       node_field->field_array_rank(),
-                       &dims[0],
-                       node_field->dimension_tags());
+  BucketArray<field_type> array(*node_field, buck);
 
- return array;
+  return array;
 
 }

@@ -12,6 +12,7 @@
 #include "Albany_STKDiscretization.hpp"
 #include "Albany_NodalGraphUtils.hpp"
 #include "Albany_STKNodeFieldContainer.hpp"
+#include "Albany_BucketArray.hpp"
 
 #include <string>
 #include <iostream>
@@ -1115,32 +1116,26 @@ void Albany::STKDiscretization::computeWorksetInfo()
     stk::mesh::Bucket& buck = *buckets[b];
     for (QPScalarState::iterator qpss = qpscalar_states.begin();
               qpss != qpscalar_states.end(); ++qpss){
-      double* data = stk::mesh::field_data( **qpss, buck);
-      // stk::mesh::BucketArray<Albany::AbstractSTKFieldContainer::QPScalarFieldType> array(**qpss, buck);
+      BucketArray<Albany::AbstractSTKFieldContainer::QPScalarFieldType> array(**qpss, buck);
 //Debug
 //std::cout << "Buck.size(): " << buck.size() << " QPSFT dim[1]: " << array.dimension(1) << std::endl;
-      MDArray ar;
-      ar.assign<stk::mesh::Cartesian>(data, buck.size());
+      MDArray ar = array;
       stateArrays.elemStateArrays[b][(*qpss)->name()] = ar;
     }
     for (QPVectorState::iterator qpvs = qpvector_states.begin();
               qpvs != qpvector_states.end(); ++qpvs){
-      double* data = stk::mesh::field_data( **qpvs, buck);
-      // stk::mesh::BucketArray<Albany::AbstractSTKFieldContainer::QPVectorFieldType> array(**qpvs, buck);
+      BucketArray<Albany::AbstractSTKFieldContainer::QPVectorFieldType> array(**qpvs, buck);
 //Debug
 //std::cout << "Buck.size(): " << buck.size() << " QPVFT dim[2]: " << array.dimension(2) << std::endl;
-      MDArray ar;
-      ar.assign<stk::mesh::Cartesian, stk::mesh::Cartesian>(data, buck.size(), spatial_dim);
+      MDArray ar = array;
       stateArrays.elemStateArrays[b][(*qpvs)->name()] = ar;
     }
     for (QPTensorState::iterator qpts = qptensor_states.begin();
               qpts != qptensor_states.end(); ++qpts){
-      double* data = stk::mesh::field_data( **qpts, buck);
-      // stk::mesh::BucketArray<Albany::AbstractSTKFieldContainer::QPTensorFieldType> array(**qpts, buck);
+      BucketArray<Albany::AbstractSTKFieldContainer::QPTensorFieldType> array(**qpts, buck);
 //Debug
 //std::cout << "Buck.size(): " << buck.size() << " QPTFT dim[3]: " << array.dimension(3) << std::endl;
-      MDArray ar;
-      ar.assign<stk::mesh::Cartesian, stk::mesh::Cartesian, stk::mesh::Cartesian>(data, buck.size(), spatial_dim, spatial_dim);
+      MDArray ar = array;
       stateArrays.elemStateArrays[b][(*qpts)->name()] = ar;
     }
     for (ScalarValueState::iterator svs = scalarValue_states.begin();

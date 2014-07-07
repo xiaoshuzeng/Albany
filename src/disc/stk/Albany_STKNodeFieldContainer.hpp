@@ -11,6 +11,7 @@
 #include "Teuchos_RCP.hpp"
 #include "Albany_AbstractNodeFieldContainer.hpp"
 #include "Albany_StateInfoStruct.hpp"
+#include "Albany_BucketArray.hpp"
 
 #include <stk_mesh/base/MetaData.hpp>
 #include <stk_mesh/base/Field.hpp>
@@ -110,9 +111,9 @@ buildSTKNodeField(const std::string& name, const std::vector<int>& dim,
         const stk::mesh::Bucket& bucket = **it;
         stk::mesh::BulkData const& bulkData = bucket.mesh();
 
-        double* raw_data = stk::mesh::field_data(*fld, bucket);
+        BucketArray<field_type> solution_array(*fld, bucket);
 
-        const size_t num_nodes_in_bucket = bucket.size();
+        const int num_nodes_in_bucket = solution_array.dimension(0);
 
         for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
@@ -120,7 +121,7 @@ buildSTKNodeField(const std::string& name, const std::vector<int>& dim,
           int local_node = overlap_node_map.LID(node_gid);
           int block_start = local_node * blocksize;
 
-          raw_data[i] = (*overlap_node_vec)[block_start + offset];
+          solution_array(i) = (*overlap_node_vec)[block_start + offset];
 
         }
       }
@@ -158,10 +159,10 @@ buildSTKNodeField(const std::string& name, const std::vector<int>& dim,
         const stk::mesh::Bucket& bucket = **it;
         stk::mesh::BulkData const& bulkData = bucket.mesh();
 
-        double* raw_data = stk::mesh::field_data(*fld, bucket);
+        BucketArray<field_type> solution_array(*fld, bucket);
 
-        const size_t num_vec_components  = stk::mesh::field_scalars_per_entity(*fld, bucket);
-        const size_t num_nodes_in_bucket = bucket.size();
+        const int num_vec_components = solution_array.dimension(0);
+        const int num_nodes_in_bucket = solution_array.dimension(1);
 
         for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
@@ -171,7 +172,7 @@ buildSTKNodeField(const std::string& name, const std::vector<int>& dim,
 
           for(std::size_t j = 0; j < num_vec_components; j++){
 
-            raw_data[i*num_vec_components + j]= (*overlap_node_vec)[block_start + offset + j];
+            solution_array(j, i) = (*overlap_node_vec)[block_start + offset + j];
 
           }
         }
@@ -210,11 +211,11 @@ buildSTKNodeField(const std::string& name, const std::vector<int>& dim,
         const stk::mesh::Bucket& bucket = **it;
         stk::mesh::BulkData const& bulkData = bucket.mesh();
 
-        double* raw_data = stk::mesh::field_data(*fld, bucket);
+        BucketArray<field_type> solution_array(*fld, bucket);
 
-        const size_t num_i_components = stk::mesh::Cartesian::Size;
-        const size_t num_j_components = stk::mesh::Cartesian::Size;
-        const size_t num_nodes_in_bucket = bucket.size();
+        const int num_i_components = solution_array.dimension(0);
+        const int num_j_components = solution_array.dimension(1);
+        const int num_nodes_in_bucket = solution_array.dimension(2);
 
         for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
@@ -225,8 +226,7 @@ buildSTKNodeField(const std::string& name, const std::vector<int>& dim,
           for(std::size_t j = 0; j < num_j_components; j++)
             for(std::size_t k = 0; k < num_i_components; k++)
 
-              raw_data[i*num_i_components*num_j_components + j*num_i_components + k] =
-                (*overlap_node_vec)[block_start + offset + j*num_i_components + k];
+              solution_array(k, j, i) = (*overlap_node_vec)[block_start + offset + j*num_i_components + k];
 
         }
       }

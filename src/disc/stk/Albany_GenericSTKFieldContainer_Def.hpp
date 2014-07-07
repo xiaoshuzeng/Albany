@@ -11,6 +11,7 @@
 
 #include "Albany_Utils.hpp"
 #include "Albany_StateInfoStruct.hpp"
+#include "Albany_BucketArray.hpp"
 #include <stk_mesh/base/GetBuckets.hpp>
 
 #ifdef ALBANY_SEACAS
@@ -131,10 +132,11 @@ Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vector& s
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
-  double* raw_data = stk::mesh::field_data(*solution_field, bucket);
+  BucketArray<T> solution_array(*solution_field, bucket);
 
-  const size_t num_vec_components  = stk::mesh::field_scalars_per_entity(*solution_field, bucket);
-  const size_t num_nodes_in_bucket = bucket.size();
+  const int num_vec_components = solution_array.dimension(0);
+  const int num_nodes_in_bucket = solution_array.dimension(1);
+
   stk::mesh::BulkData& mesh = solution_field->get_mesh();
 
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
@@ -145,7 +147,7 @@ Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vector& s
 
     for(std::size_t j = 0; j < num_vec_components; j++)
 
-      soln[getDOF(node_lid, offset + j)] = raw_data[i*num_vec_components + j];
+      soln[getDOF(node_lid, offset + j)] = solution_array(j, i);
 
   }
 }
@@ -164,9 +166,11 @@ void Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vect
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
-  double* raw_data = stk::mesh::field_data(*solution_field, bucket);
+  BucketArray<ScalarFieldType> solution_array(*solution_field, bucket);
+
+  const int num_nodes_in_bucket = solution_array.dimension(0);
+
   stk::mesh::BulkData& mesh = solution_field->get_mesh();
-  const size_t num_nodes_in_bucket = bucket.size();
 
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
@@ -174,7 +178,7 @@ void Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vect
     const int node_gid = mesh.identifier(bucket[i]) - 1;
     int node_lid = node_map->LID(node_gid);
 
-    soln[getDOF(node_lid, offset)] = raw_data[i];
+    soln[getDOF(node_lid, offset)] = solution_array(i);
 
   }
 }
@@ -193,10 +197,12 @@ Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetra_Vec
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
-  double* raw_data = stk::mesh::field_data(*solution_field, bucket);
+  BucketArray<T> solution_array(*solution_field, bucket);
+
+  const int num_vec_components = solution_array.dimension(0);
+  const int num_nodes_in_bucket = solution_array.dimension(1);
+
   stk::mesh::BulkData& mesh = solution_field->get_mesh();
-  const size_t num_vec_components  = stk::mesh::field_scalars_per_entity(*solution_field, bucket);
-  const size_t num_nodes_in_bucket = bucket.size();
 
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
@@ -205,7 +211,7 @@ Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetra_Vec
 
     for(std::size_t j = 0; j < num_vec_components; j++)
 
-      raw_data[i*num_vec_components + j] = soln[getDOF(node_lid, offset + j)];
+      solution_array(j, i) = soln[getDOF(node_lid, offset + j)];
 
   }
 }
@@ -223,10 +229,11 @@ void Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetr
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
+  BucketArray<ScalarFieldType> solution_array(*solution_field, bucket);
 
-  double* raw_data = stk::mesh::field_data(*solution_field, bucket);
+  const int num_nodes_in_bucket = solution_array.dimension(0);
+
   stk::mesh::BulkData& mesh = solution_field->get_mesh();
-  const size_t num_nodes_in_bucket = bucket.size();
 
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
@@ -234,7 +241,7 @@ void Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetr
     const int node_gid = mesh.identifier(bucket[i]) - 1;
     int node_lid = node_map->LID(node_gid);
 
-    raw_data[i] = soln[getDOF(node_lid, offset)];
+    solution_array(i) = soln[getDOF(node_lid, offset)];
 
   }
 }
@@ -251,16 +258,18 @@ Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const T* source, T* 
 
     const stk::mesh::Bucket& bucket = **it;
 
-    double* raw_source = stk::mesh::field_data(*source, bucket);
-    double* raw_target = stk::mesh::field_data(*target, bucket);
+    BucketArray<T> source_array(*source, bucket);
+    BucketArray<T> target_array(*target, bucket);
 
-    const size_t num_source_components = stk::mesh::field_scalars_per_entity(*source, bucket);
-    const size_t num_target_components = stk::mesh::field_scalars_per_entity(*target, bucket);
-    const size_t num_nodes_in_bucket = bucket.size();
+    const int num_source_components = source_array.dimension(0);
+    const int num_target_components = target_array.dimension(0);
+    const int num_nodes_in_bucket = source_array.dimension(1);
 
-    const int uneven_downsampling = num_source_components % num_target_components;
+    int downsample = num_source_components / num_target_components;
+    int uneven_downsampling = num_source_components % num_target_components;
 
-    TEUCHOS_TEST_FOR_EXCEPTION(uneven_downsampling,
+    TEUCHOS_TEST_FOR_EXCEPTION((uneven_downsampling) ||
+                               (num_nodes_in_bucket != target_array.dimension(1)),
                                std::logic_error,
                                "Error in stk fields: specification of coordinate vector vs. solution layout is incorrect." 
                                << std::endl);
@@ -273,7 +282,7 @@ Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const T* source, T* 
 
       for(std::size_t j = 0; j < num_target_components; j++) {
 
-        raw_target[i*num_target_components + j] = raw_source[i*num_source_components + j];
+        target_array(j, i) = source_array(j, i);
       }
    }
 
@@ -292,14 +301,18 @@ void Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const ScalarFie
 
     const stk::mesh::Bucket& bucket = **it;
 
-    double* raw_source = stk::mesh::field_data(*source, bucket);
-    double* raw_target = stk::mesh::field_data(*target, bucket);
+    BucketArray<ScalarFieldType> source_array(*source, bucket);
+    BucketArray<ScalarFieldType> target_array(*target, bucket);
 
-    const size_t num_nodes_in_bucket = bucket.size();
+    const int num_nodes_in_bucket = source_array.dimension(0);
+
+    TEUCHOS_TEST_FOR_EXCEPTION((num_nodes_in_bucket != target_array.dimension(0)),
+                               std::logic_error,
+                               "Error in stk fields: specification of coordinate vector vs. solution layout is incorrect." << std::endl);
 
     for(std::size_t i = 0; i < num_nodes_in_bucket; i++)
 
-      raw_target[i] = raw_source[i];
+      target_array(i) = source_array(i);
 
   }
 }
