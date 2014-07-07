@@ -102,8 +102,8 @@ Albany::GenericSTKMeshStruct::GenericSTKMeshStruct(
 
 Albany::GenericSTKMeshStruct::~GenericSTKMeshStruct()
 {
-  delete metaData;
   delete bulkData;
+  delete metaData;
 }
 
 void Albany::GenericSTKMeshStruct::SetupFieldData(
