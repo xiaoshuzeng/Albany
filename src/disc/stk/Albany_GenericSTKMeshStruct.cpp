@@ -125,12 +125,12 @@ void Albany::GenericSTKMeshStruct::SetupFieldData(
                           Albany::getMpiCommFromEpetraComm(*comm), worksetSize );
 
 #ifdef ALBANY_LCM
-  // If adaptation in LCM, create a new part for boundary
+  // If adaptation in LCM, create a new part for interface elements
   if (adaptParams.is_null() == false) {
     stk_classic::mesh::Part &
-    boundary_part = metaData->declare_part("boundary");
+    interface_part = metaData->declare_part("interface");
 #ifdef ALBANY_SEACAS
-    stk_classic::io::put_io_part_attribute(boundary_part);
+    stk_classic::io::put_io_part_attribute(interface_part);
 #endif
   }
 #endif // ALBANY_LCM
