@@ -29,6 +29,7 @@
 #include "CrystalPlasticityModel.hpp"
 #include "TvergaardHutchinsonModel.hpp"
 #include "AnisotropicViscoplasticModel.hpp"
+#include "OrtizPandolfiModel.hpp"
 
 namespace LCM
 {
@@ -254,6 +255,8 @@ initializeModel(Teuchos::ParameterList* p,
     model = rcp(new TvergaardHutchinsonModel<EvalT, Traits>(p, dl));
   } else if (model_name == "Viscoplastic") {
     model = rcp(new AnisotropicViscoplasticModel<EvalT, Traits>(p, dl));
+  } else if (model_name == "Ortiz Pandolfi") {
+	model = rcp(new OrtizPandolfiModel<EvalT, Traits>(p, dl));
   } else {
     TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, error_msg);
   }

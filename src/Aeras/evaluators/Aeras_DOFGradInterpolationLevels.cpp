@@ -6,8 +6,9 @@
 
 #include "PHAL_AlbanyTraits.hpp"
 
-#include "Aeras_XZHydrostatic_DensityWeightedVelx.hpp"
-#include "Aeras_XZHydrostatic_DensityWeightedVelx_Def.hpp"
+#include "Aeras_DOFGradInterpolationLevels.hpp"
+#include "Aeras_DOFGradInterpolationLevels_Def.hpp"
 
-PHAL_INSTANTIATE_TEMPLATE_CLASS(Aeras::XZHydrostatic_DensityWeightedVelx)
+PHAL_INSTANTIATE_TEMPLATE_CLASS(Aeras::DOFGradInterpolationLevels)
+PHAL_INSTANTIATE_TEMPLATE_CLASS(Aeras::DOFGradInterpolationLevels_noDeriv)
 

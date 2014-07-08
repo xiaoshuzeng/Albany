@@ -34,12 +34,29 @@ public:
 
   AbstractFractureCriterion() {}
 
+  AbstractFractureCriterion(std::string const & b, std::string const & s) :
+  bulk_block_name_(b), interface_block_name_(s) {}
+
   virtual
   bool
-  check(Entity const & entity) = 0;
+  check(Entity const & interface) = 0;
 
   virtual
   ~AbstractFractureCriterion() {}
+
+  std::string const &
+  getBulkBlockName() {return bulk_block_name_;}
+
+  std::string const &
+  getInterfaceBlockName() {return interface_block_name_;}
+
+protected:
+
+  std::string
+  bulk_block_name_;
+
+  std::string
+  interface_block_name_;
 
 private:
 
@@ -60,13 +77,13 @@ public:
   probability_(probability) {}
 
   bool
-  check(Entity const & entity)
+  check(Entity const & interface)
   {
     EntityRank const
-    rank = entity.entity_rank();
+    rank = interface.entity_rank();
 
     stk_classic::mesh::PairIterRelation const
-    relations = entity.relations(rank + 1);
+    relations = interface.relations(rank + 1);
 
     assert(relations.size() == 2);
 
@@ -101,13 +118,13 @@ public:
   open_(true) {}
 
   bool
-  check(Entity const & entity)
+  check(Entity const & interface)
   {
     EntityRank const
-    rank = entity.entity_rank();
+    rank = interface.entity_rank();
 
     stk_classic::mesh::PairIterRelation const
-    relations = entity.relations(rank + 1);
+    relations = interface.relations(rank + 1);
 
     assert(relations.size() == 2);
 
@@ -146,12 +163,14 @@ public:
 
   FractureCriterionTraction(
       Topology & topology,
+      std::string const & bulk_block_name,
+      std::string const & interface_block_name,
       std::string const & stress_name,
       double const critical_traction,
       double const beta);
 
   bool
-  check(Entity const & entity);
+  check(Entity const & interface);
 
 private:
 
@@ -170,19 +189,19 @@ private:
   Albany::STKDiscretization &
   stk_discretization_;
 
-  Albany::AbstractSTKMeshStruct &
+  Albany::AbstractSTKMeshStruct const &
   stk_mesh_struct_;
 
-  stk_classic::mesh::BulkData &
+  stk_classic::mesh::BulkData const &
   bulk_data_;
 
-  stk_classic::mesh::fem::FEMMetaData &
+  stk_classic::mesh::fem::FEMMetaData const &
   meta_data_;
 
   Intrepid::Index
   dimension_;
 
-  TensorFieldType &
+  TensorFieldType const &
   stress_field_;
 
   double
@@ -190,6 +209,12 @@ private:
 
   double
   beta_;
+
+  stk_classic::mesh::Part const &
+  bulk_part_;
+
+  stk_classic::mesh::Part const &
+  interface_part_;
 
   std::vector<Intrepid::Vector<double> >
   normals_;
