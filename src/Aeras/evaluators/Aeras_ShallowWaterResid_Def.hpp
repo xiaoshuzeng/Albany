@@ -396,8 +396,8 @@ void
 ShallowWaterResid<EvalT,Traits>::get_coriolis(std::size_t cell, Intrepid::FieldContainer<ScalarT>  & coriolis) {
 
   coriolis.initialize();
-  double alpha = 0;  /*must match what is in initial condition for TC2 and TC5.
-                      see AAdatpt::AerasZonal analytic function. */
+    double alpha = 0.0;//1.047;  /*must match what is in initial condition for TC2 and TC5.
+                      //see AAdatpt::AerasZonal analytic function. */
 
   for (std::size_t qp=0; qp < numQPs; ++qp) {
     const MeshScalarT lambda = sphere_coord(cell, qp, 0);
