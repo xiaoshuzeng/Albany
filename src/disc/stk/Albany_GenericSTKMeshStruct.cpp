@@ -127,8 +127,20 @@ void Albany::GenericSTKMeshStruct::SetupFieldData(
 #ifdef ALBANY_LCM
   // If adaptation in LCM, create a new part for interface elements
   if (adaptParams.is_null() == false) {
+    std::string const &
+    bulk_part_name = adaptParams->get<std::string>("Bulk Block Name");
+
     stk_classic::mesh::Part &
-    interface_part = metaData->declare_part("interface");
+    bulk_part = *(metaData->get_part(bulk_part_name));
+
+    shards::CellTopology const &
+    bulk_cell_topology = metaData->get_cell_topology(bulk_part);
+
+    std::string const &
+    interface_part_name = adaptParams->get<std::string>("Interface Block Name");
+
+    stk_classic::mesh::Part &
+    interface_part = metaData->declare_part(interface_part_name);
 #ifdef ALBANY_SEACAS
     stk_classic::io::put_io_part_attribute(interface_part);
 #endif
