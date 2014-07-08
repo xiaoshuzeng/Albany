@@ -51,7 +51,7 @@ display_connectivity(BulkData * bulk_data, EntityRank cell_rank)
 
     for (size_t j = 0; j < nodes_per_element; ++j) {
 
-      Entity const &
+      Entity
       node = *(relations[j].entity());
 
       EntityId const
@@ -74,7 +74,7 @@ display_connectivity(BulkData * bulk_data, EntityRank cell_rank)
 ///
 inline
 void
-display_relation(Entity const & entity)
+display_relation(Entity entity)
 {
   std::cout << "Relations for entity (identifier,rank): ";
   std::cout << entity.identifier() << "," << entity.entity_rank();
@@ -102,7 +102,7 @@ display_relation(Entity const & entity)
 ///
 inline
 void
-display_relation(Entity const & entity, EntityRank const rank)
+display_relation(Entity entity, EntityRank const rank)
 {
   std::cout << "Relations of rank ";
   std::cout << rank;
@@ -126,7 +126,7 @@ display_relation(Entity const & entity, EntityRank const rank)
 
 inline
 bool
-is_one_down(Entity const & entity, Relation const & relation)
+is_one_down(Entity entity, Relation const & relation)
 {
   EntityRank const
   entity_rank = entity.entity_rank();
@@ -139,7 +139,7 @@ is_one_down(Entity const & entity, Relation const & relation)
 
 inline
 bool
-is_one_up(Entity const & entity, Relation const & relation)
+is_one_up(Entity entity, Relation const & relation)
 {
   EntityRank const
   entity_rank = entity.entity_rank();
@@ -157,7 +157,7 @@ is_one_up(Entity const & entity, Relation const & relation)
 ///
 inline
 bool
-is_graph_relation(Entity const & source_entity, Relation const & relation)
+is_graph_relation(Entity source_entity, Relation const & relation)
 {
   return is_one_down(source_entity, relation);
 }
@@ -170,7 +170,7 @@ is_graph_relation(Entity const & source_entity, Relation const & relation)
 inline
 bool
 is_needed_for_stk(
-    Entity const & source_entity,
+    Entity source_entity,
     Relation const & relation,
     EntityRank const cell_rank)
 {
@@ -194,7 +194,7 @@ is_needed_for_stk(
 ///
 inline
 PairIterRelation
-relations_all(Entity const & entity)
+relations_all(Entity entity)
 {
   return entity.relations();
 }
@@ -204,7 +204,7 @@ relations_all(Entity const & entity)
 ///
 inline
 PairIterRelation
-relations_one_up(Entity const & entity)
+relations_one_up(Entity entity)
 {
   return entity.relations(entity.entity_rank() + 1);
 }
@@ -214,7 +214,7 @@ relations_one_up(Entity const & entity)
 ///
 inline
 PairIterRelation
-relations_one_down(Entity const & entity)
+relations_one_down(Entity entity)
 {
   return entity.relations(entity.entity_rank() - 1);
 }
@@ -295,7 +295,7 @@ entity_label(EntityRank const rank)
 //
 inline
 std::string
-entity_string(Entity const & entity)
+entity_string(Entity entity)
 {
   std::ostringstream
   oss;

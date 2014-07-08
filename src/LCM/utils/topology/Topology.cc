@@ -153,7 +153,7 @@ Topology::initializeFractureState()
 
     for (EntityVector::size_type i = 0; i < entities.size(); ++i) {
 
-      Entity const &
+      Entity
       entity = *(entities[i]);
 
       setFractureState(entity, CLOSED);
@@ -190,7 +190,7 @@ Topology::createDiscretization()
 
   stk::mesh::get_selected_entities(local_selector, buckets, cells);
 
-  Entity const &
+  Entity
   first_cell = *(cells[0]);
 
   setCellTopology(stk::mesh::get_cell_topology(first_cell));
@@ -427,7 +427,7 @@ Topology::getElementToNodeConnectivity()
 // Determine nodes associated with a boundary entity
 //
 EntityVector
-Topology::getBoundaryEntityNodes(Entity const & boundary_entity)
+Topology::getBoundaryEntityNodes(Entity boundary_entity)
 {
   EntityRank const
   boundary_rank = boundary_entity.entity_rank();
@@ -440,7 +440,7 @@ Topology::getBoundaryEntityNodes(Entity const & boundary_entity)
   PairIterRelation
   relations = relations_one_up(boundary_entity);
 
-  Entity const &
+  Entity
   first_cell = *(relations[0].entity());
 
   EdgeId const
@@ -576,7 +576,7 @@ Topology::getNodalCoordinates()
 
   for (EntityVector::size_type i = 0; i < number_nodes; ++i) {
 
-    Entity const &
+    Entity
     node = *(entities[i]);
 
     double const * const
@@ -789,8 +789,8 @@ Topology::getBoundary()
 //
 EntityVector
 Topology::createSurfaceElementConnectivity(
-    Entity const & face_top,
-    Entity const & face_bottom)
+    Entity face_top,
+    Entity face_bottom)
 {
   EntityVector
   top = getBoundaryEntityNodes(face_top);

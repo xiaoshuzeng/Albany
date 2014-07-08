@@ -286,7 +286,7 @@ public:
   // Set fracture state. Do nothing for cells (elements).
   //
   void
-  setFractureState(Entity const & e, FractureState const fs)
+  setFractureState(Entity e, FractureState const fs)
   {
     if (e.entity_rank() < getCellRank()) {
       *(stk::mesh::field_data(getFractureState(), e)) = static_cast<int>(fs);
@@ -297,7 +297,7 @@ public:
   // Get fracture state. Return CLOSED for cells (elements).
   //
   FractureState
-  getFractureState(Entity const & e)
+  getFractureState(Entity e)
   {
     return e.entity_rank() >= getCellRank() ?
     CLOSED :
@@ -305,7 +305,7 @@ public:
   }
 
   bool
-  isInternal(Entity const & e) {
+  isInternal(Entity e) {
 
     assert(e.entity_rank() == getBoundaryRank());
 
@@ -321,12 +321,12 @@ public:
   }
 
   bool
-  isOpen(Entity const & e) {
+  isOpen(Entity e) {
     return getFractureState(e) == OPEN;
   }
 
   bool
-  isInternalAndOpen(Entity const & e) {
+  isInternalAndOpen(Entity e) {
     return isInternal(e) == true && isOpen(e) == true;
   }
 

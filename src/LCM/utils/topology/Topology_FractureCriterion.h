@@ -30,7 +30,7 @@ public:
 
   virtual
   bool
-  check(Entity const & entity) = 0;
+  check(Entity entity) = 0;
 
   virtual
   ~AbstractFractureCriterion() {}
@@ -54,7 +54,7 @@ public:
   probability_(probability) {}
 
   bool
-  check(Entity const & entity)
+  check(Entity entity)
   {
     EntityRank const
     rank = entity.entity_rank();
@@ -95,7 +95,7 @@ public:
   open_(true) {}
 
   bool
-  check(Entity const & entity)
+  check(Entity entity)
   {
     EntityRank const
     rank = entity.entity_rank();
@@ -143,7 +143,7 @@ public:
   critical_traction_(critical_traction) {}
 
   bool
-  check(Entity const & entity)
+  check(Entity entity)
   {
     EntityRank const
     rank = entity.entity_rank();

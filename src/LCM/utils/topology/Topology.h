@@ -149,7 +149,7 @@ public:
   /// \attention Assumes all mesh elements are same type.
   ///
   EntityVector
-  getBoundaryEntityNodes(Entity const & boundary_entity);
+  getBoundaryEntityNodes(Entity boundary_entity);
 
   std::vector<Intrepid::Vector<double> >
   getNodalCoordinates();
@@ -186,7 +186,7 @@ public:
   ////
   EntityVector
   createSurfaceElementConnectivity(
-      Entity const & face_top, Entity const & face_bottom);
+      Entity face_top, Entity face_bottom);
 
   ///
   /// \brief Create vectors describing the vertices and edges of the
@@ -274,15 +274,15 @@ public:
   /// \brief Gets the local relation id (0,1,2,...) between two entities
   ///
   EdgeId
-  getLocalRelationId(Entity const & source_entity,
-      Entity const & target_entity);
+  getLocalRelationId(Entity source_entity,
+      Entity target_entity);
 
   ///
   /// \brief Returns the total number of lower rank entities
   ///        connected to a specific entity
   ///
   int
-  getNumberLowerRankEntities(Entity const & entity);
+  getNumberLowerRankEntities(Entity entity);
 
   ///
   /// \brief Returns a group of entities connected directly to a
@@ -291,7 +291,7 @@ public:
   ///
   EntityVector
   getDirectlyConnectedEntities(
-      Entity const & entity,
+      Entity entity,
       EntityRank entity_rank);
 
   ///
@@ -311,14 +311,14 @@ public:
   ///
   ///
   EntityVector
-  getBoundaryEntities(Entity const & entity, EntityRank entity_rank);
+  getBoundaryEntities(Entity entity, EntityRank entity_rank);
 
   ///
   /// \brief Checks if a segment is connected to an input node.
   /// Returns "true" if the segment connects to the node.
   ///
   bool
-  segmentIsConnected(Entity const & segment, Entity node);
+  segmentIsConnected(Entity segment, Entity node);
 
   ///
   /// \brief Finds the adjacent segments to a given segment. The
@@ -326,14 +326,14 @@ public:
   ///        point. it returns adjacent segments
   ///
   EntityVector
-  findAdjacentSegments(Entity const & segment, Entity node);
+  findAdjacentSegments(Entity segment, Entity node);
 
   ///
   /// \brief Returns all the highest dimensional topology entities
   ///        to which a given face belongs
   ///
   EntityVector
-  findCellRelations(Entity const & face);
+  findCellRelations(Entity face);
 
   ///
   /// \brief Returns all the segments at the boundary of a given
@@ -341,13 +341,13 @@ public:
   ///        barycenters and the faces boundary nodes
   ///
   EntityVector
-  findSegmentsFromElement(Entity const & element);
+  findSegmentsFromElement(Entity element);
 
   ///
   /// \brief Returns true if the faces share a segment (two points)
   ///
   bool
-  facesShareTwoPoints(Entity const & face1, Entity const & face2);
+  facesShareTwoPoints(Entity face1, Entity face2);
 
   ///
   /// \brief returns the adjacent segments from a given face
@@ -355,7 +355,7 @@ public:
   EntityVector
   findAdjacentSegmentsFromFace(
       std::vector<EntityVector> const & faces_inside_element,
-      Entity const & face,
+      Entity face,
       int element_number);
 
   ///
@@ -369,7 +369,7 @@ public:
   ///        nodes of an input entity
   ///
   EntityVector
-  getFormerElementNodes(Entity const & element,
+  getFormerElementNodes(Entity element,
       std::vector<EntityVector> const & entities);
 
   ///
@@ -618,14 +618,14 @@ public:
   {return fracture_criterion_;}
 
   bool
-  isLocalEntity(Entity const & e)
+  isLocalEntity(Entity e)
   {return getBulkData()->parallel_rank() == e.owner_rank();}
 
   //
   // Set fracture state. Do nothing for cells (elements).
   //
   void
-  setFractureState(Entity const & e, FractureState const fs)
+  setFractureState(Entity e, FractureState const fs)
   {
     if (e.entity_rank() < getCellRank()) {
       *(stk::mesh::field_data(getFractureState(), e)) = static_cast<int>(fs);
@@ -636,7 +636,7 @@ public:
   // Get fracture state. Return CLOSED for cells (elements).
   //
   FractureState
-  getFractureState(Entity const & e)
+  getFractureState(Entity e)
   {
     return e.entity_rank() >= getCellRank() ?
     CLOSED :
@@ -644,7 +644,7 @@ public:
   }
 
   bool
-  isInternal(Entity const & e) {
+  isInternal(Entity e) {
 
     assert(e.entity_rank() == getBoundaryRank());
 
@@ -660,17 +660,17 @@ public:
   }
 
   bool
-  isOpen(Entity const & e) {
+  isOpen(Entity e) {
     return getFractureState(e) == OPEN;
   }
 
   bool
-  isInternalAndOpen(Entity const & e) {
+  isInternalAndOpen(Entity e) {
     return isInternal(e) == true && isOpen(e) == true;
   }
 
   bool
-  checkOpen(Entity const & e)
+  checkOpen(Entity e)
   {
     return fracture_criterion_->check(e);
   }
