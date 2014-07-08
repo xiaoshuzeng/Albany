@@ -186,7 +186,7 @@ Subgraph::removeVertex(Vertex const vertex)
   key = localToGlobal(vertex);
 
   // look up entity from key
-  Entity *
+  Entity
   entity = getBulkData()->get_entity(key);
 
   // remove the vertex and key from global_local_vertex_map_ and
@@ -209,7 +209,7 @@ Subgraph::removeVertex(Vertex const vertex)
     EdgeId
     edge_id = relations[i].identifier();
 
-    Entity &
+    Entity
     target = *(relations[i].entity());
 
     getBulkData()->destroy_relation(*entity, target, edge_id);
@@ -239,10 +239,10 @@ Subgraph::addEdge(
   EntityKey
   global_target_key = localToGlobal(local_target_vertex);
 
-  Entity *
+  Entity
   global_source_vertex = getBulkData()->get_entity(global_source_key);
 
-  Entity *
+  Entity
   global_target_vertex = getBulkData()->get_entity(global_target_key);
 
   assert(global_source_vertex->entity_rank() -
@@ -302,10 +302,10 @@ Subgraph::removeEdge(
   EntityKey
   global_target_id = localToGlobal(local_target_vertex);
 
-  Entity *
+  Entity
   global_source_vertex = getBulkData()->get_entity(global_source_id);
 
-  Entity *
+  Entity
   global_target_vertex = getBulkData()->get_entity(global_target_id);
 
   getBulkData()->destroy_relation(
@@ -563,10 +563,10 @@ Subgraph::cloneBoundaryEntity(Vertex vertex)
 // Restore element to node connectivity needed by STK.
 //
 void
-Subgraph::updateElementNodeConnectivity(Entity & point, ElementNodeMap & map)
+Subgraph::updateElementNodeConnectivity(Entity point, ElementNodeMap & map)
 {
   for (ElementNodeMap::iterator i = map.begin(); i != map.end(); ++i) {
-    Entity &
+    Entity
     element = *(i->first);
 
     // Identify relation id and remove
@@ -591,7 +591,7 @@ Subgraph::updateElementNodeConnectivity(Entity & point, ElementNodeMap & map)
 
     getBulkData()->destroy_relation(element, point, edge_id);
 
-    Entity &
+    Entity
     new_point = *(i->second);
     getBulkData()->declare_relation(element, new_point, edge_id);
   }
@@ -601,7 +601,7 @@ Subgraph::updateElementNodeConnectivity(Entity & point, ElementNodeMap & map)
 //
 // Splits an articulation point.
 //
-std::map<Entity*, Entity*>
+std::map<Entity, Entity>
 Subgraph::splitArticulationPoint(Vertex vertex)
 {
   EntityRank
@@ -619,7 +619,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
 
   // The function returns an updated connectivity map.
   // If the vertex rank is not node, then this map will be empty.
-  std::map<Entity*, Entity*>
+  std::map<Entity, Entity>
   new_connectivity;
 
   if (number_components == 1) return new_connectivity;
@@ -638,7 +638,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
   // Create a map of elements to new node numbers
   // only if the input vertex is a node
   if (vertex_rank == NODE_RANK) {
-    Entity *
+    Entity
     point = getBulkData()->get_entity(localToGlobal(vertex));
 
     for (ComponentMap::iterator i = components.begin();
@@ -657,16 +657,16 @@ Subgraph::splitArticulationPoint(Vertex vertex)
 
       if (component_number == number_components - 1) continue;
 
-      Entity *
+      Entity
       element = getBulkData()->get_entity(localToGlobal(current_vertex));
 
       Vertex
       new_vertex = new_vertices[component_number];
 
-      Entity *
+      Entity
       new_node = getBulkData()->get_entity(localToGlobal(new_vertex));
 
-      std::pair<Entity*, Entity*>
+      std::pair<Entity, Entity>
       nc = std::make_pair(element, new_node);
 
       new_connectivity.insert(nc);
@@ -708,7 +708,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
     size_t
     vertex_component = (*component_iterator).second;
 
-    Entity &
+    Entity
     entity = *(getBulkData()->get_entity(localToGlobal(source)));
 
     if (vertex_component < number_components - 1) {
@@ -767,10 +767,10 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
   EntityKey
   new_key = localToGlobal(new_vertex);
 
-  Entity &
+  Entity
   old_entity = *(getBulkData()->get_entity(old_key));
 
-  Entity &
+  Entity
   new_entity = *(getBulkData()->get_entity(new_key));
 
   // Iterate over the out edges of the old vertex and check against the
@@ -797,7 +797,7 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
       EdgeId
       edge_id = old_relations[i].identifier();
 
-      Entity &
+      Entity
       target = *(old_relations[i].entity());
 
       getBulkData()->declare_relation(new_entity, target, edge_id);
@@ -855,7 +855,7 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
     EntityKey
     key = localToGlobal(*i);
 
-    Entity &
+    Entity
     entity = *(getBulkData()->get_entity(key));
 
     EntityRank const
@@ -889,13 +889,13 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
       EntityKey
       source_key = localToGlobal(source);
 
-      Entity &
+      Entity
       global_source = *(getBulkData()->get_entity(source_key));
 
       EntityKey
       target_key = localToGlobal(target);
 
-      Entity &
+      Entity
       global_target = *(getBulkData()->get_entity(target_key));
 
       EdgeId

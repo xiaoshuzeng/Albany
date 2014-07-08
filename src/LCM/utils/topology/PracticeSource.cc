@@ -20,16 +20,16 @@ void
 Topology::divideSegmentsHalf()
 {
 //get the segment from the original mesh
-  std::vector<Entity*>
+  std::vector<Entity>
   initial_entities_1D = getEntitiesByRank(*(getBulkData()), 1);
-  std::vector<Entity*> vector_nodes;
+  std::vector<Entity> vector_nodes;
 
 //Adding nodes to the divide segments by half
   std::vector<size_t> request1(getSpaceDimension() + 1, 0);
   request1[0] = initial_entities_1D.size();
   addEntities(request1);
 
-  std::vector<Entity*>
+  std::vector<Entity>
   initial_entities_0D = getEntitiesByRank(*(getBulkData()), 0);
 
 //add a relation from the former segment to a new node
@@ -41,7 +41,7 @@ Topology::divideSegmentsHalf()
   std::vector<size_t> requests_step1_2(getSpaceDimension() + 1, 0);
   requests_step1_2[1] = initial_entities_1D.size();
   addEntities(requests_step1_2);
-  std::vector<Entity*>
+  std::vector<Entity>
   modified_entities_1D = getEntitiesByRank(*(getBulkData()), 1);
 
   for (unsigned int i = 0; i < initial_entities_1D.size(); i++) {
@@ -87,7 +87,7 @@ void
 Topology::addCentroid()
 {
   //get the faces form the original mesh
-  std::vector<Entity*>
+  std::vector<Entity>
   initial_entities_2D = getEntitiesByRank(*(getBulkData()), 2);
 
   //Adding nodes to the faces
@@ -100,24 +100,24 @@ void
 Topology::connectCentroid()
 {
   //get the faces form the original mesh
-  std::vector<Entity*>
+  std::vector<Entity>
   initial_entities_2D = getEntitiesByRank(*(getBulkData()), 2);
 
   //get the centroid
-  std::vector<Entity*>
+  std::vector<Entity>
   modified_entities_0D = getEntitiesByRank(*(getBulkData()), 0);
 
   //adding new segment
   std::vector<size_t> request2(getSpaceDimension() + 1, 0);
   request2[1] = 6 * initial_entities_2D.size();
   addEntities(request2);
-  std::vector<Entity*>
+  std::vector<Entity>
   modified_entities_1D = getEntitiesByRank(*(getBulkData()), 1);
 
   for (unsigned int i = 0; i < initial_entities_2D.size(); i++) {
 
     //get boundary nodes
-    std::vector<Entity*>
+    std::vector<Entity>
     boundary_entities_0D = getBoundaryEntities(*(initial_entities_2D[i]), 0);
 
     //adding new relation
@@ -135,7 +135,7 @@ void
 Topology::addNewFaces()
 {
   //get the faces form the original mesh
-  std::vector<Entity*>
+  std::vector<Entity>
   initial_entities_2D = getEntitiesByRank(*(getBulkData()), 2);
 
   //Adding nodes to the faces
@@ -144,7 +144,7 @@ Topology::addNewFaces()
   addEntities(request2);
 
   //get boundary nodes
-  std::vector<Entity*>
+  std::vector<Entity>
   boundary_entities_1D = getBoundaryEntities(*(initial_entities_2D[0]), 1);
 
   for (unsigned i = 0; i < boundary_entities_1D.size(); i++) {
@@ -155,7 +155,7 @@ void
 Topology::connectNewFaces()
 {
   //get the faces form the original mesh
-  std::vector<Entity*>
+  std::vector<Entity>
   initial_entities_2D = getEntitiesByRank(*(getBulkData()), 2);
 
 }

@@ -92,28 +92,28 @@ typedef Albany::AbstractSTKFieldContainer::VectorFieldType
     VectorFieldType;
 
 // Specific to topological manipulation
-typedef std::pair<Entity*, Entity*> EntityPair;
+typedef std::pair<Entity, Entity> EntityPair;
 typedef std::map<Vertex, size_t> ComponentMap;
-typedef std::map<Entity*, Entity*> ElementNodeMap;
+typedef std::map<Entity, Entity> ElementNodeMap;
 
 enum FractureState {CLOSED = 0, OPEN = 1};
 
 enum VTKCellType {INVALID = 0, VERTEX = 1, LINE = 2, TRIANGLE = 5, QUAD = 9};
 
 static EntityRank const
-INVALID_RANK = stk::mesh::fem::FEMMetaData::INVALID_RANK;
+INVALID_RANK = stk::mesh::MetaData::INVALID_RANK;
 
 static EntityRank const
-NODE_RANK = stk::mesh::fem::FEMMetaData::NODE_RANK;
+NODE_RANK = stk::mesh::MetaData::NODE_RANK;
 
 static EntityRank const
-EDGE_RANK = stk::mesh::fem::FEMMetaData::EDGE_RANK;
+EDGE_RANK = stk::mesh::MetaData::EDGE_RANK;
 
 static EntityRank const
-FACE_RANK = stk::mesh::fem::FEMMetaData::FACE_RANK;
+FACE_RANK = stk::mesh::MetaData::FACE_RANK;
 
 static EntityRank const
-VOLUME_RANK = stk::mesh::fem::FEMMetaData::VOLUME_RANK;
+VOLUME_RANK = stk::mesh::MetaData::VOLUME_RANK;
 
 ///
 /// \brief Struct to store the data needed for creation or

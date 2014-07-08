@@ -77,7 +77,7 @@ int main(int ac, char* av[])
   // Start the mesh update process
   // Will fully separate the elements in the mesh by replacing element nodes
   // Get a vector containing the element set of the mesh.
-  std::vector<stk::mesh::Entity*> element_lst;
+  std::vector<stk::mesh::Entity> element_lst;
   stk::mesh::get_entities(bulkData,topology.getCellRank(),element_lst);
 
   // Modifies mesh for graph algorithm
@@ -142,7 +142,7 @@ int main(int ac, char* av[])
       element_lst[i]->relations(LCM::NODE_RANK);
     // Get centroid of the element
     for (int j = 0; j < relations.size(); ++j){
-      stk::mesh::Entity & node = *(relations[j].entity());
+      stk::mesh::Entity node = *(relations[j].entity());
       int id = static_cast<int>(node.identifier());
       centroid[0] += coordinates[id*3-3];
       centroid[1] += coordinates[id*3-2];
@@ -159,7 +159,7 @@ int main(int ac, char* av[])
 
     // Add displacement to nodes
     for (int j = 0; j < relations.size(); ++j){
-      stk::mesh::Entity & node = *(relations[j].entity());
+      stk::mesh::Entity node = *(relations[j].entity());
       int id = static_cast<int>(node.identifier());
       displacement[id*3-3] += disp[0];
       displacement[id*3-2] += disp[1];

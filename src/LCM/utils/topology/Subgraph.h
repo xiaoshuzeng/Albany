@@ -191,7 +191,7 @@ public:
   /// was replaced by a new point.
   ///
   void
-  updateElementNodeConnectivity(Entity & point, ElementNodeMap & map);
+  updateElementNodeConnectivity(Entity point, ElementNodeMap & map);
 
   ///
   /// \brief Splits an articulation point.
@@ -213,7 +213,7 @@ public:
   /// the new node. If the nodal connectivity of an element does not
   /// change, do not add to the map.
   ///
-  std::map<Entity*, Entity*>
+  std::map<Entity, Entity>
   splitArticulationPoint(Vertex vertex);
 
   ///
@@ -264,7 +264,7 @@ public:
   getBulkData()
   {return stk_mesh_struct_->bulkData;}
 
-  stk::mesh::fem::FEMMetaData *
+  stk::mesh::MetaData *
   getMetaData()
   {return stk_mesh_struct_->metaData;}
 

@@ -74,7 +74,7 @@ int main(int ac, char* av[]){
 	//GET THE 1D BUNDARY FROM THE INPUT MESH USING dijkstra_shortest_paths
 	//-----------------------------------------------------------------------------------------
 	stk::mesh::BulkData* bulkData_ = topology.getBulkData();
-	std::vector<Entity*> MeshNodes = topology.getEntitiesByRank(
+	std::vector<Entity> MeshNodes = topology.getEntitiesByRank(
 			*(bulkData_), 0);
 
 
@@ -83,7 +83,7 @@ int main(int ac, char* av[]){
 	std::vector<int> _nodeNames = topology.nodeNames();//Vector with node names
 
 	//Define edges and weights
-	std::vector<Entity*> MeshEdges = topology.getEntitiesByRank(
+	std::vector<Entity> MeshEdges = topology.getEntitiesByRank(
 				*(bulkData_), 1); //Get all the edges of the mesh
 
 	//Initialize Array of edges
@@ -97,7 +97,7 @@ int main(int ac, char* av[]){
 
 	for (unsigned int i = 0; i < MeshEdges.size();++i){
 
-		 std::vector<Entity*> EdgeBoundaryNodes(2);
+		 std::vector<Entity> EdgeBoundaryNodes(2);
 		 EdgeBoundaryNodes = topology.getDirectlyConnectedEntities((*MeshEdges[i]),0);
 		 EdgesArray[i] = Edge((EdgeBoundaryNodes[0]->identifier())-1,
 		 		 (EdgeBoundaryNodes[1]->identifier())-1);

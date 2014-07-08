@@ -41,7 +41,7 @@ void LCM::PeridigmManager::initialize(const Teuchos::RCP<Teuchos::ParameterList>
 
   Teuchos::RCP<Albany::STKDiscretization> stkDisc = Teuchos::rcp_dynamic_cast<Albany::STKDiscretization>(disc);
   TEUCHOS_TEST_FOR_EXCEPT_MSG(stkDisc.is_null(), "\n\n**** Error in PeridigmManager::initialize():  Peridigm interface is valid only for STK meshes.\n\n");
-  const stk::mesh::fem::FEMMetaData& metaData = stkDisc->getSTKMetaData();
+  const stk::mesh::MetaData& metaData = stkDisc->getSTKMetaData();
   const stk::mesh::BulkData& bulkData = stkDisc->getSTKBulkData();
   TEUCHOS_TEST_FOR_EXCEPT_MSG(metaData.spatial_dimension() != 3, "\n\n**** Error in PeridigmManager::initialize():  Peridigm interface is valid only for three-dimensional meshes.\n\n");
 
@@ -70,11 +70,11 @@ void LCM::PeridigmManager::initialize(const Teuchos::RCP<Teuchos::ParameterList>
     stk::mesh::Selector( metaData.universal_part() ) & ( stk::mesh::Selector( metaData.locally_owned_part() ) | stk::mesh::Selector( metaData.globally_shared_part() ) );
 
   // Select element mesh entities that match the selector
-  std::vector<stk::mesh::Entity*> elements;
+  std::vector<stk::mesh::Entity> elements;
   stk::mesh::get_selected_entities(selector, bulkData.buckets(metaData.element_rank()), elements);
 
   // Select node mesh entities that match the selector
-  std::vector<stk::mesh::Entity*> nodes;
+  std::vector<stk::mesh::Entity> nodes;
   stk::mesh::get_selected_entities(selector, bulkData.buckets(metaData.node_rank()), nodes);
 
   // List of blocks for peridynamics, partial stress, and standard FEM
@@ -106,7 +106,7 @@ void LCM::PeridigmManager::initialize(const Teuchos::RCP<Teuchos::ParameterList>
       stk::mesh::Selector( *stkElementBlocks[iBlock] ) & stk::mesh::Selector( metaData.locally_owned_part() );
 
     // Select the mesh entities that match the selector
-    std::vector<stk::mesh::Entity*> elementsInElementBlock;
+    std::vector<stk::mesh::Entity> elementsInElementBlock;
     stk::mesh::get_selected_entities(selector, bulkData.buckets(metaData.element_rank()), elementsInElementBlock);
 
     // Determine the material model assigned to this block
@@ -214,7 +214,7 @@ void LCM::PeridigmManager::initialize(const Teuchos::RCP<Teuchos::ParameterList>
       stk::mesh::Selector( *stkElementBlocks[iBlock] ) & stk::mesh::Selector( metaData.locally_owned_part() );
 
     // Select the mesh entities that match the selector
-    std::vector<stk::mesh::Entity*> elementsInElementBlock;
+    std::vector<stk::mesh::Entity> elementsInElementBlock;
     stk::mesh::get_selected_entities(selector, bulkData.buckets(metaData.element_rank()), elementsInElementBlock);
 
     // Determine the material model assigned to this block
@@ -226,7 +226,7 @@ void LCM::PeridigmManager::initialize(const Teuchos::RCP<Teuchos::ParameterList>
       for(unsigned int iElement=0 ; iElement<elementsInElementBlock.size() ; iElement++){
 	stk::mesh::PairIterRelation nodeRelations = elementsInElementBlock[iElement]->node_relations();
 	TEUCHOS_TEST_FOR_EXCEPT_MSG(nodeRelations.size() != 1, "\n\n**** Error in PeridigmManager::initialize(), \"Peridynamics\" material model may be assigned only to sphere elements.\n\n");
-	stk::mesh::Entity* node = nodeRelations.begin()->entity();
+	stk::mesh::Entity node = nodeRelations.begin()->entity();
 	int globalId = node->identifier() - 1;
 	int oneDimensionalMapLocalId = oneDimensionalMap.LID(globalId);
 	TEUCHOS_TEST_FOR_EXCEPT_MSG(oneDimensionalMapLocalId == -1, "\n\n**** Error in PeridigmManager::initialize(), invalid global id.\n\n");
@@ -303,7 +303,7 @@ void LCM::PeridigmManager::initialize(const Teuchos::RCP<Teuchos::ParameterList>
 	TEUCHOS_TEST_FOR_EXCEPT_MSG(nodeRelations.size() != numNodes, "\n\n**** Error in PeridigmManager::initialize(), nodeRelations.size() != numNodes.\n\n");
 	int index = 0;
 	for(stk::mesh::PairIterRelation::iterator it = nodeRelations.begin() ; it != nodeRelations.end() ; it++){
-	  stk::mesh::Entity* node = it->entity();
+	  stk::mesh::Entity node = it->entity();
 	  double* coordinates = stk::mesh::field_data(*coordinatesField, *node);
 	  for(int dof=0 ; dof<3 ; ++dof)
 	    cellWorkset(0, index, dof) = coordinates[dof];

@@ -204,7 +204,7 @@ public:
   ///
   void
   createStar(
-      Entity & entity,
+      Entity entity,
       std::set<EntityKey> & subgraph_entities,
       std::set<stkEdge, EdgeLessThan> & subgraph_edges);
 
@@ -241,20 +241,20 @@ public:
   /// \brief Removes an entity and all its connections
   ///
   void
-  removeEntity(Entity & entity);
+  removeEntity(Entity entity);
 
   ///
   /// \brief Adds a relation between two entities
   ///
   void
-  addRelation(Entity & source_entity, Entity & target_entity,
+  addRelation(Entity source_entity, Entity target_entity,
       EdgeId local_relation_id);
 
   ///
   /// \brief Removes the relation between two entities
   ///
   void
-  removeRelation(Entity & source_entity, Entity & target_entity,
+  removeRelation(Entity source_entity, Entity target_entity,
       EdgeId local_relation_id);
 
   ///
@@ -298,7 +298,7 @@ public:
   /// \brief Checks if an entity exists inside a specific vector
   ///
   bool
-  findEntityInVector(EntityVector & entities, Entity * entity);
+  findEntityInVector(EntityVector & entities, Entity entity);
 
   ///
   /// \brief Returns a group of entities connected indirectly to a
@@ -318,7 +318,7 @@ public:
   /// Returns "true" if the segment connects to the node.
   ///
   bool
-  segmentIsConnected(Entity const & segment, Entity * node);
+  segmentIsConnected(Entity const & segment, Entity node);
 
   ///
   /// \brief Finds the adjacent segments to a given segment. The
@@ -326,7 +326,7 @@ public:
   ///        point. it returns adjacent segments
   ///
   EntityVector
-  findAdjacentSegments(Entity const & segment, Entity * node);
+  findAdjacentSegments(Entity const & segment, Entity node);
 
   ///
   /// \brief Returns all the highest dimensional topology entities
@@ -362,7 +362,7 @@ public:
   /// \brief Returns a pointer with the coordinates of a given entity
   ///
   double*
-  getPointerOfCoordinates(Entity * entity);
+  getPointerOfCoordinates(Entity entity);
 
   ///
   /// \brief Returns a vector with the corresponding former boundary
@@ -380,7 +380,7 @@ public:
   void
   computeBarycentricCoordinates(
       EntityVector const & entities,
-      Entity * barycenter);
+      Entity barycenter);
 
   ///
   /// \brief Barycentric subdivision
@@ -391,7 +391,7 @@ public:
   ///
   /// \brief Finds the closest nodes(Entities of rank 0) to each of the three points in the input vector.
   /// EntityVector
-  std::vector<Entity*>
+  std::vector<Entity>
   getClosestNodes(std::vector<std::vector<double> > points);
 
   ///
@@ -399,14 +399,14 @@ public:
   ///        of the three points in the input vectorThese nodes
   ///        lie over the surface of the mesh
   ///
-  std::vector<Entity*>
+  std::vector<Entity>
   getClosestNodesOnSurface(std::vector<std::vector<double> > points);
 
   ///
   /// \brief calculates the distance between a node and a point
   ///
   double
-  getDistanceNodeAndPoint(Entity* node, std::vector<double> point);
+  getDistanceNodeAndPoint(Entity node, std::vector<double> point);
 
   ///
   /// \brief Returns the coordinates of the points that form a equilateral triangle.
@@ -425,7 +425,7 @@ public:
   /// \brief Returns the distance between two entities of rank 0 (nodes)
   ///
   double
-  getDistanceBetweenNodes(Entity * node1, Entity * node2);
+  getDistanceBetweenNodes(Entity node1, Entity node2);
 
   ///
   /// \brief Returns the coordinates of the max and min of x y and z
@@ -438,7 +438,7 @@ public:
   /// \brief Returns the edges necessary to compute the shortest path on the outer surface
   ///        of the mesh
   ///
-  std::vector<Entity*>
+  std::vector<Entity>
   MeshEdgesShortestPath();
 
   ///
@@ -447,14 +447,14 @@ public:
   ///
   std::vector<std::vector<int> >
   shortestpathOnBoundaryFaces(
-      std::vector<Entity*> const & nodes,
-		  std::vector<Entity*> const & MeshEdgesShortestPath);
+      std::vector<Entity> const & nodes,
+		  std::vector<Entity> const & MeshEdgesShortestPath);
 
   ///
   /// \brief Returns the shortest path between three input nodes
   ///
   std::vector<std::vector<int> >
-  shortestpath(std::vector<Entity*> const & nodes);
+  shortestpath(std::vector<Entity> const & nodes);
 
   ///
   /// \brief Returns the directions of all the edges of the input mesh
@@ -516,14 +516,14 @@ public:
   ///        It takes as an input the resulting vector taken from the solution of the
   ///        linear programming solver
   ///
-  std::vector<Entity*>
+  std::vector<Entity>
   MinimumSurfaceFaces(std::vector<int> VectorFromLPSolver);
 
   ///
   /// \brief Returns the number of times an entity is repeated in a vector
   ///
   int
-  NumberOfRepetitions(std::vector<Entity*> & entities, Entity * entity);
+  NumberOfRepetitions(std::vector<Entity> & entities, Entity entity);
 
   ///
   /// \brief Returns the coordinates of an input node.
@@ -580,7 +580,7 @@ public:
   getBulkData()
   {return stk_mesh_struct_->bulkData;}
 
-  stk::mesh::fem::FEMMetaData *
+  stk::mesh::MetaData *
   getMetaData()
   {return stk_mesh_struct_->metaData;}
 

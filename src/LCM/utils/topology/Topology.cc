@@ -193,7 +193,7 @@ Topology::createDiscretization()
   Entity const &
   first_cell = *(cells[0]);
 
-  setCellTopology(stk::mesh::fem::get_cell_topology(first_cell));
+  setCellTopology(stk::mesh::get_cell_topology(first_cell));
 
   return;
 }
@@ -238,7 +238,7 @@ void Topology::removeNodeRelations()
     nodes;
 
     for (size_t j = 0; j < relations.size(); ++j) {
-      Entity *
+      Entity
       node = relations[j].entity();
       nodes.push_back(node);
     }
@@ -274,7 +274,7 @@ void Topology::removeMultiLevelRelations()
 
     for (size_t i = 0; i < entities.size(); ++i) {
 
-      Entity &
+      Entity
       entity = *(entities[i]);
 
       PairIterRelation
@@ -316,7 +316,7 @@ void Topology::removeMultiLevelRelations()
       // Delete them
       for (size_t i = 0; i < multilevel_relation_ids.size(); ++i) {
 
-        Entity &
+        Entity
         far_entity = *(far_entities[i]);
 
         EdgeId const
@@ -350,14 +350,14 @@ void Topology::restoreElementToNodeConnectivity()
 
   // Add relations from element to nodes
   for (size_t i = 0; i < elements.size(); ++i) {
-    Entity &
+    Entity
     element = *(elements[i]);
 
     EntityVector
     element_connectivity = connectivity_[i];
 
     for (size_t j = 0; j < element_connectivity.size(); ++j) {
-      Entity &
+      Entity
       node = *(element_connectivity[j]);
       getBulkData()->declare_relation(element, node, j);
     }
@@ -411,7 +411,7 @@ Topology::getElementToNodeConnectivity()
 
     for (size_t j(0); j < nodes_per_element; ++j) {
 
-      Entity*
+      Entity
       node = relations[j].entity();
 
       node_list.push_back(node);
@@ -506,7 +506,7 @@ Topology::createBoundary()
   getBulkData()->modification_begin();
   for (EntityVector::size_type i = 0; i < entities.size(); ++i) {
 
-    Entity &
+    Entity
     entity = *(entities[i]);
 
     PairIterRelation
@@ -735,7 +735,7 @@ Topology::getBoundary()
 
   for (EntityVector::size_type i = 0; i < number_entities; ++i) {
 
-    Entity &
+    Entity
     entity = *(entities[i]);
 
     PairIterRelation
@@ -815,7 +815,7 @@ Topology::createSurfaceElementConnectivity(
 //
 void
 Topology::createStar(
-    Entity & entity,
+    Entity entity,
     std::set<EntityKey> & subgraph_entities,
     std::set<stkEdge, EdgeLessThan> & subgraph_edges)
 {
@@ -830,7 +830,7 @@ Topology::createStar(
     Relation
     relation = *i;
 
-    Entity &
+    Entity
     source = *(relation.entity());
 
     stkEdge
@@ -876,7 +876,7 @@ Topology::splitOpenFaces()
   // Collect open points
   for (EntityVector::iterator i = points.begin();i != points.end(); ++i) {
 
-    Entity &
+    Entity
     point = *(*i);
 
     if (getFractureState(point) == OPEN) {
@@ -890,7 +890,7 @@ Topology::splitOpenFaces()
   for (EntityVector::iterator i = open_points.begin();
       i != open_points.end(); ++i) {
 
-    Entity &
+    Entity
     point = *(*i);
 
     PairIterRelation
@@ -903,7 +903,7 @@ Topology::splitOpenFaces()
     for (PairIterRelation::iterator j = relations.begin();
         j != relations.end(); ++j) {
 
-      Entity &
+      Entity
       segment = *j->entity();
 
       bool const
@@ -928,7 +928,7 @@ Topology::splitOpenFaces()
     for (EntityVector::iterator j = open_segments.begin();
         j != open_segments.end(); ++j) {
 
-      Entity &
+      Entity
       segment = *(*j);
 
       // Create star of segment
@@ -976,7 +976,7 @@ Topology::splitOpenFaces()
       for (PairIterRelation::iterator k = face_relations.begin();
           k != face_relations.end(); ++k) {
 
-        Entity *
+        Entity
         face = k->entity();
 
         bool const
@@ -992,7 +992,7 @@ Topology::splitOpenFaces()
       for (EntityVector::iterator k = open_faces.begin();
           k != open_faces.end(); ++k) {
 
-        Entity *
+        Entity
         face = *k;
 
         Vertex
@@ -1004,7 +1004,7 @@ Topology::splitOpenFaces()
         EntityKey
         new_face_key = subgraph.localToGlobal(new_face_vertex);
 
-        Entity *
+        Entity
         new_face = getBulkData()->get_entity(new_face_key);
 
         // Reset fracture state for both old and new faces
@@ -1108,7 +1108,7 @@ Topology::splitOpenFaces()
     for (ElementNodeMap::iterator j = new_connectivity.begin();
         j != new_connectivity.end(); ++j) {
 
-      Entity &
+      Entity
       new_node = *((*j).second);
 
       getBulkData()->copy_entity_fields(point, new_node);
@@ -1124,8 +1124,8 @@ Topology::splitOpenFaces()
   for (std::set<EntityPair>::iterator i =
       fractured_faces.begin(); i != fractured_faces.end(); ++i) {
 
-    Entity & face1 = *((*i).first);
-    Entity & face2 = *((*i).second);
+    Entity face1 = *((*i).first);
+    Entity face2 = *((*i).second);
 
     EntityVector
     cohesive_connectivity = createSurfaceElementConnectivity(face1, face2);
@@ -1161,7 +1161,7 @@ Topology::setEntitiesOpen()
   // Iterate over the boundary entities
   for (size_t i = 0; i < boundary_entities.size(); ++i) {
 
-    Entity &
+    Entity
     entity = *(boundary_entities[i]);
 
     if (isInternal(entity) == false) continue;
@@ -1186,11 +1186,11 @@ Topology::setEntitiesOpen()
       {
         PairIterRelation segments = entity.relations(EDGE_RANK);
         for (size_t j = 0; j < segments.size(); ++j) {
-          Entity & segment = *(segments[j].entity());
+          Entity segment = *(segments[j].entity());
           setFractureState(segment, OPEN);
           PairIterRelation points = segment.relations(NODE_RANK);
           for (size_t k = 0; k < points.size(); ++k) {
-            Entity & point = *(points[k].entity());
+            Entity point = *(points[k].entity());
             setFractureState(point, OPEN);
           }
         }
@@ -1201,7 +1201,7 @@ Topology::setEntitiesOpen()
       {
         PairIterRelation points = entity.relations(NODE_RANK);
         for (size_t j = 0; j < points.size(); ++j) {
-          Entity & point = *(points[j].entity());
+          Entity point = *(points[j].entity());
           setFractureState(point, OPEN);
         }
       }
@@ -1259,7 +1259,7 @@ Topology::outputToGraphviz(
 
     for (EntityVector::size_type i = 0; i < entities.size(); ++i) {
 
-      Entity &
+      Entity
       source_entity = *(entities[i]);
 
       FractureState const
@@ -1275,7 +1275,7 @@ Topology::outputToGraphviz(
         Relation const &
         relation = relations[j];
 
-        Entity &
+        Entity
         target_entity = *(relation.entity());
 
         EntityRank const
@@ -1336,10 +1336,10 @@ Topology::outputToGraphviz(
     EntityPair
     entity_pair = relation_list[i];
 
-    Entity &
+    Entity
     source = *(entity_pair.first);
 
-    Entity &
+    Entity
     target = *(entity_pair.second);
 
     gviz_out << dot_relation(

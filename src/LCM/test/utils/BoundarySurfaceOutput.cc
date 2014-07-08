@@ -123,7 +123,7 @@ int main (int ac, char* av[]){
 
 
 			//Finds the Node (Entity of rank 0) that is closest to each of the points on the plane
-			std::vector<Entity*> closestNodes = topology.getClosestNodesOnSurface(pointsOnPlane);
+			std::vector<Entity> closestNodes = topology.getClosestNodesOnSurface(pointsOnPlane);
 
 			//Finds the identifiers of the nodes (entity rank 0) along the shortest
 			//path connecting the three points
