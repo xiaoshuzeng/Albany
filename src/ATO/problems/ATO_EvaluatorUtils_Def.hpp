@@ -57,7 +57,7 @@ ATO::EvaluatorUtils<EvalT,Traits>::constructComputeBasisFunctionsEvaluator(
       p->set<string>( "Topology Variable Name", topology );
       return rcp(new ATO::ComputeBasisFunctions_ElementTopo<EvalT,Traits>(*p,dl));
 
-    if( centering == "Node" ){
+    } else if( centering == "Node" ){
 
       p->set<string>( "Topology Variable Name", topology );
       return rcp(new ATO::ComputeBasisFunctions_NodeTopo<EvalT,Traits>(*p,dl));

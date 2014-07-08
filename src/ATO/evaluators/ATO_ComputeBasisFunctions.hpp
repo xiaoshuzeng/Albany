@@ -84,15 +84,16 @@ protected:
 */
 
 template<typename EvalT, typename Traits>
-class ComputeBasisFunctions_ElementTopo : public PHX::EvaluatorWithBaseImpl<Traits>,
-                                          public PHX::EvaluatorDerived<EvalT, Traits>  {
+class ComputeBasisFunctions_ElementTopo : public ComputeBasisFunctions<EvalT, Traits>{
 
 public:
   ComputeBasisFunctions_ElementTopo(const Teuchos::ParameterList& p,
                                     const Teuchos::RCP<Albany::Layouts>& dl):
-                                    ComputeBasisFunctions(p,dl){}
+                                    ComputeBasisFunctions<EvalT, Traits>(p,dl){}
 
   void evaluateFields(typename Traits::EvalData d);
+private:
+  typedef typename EvalT::MeshScalarT MeshScalarT;
 };
 
 /** \brief Finite Element Interpolation Evaluator (w/ Node Based Topology)
@@ -103,15 +104,16 @@ public:
 */
 
 template<typename EvalT, typename Traits>
-class ComputeBasisFunctions_NodeTopo : public PHX::EvaluatorWithBaseImpl<Traits>,
-                                       public PHX::EvaluatorDerived<EvalT, Traits>  {
+class ComputeBasisFunctions_NodeTopo : public ComputeBasisFunctions<EvalT, Traits>{
 
 public:
   ComputeBasisFunctions_NodeTopo(const Teuchos::ParameterList& p,
                                  const Teuchos::RCP<Albany::Layouts>& dl):
-                                 ComputeBasisFunctions(p,dl){}
+                                 ComputeBasisFunctions<EvalT, Traits>(p,dl){}
 
   void evaluateFields(typename Traits::EvalData d);
+private:
+  typedef typename EvalT::MeshScalarT MeshScalarT;
 };
 
 }

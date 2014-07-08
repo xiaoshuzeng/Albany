@@ -221,6 +221,18 @@ ELSE()
   SET(ALBANY_DEMO_PDES FALSE)
 ENDIF()
 
+# set optional dependency on ATO, defaults to Disabled
+OPTION(ENABLE_ATO "Flag to turn on ATO source code" OFF)
+IF (ENABLE_ATO)
+  ADD_DEFINITIONS(-DALBANY_ATO)
+  MESSAGE("-- ATO       is Enabled, compiling with -DALBANY_ATO")
+  SET(ALBANY_ATO TRUE)
+ELSE()
+  MESSAGE("-- ATO       is NOT Enabled.")
+  SET(ALBANY_ATO FALSE)
+ENDIF()
+
+
 # set optional dependency on LCM, defaults to Disabled
 OPTION(ENABLE_LCM "Flag to turn on LCM Mechanics source code" OFF)
 IF (ENABLE_LCM)

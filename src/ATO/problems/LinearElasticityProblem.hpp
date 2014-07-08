@@ -109,6 +109,7 @@ namespace Albany {
 #include "Albany_ProblemUtils.hpp"
 #include "Albany_ResponseUtilities.hpp"
 #include "Albany_EvaluatorUtils.hpp"
+#include "ATO_EvaluatorUtils.hpp"
 
 #include "PHAL_Source.hpp"
 #include "Strain.hpp"

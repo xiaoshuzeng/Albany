@@ -23,7 +23,7 @@ ComputeBasisFunctions(const Teuchos::ParameterList& p,
   wBF              (p.get<std::string>  ( "Weighted BF Name"          ), dl->node_qp_scalar),
   GradBF           (p.get<std::string>  ( "Gradient BF Name"          ), dl->node_qp_gradient),
   wGradBF          (p.get<std::string>  ( "Weighted Gradient BF Name" ), dl->node_qp_gradient),
-  topoName         (p.get<std::string>  ( "Topology Variable Name"    ),
+  topoName         (p.get<std::string>  ( "Topology Variable Name"    )),
   cubature         (p.get<Teuchos::RCP <Intrepid::Cubature<RealType> > >("Cubature")),
   intrepidBasis    (p.get<Teuchos::RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > > > ("Intrepid Basis") ),
   cellType         (p.get<Teuchos::RCP <shards::CellTopology> > ("Cell Type"))
@@ -98,32 +98,32 @@ evaluateFields(typename Traits::EvalData workset)
   // setJacobian only needs to be RealType since the data type is only
   //  used internally for Basis Fns on reference elements, which are
   //  not functions of coordinates. This save 18min of compile time!!!
-  Intrepid::CellTools<RealType>::setJacobian(jacobian, refPoints, coordVec, *cellType);
-  Intrepid::CellTools<MeshScalarT>::setJacobianInv(jacobian_inv, jacobian);
-  Intrepid::CellTools<MeshScalarT>::setJacobianDet(jacobian_det, jacobian);
+  Intrepid::CellTools<RealType>::setJacobian(this->jacobian, this->refPoints, 
+                                             this->coordVec, *(this->cellType));
+  Intrepid::CellTools<MeshScalarT>::setJacobianInv(this->jacobian_inv, this->jacobian);
+  Intrepid::CellTools<MeshScalarT>::setJacobianDet(this->jacobian_det, this->jacobian);
 
   Intrepid::FunctionSpaceTools::HGRADtransformVALUE<RealType>
-    (BF, val_at_cub_points);
+    (this->BF, this->val_at_cub_points);
   Intrepid::FunctionSpaceTools::HGRADtransformGRAD<MeshScalarT>
-    (GradBF, jacobian_inv, grad_at_cub_points);
+    (this->GradBF, this->jacobian_inv, this->grad_at_cub_points);
 
   Intrepid::FunctionSpaceTools::computeCellMeasure<MeshScalarT>
-    (weighted_measure, jacobian_det, refWeights);
+    (this->weighted_measure, this->jacobian_det, this->refWeights);
 
   // adjust weighted_measure to account for topology
-  Albany::MDArray topology = (*workset.stateArrayPtr)[topoName];
+  int nQPs = this->numQPs;
+  Albany::MDArray topology = (*workset.stateArrayPtr)[this->topoName];
   for (std::size_t cell=0; cell < workset.numCells; ++cell)
-    for (std::size_t qp=0; qp < numQPs; ++qp)
-      weighted_measure(cell,qp) *= topology(cell);
+    for (std::size_t qp=0; qp < nQPs; ++qp)
+      this->weighted_measure(cell,qp) *= topology(cell);
  
   Intrepid::FunctionSpaceTools::multiplyMeasure<MeshScalarT>
-    (wBF, weighted_measure, BF);
+    (this->wBF, this->weighted_measure, this->BF);
   Intrepid::FunctionSpaceTools::multiplyMeasure<MeshScalarT>
-    (wGradBF, weighted_measure, GradBF);
+    (this->wGradBF, this->weighted_measure, this->GradBF);
 
 
-
-}
 
 }
 
@@ -144,33 +144,38 @@ evaluateFields(typename Traits::EvalData workset)
   // setJacobian only needs to be RealType since the data type is only
   //  used internally for Basis Fns on reference elements, which are
   //  not functions of coordinates. This save 18min of compile time!!!
-  Intrepid::CellTools<RealType>::setJacobian(jacobian, refPoints, coordVec, *cellType);
-  Intrepid::CellTools<MeshScalarT>::setJacobianInv(jacobian_inv, jacobian);
-  Intrepid::CellTools<MeshScalarT>::setJacobianDet(jacobian_det, jacobian);
+  Intrepid::CellTools<RealType>::setJacobian(this->jacobian, this->refPoints, 
+                                             this->coordVec, *(this->cellType));
+  Intrepid::CellTools<MeshScalarT>::setJacobianInv(this->jacobian_inv, this->jacobian);
+  Intrepid::CellTools<MeshScalarT>::setJacobianDet(this->jacobian_det, this->jacobian);
 
   Intrepid::FunctionSpaceTools::HGRADtransformVALUE<RealType>
-    (BF, val_at_cub_points);
+    (this->BF, this->val_at_cub_points);
   Intrepid::FunctionSpaceTools::HGRADtransformGRAD<MeshScalarT>
-    (GradBF, jacobian_inv, grad_at_cub_points);
+    (this->GradBF, this->jacobian_inv, this->grad_at_cub_points);
 
   Intrepid::FunctionSpaceTools::computeCellMeasure<MeshScalarT>
-    (weighted_measure, jacobian_det, refWeights);
+    (this->weighted_measure, this->jacobian_det, this->refWeights);
 
   // adjust weighted_measure to account for topology
-  Albany::MDArray topology = (*workset.stateArrayPtr)[topoName];
+  int nQPs = this->numQPs;
+  int nNodes = this->numNodes;
+  Albany::MDArray topology = (*workset.stateArrayPtr)[this->topoName];
   for (std::size_t cell=0; cell < workset.numCells; ++cell)
-    for (std::size_t qp=0; qp < numQPs; ++qp)
-      MeshScalarT topo_weight = 0.0;
-      for (std::size_t node=0; node < numNodes; ++node)
-        topo_weight += topology(cell,node) * BF(cell, node, qp);
-      weighted_measure(cell,qp) *= topo_weight;
+    for (std::size_t qp=0; qp < nQPs; ++qp){
+      RealType topo_weight = 0.0;
+      for (std::size_t node=0; node < nNodes; ++node)
+        topo_weight += topology(cell,node) * this->BF(cell, node, qp);
+      this->weighted_measure(cell,qp) *= topo_weight;
+    }
  
   Intrepid::FunctionSpaceTools::multiplyMeasure<MeshScalarT>
-    (wBF, weighted_measure, BF);
+    (this->wBF, this->weighted_measure, this->BF);
   Intrepid::FunctionSpaceTools::multiplyMeasure<MeshScalarT>
-    (wGradBF, weighted_measure, GradBF);
+    (this->wGradBF, this->weighted_measure, this->GradBF);
 
 
 
 }
 
+}  // end ATO namespace
