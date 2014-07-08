@@ -8,12 +8,11 @@
 #include "Albany_Utils.hpp"
 #include "Albany_SolverFactory.hpp"
 #include "Teuchos_XMLParameterListHelpers.hpp"
-#include <stk_mesh/base/FieldData.hpp>
+#include <stk_mesh/base/FieldBase.hpp>
 #include "Piro_PerformSolve.hpp"
 #include <stk_io/IossBridge.hpp>
 #include <stk_io/MeshReadWriteUtils.hpp>
 #include <stk_mesh/base/GetEntities.hpp>
-#include <stk_mesh/base/FieldData.hpp>
 #include <Ionit_Initializer.h>
 #include "Albany_OrdinarySTKFieldContainer.hpp"
 #include "Thyra_EpetraThyraWrappers.hpp"

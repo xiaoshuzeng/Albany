@@ -78,7 +78,12 @@ AAdapt::STKUnifRefineField::operator()(const stk::mesh::Entity element,
   const stk::mesh::PairIterRelation elem_nodes = element.relations(stk::topology::NODE_RANK);
   unsigned num_node = elem_nodes.size();
   double* f_data = stk::percept::PerceptMesh::field_data_entity(field, element);
-  Albany::AbstractSTKFieldContainer::VectorFieldType* coordField = m_eMesh.get_coordinates_field();
+  Albany::AbstractSTKFieldContainer::VectorFieldType* coordField = 
+#ifdef HAZ_PERCEPT
+    m_eMesh.get_coordinates_field();
+#else
+  NULL
+#endif
 
   bool found = false;
 

@@ -7,7 +7,7 @@
 #if !defined(LCM_Topology_Subgraph_h)
 #define LCM_Topology_Subgraph_h
 
-#include <stk_mesh/base/FieldData.hpp>
+#include <stk_mesh/base/FieldBase.hpp>
 
 #include "Topology_Types.h"
 

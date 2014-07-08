@@ -6,7 +6,9 @@
 
 #include "AAdapt_STKAdapt.hpp"
 #include "Intrepid_MiniTensor.h"
+#ifdef HAZ_PERCEPT
 #include "PerceptMesh.hpp"
+#endif
 #include "Phalanx_DataLayout.hpp"
 #include "Sacado_ParameterRegistration.hpp"
 #include "Teuchos_TestForException.hpp"

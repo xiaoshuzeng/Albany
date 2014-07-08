@@ -7,7 +7,7 @@
 // Define only if LCM is enabled
 #if defined (ALBANY_LCM)
 
-#include <stk_mesh/base/FieldData.hpp>
+#include <stk_mesh/base/FieldBase.hpp>
 #include "Topology.h"
 
 // FIXME: need to extract Topology member functions specific to

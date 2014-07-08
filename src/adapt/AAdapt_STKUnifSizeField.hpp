@@ -7,17 +7,25 @@
 #ifndef AADAPT_STKUNIFSIZEFIELD_HPP
 #define AADAPT_STKUNIFSIZEFIELD_HPP
 
+#ifdef HAZ_PERCEPT
 #include <stk_percept/PerceptMesh.hpp>
 #include <stk_percept/function/ElementOp.hpp>
+#endif
 
 namespace AAdapt {
 
-class STKUnifRefineField : public stk::percept::ElementOp {
+class STKUnifRefineField
+#ifdef HAZ_PERCEPT
+: public stk::percept::ElementOp
+#endif
+{
 
   public:
 
-    STKUnifRefineField(stk::percept::PerceptMesh& eMesh) : m_eMesh(eMesh) {
-    }
+#ifdef HAZ_PERCEPT
+  STKUnifRefineField(stk::percept::PerceptMesh& eMesh) : m_eMesh(eMesh) {
+  }
+#endif
 
     virtual bool operator()(const stk::mesh::Entity element,
                             stk::mesh::FieldBase* field,  const stk::mesh::BulkData& bulkData);
@@ -25,15 +33,23 @@ class STKUnifRefineField : public stk::percept::ElementOp {
     virtual void fini_elementOp() {}
 
   private:
+#ifdef HAZ_PERCEPT
     stk::percept::PerceptMesh& m_eMesh;
+#endif
 };
 
-class STKUnifUnrefineField : public stk::percept::ElementOp {
+class STKUnifUnrefineField
+#ifdef HAZ_PERCEPT
+: public stk::percept::ElementOp
+#endif
+{
 
   public:
 
+#ifdef HAZ_PERCEPT
     STKUnifUnrefineField(stk::percept::PerceptMesh& eMesh) : m_eMesh(eMesh) {
     }
+#endif
 
     virtual bool operator()(const stk::mesh::Entity element,
                             stk::mesh::FieldBase* field,  const stk::mesh::BulkData& bulkData);
@@ -41,7 +57,9 @@ class STKUnifUnrefineField : public stk::percept::ElementOp {
     virtual void fini_elementOp() {}
 
   private:
+#ifdef HAZ_PERCEPT
     stk::percept::PerceptMesh& m_eMesh;
+#endif
 };
 
 }

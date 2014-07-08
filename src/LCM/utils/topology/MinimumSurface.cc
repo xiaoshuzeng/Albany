@@ -7,7 +7,7 @@
 // Define only if ALbany is enabled
 #if defined (ALBANY_LCM)
 
-#include <stk_mesh/base/FieldData.hpp>
+#include <stk_mesh/base/FieldBase.hpp>
 #include "Topology.h"
 #define _USE_MATH_DEFINES
 #include <math.h>

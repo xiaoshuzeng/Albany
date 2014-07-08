@@ -211,7 +211,7 @@ Albany::MultiSTKFieldContainer<Interleaved>::MultiSTKFieldContainer(
 #ifdef ALBANY_LCM
   // sphere volume is a mesh attribute read from a genesis mesh file containing sphere element (used for peridynamics)
   if(buildSphereVolume){
-    this->sphereVolume_field = metaData_->get_field< stk::mesh::Field<double> >("volume");
+    this->sphereVolume_field = metaData_->get_field< stk::mesh::Field<double> >(stk::topology::ELEMENT_RANK, "volume");
     if(this->sphereVolume_field)
       stk::io::set_field_role(*this->sphereVolume_field, Ioss::Field::ATTRIBUTE);
   }
@@ -250,16 +250,11 @@ void Albany::MultiSTKFieldContainer<Interleaved>::initializeSTKAdaptation() {
 #ifdef ALBANY_LCM
   // Fracture state used for adaptive insertion.
   // It exists for all entities except cells (elements).
-  this->fracture_state =
-      & this->metaData->template declare_field< ISFT >("fracture_state");
 
-  stk::mesh::EntityRank const
-  cell_rank = this->metaData->element_rank();
-
-  for (stk::mesh::EntityRank rank = 0; rank < cell_rank; ++rank) {
+  for (stk::mesh::EntityRank rank = stk::topology::NODE_RANK; rank < stk::topology::ELEMENT_RANK; ++rank) {
+    this->fracture_state[rank] = &this->metaData->template declare_field< ISFT >(rank, "fracture_state");
     stk::mesh::put_field(
-        *this->fracture_state,
-        rank,
+        *this->fracture_state[rank],
         this->metaData->universal_part());
 
   }
@@ -270,7 +265,9 @@ void Albany::MultiSTKFieldContainer<Interleaved>::initializeSTKAdaptation() {
   stk::io::set_field_role(*this->proc_rank_field, Ioss::Field::MESH);
   stk::io::set_field_role(*this->refine_field, Ioss::Field::MESH);
 #ifdef ALBANY_LCM
-  stk::io::set_field_role(*this->fracture_state, Ioss::Field::MESH);
+  for (stk::mesh::EntityRank rank = stk::topology::NODE_RANK; rank < stk::topology::ELEMENT_RANK; ++rank) {
+    stk::io::set_field_role(*this->fracture_state[rank], Ioss::Field::MESH);
+  }
 #endif // ALBANY_LCM
 #endif
 

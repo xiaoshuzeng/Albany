@@ -8,7 +8,7 @@
 
 #include <iterator>
 
-#include <stk_mesh/base/FieldData.hpp>
+#include <stk_mesh/base/FieldBase.hpp>
 
 #include "Topology_Types.h"
 #include "Topology_FractureCriterion.h"

@@ -13,9 +13,8 @@
 #include <stk_mesh/base/Field.hpp>
 #include <stk_mesh/base/GetEntities.hpp>
 #include <stk_mesh/base/Types.hpp>
-#include <stk_mesh/fem/CreateAdjacentEntities.hpp>
-#include <stk_mesh/fem/FEMMetaData.hpp>
-#include <stk_mesh/fem/SkinMesh.hpp>
+#include <stk_mesh/base/CreateAdjacentEntities.hpp>
+#include <stk_mesh/base/SkinMesh.hpp>
 
 // Boost includes
 #include <boost/graph/adjacency_list.hpp>

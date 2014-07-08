@@ -64,7 +64,7 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     IntScalarFieldType* getProcRankField(){ return proc_rank_field; }
     IntScalarFieldType* getRefineField(){ return refine_field; }
 #ifdef ALBANY_LCM
-    IntScalarFieldType* getFractureState(){ return fracture_state; }
+    IntScalarFieldType* getFractureState(stk::topology::rank_t rank){ return fracture_state[rank]; }
 #endif // ALBANY_LCM
     ScalarFieldType* getSurfaceHeightField(){ return surfaceHeight_field; }
     ScalarFieldType* getTemperatureField(){ return temperature_field; }
@@ -106,7 +106,7 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     IntScalarFieldType* proc_rank_field;
     IntScalarFieldType* refine_field;
 #ifdef ALBANY_LCM
-    IntScalarFieldType* fracture_state;
+    IntScalarFieldType* fracture_state[stk::topology::ELEMENT_RANK];
 #endif // ALBANY_LCM
     ScalarFieldType* surfaceHeight_field; // Required for FELIX
     ScalarFieldType* temperature_field; // Required for FELIX

@@ -3,7 +3,7 @@
 #include "PeridigmManager.hpp"
 #include "Albany_Utils.hpp"
 #include <stk_mesh/base/GetEntities.hpp>
-#include <stk_mesh/base/FieldData.hpp>
+#include <stk_mesh/base/FieldBase.hpp>
 #include "Phalanx_DataLayout.hpp"
 #include "QCAD_MaterialDatabase.hpp"
 #include "PHAL_Dimension.hpp"
