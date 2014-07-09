@@ -59,7 +59,7 @@ AAdapt::TopologyMod::TopologyMod(
   interface_block_name = params->get<std::string>("Interface Block Name");
 
   std::string const
-  stress_name = "nodal_Cauchy_Stress";
+  stress_name = "nodal_PK1";
 
   double const
   critical_traction = params->get<double>("Critical Traction");
