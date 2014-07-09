@@ -153,9 +153,17 @@ void createInterfaceParts(
 )
 {
   bool const
-  do_adapt = adapt_params.is_null() == false;
+  do_adaption = adapt_params.is_null() == false;
 
-  if (do_adapt == false) return;
+  if (do_adaption == false) return;
+
+  std::string const &
+  adaption_method_name = adapt_params->get<std::string>("Method");
+
+  bool const
+  is_topology_modification = adaption_method_name == "Topmod";
+
+  if (is_topology_modification == false) return;
 
   std::string const &
   bulk_part_name = adapt_params->get<std::string>("Bulk Block Name");
