@@ -177,12 +177,16 @@ void createInterfaceParts(
   std::string const &
   interface_part_name(adapt_params->get<std::string>("Interface Block Name"));
 
-  stk_classic::mesh::Part &
-  interface_part = fem_meta_data.declare_part(interface_part_name);
-
   shards::CellTopology const
   interface_cell_topology =
       shards::interfaceCellTopogyFromBulkCellTopogy(bulk_cell_topology);
+
+  stk_classic::mesh::EntityRank const
+  interface_dimension = interface_cell_topology.getDimension();
+
+  stk_classic::mesh::Part &
+  interface_part =
+      fem_meta_data.declare_part(interface_part_name, interface_dimension);
 
   stk_classic::mesh::fem::set_cell_topology(
       interface_part, interface_cell_topology
