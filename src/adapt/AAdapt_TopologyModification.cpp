@@ -140,14 +140,6 @@ AAdapt::TopologyMod::adaptMesh(
   // Start the mesh update process
 
   // Modifies mesh for graph algorithm
-  // Function must be called each time before there are changes to the mesh
-
-  // Check for failure criterion
-  // std::map<EntityKey, bool> local_entity_open;
-  // std::map<EntityKey, bool> global_entity_open;
-  topology_->setEntitiesOpen();
-
-  // getGlobalOpenList(local_entity_open, global_entity_open);
 
   // begin mesh update
 
