@@ -125,18 +125,6 @@ private:
   stk::mesh::MetaData *
   meta_data_;
 
-  stk::mesh::EntityRank
-  node_rank_;
-
-  stk::mesh::EntityRank
-  edge_rank_;
-
-  stk::mesh::EntityRank
-  face_rank_;
-
-  stk::mesh::EntityRank
-  element_rank_;
-
   Teuchos::RCP<LCM::AbstractFractureCriterion>
   fracture_criterion_;
 

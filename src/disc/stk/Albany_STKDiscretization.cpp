@@ -259,13 +259,13 @@ Albany::STKDiscretization::transformMesh()
     stkMeshStruct->PBCStruct.scale[1]*=L;
     AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
     for (int i=0; i < numOverlapNodes; i++)  {
-      double* x = stk::mesh::field_data(*coordinates_field, *overlapnodes[i]);
+      double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
       x[1] = L*x[1];
       double s = -x[0]*tan(alpha);
       double b = s - 1.0 + 0.5*sin(2*pi/L*x[0])*sin(2*pi/L*x[1]);
       x[2] = s*x[2] + b*(1-x[2]);
-      *stk::mesh::field_data(*surfaceHeight_field, *overlapnodes[i]) = s;
+      *stk::mesh::field_data(*surfaceHeight_field, overlapnodes[i]) = s;
      }
    }
   else if (transformType == "ISMIP-HOM Test B") {
@@ -286,13 +286,13 @@ Albany::STKDiscretization::transformMesh()
     stkMeshStruct->PBCStruct.scale[1]*=L;
     AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
     for (int i=0; i < numOverlapNodes; i++)  {
-      double* x = stk::mesh::field_data(*coordinates_field, *overlapnodes[i]);
+      double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
       x[1] = L*x[1];
       double s = -x[0]*tan(alpha);
       double b = s - 1.0 + 0.5*sin(2*pi/L*x[0]);
       x[2] = s*x[2] + b*(1-x[2]);
-      *stk::mesh::field_data(*surfaceHeight_field, *overlapnodes[i]) = s;
+      *stk::mesh::field_data(*surfaceHeight_field, overlapnodes[i]) = s;
      }
    }
    else if ((transformType == "ISMIP-HOM Test C") || (transformType == "ISMIP-HOM Test D")) {
@@ -313,13 +313,13 @@ Albany::STKDiscretization::transformMesh()
     stkMeshStruct->PBCStruct.scale[1]*=L;
     AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
     for (int i=0; i < numOverlapNodes; i++)  {
-      double* x = stk::mesh::field_data(*coordinates_field, *overlapnodes[i]);
+      double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
       x[1] = L*x[1];
       double s = -x[0]*tan(alpha);
       double b = s - 1.0;
       x[2] = s*x[2] + b*(1-x[2]);
-      *stk::mesh::field_data(*surfaceHeight_field, *overlapnodes[i]) = s;
+      *stk::mesh::field_data(*surfaceHeight_field, overlapnodes[i]) = s;
      }
    }
    else if (transformType == "Dome") {
@@ -331,12 +331,12 @@ Albany::STKDiscretization::transformMesh()
     stkMeshStruct->PBCStruct.scale[1]*=L;
     AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
     for (int i=0; i < numOverlapNodes; i++)  {
-      double* x = stk::mesh::field_data(*coordinates_field, *overlapnodes[i]);
+      double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
       x[1] = L*x[1];
       double s = 0.7071*sqrt(450.0 - x[0]*x[0] - x[1]*x[1])/sqrt(450.0);
       x[2] = s*x[2];
-      *stk::mesh::field_data(*surfaceHeight_field, *overlapnodes[i]) = s;
+      *stk::mesh::field_data(*surfaceHeight_field, overlapnodes[i]) = s;
     }
   }
    else if (transformType == "Confined Shelf") {
@@ -349,13 +349,13 @@ Albany::STKDiscretization::transformMesh()
     stkMeshStruct->PBCStruct.scale[1]*=L;
     AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
     for (int i=0; i < numOverlapNodes; i++)  {
-      double* x = stk::mesh::field_data(*coordinates_field, *overlapnodes[i]);
+      double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
       x[1] = L*x[1];
       double s = 0.06; //top surface is at z=0.06km=60m
       double b = -0.440; //basal surface is at z=-0.440km=-440m
       x[2] = s*x[2] + b*(1.0-x[2]);
-      *stk::mesh::field_data(*surfaceHeight_field, *overlapnodes[i]) = s;
+      *stk::mesh::field_data(*surfaceHeight_field, overlapnodes[i]) = s;
     }
   }
   else if (transformType == "Circular Shelf") {
@@ -372,13 +372,13 @@ Albany::STKDiscretization::transformMesh()
     stkMeshStruct->PBCStruct.scale[1]*=L;
     AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
     for (int i=0; i < numOverlapNodes; i++)  {
-      double* x = stk::mesh::field_data(*coordinates_field, *overlapnodes[i]);
+      double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
       x[1] = L*x[1];
       double s = 1.0-rhoIce/rhoOcean; //top surface is at z=(1-rhoIce/rhoOcean) km
       double b = s - 1.0; //basal surface is at z=s-1 km
       x[2] = s*x[2] + b*(1.0-x[2]);
-      *stk::mesh::field_data(*surfaceHeight_field, *overlapnodes[i]) = s;
+      *stk::mesh::field_data(*surfaceHeight_field, overlapnodes[i]) = s;
     }
   }
 #endif
@@ -387,7 +387,7 @@ Albany::STKDiscretization::transformMesh()
     *out << "Aeras Schar Mountain transformation!" << endl;
     double rhoOcean = 1028.0; //ocean density, in kg/m^3
     for (int i=0; i < numOverlapNodes; i++)  {
-      double* x = stk::mesh::field_data(*coordinates_field, *overlapnodes[i]);
+      double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = x[0];
       double hstar = 0.0, h;
       if (std::abs(x[0]-150.0) <= 25.0) hstar = 3.0* std::pow(cos(M_PI*(x[0]-150.0) / 50.0),2);

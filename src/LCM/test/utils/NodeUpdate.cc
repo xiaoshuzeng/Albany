@@ -78,7 +78,7 @@ int main(int ac, char* av[])
   // Will fully separate the elements in the mesh by replacing element nodes
   // Get a vector containing the element set of the mesh.
   std::vector<stk::mesh::Entity> element_lst;
-  stk::mesh::get_entities(bulkData,topology.getCellRank(),element_lst);
+  stk::mesh::get_entities(bulkData,stk::topology::ELEMENT_RANK,element_lst);
 
   // Modifies mesh for graph algorithm
   // Function must be called each time before there are changes to the mesh
@@ -130,7 +130,7 @@ int main(int ac, char* av[])
   Epetra_Vector displacement = Epetra_Vector(*(dof_map),true);
 
   // Add displacement to nodes
-  stk::mesh::get_entities(bulkData,topology.getCellRank(),element_lst);
+  stk::mesh::get_entities(bulkData,stk::topology::ELEMENT_RANK,element_lst);
 
   // displacement scale factor
   double alpha = 0.5;
@@ -138,19 +138,19 @@ int main(int ac, char* av[])
   for (int i = 0; i < element_lst.size(); ++i){
     std::vector<double> centroid(3);
     std::vector<double> disp(3);
-    stk::mesh::PairIterRelation relations =
-      element_lst[i]->relations(LCM::NODE_RANK);
+    stk::mesh::Entity const* relations = bulkData.begin_nodes(element_lst[i]);
+    int const num_relations = bulkData.num_nodes(element_lst[i]);
     // Get centroid of the element
-    for (int j = 0; j < relations.size(); ++j){
-      stk::mesh::Entity node = *(relations[j].entity());
-      int id = static_cast<int>(node.identifier());
+    for (int j = 0; j < num_relations; ++j){
+      stk::mesh::Entity node = relations[j];
+      int id = static_cast<int>(bulkData.identifier(node));
       centroid[0] += coordinates[id*3-3];
       centroid[1] += coordinates[id*3-2];
       centroid[2] += coordinates[id*3-1];
     }
-    centroid[0] /= relations.size();
-    centroid[1] /= relations.size();
-    centroid[2] /= relations.size();
+    centroid[0] /= num_relations;
+    centroid[1] /= num_relations;
+    centroid[2] /= num_relations;
 
     // Determine displacement
     for (int j = 0; j < 3; ++j){
@@ -158,9 +158,9 @@ int main(int ac, char* av[])
     }
 
     // Add displacement to nodes
-    for (int j = 0; j < relations.size(); ++j){
-      stk::mesh::Entity node = *(relations[j].entity());
-      int id = static_cast<int>(node.identifier());
+    for (int j = 0; j < num_relations; ++j){
+      stk::mesh::Entity node = relations[j];
+      int id = static_cast<int>(bulkData.identifier(node));
       displacement[id*3-3] += disp[0];
       displacement[id*3-2] += disp[1];
       displacement[id*3-1] += disp[2];

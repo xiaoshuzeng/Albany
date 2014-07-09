@@ -69,19 +69,19 @@ Albany::OrdinarySTKFieldContainer<Interleaved>::OrdinarySTKFieldContainer(
 #ifdef ALBANY_FELIX
 
   if(buildSurfaceHeight)
-    this->surfaceHeight_field = & metaData_->declare_field< SFT >("surface_height");
+    this->surfaceHeight_field = & metaData_->declare_field< SFT >(stk::topology::NODE_RANK, "surface_height");
   if(buildTemperature)
-    this->temperature_field = & metaData_->declare_field< SFT >("temperature");
+    this->temperature_field = & metaData_->declare_field< SFT >(stk::topology::ELEMENT_RANK, "temperature");
   if(buildBasalFriction)
-    this->basalFriction_field = & metaData_->declare_field< SFT >("basal_friction");
+    this->basalFriction_field = & metaData_->declare_field< SFT >(stk::topology::NODE_RANK, "basal_friction");
   if(buildThickness)
-    this->thickness_field = & metaData_->declare_field< SFT >("thickness");
+    this->thickness_field = & metaData_->declare_field< SFT >(stk::topology::NODE_RANK, "thickness");
   if(buildFlowFactor)
-    this->flowFactor_field = & metaData_->declare_field< SFT >("flow_factor");
+    this->flowFactor_field = & metaData_->declare_field< SFT >(stk::topology::ELEMENT_RANK, "flow_factor");
   if(buildSurfaceVelocity)
-    this->surfaceVelocity_field = & metaData_->declare_field< VFT >("surface_velocity");
+    this->surfaceVelocity_field = & metaData_->declare_field< VFT >(stk::topology::NODE_RANK, "surface_velocity");
   if(buildVelocityRMS)
-    this->velocityRMS_field = & metaData_->declare_field< VFT >("velocity_RMS");
+    this->velocityRMS_field = & metaData_->declare_field< VFT >(stk::topology::NODE_RANK, "velocity_RMS");
 #endif
 
   stk::mesh::put_field(*this->coordinates_field , metaData_->universal_part(), numDim_);
@@ -94,19 +94,19 @@ Albany::OrdinarySTKFieldContainer<Interleaved>::OrdinarySTKFieldContainer(
 #ifdef ALBANY_FELIX
 
   if(buildSurfaceHeight)
-    stk::mesh::put_field( *this->surfaceHeight_field , metaData_->node_rank() , metaData_->universal_part());
+    stk::mesh::put_field( *this->surfaceHeight_field , metaData_->universal_part());
   if(buildTemperature)
-    stk::mesh::put_field( *this->temperature_field , metaData_->element_rank() , metaData_->universal_part());
+    stk::mesh::put_field( *this->temperature_field , metaData_->universal_part());
   if(buildBasalFriction)
-    stk::mesh::put_field( *this->basalFriction_field , metaData_->node_rank() , metaData_->universal_part());//*metaData_->get_part("basalside","Mpas Interface"));
+    stk::mesh::put_field( *this->basalFriction_field , metaData_->universal_part());//*metaData_->get_part("basalside","Mpas Interface"));
   if(buildThickness)
-    stk::mesh::put_field( *this->thickness_field , metaData_->node_rank() , metaData_->universal_part());
+    stk::mesh::put_field( *this->thickness_field , metaData_->universal_part());
   if(buildFlowFactor)
-    stk::mesh::put_field( *this->flowFactor_field , metaData_->element_rank() , metaData_->universal_part());
+    stk::mesh::put_field( *this->flowFactor_field , metaData_->universal_part());
   if(buildSurfaceVelocity)
-    stk::mesh::put_field( *this->surfaceVelocity_field , metaData_->node_rank() , metaData_->universal_part(), neq_);
+    stk::mesh::put_field( *this->surfaceVelocity_field , metaData_->universal_part(), neq_);
   if(buildVelocityRMS)
-    stk::mesh::put_field( *this->velocityRMS_field , metaData_->node_rank() , metaData_->universal_part(), neq_);
+    stk::mesh::put_field( *this->velocityRMS_field , metaData_->universal_part(), neq_);
 #endif
 
 #ifdef ALBANY_SEACAS

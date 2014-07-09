@@ -77,7 +77,7 @@ int main(int ac, char* av[])
   std::cout << "***********************" << std::endl;
   std::cout << "Before mesh subdivision" << std::endl;
   std::cout << "***********************" << std::endl;
-  LCM::display_connectivity(topology.getBulkData(), topology.getCellRank());
+  LCM::display_connectivity(*topology.getBulkData(), stk::topology::ELEMENT_RANK);
   //Request the number of entities of the input mesh
   std::vector<int> vector_initial_entities = return_number_entities(topology);
   // Start the mesh update process
@@ -97,7 +97,7 @@ int main(int ac, char* av[])
   // Must be called each time at conclusion of mesh modification
 
   topology.restoreElementToNodeConnectivity();
-  LCM::display_connectivity(topology.getBulkData(), topology.getCellRank());
+  LCM::display_connectivity(*topology.getBulkData(), stk::topology::ELEMENT_RANK);
 
   //
   // Generate the output (exodus) file
@@ -139,19 +139,19 @@ return_number_entities(LCM::Topology & topology_){
 	//Push back number of nodes
 	stk::mesh::BulkData* bulkData_ = topology_.getBulkData();
 	std::vector<Entity> initial_entities_D0 = topology_.getEntitiesByRank(
-			*(bulkData_), 0);
+          *(bulkData_), stk::topology::NODE_RANK);
 	output_vector.push_back(initial_entities_D0.size());
 	//Push back number of edges
 	std::vector<Entity> initial_entities_D1 = topology_.getEntitiesByRank(
-			*(bulkData_), 1);
+			*(bulkData_), stk::topology::EDGE_RANK);
 	output_vector.push_back(initial_entities_D1.size());
 	//Push back number of faces
 	std::vector<Entity> initial_entities_D2 = topology_.getEntitiesByRank(
-			*(bulkData_), 2);
+			*(bulkData_), stk::topology::FACE_RANK);
 	output_vector.push_back(initial_entities_D2.size());
 	//Push back number of elements
 	std::vector<Entity> initial_entities_D3 = topology_.getEntitiesByRank(
-			*(bulkData_), 3);
+			*(bulkData_), stk::topology::ELEMENT_RANK);
 	output_vector.push_back(initial_entities_D3.size());
 
 	return output_vector;

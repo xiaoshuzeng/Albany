@@ -159,20 +159,27 @@ AAdapt::TopologyMod::getValidAdapterParameters() const {
 //----------------------------------------------------------------------------
 void
 AAdapt::TopologyMod::showRelations() {
-  std::vector<Entity*> element_list;
-  stk::mesh::get_entities(*(bulk_data_), element_rank_, element_list);
+  std::vector<Entity> element_list;
+  stk::mesh::get_entities(*(bulk_data_), stk::topology::ELEMENT_RANK, element_list);
 
   // Remove extra relations from element
   for(int i = 0; i < element_list.size(); ++i) {
-    Entity& element = *(element_list[i]);
-    stk::mesh::PairIterRelation relations = element.relations();
-    std::cout << "Element " << element_list[i]->identifier()
-              << " relations are :" << std::endl;
+    Entity element = element_list[i];
 
-    for(int j = 0; j < relations.size(); ++j) {
-      std::cout << "entity:\t" << relations[j].entity()->identifier() << ","
-                << relations[j].entity()->entity_rank() << "\tlocal id: "
-                << relations[j].identifier() << "\n";
+    for (EntityRank rank = stk::topology::NODE_RANK; rank < meta_data_->entity_rank_count(); ++rank) {
+
+      Entity const* relations = bulk_data_->begin(element, rank);
+      stk::mesh::ConnectivityOrdinal const* ords = bulk_data_->begin_ordinals(element, rank);
+      size_t const num_relations = bulk_data_->num_connectivity(element, rank);
+
+      std::cout << "Element " << bulk_data_->identifier(element_list[i])
+                << " relations are :" << std::endl;
+
+      for(int j = 0; j < num_relations; ++j) {
+        std::cout << "entity:\t" << bulk_data_->identifier(relations[j]) << ","
+                  << bulk_data_->entity_rank(relations[j]) << "\tlocal id: "
+                  << ords[j] << "\n";
+      }
     }
   }
 }
@@ -197,16 +204,16 @@ getGlobalOpenList(std::map<EntityKey, bool>& local_entity_open,
                   std::map<EntityKey, bool>& global_entity_open) {
 
   // Make certain that we can send keys as MPI_UINT64_T types
-  assert(sizeof(EntityKey::raw_key_type) >= sizeof(uint64_t));
+  assert(sizeof(EntityKey::entity_key_t) >= sizeof(uint64_t));
 
   const unsigned parallel_size = bulk_data_->parallel_size();
 
   // Build local vector of keys
   std::pair<EntityKey, bool> me; // what a map<EntityKey, bool> is made of
-  std::vector<EntityKey::raw_key_type> v;     // local vector of open keys
+  std::vector<EntityKey::entity_key_t> v;     // local vector of open keys
 
   BOOST_FOREACH(me, local_entity_open) {
-    v.push_back(me.first.raw_key());
+    v.push_back(EntityKey::entity_key_t(me.first));
 
     // Debugging
     /*
@@ -243,14 +250,14 @@ getGlobalOpenList(std::map<EntityKey, bool>& local_entity_open,
 #ifndef MPI_UINT64_T
 #define MPI_UINT64_T MPI_UNSIGNED_LONG_LONG
 #endif
-  EntityKey::raw_key_type* result_array = new EntityKey::raw_key_type[total_number_of_open_entities];
+  EntityKey::entity_key_t* result_array = new EntityKey::entity_key_t[total_number_of_open_entities];
   MPI_Allgatherv(&v[0], num_open_on_pe, MPI_UINT64_T, result_array,
                  sizes, offsets, MPI_UINT64_T, bulk_data_->parallel());
 
   // Save the global keys
   for(int i = 0; i < total_number_of_open_entities; i++) {
 
-    EntityKey key = EntityKey(&result_array[i]);
+    EntityKey key = EntityKey(result_array[i]);
     global_entity_open[key] = true;
 
     // Debugging

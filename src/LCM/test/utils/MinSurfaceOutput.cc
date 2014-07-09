@@ -130,12 +130,12 @@ int main(int ac, char* av[]){
 	{
 		std::vector<Entity> temp;
 		//Obtain all the entities of rank 0
-		temp = topology.getBoundaryEntities(*(*I_entities),0);
+		temp = topology.getBoundaryEntities(*I_entities, stk::topology::NODE_RANK);
 		std::vector<int> temp2; std::vector<Entity>::const_iterator I_nodes;
 		//Get the identifiers of the entities above
 		for (I_nodes = temp.begin(); I_nodes != temp.end(); I_nodes++)
 		{
-			temp2.push_back((*I_nodes)->identifier());
+                    temp2.push_back(topology.getBulkData()->identifier(*I_nodes));
 		}
 		boundaryNodes_.push_back(temp2); //Connectivity matrix
 	}
@@ -152,7 +152,7 @@ int main(int ac, char* av[]){
 	for (unsigned int i = 0;i<(EntitiesMinSurface.size());i++)
 	{
 		//Compute the area
-		std::vector<Entity> Nodes =  topology.getBoundaryEntities(*EntitiesMinSurface[i],0);
+                std::vector<Entity> Nodes =  topology.getBoundaryEntities(EntitiesMinSurface[i], stk::topology::NODE_RANK);
 		double a =  topology.getDistanceBetweenNodes(Nodes[0], Nodes[1]);
 		double b =  topology.getDistanceBetweenNodes(Nodes[1], Nodes[2]);
 		double c =  topology.getDistanceBetweenNodes(Nodes[2], Nodes[0]);

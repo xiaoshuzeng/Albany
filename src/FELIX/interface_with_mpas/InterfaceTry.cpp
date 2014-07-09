@@ -874,7 +874,7 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 		  {
 			  int ib = (Ordering == 0)*(i%lVertexColumnShift) + (Ordering == 1)*(i/vertexLayerShift);
 			  int il = (Ordering == 0)*(i/lVertexColumnShift) + (Ordering == 1)*(i%vertexLayerShift);
-			  stk::mesh::Entity& node = *meshStruct->bulkData->get_entity(meshStruct->metaData->node_rank(), il*vertexColumnShift+vertexLayerShift * indexToVertexID[ib]+1);
+			  stk::mesh::Entity node = meshStruct->bulkData->get_entity(stk::topology::NODE_RANK, il*vertexColumnShift+vertexLayerShift * indexToVertexID[ib]+1);
 			  double* coord = stk::mesh::field_data(*meshStruct->coordinates_field, node);
 			  coord[2] = elevationData[ib] - levelsNormalizedThickness[nLayers-il]*regulThk[ib];
 			  double* sHeight = stk::mesh::field_data(*meshStruct->surfaceHeight_field, node);

@@ -118,13 +118,6 @@ public:
   removeMultiLevelRelations();
 
   ///
-  /// \brief Returns array of pointers to Entities for the element to
-  ///        node relations
-  ///
-  std::vector<EntityVector>
-  getElementToNodeConnectivity();
-
-  ///
   /// \brief After mesh manipulations are complete, need to recreate
   ///        a stk mesh understood by Albany_STKDiscretization.
   ///
@@ -596,18 +589,14 @@ public:
   getSpaceDimension() {return static_cast<size_t>(getSTKMeshStruct()->numDim);}
 
   EntityRank const
-  getCellRank() {return getMetaData()->element_rank();}
-
-  EntityRank const
   getBoundaryRank()
   {
-    assert(getCellRank() > 0);
-    return getCellRank() - 1;
+    return getMetaData()->side_rank();
   }
 
   IntScalarFieldType &
-  getFractureState()
-  {return *(stk_mesh_struct_->getFieldContainer()->getFractureState());}
+  getFractureState(EntityRank rank)
+  {return *(stk_mesh_struct_->getFieldContainer()->getFractureState(rank));}
 
   void
   setFractureCriterion(RCP<AbstractFractureCriterion> const & fc)
@@ -619,7 +608,7 @@ public:
 
   bool
   isLocalEntity(Entity e)
-  {return getBulkData()->parallel_rank() == e.owner_rank();}
+  {return getBulkData()->parallel_rank() == getBulkData()->parallel_owner_rank(e);}
 
   //
   // Set fracture state. Do nothing for cells (elements).
@@ -627,8 +616,9 @@ public:
   void
   setFractureState(Entity e, FractureState const fs)
   {
-    if (e.entity_rank() < getCellRank()) {
-      *(stk::mesh::field_data(getFractureState(), e)) = static_cast<int>(fs);
+    EntityRank const rank = getBulkData()->entity_rank(e);
+    if (rank < stk::topology::ELEMENT_RANK) {
+      *(stk::mesh::field_data(getFractureState(rank), e)) = static_cast<int>(fs);
     }
   }
 
@@ -638,21 +628,19 @@ public:
   FractureState
   getFractureState(Entity e)
   {
-    return e.entity_rank() >= getCellRank() ?
+    EntityRank const rank = getBulkData()->entity_rank(e);
+    return rank >= stk::topology::ELEMENT_RANK ?
     CLOSED :
-    static_cast<FractureState>(*(stk::mesh::field_data(getFractureState(), e)));
+    static_cast<FractureState>(*(stk::mesh::field_data(getFractureState(rank), e)));
   }
 
   bool
   isInternal(Entity e) {
 
-    assert(e.entity_rank() == getBoundaryRank());
-
-    PairIterRelation
-    relations = relations_one_up(e);
+    assert(getBulkData()->entity_rank(e) == getBoundaryRank());
 
     size_t const
-    number_in_edges = std::distance(relations.begin(), relations.end());
+    number_in_edges = getBulkData()->num_elements(e);
 
     assert(number_in_edges == 1 || number_in_edges == 2);
 
@@ -672,7 +660,7 @@ public:
   bool
   checkOpen(Entity e)
   {
-    return fracture_criterion_->check(e);
+    return fracture_criterion_->check(*getBulkData(), e);
   }
 
   ///

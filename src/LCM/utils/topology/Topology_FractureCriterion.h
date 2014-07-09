@@ -30,7 +30,7 @@ public:
 
   virtual
   bool
-  check(Entity entity) = 0;
+  check(stk::mesh::BulkData& mesh, Entity entity) = 0;
 
   virtual
   ~AbstractFractureCriterion() {}
@@ -54,15 +54,11 @@ public:
   probability_(probability) {}
 
   bool
-  check(Entity entity)
+  check(stk::mesh::BulkData& mesh, Entity entity)
   {
-    EntityRank const
-    rank = entity.entity_rank();
+    EntityRank const rank = mesh.entity_rank(entity);
 
-    stk::mesh::PairIterRelation const
-    relations = entity.relations(rank + 1);
-
-    assert(relations.size() == 2);
+    assert(mesh.num_connectivity(entity, (EntityRank)(rank+1)) == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
@@ -95,15 +91,11 @@ public:
   open_(true) {}
 
   bool
-  check(Entity entity)
+  check(stk::mesh::BulkData& mesh, Entity entity)
   {
-    EntityRank const
-    rank = entity.entity_rank();
+    EntityRank const rank = mesh.entity_rank(entity);
 
-    stk::mesh::PairIterRelation const
-    relations = entity.relations(rank + 1);
-
-    assert(relations.size() == 2);
+    assert(mesh.num_connectivity(entity, (EntityRank)(rank+1)) == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
@@ -143,15 +135,11 @@ public:
   critical_traction_(critical_traction) {}
 
   bool
-  check(Entity entity)
+  check(stk::mesh::BulkData& mesh, Entity entity)
   {
-    EntityRank const
-    rank = entity.entity_rank();
+    EntityRank const rank = mesh.entity_rank(entity);
 
-    stk::mesh::PairIterRelation const
-    relations = entity.relations(rank + 1);
-
-    assert(relations.size() == 2);
+    assert(mesh.num_connectivity(entity, (EntityRank)(rank+1)) == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;

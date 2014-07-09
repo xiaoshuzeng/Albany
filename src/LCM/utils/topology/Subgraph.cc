@@ -29,7 +29,7 @@ Subgraph::Subgraph(RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct,
 
     // get entity rank
     EntityRank
-    vertex_rank = getBulkData()->get_entity(global_vertex)->entity_rank();
+    vertex_rank = getBulkData()->entity_rank(getBulkData()->get_entity(global_vertex));
 
     // create new local vertex
     Vertex
@@ -149,7 +149,7 @@ Subgraph::addVertex(EntityRank vertex_rank)
   getBulkData()->generate_new_entities(requests, new_entities);
 
   EntityKey
-  global_vertex = new_entities[0]->key();
+  global_vertex = getBulkData()->entity_key(new_entities[0]);
 
   // Add the vertex to the subgraph
   Vertex
@@ -200,21 +200,6 @@ Subgraph::removeVertex(Vertex const vertex)
   // remove the vertex
   boost::remove_vertex(vertex, *this);
 
-  // destroy all relations to or from the entity
-  PairIterRelation
-  relations = entity->relations();
-
-  for (size_t i = 0; i < relations.size(); ++i) {
-
-    EdgeId
-    edge_id = relations[i].identifier();
-
-    Entity
-    target = *(relations[i].entity());
-
-    getBulkData()->destroy_relation(*entity, target, edge_id);
-  }
-
   // remove the entity from stk mesh
   bool const
   deleted = getBulkData()->destroy_entity(entity);
@@ -245,8 +230,8 @@ Subgraph::addEdge(
   Entity
   global_target_vertex = getBulkData()->get_entity(global_target_key);
 
-  assert(global_source_vertex->entity_rank() -
-      global_target_vertex->entity_rank() == 1);
+  assert(getBulkData()->entity_rank(global_source_vertex) -
+         getBulkData()->entity_rank(global_target_vertex) == 1);
 
   // Add edge to local graph
   std::pair<Edge, bool>
@@ -256,8 +241,8 @@ Subgraph::addEdge(
 
   // Add edge to stk mesh
   getBulkData()->declare_relation(
-      *(global_source_vertex),
-      *(global_target_vertex),
+      global_source_vertex,
+      global_target_vertex,
       edge_id);
 
   // Add edge id to edge property
@@ -309,9 +294,9 @@ Subgraph::removeEdge(
   global_target_vertex = getBulkData()->get_entity(global_target_id);
 
   getBulkData()->destroy_relation(
-      *(global_source_vertex),
-      *(global_target_vertex),
-      edge_id);
+    global_source_vertex,
+    global_target_vertex,
+    edge_id);
 
   return;
 }
@@ -567,21 +552,21 @@ Subgraph::updateElementNodeConnectivity(Entity point, ElementNodeMap & map)
 {
   for (ElementNodeMap::iterator i = map.begin(); i != map.end(); ++i) {
     Entity
-    element = *(i->first);
+    element = i->first;
 
     // Identify relation id and remove
-    PairIterRelation
-    relations = element.relations(NODE_RANK);
+    Entity const* relations = getBulkData()->begin_nodes(element);
+    stk::mesh::ConnectivityOrdinal const* ords = getBulkData()->begin_node_ordinals(element);
+    size_t const num_relations = getBulkData()->num_nodes(element);
 
-    EdgeId
-    edge_id = relations[0].identifier();
+    EdgeId edge_id;
 
     bool
     found = false;
 
-    for (size_t j = 0; j < relations.size(); ++j) {
-      if (relations[j].entity() == &point) {
-        edge_id = relations[j].identifier();
+    for (size_t j = 0; j < num_relations; ++j) {
+      if (relations[j] == point) {
+        edge_id = ords[j];
         found = true;
         break;
       }
@@ -592,7 +577,7 @@ Subgraph::updateElementNodeConnectivity(Entity point, ElementNodeMap & map)
     getBulkData()->destroy_relation(element, point, edge_id);
 
     Entity
-    new_point = *(i->second);
+    new_point = i->second;
     getBulkData()->declare_relation(element, new_point, edge_id);
   }
   return;
@@ -672,7 +657,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
       new_connectivity.insert(nc);
     }
 
-    updateElementNodeConnectivity(*point, new_connectivity);
+    updateElementNodeConnectivity(point, new_connectivity);
   }
 
   // Copy the out edges of the original vertex to the new vertex
@@ -709,7 +694,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
     vertex_component = (*component_iterator).second;
 
     Entity
-    entity = *(getBulkData()->get_entity(localToGlobal(source)));
+    entity = getBulkData()->get_entity(localToGlobal(source));
 
     if (vertex_component < number_components - 1) {
       EdgeId
@@ -768,26 +753,31 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
   new_key = localToGlobal(new_vertex);
 
   Entity
-  old_entity = *(getBulkData()->get_entity(old_key));
+  old_entity = getBulkData()->get_entity(old_key);
 
   Entity
-  new_entity = *(getBulkData()->get_entity(new_key));
+  new_entity = getBulkData()->get_entity(new_key);
 
   // Iterate over the out edges of the old vertex and check against the
   // out edges of the new vertex. If the edge does not exist, add.
-  PairIterRelation
-  old_relations = relations_one_down(old_entity);
+  assert(getMetaData()->spatial_dimension() == 3);
 
-  for (size_t i = 0; i < old_relations.size(); ++i) {
-    PairIterRelation
-    new_relations = relations_one_down(new_entity);
+  EntityRank const one_down = (EntityRank)(getBulkData()->entity_rank(old_entity) - 1);
+
+  Entity const* old_relations = getBulkData()->begin(old_entity, one_down);
+  size_t const num_old_relations = getBulkData()->num_connectivity(old_entity, one_down);
+  stk::mesh::ConnectivityOrdinal const* old_relation_ords = getBulkData()->begin_ordinals(old_entity, one_down);
+
+  for (size_t i = 0; i < num_old_relations; ++i) {
+    Entity const* new_relations = getBulkData()->begin(new_entity, one_down);
+    size_t const num_new_relations = getBulkData()->num_connectivity(new_entity, one_down);
 
     // assume the edge doesn't exist
     bool
     exists = false;
 
-    for (size_t j = 0; j < new_relations.size(); ++j) {
-      if (old_relations[i].entity() == new_relations[j].entity()) {
+    for (size_t j = 0; j < num_new_relations; ++j) {
+      if (old_relations[i] == new_relations[j]) {
         exists = true;
         break;
       }
@@ -795,10 +785,10 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
 
     if (exists == false) {
       EdgeId
-      edge_id = old_relations[i].identifier();
+      edge_id = old_relation_ords[i];
 
       Entity
-      target = *(old_relations[i].entity());
+      target = old_relations[i];
 
       getBulkData()->declare_relation(new_entity, target, edge_id);
     }
@@ -856,15 +846,15 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
     key = localToGlobal(*i);
 
     Entity
-    entity = *(getBulkData()->get_entity(key));
+    entity = getBulkData()->get_entity(key);
 
     EntityRank const
-    rank = entity.entity_rank();
+    rank = getBulkData()->entity_rank(entity);
 
     FractureState const
     fracture_state = getFractureState(entity);
 
-    gviz_out << dot_entity(entity.identifier(), rank, fracture_state);
+    gviz_out << dot_entity(getBulkData()->identifier(entity), rank, fracture_state);
 
     // write the edges in the subgraph
     OutEdgeIterator
@@ -890,23 +880,23 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
       source_key = localToGlobal(source);
 
       Entity
-      global_source = *(getBulkData()->get_entity(source_key));
+      global_source = getBulkData()->get_entity(source_key);
 
       EntityKey
       target_key = localToGlobal(target);
 
       Entity
-      global_target = *(getBulkData()->get_entity(target_key));
+      global_target = getBulkData()->get_entity(target_key);
 
       EdgeId
       edge_id = getEdgeId(out_edge);
 
       gviz_out << dot_relation(
-          global_source.identifier(),
-          global_source.entity_rank(),
-          global_target.identifier(),
-          global_target.entity_rank(),
-          edge_id
+        getBulkData()->identifier(global_source),
+        getBulkData()->entity_rank(global_source),
+        getBulkData()->identifier(global_target),
+        getBulkData()->entity_rank(global_target),
+        edge_id
       );
 
     }

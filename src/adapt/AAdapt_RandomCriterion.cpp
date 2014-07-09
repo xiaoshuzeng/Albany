@@ -17,9 +17,8 @@ namespace AAdapt {
 // Default constructor
 //
 RandomCriterion::RandomCriterion(int num_dim,
-                                 stk::mesh::EntityRank& element_rank,
                                  Albany::STKDiscretization& stk) :
-  AbstractFractureCriterion(num_dim, element_rank),
+  AbstractFractureCriterion(num_dim, stk::topology::ELEMENT_RANK),
   stk_(stk) {
 }
 
@@ -35,7 +34,7 @@ RandomCriterion::computeFractureCriterion(stk::mesh::Entity entity, double p) {
   assert(rank == num_dim_ - 1);
 
   stk::mesh::PairIterRelation neighbor_elems =
-    entity.relations(element_rank_);
+    entity.relations(stk::topology::ELEMENT_RANK);
 
   // Need an element on each side
   if(neighbor_elems.size() != 2)

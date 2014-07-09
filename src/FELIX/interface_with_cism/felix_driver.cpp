@@ -10,8 +10,6 @@
 #include "Teuchos_XMLParameterListHelpers.hpp"
 #include <stk_mesh/base/FieldBase.hpp>
 #include "Piro_PerformSolve.hpp"
-#include <stk_io/IossBridge.hpp>
-#include <stk_io/MeshReadWriteUtils.hpp>
 #include <stk_mesh/base/GetEntities.hpp>
 #include <Ionit_Initializer.h>
 #include "Albany_OrdinarySTKFieldContainer.hpp"
@@ -141,7 +139,7 @@ extern "C" void felix_driver_();
 //What is exec_mode??
 void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const char * input_fname)
 { 
-
+#if 0 // JGF: Fix
     // ---------------------------------------------
     //get communicator / communicator info from CISM
     //TO DO: ifdef to check if CISM and Albany have MPI?  
@@ -281,14 +279,14 @@ void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const 
  
     // clean up
     //if (mpiComm->MyPID() == 0) std::cout << "exec mode = " << exec_mode << std::endl;
-
+#endif
 }
 
 // The solve is done in the felix_driver_run function, and the solution is passed back to Glimmer-CISM 
 // IK, 12/3/13: time_inc_yr and cur_time_yr are not used here... 
 void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time_inc_yr)
 {
-
+#if 0 // JGF: Fix
     //IK, 12/9/13: how come FancyOStream prints an all processors??    
     Teuchos::RCP<Teuchos::FancyOStream> out(Teuchos::VerboseObjectBase::getDefaultOStream());
 
@@ -363,7 +361,7 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
        for (int j=0; j<8; j++) {
         int node_GID =  global_element_conn_active_Ptr[i + nElementsActive*j]; //node_GID is 1-based
         int node_LID =  node_map->LID(node_GID); //node_LID is 0-based
-        stk::mesh::Entity& node = *meshStruct->bulkData->get_entity(meshStruct->metaData->node_rank(), node_GID);
+        stk::mesh::Entity node = meshStruct->bulkData->get_entity(stk::topology::NODE_RANK, node_GID);
         double* sol = stk::mesh::field_data(*solutionField, node);
         //IK, 3/18/14: added division by velScale to convert uvel and vvel from dimensionless to having units of m/year (the Albany units)  
         sol[0] = uvel_vec[node_LID]/velScale;
@@ -565,7 +563,7 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
 
 
     first_time_step = false;
- 
+#endif
 }
   
 

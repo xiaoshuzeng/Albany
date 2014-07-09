@@ -13,7 +13,7 @@
 #include "Piro_PerformSolve.hpp"
 #include "Thyra_EpetraThyraWrappers.hpp"
 #include <stk_io/IossBridge.hpp>
-#include <stk_io/MeshReadWriteUtils.hpp>
+#include <stk_io/StkMeshIoBroker.hpp>
 #include <stk_mesh/base/GetEntities.hpp>
 #include <Ionit_Initializer.h>
 #include "Albany_OrdinarySTKFieldContainer.hpp"
@@ -283,9 +283,11 @@ void velocity_solver_export_2d_data(double const * lowerSurface_F, double const 
 
 	    import2DFields(lowerSurface_F, thickness_F, beta_F, minThick);
 
-	    Teuchos::RCP<stk::io::MeshData> mesh_data =Teuchos::rcp(new stk::io::MeshData);
-	    stk::io::create_output_mesh("mesh2D.exo", reducedComm, *meshStruct2D->bulkData, *mesh_data);
-	    stk::io::define_output_fields(*mesh_data, *meshStruct->metaData);
+	    Teuchos::RCP<stk::io::StkMeshIoBroker> mesh_data =Teuchos::rcp(new stk::io::StkMeshIoBroker(reducedComm));
+            mesh_data->set_bulk_data(*meshStruct2D->bulkData);
+            mesh_data->create_output_mesh("mesh2D.exo", stk::io::WRITE_RESULTS);
+
+	    //stk::io::define_output_fields(*mesh_data, *meshStruct->metaData);
 
       //  iceProblemPtr->export_2D_fields(elevationData, thicknessData, betaData, indexToVertexID);
 }
@@ -394,7 +396,7 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 			   int ib = (Ordering == 0)*(j%lVertexColumnShift) + (Ordering == 1)*(j/vertexLayerShift);
 			   int il = (Ordering == 0)*(j/lVertexColumnShift) + (Ordering == 1)*(j%vertexLayerShift);
 			   int gId = il*vertexColumnShift+vertexLayerShift * indexToVertexID[ib];
-			   stk::mesh::Entity& node = *meshStruct->bulkData->get_entity(meshStruct->metaData->node_rank(), gId+1);
+			   stk::mesh::Entity node = meshStruct->bulkData->get_entity(stk::topology::NODE_RANK, gId+1);
 			   double* coord = stk::mesh::field_data(*meshStruct->getCoordinatesField(), node);
 			   coord[2] = elevationData[ib] - levelsNormalizedThickness[nLayers-il]*regulThk[ib];
 			   double* sHeight = stk::mesh::field_data(*meshStruct->getFieldContainer()->getSurfaceHeightField(), node);
@@ -420,7 +422,7 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 			   int lId = il*lElemColumnShift+elemLayerShift * ib;
 			   for(int iTetra=0; iTetra<3; iTetra++)
 			   {
-				   stk::mesh::Entity& elem = *meshStruct->bulkData->get_entity(meshStruct->metaData->element_rank(), ++gId);
+                                   stk::mesh::Entity elem = meshStruct->bulkData->get_entity(stk::topology::ELEMENT_RANK, ++gId);
 				   double* temperature = stk::mesh::field_data(*meshStruct->getFieldContainer()->getTemperatureField(), elem);
 				   temperature[0] = temperatureOnTetra[lId++] ;
 			   }
@@ -521,10 +523,10 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 			return;
 
 		Ioss::Init::Initializer io;
-	    Teuchos::RCP<stk::io::MeshData> mesh_data =Teuchos::rcp(new stk::io::MeshData);
-	    stk::io::create_output_mesh("IceSheet.exo", reducedComm, *meshStruct->bulkData, *mesh_data);
-	    stk::io::define_output_fields(*mesh_data, *meshStruct->metaData);
-	    stk::io::process_output_request(*mesh_data, *meshStruct->bulkData, 0.0);
+                Teuchos::RCP<stk::io::StkMeshIoBroker> mesh_data =Teuchos::rcp(new stk::io::StkMeshIoBroker(reducedComm));
+                mesh_data->set_bulk_data(*meshStruct->bulkData);
+                size_t idx = mesh_data->create_output_mesh("IceSheet.exo", stk::io::WRITE_RESULTS);
+                mesh_data->process_output_request(idx, 0.0);
 	}
 
 

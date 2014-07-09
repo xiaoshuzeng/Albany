@@ -92,7 +92,7 @@ AAdapt::RandomFracture::queryAdaptationCriteria() {
     // Iterate over the boundary entities
     for(int i(0); i < face_list.size(); ++i) {
 
-      stk::mesh::Entity face = *(face_list[i]);
+      stk::mesh::Entity face = face_list[i];
 
       if(fracture_criterion_->
           computeFractureCriterion(face, fracture_probability_)) {
@@ -215,12 +215,12 @@ AAdapt::RandomFracture::getValidAdapterParameters() const {
 void
 AAdapt::RandomFracture::
 showTopLevelRelations() {
-  std::vector<Entity*> element_list;
+  std::vector<Entity> element_list;
   stk::mesh::get_entities(*(bulk_data_), element_rank_, element_list);
 
   // Remove extra relations from element
   for(int i = 0; i < element_list.size(); ++i) {
-    Entity& element = *(element_list[i]);
+    Entity element = *(element_list[i]);
     stk::mesh::PairIterRelation relations = element.relations();
     std::cout << "Entitiy " << element.identifier() << " relations are :" << std::endl;
 
@@ -235,19 +235,19 @@ showTopLevelRelations() {
 //----------------------------------------------------------------------------
 void
 AAdapt::RandomFracture::showRelations() {
-  std::vector<Entity*> element_list;
+  std::vector<Entity> element_list;
   stk::mesh::get_entities(*(bulk_data_), element_rank_, element_list);
 
   // Remove extra relations from element
   for(int i = 0; i < element_list.size(); ++i) {
-    Entity& element = *(element_list[i]);
+    Entity element = *(element_list[i]);
     showRelations(0, element);
   }
 }
 
 //----------------------------------------------------------------------------
 void
-AAdapt::RandomFracture::showRelations(int level, const Entity& entity) {
+AAdapt::RandomFracture::showRelations(int level, Entity entity) {
   stk::mesh::PairIterRelation relations = entity.relations();
 
   for(int i = 0; i < level; i++) {
@@ -347,7 +347,7 @@ AAdapt::RandomFracture::getGlobalOpenList(std::map<EntityKey, bool>& local_entit
     const unsigned entity_rank = stk::mesh::entity_rank(key);
     const stk::mesh::EntityId entity_id = stk::mesh::entity_id(key);
     const std::string& entity_rank_name = meta_data_->entity_rank_name(entity_rank);
-    Entity* entity = bulk_data_->get_entity(key);
+    Entity entity = bulk_data_->get_entity(key);
     std::cout << "Global proc fracture list contains " << " " << entity_rank_name << " [" << entity_id << "] Proc:"
               << entity->owner_rank() << std::endl;
   }

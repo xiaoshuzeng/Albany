@@ -269,18 +269,15 @@ public:
   {return stk_mesh_struct_->metaData;}
 
   EntityRank const
-  getCellRank() {return getMetaData()->element_rank();}
+  getCellRank() {return stk::topology::ELEMENT_RANK;}
 
   EntityRank const
   getBoundaryRank()
-  {
-    assert(getCellRank() > 0);
-    return getCellRank() - 1;
-  }
+  { return getMetaData()->side_rank(); }
 
   IntScalarFieldType &
-  getFractureState()
-  {return *(stk_mesh_struct_->getFieldContainer()->getFractureState());}
+  getFractureState(EntityRank rank)
+  {return *(stk_mesh_struct_->getFieldContainer()->getFractureState(rank));}
 
   //
   // Set fracture state. Do nothing for cells (elements).
@@ -288,8 +285,9 @@ public:
   void
   setFractureState(Entity e, FractureState const fs)
   {
-    if (e.entity_rank() < getCellRank()) {
-      *(stk::mesh::field_data(getFractureState(), e)) = static_cast<int>(fs);
+    EntityRank const rank = getBulkData()->entity_rank(e);
+    if (rank < getCellRank()) {
+      *(stk::mesh::field_data(getFractureState(rank), e)) = static_cast<int>(fs);
     }
   }
 
@@ -299,18 +297,19 @@ public:
   FractureState
   getFractureState(Entity e)
   {
-    return e.entity_rank() >= getCellRank() ?
+    EntityRank const rank = getBulkData()->entity_rank(e);
+    return rank >= getCellRank() ?
     CLOSED :
-    static_cast<FractureState>(*(stk::mesh::field_data(getFractureState(), e)));
+    static_cast<FractureState>(*(stk::mesh::field_data(getFractureState(rank), e)));
   }
 
   bool
   isInternal(Entity e) {
 
-    assert(e.entity_rank() == getBoundaryRank());
+    assert(getBulkData()->entity_rank(e) == getBoundaryRank());
 
     Vertex
-    vertex = globalToLocal(e.key());
+    vertex = globalToLocal(getBulkData()->entity_key(e));
 
     boost::graph_traits<Graph>::degree_size_type
     number_in_edges = boost::in_degree(vertex, *this);
