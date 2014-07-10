@@ -639,6 +639,7 @@ set(ALL_LIBRARIES
   ${SCOREC_LIB}
   ${Trilinos_EXTRA_LD_FLAGS}
   ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}
+  albanySTKRebalance
   )
 
 # Add Albany internal libraries/physics sets, as enabled.
