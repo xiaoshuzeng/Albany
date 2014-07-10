@@ -51,9 +51,6 @@ namespace Albany {
     Teuchos::RCP<const Teuchos::ParameterList>
       getValidDiscretizationParameters() const;
 
-    void readSerialMesh(const Teuchos::RCP<const Epetra_Comm>& comm,
-                        std::vector<std::string>& entity_rank_names);
-
     Teuchos::RCP<Teuchos::FancyOStream> out;
     bool usePamgen;
     bool useSerialMesh;

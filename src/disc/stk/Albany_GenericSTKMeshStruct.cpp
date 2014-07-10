@@ -20,14 +20,12 @@
 #include <stk_mesh/base/GetEntities.hpp>
 #include <stk_mesh/base/CreateAdjacentEntities.hpp>
 
-#undef ALBANY_ZOLTAN
-
 // Rebalance
 #ifdef ALBANY_ZOLTAN
-#include <stk_rebalance/Rebalance.hpp>
-#include <stk_rebalance/Partition.hpp>
-#include <stk_rebalance/ZoltanPartition.hpp>
-#include <stk_rebalance_utils/RebalanceUtils.hpp>
+#include <percept/stk_rebalance/Rebalance.hpp>
+#include <percept/stk_rebalance/Partition.hpp>
+#include <percept/stk_rebalance/ZoltanPartition.hpp>
+#include <percept/stk_rebalance_utils/RebalanceUtils.hpp>
 #endif
 
 // Refinement
@@ -117,6 +115,8 @@ void Albany::GenericSTKMeshStruct::SetupFieldData(
        std::logic_error,
        "LogicError: metaData->FEM_initialize(numDim) not yet called" << std::endl);
 
+  std::cout << "AGS SetupFieldData " << std::endl;
+
   neq = neq_;
 
   this->nodal_data_block = sis->getNodalDataBlock();
@@ -197,6 +197,8 @@ void Albany::GenericSTKMeshStruct::SetupFieldData(
   writeCoordsToMMFile = params->get("Write Coordinates to MatrixMarket", false);
 
   transferSolutionToCoords = params->get<bool>("Transfer Solution to Coordinates", false);
+
+  std::cout << "AGS SetupFieldData XXX" << std::endl;
 
 #ifdef ALBANY_STK_PERCEPT
   // Build the eMesh if needed
@@ -552,6 +554,7 @@ void Albany::GenericSTKMeshStruct::rebalanceInitialMesh(const Teuchos::RCP<const
 
   if(rebalance || (useSerialMesh && comm->NumProc() > 1)){
 
+
     rebalanceAdaptedMesh(params, comm);
 
   }
@@ -567,9 +570,12 @@ void Albany::GenericSTKMeshStruct::rebalanceAdaptedMesh(const Teuchos::RCP<Teuch
 
     using std::cout; using std::endl;
 
+
     if(comm->NumProc() <= 1)
 
       return;
+
+    cout << "Starting Mesh Rebalance: proc " << comm->MyPID() << endl;
 
     double imbalance;
 
@@ -578,18 +584,18 @@ void Albany::GenericSTKMeshStruct::rebalanceAdaptedMesh(const Teuchos::RCP<Teuch
     stk::mesh::Selector selector(metaData->universal_part());
     stk::mesh::Selector owned_selector(metaData->locally_owned_part());
 
+
     if(comm->MyPID() == 0){
 
       std::cout << "Before rebal nelements " << comm->MyPID() << "  " <<
-        stk::mesh::count_selected_entities(owned_selector, bulkData->buckets(metaData->element_rank())) << endl;
+        stk::mesh::count_selected_entities(owned_selector, bulkData->buckets(stk::topology::ELEMENT_RANK)) << endl;
 
       std::cout << "Before rebal " << comm->MyPID() << "  " <<
-        stk::mesh::count_selected_entities(owned_selector, bulkData->buckets(metaData->node_rank())) << endl;
+        stk::mesh::count_selected_entities(owned_selector, bulkData->buckets(stk::topology::NODE_RANK)) << endl;
     }
 
 
-    imbalance = stk::rebalance::check_balance(*bulkData, NULL,
-      metaData->node_rank(), &selector);
+    imbalance = stk::rebalance::check_balance(*bulkData, NULL, stk::topology::NODE_RANK, &selector);
 
     if(comm->MyPID() == 0)
 
@@ -616,12 +622,11 @@ void Albany::GenericSTKMeshStruct::rebalanceAdaptedMesh(const Teuchos::RCP<Teuch
 
     }
 
-    stk::rebalance::Zoltan zoltan_partition(Albany::getMpiCommFromEpetraComm(*comm), numDim, graph_options);
+    stk::rebalance::Zoltan zoltan_partition(*bulkData, Albany::getMpiCommFromEpetraComm(*comm), numDim, graph_options);
     stk::rebalance::rebalance(*bulkData, owned_selector, coordinates_field, NULL, zoltan_partition);
 
-
     imbalance = stk::rebalance::check_balance(*bulkData, NULL,
-      metaData->node_rank(), &selector);
+      stk::topology::NODE_RANK, &selector);
 
     if(comm->MyPID() == 0)
       std::cout << "After rebalance: Imbalance threshold is = " << imbalance << endl;

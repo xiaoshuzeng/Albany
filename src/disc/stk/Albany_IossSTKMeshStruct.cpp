@@ -25,8 +25,6 @@
 
 #include "Albany_Utils.hpp"
 
-#undef ALBANY_ZOLTAN
-
 namespace {
 
 void get_element_block_sizes(stk::io::StkMeshIoBroker &mesh_data,
@@ -58,8 +56,6 @@ Albany::IossSTKMeshStruct::IossSTKMeshStruct(
 {
   params->validateParameters(*getValidDiscretizationParameters(),0);
 
-  mesh_data = new stk::io::StkMeshIoBroker(Albany::getMpiCommFromEpetraComm(*comm));
-
   usePamgen = (params->get("Method","Exodus") == "Pamgen");
 
   std::vector<std::string> entity_rank_names = stk::mesh::entity_rank_names();
@@ -69,44 +65,59 @@ Albany::IossSTKMeshStruct::IossSTKMeshStruct(
     entity_rank_names.push_back("FAMILY_TREE");
   }
 
-#ifdef ALBANY_ZOLTAN  // rebalance requires Zoltan
-
   if (params->get<bool>("Use Serial Mesh", false) && comm->NumProc() > 1){ 
     // We are parallel but reading a single exodus file
-
     useSerialMesh = true;
 
-    readSerialMesh(comm, entity_rank_names);
+    // Read a single exodus mesh on Proc 0 then rebalance it across the machine
+    MPI_Group group_world;
+    MPI_Group peZero;
+    MPI_Comm peZeroComm;
+    MPI_Comm theComm = Albany::getMpiCommFromEpetraComm(*comm);
+    int process_rank[1]; // the reader process
+    process_rank[0] = 0;
+    int my_rank = comm->MyPID();
 
+    //get the group under theComm
+    MPI_Comm_group(theComm, &group_world);
+    // create the new group. This group includes only processor zero - that is the only processor that reads the file
+    MPI_Group_incl(group_world, 1, process_rank, &peZero);
+    // create the new communicator - it just contains processor zero
+    MPI_Comm_create(theComm, peZero, &peZeroComm);
+
+    mesh_data = new stk::io::StkMeshIoBroker(peZeroComm);
   }
   else {
-#endif
-    mesh_data->set_rank_name_vector(entity_rank_names);
-    std::string mesh_type;
-    std::string file_name;
-    if (!usePamgen) {
-      *out << "Albany_IOSS: Loading STKMesh from Exodus file  "
-           << params->get<std::string>("Exodus Input File Name") << std::endl;
-
-      mesh_type = "exodusII";
-      file_name = params->get<std::string>("Exodus Input File Name");
-    }
-    else {
-      *out << "Albany_IOSS: Loading STKMesh from Pamgen file  "
-           << params->get<std::string>("Pamgen Input File Name") << std::endl;
-
-      mesh_type = "pamgen";
-      file_name = params->get<std::string>("Pamgen Input File Name");
-    }
-
-    mesh_data->add_mesh_database(file_name, mesh_type, stk::io::READ_MESH);
-    mesh_data->create_input_mesh();
-
-    delete metaData;
-    metaData = &mesh_data->meta_data();
-#ifdef ALBANY_ZOLTAN
+    mesh_data = new stk::io::StkMeshIoBroker(Albany::getMpiCommFromEpetraComm(*comm));
   }
-#endif
+
+  // Create input mesh 
+
+  mesh_data->set_rank_name_vector(entity_rank_names);
+  std::string mesh_type;
+  std::string file_name;
+  if (!usePamgen) {
+    *out << "Albany_IOSS: Loading STKMesh from Exodus file  "
+         << params->get<std::string>("Exodus Input File Name") << std::endl;
+
+    mesh_type = "exodusII";
+    file_name = params->get<std::string>("Exodus Input File Name");
+  }
+  else {
+    *out << "Albany_IOSS: Loading STKMesh from Pamgen file  "
+         << params->get<std::string>("Pamgen Input File Name") << std::endl;
+
+    mesh_type = "pamgen";
+    file_name = params->get<std::string>("Pamgen Input File Name");
+  }
+
+  mesh_data->add_mesh_database(file_name, mesh_type, stk::io::READ_MESH);
+  mesh_data->create_input_mesh();
+
+  delete metaData;
+  metaData = &mesh_data->meta_data();
+
+  // End of creating input mesh
 
   typedef Teuchos::Array<std::string> StringArray;
   const StringArray additionalNodeSets = params->get("Additional Node Sets", StringArray());
@@ -226,57 +237,6 @@ Albany::IossSTKMeshStruct::~IossSTKMeshStruct()
 }
 
 void
-Albany::IossSTKMeshStruct::readSerialMesh(const Teuchos::RCP<const Epetra_Comm>& comm,
-                                          std::vector<std::string>& entity_rank_names){
-
-#ifdef ALBANY_ZOLTAN // rebalance needs Zoltan
-
-  MPI_Group group_world;
-  MPI_Group peZero;
-  MPI_Comm peZeroComm;
-
-  // Read a single exodus mesh on Proc 0 then rebalance it across the machine
-
-  MPI_Comm theComm = Albany::getMpiCommFromEpetraComm(*comm);
-
-  int process_rank[1]; // the reader process
-
-  process_rank[0] = 0;
-  int my_rank = comm->MyPID();
-
-  //get the group under theComm
-  MPI_Comm_group(theComm, &group_world);
-  // create the new group. This group includes only processor zero - that is the only processor that reads the file
-  MPI_Group_incl(group_world, 1, process_rank, &peZero);
-  // create the new communicator - it just contains processor zero
-  MPI_Comm_create(theComm, peZero, &peZeroComm);
-
-  // Note that peZeroComm == MPI_COMM_NULL on all processors but processor 0
-
-  if(my_rank == 0){
-
-    *out << "Albany_IOSS: Loading serial STKMesh from Exodus file  " 
-         << params->get<std::string>("Exodus Input File Name") << std::endl;
-
-  }
-
-  /* 
-   * This checks the existence of the file, checks to see if we can open it, builds a handle to the region
-   * and puts it in mesh_data (in_region), and reads the metaData into metaData.
-   */
-
-  mesh_data->set_rank_name_vector(entity_rank_names);
-  mesh_data->add_mesh_database( params->get<std::string>("Exodus Input File Name"),
-                                "exodusII", stk::io::READ_MESH);
-  mesh_data->create_input_mesh();
-
-  // Here, all PEs have read the metaData from the input file, and have a pointer to in_region in mesh_data
-
-#endif
-
-}
-
-void
 Albany::IossSTKMeshStruct::setFieldAndBulkData(
                                                const Teuchos::RCP<const Epetra_Comm>& comm,
                                                const Teuchos::RCP<Teuchos::ParameterList>& params,
@@ -286,6 +246,8 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
                                                const unsigned int worksetSize)
 {
   this->SetupFieldData(comm, neq_, req, sis, worksetSize);
+
+  mesh_data->set_bulk_data(*bulkData);
 
   *out << "IOSS-STK: number of node sets = " << nsPartVec.size() << std::endl;
   *out << "IOSS-STK: number of side sets = " << ssPartVec.size() << std::endl;
@@ -308,22 +270,26 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
 
   if(useSerialMesh){
 
+    // trick to avoid hanging
     bulkData->modification_begin();
 
     if(comm->MyPID() == 0){ // read in the mesh on PE 0
 
-      stk::io::process_mesh_bulk_data(region, *bulkData);
+
+      //stk::io::process_mesh_bulk_data(region, *bulkData);
+      mesh_data->populate_bulk_data();
+      //bulkData = &mesh_data->bulk_data();
 
       // Read solution from exodus file.
       if (index >= 0) { // User has specified a time step to restart at
         *out << "Restart Index set, reading solution index : " << index << std::endl;
-        stk::io::input_mesh_fields(region, *bulkData, index);
+        mesh_data->read_defined_input_fields(index);
         m_restartDataTime = region.get_state_time(index);
         m_hasRestartSolution = true;
       }
       else if (res_time >= 0) { // User has specified a time to restart at
         *out << "Restart solution time set, reading solution time : " << res_time << std::endl;
-        stk::io::input_mesh_fields(region, *bulkData, res_time);
+        mesh_data->read_defined_input_fields(res_time);
         m_restartDataTime = res_time;
         m_hasRestartSolution = true;
       }
@@ -332,6 +298,10 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
         *out << "Neither restart index or time are set. Not reading solution data from exodus file"<< std::endl;
 
       }
+    }
+    else {
+      // trick to avoid hanging
+      bulkData->modification_begin(); bulkData->modification_begin();
     }
 
     bulkData->modification_end();
@@ -349,8 +319,6 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
 
   { // running in Serial or Parallel read from Nemspread files
     mesh_data->populate_bulk_data();
-    delete bulkData;
-    bulkData = &mesh_data->bulk_data();
     if (!usePamgen)  {
 
       // Read solution from exodus file.
@@ -395,13 +363,9 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
     Ioss::NameList exo_fld_names;
     elem_blocks[0]->field_describe(&exo_fld_names);
     for(std::size_t i = 0; i < exo_fld_names.size(); i++){
-    *out << "Found field \"" << exo_fld_names[i] << "\" in exodus file" << std::endl;
-    }
-    */
+    *out << "Found field \"" << exo_fld_names[i] << "\" in exodus file" << std::endl; } */
 
-    for (std::size_t i=0; i<sis->size(); i++) {
-      Albany::StateStruct& st = *((*sis)[i]);
-
+    for (std::size_t i=0; i<sis->size(); i++) { Albany::StateStruct& st = *((*sis)[i]); 
       if(elem_blocks[0]->field_exists(st.name))
 
         for(std::size_t j = 0; j < restart_fields.size(); j++)
