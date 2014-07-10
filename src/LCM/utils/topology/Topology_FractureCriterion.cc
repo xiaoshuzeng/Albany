@@ -29,12 +29,6 @@ beta_(beta),
 bulk_part_(*(meta_data_.get_part(bulk_block_name))),
 interface_part_(*(meta_data_.get_part(interface_block_name)))
 {
-  Intrepid::Index const
-  interface_ordinal = interface_part_.mesh_meta_data_ordinal();
-
-  CellTopologyData const * const
-  top = meta_data_.get_cell_topology(interface_part_).getCellTopologyData();
-
   if (&stress_field_ == 0) {
     std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
     std::cerr << '\n';
