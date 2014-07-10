@@ -5,12 +5,14 @@
 ##*****************************************************************//
 
 SET(SOURCES
+  ${CMAKE_SOURCE_DIR}/src/ATO/ATO_Solver.cpp
   ${CMAKE_SOURCE_DIR}/src/ATO/evaluators/ATO_ComputeBasisFunctions.cpp
   ${CMAKE_SOURCE_DIR}/src/ATO/problems/ATO_EvaluatorUtils.cpp
   ${CMAKE_SOURCE_DIR}/src/ATO/problems/LinearElasticityProblem.cpp
 )
 
 SET(HEADERS
+  ${CMAKE_SOURCE_DIR}/src/ATO/ATO_Solver.hpp
   ${CMAKE_SOURCE_DIR}/src/ATO/evaluators/ATO_ComputeBasisFunctions_Def.hpp
   ${CMAKE_SOURCE_DIR}/src/ATO/evaluators/ATO_ComputeBasisFunctions.hpp
   ${CMAKE_SOURCE_DIR}/src/ATO/problems/ATO_EvaluatorUtils_Def.hpp
