@@ -29,6 +29,7 @@ include_directories (${Trilinos_INCLUDE_DIRS}  ${Trilinos_TPL_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/src/LCM/
   ${CMAKE_SOURCE_DIR}/src/LCM/evaluators 
   ${CMAKE_SOURCE_DIR}/src/LCM/utils
+  ${CMAKE_SOURCE_DIR}/src/ATO/
   ${CMAKE_SOURCE_DIR}/src/ATO/evaluators 
   ${CMAKE_SOURCE_DIR}/src/ATO/problems
 )

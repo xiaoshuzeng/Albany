@@ -26,6 +26,10 @@
   #include "QCAD_GenEigensolver.hpp"
 #endif
 
+#ifdef ALBANY_ATO
+  #include "ATO_Solver.hpp"
+#endif
+
 //#include "Thyra_EpetraModelEvaluator.hpp"
 //#include "AAdapt_AdaptiveModelFactory.hpp"
 
@@ -253,6 +257,15 @@ Albany::SolverFactory::createAndGetAlbanyApp(
 #endif /* ALBANY_QCAD */
     }
 
+
+    if (solutionMethod == "ATO Problem") {
+#ifdef ALBANY_ATO
+      return rcp(new ATO::Solver(appParams, solverComm, initial_guess));
+#else /* ALBANY_ATO */
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "Must activate ATO (topological optimization)\n");
+#endif /* ALBANY_ATO */
+    }
+
     // Solver uses a single app, create it here along with observer
     RCP<Albany::Application> app;
     const RCP<EpetraExt::ModelEvaluator> model = createAlbanyAppAndModel(app, appComm, initial_guess);
@@ -349,7 +362,9 @@ Albany::SolverFactory::createThyraSolverAndGetAlbanyApp(
   const Teuchos::RCP<EpetraExt::ModelEvaluator> epetraSolver =
     this->createAndGetAlbanyApp(albanyApp, appComm, solverComm, initial_guess);
 
-  if (solutionMethod == "QCAD Multi-Problem" || solutionMethod == "QCAD Poisson-Schrodinger") {
+  if ( solutionMethod == "QCAD Multi-Problem" ||
+       solutionMethod == "QCAD Poisson-Schrodinger" ||
+       solutionMethod == "ATO Problem" ) {
     return Thyra::epetraModelEvaluator(epetraSolver, Teuchos::null);
   }
   else {

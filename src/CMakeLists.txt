@@ -516,6 +516,9 @@ include_directories (${Trilinos_INCLUDE_DIRS}
                      ./QCAD/problems
                      ./QCAD/evaluators
                      ./QCAD/responses
+                     ./ATO
+                     ./ATO/problems
+                     ./ATO/evaluators
                     )
 
 link_directories (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS}
