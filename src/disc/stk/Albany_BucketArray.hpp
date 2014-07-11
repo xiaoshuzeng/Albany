@@ -31,7 +31,7 @@ private:
 
 template< class FieldType > struct BucketArray {};
 
-/** \brief  \ref stk_classic::mesh::Field "Field" data \ref shards::Array "Array"
+/** \brief  \ref stk::mesh::Field "Field" data \ref shards::Array "Array"
  *          for a given scalar field and bucket
  */
 template< typename ScalarType >
@@ -63,7 +63,7 @@ public:
 };
 
 //----------------------------------------------------------------------
-/** \brief  \ref stk_classic::mesh::Field "Field" data \ref shards::Array "Array"
+/** \brief  \ref stk::mesh::Field "Field" data \ref shards::Array "Array"
  *          for a given array field and bucket
  */
 template< typename ScalarType ,

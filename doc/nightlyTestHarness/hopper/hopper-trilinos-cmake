@@ -13,8 +13,8 @@
 #/opt/modules/3.2.6.6/bin/modulecmd bash load boost
 
 
-
 rm -f CMakeCache.txt
+
 
 cmake -D CMAKE_INSTALL_PREFIX:PATH=$TRILINSTALLDIR \
       -D Boost_INCLUDE_DIRS:FILEPATH="${BOOST_DIR}/include" \
@@ -51,7 +51,7 @@ cmake -D CMAKE_INSTALL_PREFIX:PATH=$TRILINSTALLDIR \
       -D Trilinos_ENABLE_Stokhos:BOOL=ON \
       -D Trilinos_ENABLE_Isorropia:BOOL=ON\
       -D Trilinos_ENABLE_Piro:BOOL=ON \
-      -D Trilinos_ENABLE_STK:BOOL=ON \
+      -D Trilinos_ENABLE_STKClassic:BOOL=ON \
       -D Trilinos_ENABLE_Teko:BOOL=ON \
       -D TPL_FIND_SHARED_LIBS:BOOL=OFF \
 \

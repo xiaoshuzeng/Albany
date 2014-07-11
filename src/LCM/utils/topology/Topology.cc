@@ -115,23 +115,6 @@ Topology(RCP<Albany::AbstractDiscretization> & discretization) :
 }
 
 //
-//
-//
-Topology::
-Topology(RCP<Albany::AbstractDiscretization>& discretization,
-    RCP<AbstractFractureCriterion>& fracture_criterion) :
-    discretization_(Teuchos::null),
-    stk_mesh_struct_(Teuchos::null),
-    fracture_criterion_(Teuchos::null)
-{
-  setDiscretization(discretization);
-  setFractureCriterion(fracture_criterion);
-  Topology::createDiscretization();
-
-  return;
-}
-
-//
 // Initialize fracture state field
 // It exists for all entities except cells (elements)
 //
@@ -422,12 +405,12 @@ void
 Topology::createBoundary()
 {
   stk::mesh::Part &
-  boundary_part = *(getMetaData()->get_part("boundary"));
+  interface_part = *(getMetaData()->get_part("interface"));
 
   stk::mesh::PartVector
   add_parts;
 
-  add_parts.push_back(&boundary_part);
+  add_parts.push_back(&interface_part);
 
   stk::mesh::PartVector const
   part_vector = getMetaData()->get_parts();

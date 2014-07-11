@@ -19,11 +19,14 @@
 #include "Aeras_GatherSolution.hpp"
 #include "Aeras_ScatterResidual.hpp"
 #include "Aeras_DOFInterpolation.hpp"
+#include "Aeras_DOFInterpolationLevels.hpp"
 #include "Aeras_DOFGradInterpolation.hpp"
+#include "Aeras_DOFGradInterpolationLevels.hpp"
 #include "Aeras_Atmosphere_Moisture.hpp"
 #include "Aeras_XZHydrostatic_Density.hpp"
 #include "Aeras_XZHydrostatic_EtaDotPi.hpp"
 #include "Aeras_XZHydrostatic_GeoPotential.hpp"
+#include "Aeras_XZHydrostatic_Omega.hpp"
 #include "Aeras_XZHydrostatic_Pressure.hpp"
 #include "Aeras_XZHydrostatic_VelResid.hpp"
 #include "Aeras_XZHydrostatic_TracerResid.hpp"
@@ -109,13 +112,12 @@ namespace Aeras {
 #include "Intrepid_DefaultCubatureFactory.hpp"
 #include "Shards_CellTopology.hpp"
 
+#include "Aeras_Eta.hpp"
 #include "Albany_Utils.hpp"
 #include "Albany_ProblemUtils.hpp"
 #include "Albany_EvaluatorUtils.hpp"
 #include "Albany_ResponseUtilities.hpp"
 #include "PHAL_Neumann.hpp"
-
-#include "Aeras_XZHydrostaticResid.hpp"
 
 template <typename EvalT>
 Teuchos::RCP<const PHX::FieldTag>
@@ -136,6 +138,14 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
   using std::map;
   using PHAL::AlbanyTraits;
   
+  {
+    Teuchos::ParameterList& xzhydrostatic_params = params->sublist("XZHydrostatic Problem");
+    const typename EvalT::ScalarT Ptop = xzhydrostatic_params.get<double>("Ptop", 101.325); 
+    const typename EvalT::ScalarT P0   = xzhydrostatic_params.get<double>("P0",   101325.0); 
+    Eta<EvalT>::self(Ptop, P0, numLevels);
+  }
+
+
   RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > >
     intrepidBasis = Albany::getIntrepidBasis(meshSpecs.ctd);
   RCP<shards::CellTopology> cellType = rcp(new shards::CellTopology (&meshSpecs.ctd));
@@ -198,19 +208,19 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
   Teuchos::ArrayRCP<std::string> dof_names_tracers_gradient(numTracers);
   Teuchos::ArrayRCP<std::string> dof_names_tracers_src(numTracers);
   Teuchos::ArrayRCP<std::string> dof_names_tracers_resid(numTracers);
+  Teuchos::ArrayRCP<std::string> dof_names_tracers_deta(numTracers);
 
   for (int t=0; t<numTracers; ++t) {
     dof_names_tracers_dot     [t] = dof_names_tracers[t]+"_dot";
     dof_names_tracers_gradient[t] = dof_names_tracers[t]+"_gradient";
     dof_names_tracers_src     [t] = dof_names_tracers[t]+"_source";
     dof_names_tracers_resid   [t] = dof_names_tracers[t]+"_residual";
+    dof_names_tracers_deta    [t] = dof_names_tracers[t]+"_deta";
   }
  
   {
     RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation "+dof_names_nodes[0]));
     p->set<string>("Variable Name", dof_names_nodes[0]);
-    p->set<Teuchos::RCP<PHX::DataLayout> >("Nodal Variable Layout",     dl->node_scalar);
-    p->set<Teuchos::RCP<PHX::DataLayout> >("Quadpoint Variable Layout", dl->qp_scalar);
     p->set<string>("BF Name", "BF");
 
     ev = rcp(new Aeras::DOFInterpolation<EvalT,AlbanyTraits>(*p,dl));
@@ -220,8 +230,6 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
   {
     RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation "+dof_names_nodes_dot[0]));
     p->set<string>("Variable Name", dof_names_nodes_dot[0]);
-    p->set<Teuchos::RCP<PHX::DataLayout> >("Nodal Variable Layout",     dl->node_scalar);
-    p->set<Teuchos::RCP<PHX::DataLayout> >("Quadpoint Variable Layout", dl->qp_scalar);
     p->set<string>("BF Name", "BF");
 
     ev = rcp(new Aeras::DOFInterpolation<EvalT,AlbanyTraits>(*p,dl));
@@ -233,7 +241,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<string>("Variable Name", dof_names_tracers[t]);
     p->set<string>("BF Name", "BF");
 
-    ev = rcp(new Aeras::DOFInterpolation<EvalT,AlbanyTraits>(*p,dl));
+    ev = rcp(new Aeras::DOFInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -242,7 +250,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<string>("Variable Name", dof_names_tracers_dot[t]);
     p->set<string>("BF Name", "BF");
 
-    ev = rcp(new Aeras::DOFInterpolation<EvalT,AlbanyTraits>(*p,dl));
+    ev = rcp(new Aeras::DOFInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -252,8 +260,6 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<string>("Variable Name",          dof_names_nodes[0]);
     p->set<string>("Gradient BF Name",       "Grad BF");
     p->set<string>("Gradient Variable Name", dof_names_nodes_gradient[0]);
-    p->set<Teuchos::RCP<PHX::DataLayout> >("Nodal Variable Layout",     dl->node_gradient);
-    p->set<Teuchos::RCP<PHX::DataLayout> >("Quadpoint Variable Layout", dl->qp_gradient);
 
     ev = rcp(new Aeras::DOFGradInterpolation<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
@@ -266,7 +272,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<string>("Gradient BF Name", "Grad BF");
     p->set<string>("Gradient Variable Name", dof_names_tracers_gradient[t]);
 
-    ev = rcp(new Aeras::DOFGradInterpolation<EvalT,AlbanyTraits>(*p,dl));
+    ev = rcp(new Aeras::DOFGradInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -286,10 +292,8 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<std::string>("Weighted BF Name", "wBF");
     p->set<std::string>("Weighted Gradient BF Name", "wGrad BF");
     p->set<std::string>("QP Variable Name",                 dof_names_nodes[0]);
-    p->set<std::string>("QP Eta"          ,                 "Eta");
     p->set<std::string>("QP Time Derivative Variable Name", dof_names_nodes_dot[0]);
     p->set<std::string>("Gradient QP PiVelx",        "Gradient QP PiVelx");
-    p->set<std::string>("QP Coordinate Vector Name", "Coord Vec");
     
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
 
@@ -309,7 +313,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
       p->set<string>("Variable Name", dof_names_levels[nldof]);
       p->set<string>("BF Name", "BF");
       
-      ev = rcp(new Aeras::DOFInterpolation<EvalT,AlbanyTraits>(*p,dl));
+      ev = rcp(new Aeras::DOFInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
       fm0.template registerEvaluator<EvalT>(ev);
     }
       
@@ -318,7 +322,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
       p->set<string>("Variable Name", dof_names_levels_dot[nldof]);
       p->set<string>("BF Name", "BF");
       
-      ev = rcp(new Aeras::DOFInterpolation<EvalT,AlbanyTraits>(*p,dl));
+      ev = rcp(new Aeras::DOFInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
       fm0.template registerEvaluator<EvalT>(ev);
     }
       
@@ -329,7 +333,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
       p->set<string>("Gradient BF Name", "Grad BF");
       p->set<string>("Gradient Variable Name", dof_names_levels_gradient[nldof]);
       
-      ev = rcp(new Aeras::DOFGradInterpolation<EvalT,AlbanyTraits>(*p,dl));
+      ev = rcp(new Aeras::DOFGradInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
@@ -351,7 +355,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<string>("Gradient BF Name", "Grad BF");
     p->set<string>("Gradient Variable Name", "KineticEnergy_gradient");
   
-    ev = rcp(new Aeras::DOFGradInterpolation<EvalT,AlbanyTraits>(*p,dl));
+    ev = rcp(new Aeras::DOFGradInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -361,13 +365,12 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     //Input
     p->set<std::string>("Weighted BF Name",                 "wBF");
     p->set<std::string>("Weighted Gradient BF Name",        "wGrad BF");
-    p->set<std::string>("QP Variable Name",                 dof_names_levels[0]);
-    p->set<std::string>("QP Time Derivative Variable Name", dof_names_levels_dot[0]);
-    p->set<std::string>("QP Density",                       "Density");
-    p->set<std::string>("Gradient QP Pressure",             dof_names_nodes_gradient[0]);
     p->set<std::string>("Gradient QP Kinetic Energy",       "KineticEnergy_gradient");
     p->set<std::string>("Gradient QP GeoPotential",         "Gradient QP GeoPotential");
-    p->set<std::string>("QP Coordinate Vector Name",        "Coord Vec");
+    p->set<std::string>("QP Time Derivative Variable Name", dof_names_levels_dot[0]);
+    p->set<std::string>("QP Density",                       "Density");
+    p->set<std::string>("Gradient QP Pressure",             "Gradient QP Pressure");
+    p->set<std::string>("EtaDotdVelx",                      "EtaDotdVelx");
     
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
 
@@ -388,12 +391,13 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     //Input
     p->set<std::string>("Weighted BF Name",               "wBF");
     p->set<std::string>("Weighted Gradient BF Name",      "wGrad BF");
-    p->set<std::string>("QP Coordinate Vector Name",      "Coord Vec");
-    p->set<std::string>("QP Velx",                        dof_names_levels[0]);
     p->set<std::string>("QP Temperature",                 dof_names_levels[1]);
-    p->set<std::string>("QP Time Derivative Temperature", dof_names_levels_dot[1]);
     p->set<std::string>("Gradient QP Temperature",        dof_names_levels_gradient[1]);
+    p->set<std::string>("QP Time Derivative Temperature", dof_names_levels_dot[1]);
     p->set<std::string>("Temperature Source",             dof_names_levels_src[1]);
+    p->set<std::string>("QP Velx",                        dof_names_levels[0]);
+    p->set<std::string>("Omega",                          "Omega");
+    p->set<std::string>("EtaDotdT",                       "EtaDotdT");
     
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
 
@@ -417,9 +421,8 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<std::string>("Pressure Level 0",   dof_names_nodes[0]);
 
     //Output
-    p->set<std::string>("Pressure",           dof_names_nodes[0]);
+    p->set<std::string>("Pressure",                "Pressure");
     p->set<std::string>("Eta",                     "Eta");
-    p->set<std::string>("DeltaEta",                "DeltaEta");
     p->set<std::string>("Pi",                      "Pi");
 
     ev = rcp(new Aeras::XZHydrostatic_Pressure<EvalT,AlbanyTraits>(*p,dl));
@@ -427,30 +430,59 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
   }
   {//QP Pressure
     RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation Pressure"));
-    p->set<string>("Variable Name", dof_names_nodes[0]);
+    p->set<string>("Variable Name", "Pressure");
     p->set<string>("BF Name", "BF");
     
-    ev = rcp(new Aeras::DOFInterpolation<EvalT,AlbanyTraits>(*p,dl));
+    ev = rcp(new Aeras::DOFInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
   {//Gradient QP Pressure
-      RCP<ParameterList> p = rcp(new ParameterList("Grad UTracer"));
+      RCP<ParameterList> p = rcp(new ParameterList("Gradient Pressure"));
       // Input
-      p->set<string>("Variable Name",          dof_names_nodes[0]);
-      p->set<string>("Gradient BF Name",       "Grad BF");
-      p->set<string>("Gradient Variable Name", dof_names_nodes_gradient[0]);
+      p->set<string>("Variable Name"            ,   "Pressure");
+      p->set<string>("Gradient BF Name"    ,   "Grad BF");
+      p->set<string>("Gradient Variable Name",   "Gradient QP Pressure");
     
-      ev = rcp(new Aeras::DOFGradInterpolation<EvalT,AlbanyTraits>(*p,dl));
+      ev = rcp(new Aeras::DOFGradInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
       fm0.template registerEvaluator<EvalT>(ev);
   }
-  {//QP Eta
-    RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation Pressure"));
-    p->set<string>("Variable Name", "Eta");
+  {//QP Pi
+    RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation Pi"));
+    p->set<string>("Variable Name", "Pi");
     p->set<string>("BF Name", "BF");
     
-    ev = rcp(new Aeras::DOFInterpolation<EvalT,AlbanyTraits>(*p,dl));
+    ev = rcp(new Aeras::DOFInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
+
+  { // XZHydrostatic Omega = (R*Tv/Cp*P)*DP/Dt) 
+    RCP<ParameterList> p = rcp(new ParameterList("XZHydrostatic_Omega"));
+
+    p->set<RCP<ParamLib> >("Parameter Library", paramLib);
+    Teuchos::ParameterList& paramList = params->sublist("XZHydrostatic Problem");
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
+
+    //Input
+    p->set<string>("Velx"                  , dof_names_levels[0]);
+    p->set<string>("Gradient QP Pressure"  , "Gradient QP Pressure");
+    p->set<string>("Density"               , "Density");
+    p->set<string>("Gradient QP PiVelx"    , "Gradient QP PiVelx");
+
+    //Output
+    p->set<std::string>("Omega"            , "Omega");
+
+    ev = rcp(new Aeras::XZHydrostatic_Omega<EvalT,AlbanyTraits>(*p,dl));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+  //{//QP Omega 
+  //  RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation Omega"));
+  //  p->set<string>("Variable Name"  , "Omega");
+  //  p->set<string>("BF Name", "BF");
+  //  
+  //  ev = rcp(new Aeras::DOFInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
+  //  fm0.template registerEvaluator<EvalT>(ev);
+  //}
+
 
   { // XZHydrostatic Density 
     RCP<ParameterList> p = rcp(new ParameterList("XZHydrostatic_Density"));
@@ -460,7 +492,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Input
-    p->set<std::string>("Pressure",           dof_names_nodes [0]);
+    p->set<std::string>("Pressure",           "Pressure");
     p->set<std::string>("VirtualT",        dof_names_levels[1]);
     //Output
     p->set<std::string>("Density",                     "Density");
@@ -473,7 +505,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<string>("Variable Name", "Density");
     p->set<string>("BF Name", "BF");
     
-    ev = rcp(new Aeras::DOFInterpolation<EvalT,AlbanyTraits>(*p,dl));
+    ev = rcp(new Aeras::DOFInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -505,7 +537,6 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     //Input
     p->set<std::string>("Density",             "Density" );
     p->set<std::string>("Eta",                 "Eta"     );
-    p->set<std::string>("DeltaEta",            "DeltaEta");
     p->set<std::string>("Pi",                  "Pi"      );
 
     //Output
@@ -515,13 +546,13 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(ev);
   }
   {//Gradient QP GeoPotential 
-      RCP<ParameterList> p = rcp(new ParameterList("Grad UTracer"));
+      RCP<ParameterList> p = rcp(new ParameterList("Gradient GeoPotential"));
       // Input
-      p->set<string>("GeoPotential",          "GeoPotential");
+      p->set<string>("Variable Name",          "GeoPotential");
       p->set<string>("Gradient BF Name",       "Grad BF");
-      p->set<string>("Gradient QP GeoPotential", "Gradient QP GeoPotential");
+      p->set<string>("Gradient Variable Name", "Gradient QP GeoPotential");
     
-      ev = rcp(new Aeras::DOFGradInterpolation<EvalT,AlbanyTraits>(*p,dl));
+      ev = rcp(new Aeras::DOFGradInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
       fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -534,21 +565,21 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
 
     //Input
     p->set<std::string>("Pi",            "Pi");
-    p->set<std::string>("Velx",                dof_names_levels[0]);
+    p->set<std::string>("Velx",          dof_names_levels[0]);
     //Output
     p->set<std::string>("PiVelx",        "PiVelx");
 
     ev = rcp(new Aeras::XZHydrostatic_PiVel<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
-  {//Gradient Density weighted Pressure
-    RCP<ParameterList> p = rcp(new ParameterList("Grad UTracer"));
+  {//Gradient Pi weighted Velocity 
+    RCP<ParameterList> p = rcp(new ParameterList("Gradient PiVelx"));
     // Input
     p->set<string>("Variable Name",          "PiVelx");
     p->set<string>("Gradient BF Name",       "Grad BF");
     p->set<string>("Gradient Variable Name", "Gradient QP PiVelx");
    
-    ev = rcp(new Aeras::DOFGradInterpolation<EvalT,AlbanyTraits>(*p,dl));
+    ev = rcp(new Aeras::DOFGradInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -562,9 +593,17 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     //Input
     p->set<std::string>("Gradient QP PiVelx",     "Gradient QP PiVelx");
     p->set<std::string>("Pressure Dot Level 0",   dof_names_nodes_dot[0]);
+    p->set<std::string>("Pi"                    , "Pi");
+    p->set<std::string>("QP Velx",                dof_names_levels[0]);
+    p->set<std::string>("QP Temperature",         dof_names_levels[1]);
+    p->set< Teuchos::ArrayRCP<std::string> >("Tracer Names",        dof_names_tracers);
+
     //Output
     p->set<std::string>("EtaDotPi",                   "EtaDotPi");
-
+    p->set<std::string>("EtaDotdT",                   "EtaDotdT");
+    p->set<std::string>("EtaDotdVelx",                "EtaDotdVelx");
+    p->set< Teuchos::ArrayRCP<std::string> >("Tracer EtaDotd Names", dof_names_tracers_deta);
+    
     ev = rcp(new Aeras::XZHydrostatic_EtaDotPi<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
@@ -572,23 +611,19 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
 
   { // XZHydrostatic Atmosphere Moisture Resid
     RCP<ParameterList> p = rcp(new ParameterList("XZHydrostatic_Atmosphere_Moisture"));
+    p->set<RCP<ParamLib> >("Parameter Library", paramLib);
+    Teuchos::ParameterList& paramList = params->sublist("XZHydrostatic Problem");
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
    
     //Input
     p->set<std::string>("Weighted BF Name",              "wBF");
-    p->set<std::string>("QP Coordinate Vector Name",     "Coord Vec");
     p->set<std::string>("QP Velx",                        dof_names_levels[0]);
     p->set<std::string>("QP Temperature",                 dof_names_levels[1]);
-    p->set<std::string>("QP Pressure",                    dof_names_nodes[0]);
-    p->set<std::string>("QP Eta",                         "Eta");
+    p->set<std::string>("QP Pressure",                    "Pressure");
     p->set<std::string>("Temperature Source",             dof_names_levels_src[1]);
     p->set<std::string>("QP Density",                     "Density");
     p->set< Teuchos::ArrayRCP<std::string> >("Tracer Names",        dof_names_tracers);
     p->set< Teuchos::ArrayRCP<std::string> >("Tracer Source Names", dof_names_tracers_src);
-    
-    p->set<RCP<ParamLib> >("Parameter Library", paramLib);
-
-    Teuchos::ParameterList& paramList = params->sublist("XZHydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Output
     p->set<std::string>("Residual Name", dof_names_levels_resid[1]);
@@ -618,7 +653,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
       p->set<string>("Gradient BF Name",       "Grad BF");
       p->set<string>("Gradient Variable Name", "U"+dof_names_tracers[t]+"_gradient");
     
-      ev = rcp(new Aeras::DOFGradInterpolation<EvalT,AlbanyTraits>(*p,dl));
+      ev = rcp(new Aeras::DOFGradInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
@@ -628,6 +663,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<std::string>("Gradient QP UTracer",              "U"+dof_names_tracers      [t]+"_gradient");
     p->set<std::string>("Residual Name",                        dof_names_tracers_resid[t]);
     p->set<std::string>("Tracer Source Name",                   dof_names_tracers_src  [t]);
+    p->set<std::string>("Tracer EtaDotd Name",                  dof_names_tracers_deta [t]);
 
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
 

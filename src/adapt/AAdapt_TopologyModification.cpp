@@ -46,14 +46,36 @@ AAdapt::TopologyMod::TopologyMod(
   // Save the initial output file name
   base_exo_filename_ = stk_mesh_struct_->exoOutFile;
 
-  double const
-  fracture_probability = params->get<double>("Fracture Probability");
+  std::string const
+  bulk_block_name = params->get<std::string>("Bulk Block Name");
 
-  fracture_criterion_ =
-    Teuchos::rcp(new LCM::FractureCriterionRandom(fracture_probability));
+  std::string const
+  interface_block_name = params->get<std::string>("Interface Block Name");
+
+  std::string const
+  stress_name = "nodal_PK1";
+
+  double const
+  critical_traction = params->get<double>("Critical Traction");
+
+  double const
+  beta = params->get<double>("beta");
 
   topology_ =
-    Teuchos::rcp(new LCM::Topology(discretization_, fracture_criterion_));
+    Teuchos::rcp(new LCM::Topology(discretization_));
+
+  fracture_criterion_ =
+    Teuchos::rcp(
+        new LCM::FractureCriterionTraction(
+            *topology_,
+            bulk_block_name,
+            interface_block_name,
+            stress_name,
+            critical_traction,
+            beta)
+  );
+
+  topology_->setFractureCriterion(fracture_criterion_);
 }
 
 //
@@ -112,14 +134,6 @@ AAdapt::TopologyMod::adaptMesh(
   // Start the mesh update process
 
   // Modifies mesh for graph algorithm
-  // Function must be called each time before there are changes to the mesh
-
-  // Check for failure criterion
-  // std::map<EntityKey, bool> local_entity_open;
-  // std::map<EntityKey, bool> global_entity_open;
-  topology_->setEntitiesOpen();
-
-  // getGlobalOpenList(local_entity_open, global_entity_open);
 
   // begin mesh update
 
@@ -148,9 +162,14 @@ AAdapt::TopologyMod::getValidAdapterParameters() const {
     this->getGenericAdapterParams("ValidTopologyModificationParams");
 
   valid_pl_->
-  set<double>("Fracture Stress",
+  set<double>("Critical Traction",
               1.0,
-              "Fracture stress value at which two elements separate");
+              "Critical traction at which two elements separate t_eff >= t_cr");
+
+  valid_pl_->
+  set<double>("beta",
+              1.0,
+              "Weight factor t_eff = sqrt[(t_s/beta)^2 + t_n^2]");
 
   return valid_pl_;
 }

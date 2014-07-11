@@ -14,10 +14,16 @@
 
 #include <cassert>
 
+#include <stk_mesh/base/FieldBase.hpp>
+
 #include "Teuchos_ScalarTraits.hpp"
 #include "Topology_Types.h"
+#include "Topology_Utils.h"
 
 namespace LCM{
+
+// Forward declaration
+class Topology;
 
 ///
 /// Base class for fracture criteria
@@ -28,12 +34,29 @@ public:
 
   AbstractFractureCriterion() {}
 
+  AbstractFractureCriterion(std::string const & b, std::string const & s) :
+  bulk_block_name_(b), interface_block_name_(s) {}
+
   virtual
   bool
-  check(stk::mesh::BulkData& mesh, Entity entity) = 0;
+  check(stk::mesh::BulkData& mesh, Entity interface) = 0;
 
   virtual
   ~AbstractFractureCriterion() {}
+
+  std::string const &
+  getBulkBlockName() {return bulk_block_name_;}
+
+  std::string const &
+  getInterfaceBlockName() {return interface_block_name_;}
+
+protected:
+
+  std::string
+  bulk_block_name_;
+
+  std::string
+  interface_block_name_;
 
 private:
 
@@ -54,11 +77,11 @@ public:
   probability_(probability) {}
 
   bool
-  check(stk::mesh::BulkData& mesh, Entity entity)
+  check(stk::mesh::BulkData& mesh, Entity interface)
   {
-    EntityRank const rank = mesh.entity_rank(entity);
+    EntityRank const rank = mesh.entity_rank(interface);
 
-    assert(mesh.num_connectivity(entity, (EntityRank)(rank+1)) == 2);
+    assert(mesh.num_connectivity(interface, (EntityRank)(rank+1)) == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
@@ -91,11 +114,11 @@ public:
   open_(true) {}
 
   bool
-  check(stk::mesh::BulkData& mesh, Entity entity)
+  check(stk::mesh::BulkData& mesh, Entity interface)
   {
-    EntityRank const rank = mesh.entity_rank(entity);
+    EntityRank const rank = mesh.entity_rank(interface);
 
-    assert(mesh.num_connectivity(entity, (EntityRank)(rank+1)) == 2);
+    assert(mesh.num_connectivity(interface, (EntityRank)(rank+1)) == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
@@ -130,22 +153,16 @@ class FractureCriterionTraction : public AbstractFractureCriterion {
 
 public:
 
-  FractureCriterionTraction(double const critical_traction) :
-  AbstractFractureCriterion(),
-  critical_traction_(critical_traction) {}
+  FractureCriterionTraction(
+      Topology & topology,
+      std::string const & bulk_block_name,
+      std::string const & interface_block_name,
+      std::string const & stress_name,
+      double const critical_traction,
+      double const beta);
 
   bool
-  check(stk::mesh::BulkData& mesh, Entity entity)
-  {
-    EntityRank const rank = mesh.entity_rank(entity);
-
-    assert(mesh.num_connectivity(entity, (EntityRank)(rank+1)) == 2);
-
-    double const
-    random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
-
-    return random < critical_traction_;
-  }
+  check(stk::mesh::BulkData& mesh, Entity interface);
 
 private:
 
@@ -153,10 +170,46 @@ private:
   FractureCriterionTraction(FractureCriterionTraction const &);
   FractureCriterionTraction & operator=(FractureCriterionTraction const &);
 
+  void
+  computeNormals();
+
 private:
+
+  Topology &
+  topology_;
+
+  Albany::STKDiscretization &
+  stk_discretization_;
+
+  Albany::AbstractSTKMeshStruct const &
+  stk_mesh_struct_;
+
+  stk::mesh::BulkData const &
+  bulk_data_;
+
+  stk::mesh::MetaData const &
+  meta_data_;
+
+  Intrepid::Index
+  dimension_;
+
+  TensorFieldType const &
+  stress_field_;
 
   double
   critical_traction_;
+
+  double
+  beta_;
+
+  stk::mesh::Part const &
+  bulk_part_;
+
+  stk::mesh::Part const &
+  interface_part_;
+
+  std::vector<Intrepid::Vector<double> >
+  normals_;
 };
 
 } // namespace LCM

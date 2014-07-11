@@ -11,6 +11,8 @@
 #include "Teuchos_TestForException.hpp"
 #include "Phalanx_DataLayout.hpp"
 
+#include "Aeras_Eta.hpp"
+
 // NINT(x) - nearest whole number
 #define NINT(x) ( fabs(x)-fabs(int(x)) > 0.5 ) ? (x/fabs(x))*(int(fabs(x)+1)) : int(x)
 
@@ -26,12 +28,10 @@ template<typename EvalT, typename Traits>
 Atmosphere_Moisture<EvalT, Traits>::
 Atmosphere_Moisture(Teuchos::ParameterList& p,
            const Teuchos::RCP<Aeras::Layouts>& dl) :
-  coordVec        (p.get<std::string> ("QP Coordinate Vector Name"),     dl->qp_vector     ),
   Velx            (p.get<std::string> ("QP Velx"),                       dl->qp_scalar_level),
   Temp            (p.get<std::string> ("QP Temperature"),                dl->qp_scalar_level),
   Density         (p.get<std::string> ("QP Density"),                    dl->qp_scalar_level),
   Pressure        (p.get<std::string> ("QP Pressure"),                   dl->qp_scalar_level),
-  Eta             (p.get<std::string> ("QP Eta"),                        dl->qp_scalar_level),
   TempSrc         (p.get<std::string> ("Temperature Source"),            dl->qp_scalar_level),
   tracerNames     (p.get< Teuchos::ArrayRCP<std::string> >("Tracer Names")),
   tracerSrcNames(p.get< Teuchos::ArrayRCP<std::string> >("Tracer Source Names")),
@@ -42,20 +42,18 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
 {  
   Teuchos::ArrayRCP<std::string> RequiredTracers(3);
   RequiredTracers[0] = "Vapor";
-  RequiredTracers[1] = "Rain";
-  RequiredTracers[2] = "Snow";
+  RequiredTracers[1] = "Cloud";
+  RequiredTracers[2] = "Rain";
   for (int i=0; i<3; ++i) {
     bool found = false;
     for (int j=0; j<3 && !found; ++j)
       if (RequiredTracers[i] == tracerNames[j]) found = true;
     TEUCHOS_TEST_FOR_EXCEPTION(!found, std::logic_error,
-      "Aeras::Atmosphere_Moisture requires Vapor, Rain and Snow tracers.");
+      "Aeras::Atmosphere_Moisture requires Vapor, Cloud and Rain tracers.");
   }
 
-  this->addDependentField(coordVec);
   this->addDependentField(Velx);
   this->addDependentField(Density);
-  this->addDependentField(Eta);
   this->addDependentField(Pressure);
   this->addDependentField(Temp);
 
@@ -78,12 +76,10 @@ template<typename EvalT, typename Traits>
 void Atmosphere_Moisture<EvalT, Traits>::postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& fm)
 {
-  this->utils.setFieldData(coordVec,fm);
   this->utils.setFieldData(Velx,    fm);
   this->utils.setFieldData(Temp,    fm);
   this->utils.setFieldData(Density, fm);
   this->utils.setFieldData(Pressure, fm);
-  this->utils.setFieldData(Eta, fm);
   this->utils.setFieldData(TempSrc, fm);
 
   for (int i = 0; i < TracerIn.size();  ++i) this->utils.setFieldData(TracerIn[tracerNames[i]], fm);
@@ -95,13 +91,14 @@ void Atmosphere_Moisture<EvalT, Traits>::postRegistrationSetup(typename Traits::
 template<typename EvalT, typename Traits>
 void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalData workset)
 { 
+  const Eta<EvalT> &E = Eta<EvalT>::self();
   unsigned int numCells = workset.numCells;
   //Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > wsCoords = workset.wsCoords;
 
-   double dt_in = workset.current_time - workset.previous_time;
+   const double dt_in = workset.current_time - workset.previous_time;
    double rainnc, rainncv;
-   double zbot = 25.0;
-   double ztop = 10000.0;
+   const double zbot = 25.0;
+   const double ztop = 10000.0;
 
    std::vector<double> rho(numLevels, 0.0);
    std::vector<double> p(numLevels, 0.0);
@@ -128,9 +125,9 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
         exner[level] = pow( (p[level]/1000.0),(0.286) );
         rho[level]   = Albany::ADValue( Density(cell,qp,level) );
         qv[level]    = Albany::ADValue( TracerIn["Vapor"](cell,qp,level) );
-        qc[level]    = Albany::ADValue( TracerIn["Rain"](cell,qp,level) );
-        qr[level]    = Albany::ADValue( TracerIn["Snow"](cell,qp,level) );
-        z[level]     = (1.0-Albany::ADValue( Eta(cell,qp,level)) ) * ztop + zbot;
+        qc[level]    = Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
+        qr[level]    = Albany::ADValue( TracerIn["Rain"](cell,qp,level) );
+        z[level]     = (1.0-Albany::ADValue( E.eta(level)) ) * ztop + zbot;
         dz8w[level]  = z[level];
       }
 
@@ -142,8 +139,8 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
 
       for (int level=0; level < numLevels; ++level) { 
         TracerSrc[namesToSrc["Vapor"]](cell,qp,level) += 0 * TracerIn["Vapor"] (cell,qp,level);
+        TracerSrc[namesToSrc["Cloud"]] (cell,qp,level) += 0 * TracerIn["Cloud"]  (cell,qp,level);
         TracerSrc[namesToSrc["Rain"]] (cell,qp,level) += 0 * TracerIn["Rain"]  (cell,qp,level);
-        TracerSrc[namesToSrc["Snow"]] (cell,qp,level) += 0 * TracerIn["Snow"]  (cell,qp,level);
       }
     }
   }
@@ -160,34 +157,34 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
 
 // **********************************************************************
 template<typename EvalT, typename Traits>
-void Atmosphere_Moisture<EvalT, Traits>::kessler(int Km, double dt_in,
-             std::vector<double> & rho, 
-             std::vector<double> & p, 
-             std::vector<double> & exner, 
-             std::vector<double> & dz8w,
+void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_in,
+             const std::vector<double> & rho, 
+             const std::vector<double> & p, 
+             const std::vector<double> & exner, 
+             const std::vector<double> & dz8w,
              std::vector<double> & t,  
              std::vector<double> & qv, 
              std::vector<double> & qc, 
              std::vector<double> & qr,
              double &rainnc,  double &rainncv,
-             std::vector<double> & z)
+             const std::vector<double> & z)
 {
 
   int nfall, nfall_new;
 
-  double xlv          = 2.501e+6; // Latent heat of vaporization at 0C [J/kg]
-  double cp           = 1005.7;   // Specific heat capacity at constant pressure [J/kg/K]
-  double Rd           = 287.04;   // Gas constant for dry air [J/kg/K]
-  double Rv           = 461.5;    // Gas constant for water vapor [J/kg/K]
-  double eps          = 0.622;    // epsilon, Ratio of Rd/Rv [unitless]
-  double csvp3        = 29.65;    // Constant for saturation vapor pressure 
-  double K_temp_C     = 273.15;   // Temperature in K at 0 C                     
-  double mm_per_m     = 1000.;    // Convert, 1000 mm per m
-  double mbar_per_bar = 1000.;    // Convert, 1000 mbar per bar 
-  double mks_to_cgs   = 0.001;    // Convert mks to cgs
-  double rhowater     = 1.0;      // Density of water [1g/cm3=1000kg/m3]
+  const double xlv          = 2.501e+6; // Latent heat of vaporization at 0C [J/kg]
+  const double cp           = 1005.7;   // Specific heat capacity at constant pressure [J/kg/K]
+  const double Rd           = 287.04;   // Gas constant for dry air [J/kg/K]
+  const double Rv           = 461.5;    // Gas constant for water vapor [J/kg/K]
+  const double eps          = 0.622;    // epsilon, Ratio of Rd/Rv [unitless]
+  const double csvp3        = 29.65;    // Constant for saturation vapor pressure 
+  const double K_temp_C     = 273.15;   // Temperature in K at 0 C                     
+  const double mm_per_m     = 1000.;    // Convert, 1000 mm per m
+  const double mbar_per_bar = 1000.;    // Convert, 1000 mbar per bar 
+  const double mks_to_cgs   = 0.001;    // Convert mks to cgs
+  const double rhowater     = 1.0;      // Density of water [1g/cm3=1000kg/m3]
 
-  double max_cr_sedimentation = 0.75;
+  const double max_cr_sedimentation = 0.75;
 
   double qrprod;
   double qrvent;
@@ -198,7 +195,6 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(int Km, double dt_in,
   double es;      // Saturation vapor pressure [mbar] from Bolton or Teton's formula 
   double qvs;     // Saturation mixing ratio (Rogers & Yau Eq. 2.18) [bar]
   double dz; 
-  double dt;
   double f5; 
   double dtfall; 
   double rdz; 
@@ -220,7 +216,7 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(int Km, double dt_in,
   std::vector<double> rdzw(Km,0.0);
   std::vector<double> qrcond(Km,1.0);
 
-  dt = dt_in;
+  const double dt = dt_in;
   f5 = 17.67*243.5*xlv/cp;    // changes?
 
    for (int k=0; k<Km; ++k) {             // construct column data
