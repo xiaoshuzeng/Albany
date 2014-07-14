@@ -7,6 +7,7 @@
 
 #include "Subgraph.h"
 #include "Topology.h"
+#include "Topology_FractureCriterion.h"
 #include "Topology_Utils.h"
 
 namespace LCM {
@@ -77,7 +78,11 @@ Topology::Topology(
   probability = 0.01;
 
   setFractureCriterion(
-      Teuchos::rcp(new FractureCriterionRandom(probability))
+      Teuchos::rcp(new FractureCriterionRandom(
+          *this,
+          "bulk",
+          "interface",
+          probability))
   );
 
   // Create the full mesh representation. This must be done prior to
@@ -108,10 +113,23 @@ Topology(RCP<Albany::AbstractDiscretization> & discretization) :
   probability = 0.1;
 
   setFractureCriterion(
-      Teuchos::rcp(new FractureCriterionRandom(probability))
+      Teuchos::rcp(new FractureCriterionRandom(
+          *this,
+          "bulk",
+          "interface",
+          probability))
   );
 
   return;
+}
+
+//
+// Check fracture criterion
+//
+bool
+Topology::checkOpen(Entity const & e)
+{
+  return fracture_criterion_->check(e);
 }
 
 //
@@ -770,7 +788,7 @@ Topology::getBoundary()
 //
 // Create cohesive connectivity
 //
-EntityVector
+std::vector<EntityId>
 Topology::createSurfaceElementConnectivity(
     Entity const & face_top,
     Entity const & face_bottom)
@@ -789,7 +807,14 @@ Topology::createSurfaceElementConnectivity(
   both.insert(both.end(), top.begin(), top.end());
   both.insert(both.end(), bottom.begin(), bottom.end());
 
-  return both;
+  std::vector<EntityId>
+  connectivity;
+
+  for (EntityVector::size_type i = 0; i < both.size(); ++i) {
+    connectivity.push_back(both[i]->identifier());
+  }
+
+  return connectivity;
 }
 
 //
@@ -1110,7 +1135,7 @@ Topology::splitOpenFaces()
     Entity & face1 = *((*i).first);
     Entity & face2 = *((*i).second);
 
-    EntityVector
+    std::vector<EntityId>
     cohesive_connectivity = createSurfaceElementConnectivity(face1, face2);
 
     // TODO: Insert the surface element element

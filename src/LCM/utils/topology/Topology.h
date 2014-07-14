@@ -11,10 +11,12 @@
 #include <stk_mesh/base/FieldData.hpp>
 
 #include "Topology_Types.h"
-#include "Topology_FractureCriterion.h"
 #include "Topology_Utils.h"
 
 namespace LCM {
+
+// Forward declaration
+class AbstractFractureCriterion;
 
 class Topology {
 public:
@@ -172,7 +174,7 @@ public:
   ///
   /// \attention Assumes that all elements have the same topology
   ////
-  EntityVector
+  std::vector<EntityId>
   createSurfaceElementConnectivity(
       Entity const & face_top, Entity const & face_bottom);
 
@@ -661,11 +663,11 @@ public:
     return isInternal(e) == true && isOpen(e) == true;
   }
 
+  ///
+  /// Check fracture criterion
+  ///
   bool
-  checkOpen(Entity const & e)
-  {
-    return fracture_criterion_->check(e);
-  }
+  checkOpen(Entity const & e);
 
   ///
   /// Initialization of the open field for fracture
