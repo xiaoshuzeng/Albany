@@ -41,6 +41,7 @@
        evaluators/Aeras_DOFGradInterpolation.cpp
        evaluators/Aeras_DOFGradInterpolationLevels.cpp
        evaluators/Aeras_Atmosphere_Moisture.cpp
+       evaluators/Aeras_ShallowWaterSource.cpp
    )
    
   SET(HEADERS
@@ -108,6 +109,8 @@
        evaluators/Aeras_DOFGradInterpolationLevels_Def.hpp
        evaluators/Aeras_Atmosphere_Moisture.hpp
        evaluators/Aeras_Atmosphere_Moisture_Def.hpp
+       evaluators/Aeras_ShallowWaterSource_Def.hpp
+       evaluators/Aeras_ShallowWaterSource.hpp
   )
   
 include_directories (${Trilinos_INCLUDE_DIRS}  ${Trilinos_TPL_INCLUDE_DIRS}
