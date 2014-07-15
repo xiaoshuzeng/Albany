@@ -46,7 +46,7 @@ private:
   // Input:
   PHX::MDField<MeshScalarT,Cell,Node,QuadPoint> wBF;
   PHX::MDField<MeshScalarT,Cell,Node,QuadPoint,Dim> wGradBF;
-
+//if i want hv for height, do i change here vecdim to vecdim+1?
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> U;  //vecDim works but its really Dim+1
   PHX::MDField<ScalarT,Cell,Node,VecDim> UNodal;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim,Dim> Ugrad;
@@ -67,7 +67,7 @@ private:
 
   bool usePrescribedVelocity;
   bool ibpGradH;
-
+                    
   Teuchos::RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > > intrepidBasis;
   Teuchos::RCP<Intrepid::Cubature<RealType> > cubature;
   Intrepid::FieldContainer<RealType>    refPoints;
@@ -79,6 +79,8 @@ private:
 
   ScalarT gravity; // gravity parameter -- Sacado-ized for sensitivities
   ScalarT Omega;   //rotation of earth  -- Sacado-ized for sensitivities
+ 
+  double ViscCoeff; //viscosity or hv coeff
 
   std::size_t numNodes;
   std::size_t numQPs;

@@ -273,7 +273,7 @@ class AerasTCGalewskyInit : public AnalyticFunction {
         double hperturb(const double lon, const double lat); //
     
         double earthRadius; //Earth radius
-        double testDuration; // =12 days, in seconds, should be a param from data_
+        //double testDuration; // =12 days, in seconds, should be a param from data_
         double myPi; // a local copy of pi
     
         double phi0;
@@ -282,10 +282,10 @@ class AerasTCGalewskyInit : public AnalyticFunction {
         double en;
 
         const double h0 = 10000.0;
-    double phi2;
-    const double al = 1./3.;
-    const double beta =  1./15.;
-    const double hhat = 120.; //meters
+        double phi2;
+        const double al = 1./3.;
+        const double beta =  1./15.;
+        const double hhat = 120.; //meters
 };
     
 class AerasPlanarCosineBell : public AnalyticFunction {

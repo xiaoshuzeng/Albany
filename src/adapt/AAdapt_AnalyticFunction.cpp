@@ -637,17 +637,18 @@ double AAdapt::AerasTCGalewskyInit::ucomponent(const double lat){
     if( (lat <= phi0) || (lat >=phi1)){
         return 0.0;
     }else{
-        return umax/en*exp(1/(lat - phi0)/(lat - phi1));
+        return umax/en*exp(1./((lat - phi0)*(lat - phi1)));
     }
 }
 
 double AAdapt::AerasTCGalewskyInit::hperturb(const double lon, const double lat){
     
-    if( (lon > -myPi)&&(lon < myPi) ){
-        return hhat*cos(lat)*exp(-lon*lon/al/al)*exp( -((phi2-lat)/beta)*((phi2-lat)/beta) );
-    }else{
-        return 0.0;
+    double lon2=lon;
+    if (lon2 > myPi){
+        lon2=lon - 2*myPi;
     }
+    return (hhat*cos(lat)*exp(-lon2*lon2/al/al)*exp( -((phi2-lat)/beta)*((phi2-lat)/beta) ));
+
 }
 
 void AAdapt::AerasTCGalewskyInit::compute(double* solution, const double* X) {
@@ -659,12 +660,6 @@ void AAdapt::AerasTCGalewskyInit::compute(double* solution, const double* X) {
     const double a = Aeras::ShallowWaterConstants::self().earthRadius;
     
     //const double h0g = data[0];
-    
-    const double alpha = 0.0;//1.047; /* must match value in ShallowWaterResidDef
-    //don't know how to get data from input into this class and that one. */
-    
-    const double cosAlpha = std::cos(alpha);
-    const double sinAlpha = std::sin(alpha);
     
     const double x = X[0];  //assume that the mesh has unit radius
     const double y = X[1];
@@ -681,22 +676,10 @@ void AAdapt::AerasTCGalewskyInit::compute(double* solution, const double* X) {
     else if (lambda < 0) lambda += 2*myPi;
     //end note 1
     
-    const double sinTheta = std::sin(theta);//unused
-    const double cosTheta = std::cos(theta);//un
-    
-    const double sinLambda = std::sin(lambda);//un
-    const double cosLambda = std::cos(lambda);//un
-    
-    //const double h0 = h0g/gravity;
-    
     double h = h0;
     
-    //double rotlambda, rottheta;
-    
-    //rotate(lambda, theta, alpha, rotlambda, rottheta);
-    
     //integrating height numerically
-    const int integration_steps = 5000;//make this a const in class
+    const int integration_steps = 1000;//make this a const in class
     const double deltat = (theta+myPi/2.0)/integration_steps;
     for(int i=0; i<integration_steps; i++){
         
@@ -705,26 +688,27 @@ void AAdapt::AerasTCGalewskyInit::compute(double* solution, const double* X) {
         
         double loc_u = ucomponent(midpoint1);
         
-        h -= a/gravity*deltat*(2*Omega*sin(midpoint1)+loc_u*tan(midpoint1)/a)*loc_u/2.;
+        h -= a/gravity*deltat*(2.*Omega*sin(midpoint1)+loc_u*tan(midpoint1)/a)*loc_u/2.;
         
         loc_u = ucomponent(midpoint2);
         
-        h -= a/gravity*deltat*(2*Omega*sin(midpoint2)+loc_u*tan(midpoint2)/a)*loc_u/2.;
+        h -= a/gravity*deltat*(2.*Omega*sin(midpoint2)+loc_u*tan(midpoint2)/a)*loc_u/2.;
         
     }
     
     //now add the perturbation
+    
     h += hperturb(lambda, theta);
     
     double u, v;
 
     u = ucomponent(theta);
     v = 0.0;
-
     
     solution[0] = h;
     solution[1] = u;
     solution[2] = v;
+
 }
 
 
