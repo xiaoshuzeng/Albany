@@ -78,10 +78,10 @@ public:
   Intrepid::Index
   getDimension() {return dimension_;}
 
-  stk_classic::mesh::Part const &
+  stk_classic::mesh::Part &
   getBulkPart() {return bulk_part_;}
 
-  stk_classic::mesh::Part const &
+  stk_classic::mesh::Part &
   getInterfacePart() {return bulk_part_;}
 
 protected:
@@ -110,10 +110,10 @@ protected:
   Intrepid::Index
   dimension_;
 
-  stk_classic::mesh::Part const &
+  stk_classic::mesh::Part &
   bulk_part_;
 
-  stk_classic::mesh::Part const &
+  stk_classic::mesh::Part &
   interface_part_;
 
 private:

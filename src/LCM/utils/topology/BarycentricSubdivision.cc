@@ -17,31 +17,6 @@ namespace LCM {
 
 //----------------------------------------------------------------------------
 //
-// \brief Determine highest id number for each entity rank.
-// Used to assign unique ids to newly created entities
-//
-void
-Topology::setHighestIds()
-{
-  // Get space dimension by querying the STK discretization.
-  Albany::STKDiscretization &
-  stk_discretization =
-      static_cast<Albany::STKDiscretization &>(*discretization_);
-
-  const unsigned int number_dimensions =
-      stk_discretization.getSTKMeshStruct()->numDim;
-
-  highest_ids_.resize(number_dimensions);
-
-  for (unsigned int rank = 0; rank < number_dimensions; ++rank) {
-    highest_ids_[rank] = getNumberEntitiesByRank(*getBulkData(), rank);
-  }
-
-  return;
-}
-
-//----------------------------------------------------------------------------
-//
 // \brief Adds a new entity of rank 3 to the mesh
 //
 void
@@ -1265,7 +1240,7 @@ void Topology::barycentricSubdivision()
         double v14x = coordinates[3][0] - coordinates[0][0];
         double v14y = coordinates[3][1] - coordinates[0][1];
         double v14z = coordinates[3][2] - coordinates[0][2];
-	volume = v12x * (v13y*v14z - v14y*v13z) - v12y * (v13x*v14z - v14x*v13z) + v12z * (v13x*v14y - v14x*v13y); 
+	volume = v12x * (v13y*v14z - v14y*v13z) - v12y * (v13x*v14z - v14x*v13z) + v12z * (v13x*v14y - v14x*v13y);
     }
     if(volume < 0){
         std::reverse(++entities.begin(), --entities.end());

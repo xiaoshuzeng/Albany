@@ -5,6 +5,7 @@
 //*****************************************************************//
 #include <boost/foreach.hpp>
 
+#include "stk_mesh/fem/FEMHelpers.hpp"
 #include "Subgraph.h"
 #include "Topology.h"
 #include "Topology_FractureCriterion.h"
@@ -1128,7 +1129,15 @@ Topology::splitOpenFaces()
 
   getBulkData()->modification_begin();
 
-  // Create the cohesive connectivity
+  setHighestIds();
+
+  EntityRank const
+  interface_rank = getCellRank() - 1;
+
+  EntityId
+  new_id = highest_ids_[interface_rank];
+
+  // Create the interface connectivity
   for (std::set<EntityPair>::iterator i =
       fractured_faces.begin(); i != fractured_faces.end(); ++i) {
 
@@ -1136,10 +1145,16 @@ Topology::splitOpenFaces()
     Entity & face2 = *((*i).second);
 
     std::vector<EntityId>
-    cohesive_connectivity = createSurfaceElementConnectivity(face1, face2);
+    interface_connectivity = createSurfaceElementConnectivity(face1, face2);
 
-    // TODO: Insert the surface element element
+    // Insert the surface element
+    stk_classic::mesh::fem::declare_element(
+        *getBulkData(),
+        fracture_criterion_->getInterfacePart(),
+        new_id,
+        &interface_connectivity[0]);
 
+    ++new_id;
   }
 
   getBulkData()->modification_end();
@@ -1364,6 +1379,30 @@ Topology::outputToGraphviz(
   gviz_out << dot_footer();
 
   gviz_out.close();
+
+  return;
+}
+
+//
+// \brief Determine highest id number for each entity rank.
+// Used to assign unique ids to newly created entities
+//
+void
+Topology::setHighestIds()
+{
+  // Get space dimension by querying the STK discretization.
+  Albany::STKDiscretization &
+  stk_discretization =
+      static_cast<Albany::STKDiscretization &>(*discretization_);
+
+  const unsigned int number_dimensions =
+      stk_discretization.getSTKMeshStruct()->numDim;
+
+  highest_ids_.resize(number_dimensions);
+
+  for (unsigned int rank = 0; rank < number_dimensions; ++rank) {
+    highest_ids_[rank] = getNumberEntitiesByRank(*getBulkData(), rank);
+  }
 
   return;
 }
