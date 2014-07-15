@@ -174,7 +174,7 @@ public:
   ///
   /// \attention Assumes that all elements have the same topology
   ////
-  std::vector<EntityId>
+  EntityVector
   createSurfaceElementConnectivity(
       Entity const & face_top, Entity const & face_bottom);
 
@@ -258,7 +258,7 @@ public:
   /// \brief Number of entities of a specific rank
   ///
   EntityVector::size_type
-  getNumberEntitiesByRank(BulkData const & mesh, EntityRank entity_rank);
+  getNumberEntitiesByRank(BulkData const & bulk_date, EntityRank entity_rank);
 
   ///
   /// \brief Gets the local relation id (0,1,2,...) between two entities

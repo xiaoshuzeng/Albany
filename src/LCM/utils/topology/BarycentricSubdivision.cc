@@ -15,6 +15,31 @@
 
 namespace LCM {
 
+
+//
+// \brief Determine highest id number for each entity rank.
+// Used to assign unique ids to newly created entities
+//
+void
+Topology::setHighestIds()
+{
+  // Get space dimension by querying the STK discretization.
+  Albany::STKDiscretization &
+  stk_discretization =
+      static_cast<Albany::STKDiscretization &>(*discretization_);
+
+  const unsigned int number_dimensions =
+      stk_discretization.getSTKMeshStruct()->numDim;
+
+  highest_ids_.resize(number_dimensions);
+
+  for (unsigned int rank = 0; rank < number_dimensions; ++rank) {
+    highest_ids_[rank] = getNumberEntitiesByRank(*getBulkData(), rank);
+  }
+
+  return;
+}
+
 //----------------------------------------------------------------------------
 //
 // \brief Adds a new entity of rank 3 to the mesh
@@ -127,18 +152,6 @@ Topology::getEntitiesByRank(const stk_classic::mesh::BulkData & mesh,
     }
   }
   return entities;
-}
-
-//----------------------------------------------------------------------------
-//
-// \brief This returns the number of entities on the former mesh of
-// a given rank
-//
-std::vector<Entity*>::size_type
-Topology::getNumberEntitiesByRank(const stk_classic::mesh::BulkData & mesh,
-    EntityRank entity_rank)
-{
-  return mesh.buckets(entity_rank).size();
 }
 
 //----------------------------------------------------------------------------
