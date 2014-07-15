@@ -67,6 +67,13 @@ namespace ATO {
 
     SolverSubSolverData CreateSubSolverData(const ATO::SolverSubSolver& sub) const;
 
+    Teuchos::RCP<Teuchos::ParameterList>
+    createElasticityInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appParams,
+                               int numDims,
+                               const std::string& specialProcessing,
+                               const std::string& exoOutputFile ) const;
+
+
   };
 
   class SolverSubSolver {

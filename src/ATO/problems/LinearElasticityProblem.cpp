@@ -9,8 +9,8 @@
 
 Albany::LinearElasticityProblem::
 LinearElasticityProblem(const Teuchos::RCP<Teuchos::ParameterList>& params_,
-		  const Teuchos::RCP<ParamLib>& paramLib_,
-		  const int numDim_) :
+		        const Teuchos::RCP<ParamLib>& paramLib_,
+		        const int numDim_) :
   Albany::AbstractProblem(params_, paramLib_, numDim_),
   haveSource(false),
   numDim(numDim_)

@@ -145,8 +145,11 @@ Albany::SolverFactory::SolverFactory(
   appParams = Teuchos::createParameterList("Albany Parameters");
   Teuchos::updateParametersFromXmlFileAndBroadcast(inputFile, appParams.ptr(), *tcomm);
 
-  //do not set default solver parameters for QCAD::Solver problems, as it handles this itself
-  if (appParams->sublist("Problem").get("Solution Method", "Steady") != "QCAD Multi-Problem") {  
+  // do not set default solver parameters for QCAD::Solver or ATO::Solver problems, 
+  // ... as they handle this themselves
+  std::string solution_method = appParams->sublist("Problem").get("Solution Method", "Steady");
+  if (solution_method != "QCAD Multi-Problem" &&
+      solution_method != "ATO Problem" ) {  
     RCP<ParameterList> defaultSolverParams = rcp(new ParameterList());
     setSolverParamDefaults(defaultSolverParams.get(), tcomm->getRank());
     appParams->setParametersNotAlreadySet(*defaultSolverParams);
@@ -163,8 +166,11 @@ Albany::SolverFactory::SolverFactory(
 {
   RCP<Teuchos::Comm<int> > tcomm = Albany::createTeuchosCommFromMpiComm(mcomm);
 
-  //do not set default solver parameters for QCAD::Solver problems, as it handles this itself
-  if (appParams->sublist("Problem").get("Solution Method", "Steady") != "QCAD Multi-Problem") {  
+  // do not set default solver parameters for QCAD::Solver or ATO::Solver problems, 
+  // ... as they handle this themselves
+  std::string solution_method = appParams->sublist("Problem").get("Solution Method", "Steady");
+  if (solution_method != "QCAD Multi-Problem" &&
+      solution_method != "ATO Problem" ) {  
     RCP<ParameterList> defaultSolverParams = rcp(new ParameterList());
     setSolverParamDefaults(defaultSolverParams.get(), tcomm->getRank());
     appParams->setParametersNotAlreadySet(*defaultSolverParams);
@@ -266,6 +272,30 @@ Albany::SolverFactory::createAndGetAlbanyApp(
 #endif /* ALBANY_ATO */
     }
 
+    if (solutionMethod == "ATO Elasticity") {
+#ifdef ALBANY_ATO
+/*
+      const RCP<ATO::Elasticity> ps_model = rcp(new ATO::Elasticity(appParams, solverComm, initial_guess));
+      const RCP<ParameterList> piroParams = Teuchos::sublist(appParams, "Piro");
+
+      // Create and setup the Piro solver factory
+      Piro::Epetra::SolverFactory piroFactory;
+      {
+        // Do we need: Observers for output from time-stepper ??
+        const RCP<Piro::ProviderBase<NOX::Epetra::Observer> > noxObserverProvider =
+          rcp(new QCAD::CoupledPS_NOXObserverConstructor(ps_model));
+          //  rcp(new NOXObserverConstructor(poisson_app));
+        piroFactory.setSource<NOX::Epetra::Observer>(noxObserverProvider);
+
+        // LOCA auxiliary objects -- needed?
+      }
+      return piroFactory.createSolver(piroParams, ps_model);
+*/
+#else /* ALBANY_QCAD */
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "Must activate QCAD\n");
+#endif /* ALBANY_QCAD */
+    }
+
     // Solver uses a single app, create it here along with observer
     RCP<Albany::Application> app;
     const RCP<EpetraExt::ModelEvaluator> model = createAlbanyAppAndModel(app, appComm, initial_guess);
@@ -343,8 +373,11 @@ Albany::SolverFactory::createThyraSolverAndGetAlbanyApp(
     const RCP<Thyra::LinearOpWithSolveFactoryBase<double> > lowsFactory =
       createLinearSolveStrategy(linearSolverBuilder);
 
-    if (solutionMethod == "QCAD Multi-Problem" || solutionMethod == "QCAD Poisson-Schrodinger") {
-       // These QCAD solvers do not contain a primary Albany::Application instance and so albanyApp is null.
+    if ( solutionMethod == "QCAD Multi-Problem" || 
+         solutionMethod == "QCAD Poisson-Schrodinger" ||
+         solutionMethod == "ATO Problem" ||
+         solutionMethod == "ATO Elasticity" ) {
+       // These QCAD and ATO solvers do not contain a primary Albany::Application instance and so albanyApp is null.
        // For now, do not resize the response vectors. FIXME sort out this issue.
        const RCP<Thyra::ModelEvaluator<double> > thyraModel = Thyra::epetraModelEvaluator(model, lowsFactory);
        const RCP<Piro::ObserverBase<double> > observer = rcp(new PiroObserver(app));
@@ -364,7 +397,8 @@ Albany::SolverFactory::createThyraSolverAndGetAlbanyApp(
 
   if ( solutionMethod == "QCAD Multi-Problem" ||
        solutionMethod == "QCAD Poisson-Schrodinger" ||
-       solutionMethod == "ATO Problem" ) {
+       solutionMethod == "ATO Problem" ||
+       solutionMethod == "ATO Elasticity" ) {
     return Thyra::epetraModelEvaluator(epetraSolver, Teuchos::null);
   }
   else {
