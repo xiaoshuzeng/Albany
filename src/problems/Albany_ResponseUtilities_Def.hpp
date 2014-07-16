@@ -24,6 +24,9 @@
 #ifdef ALBANY_LCM
 #include "IPtoNodalField.hpp"
 #endif
+#ifdef ALBANY_AERAS
+#include "Aeras_ResponseL2Error.hpp"
+#endif
 
 template<typename EvalT, typename Traits>
 Albany::ResponseUtilities<EvalT,Traits>::ResponseUtilities(
@@ -140,6 +143,17 @@ Albany::ResponseUtilities<EvalT,Traits>::constructResponses(
     response_tag = res_ev->getResponseFieldTag();
     fm.requireField<EvalT>(*(res_ev->getEvaluatedFieldTag()));
   }
+  
+#ifdef ALBANY_AERAS
+  else if (responseName == "Aeras L2 Error")
+  {
+    RCP<Aeras::ResponseL2Error<EvalT,Traits> > res_ev =
+      rcp(new Aeras::ResponseL2Error<EvalT,Traits>(*p, dl));
+    fm.template registerEvaluator<EvalT>(res_ev);
+    response_tag = res_ev->getResponseFieldTag();
+    fm.requireField<EvalT>(*(res_ev->getEvaluatedFieldTag()));
+  }
+#endif
 
   else if (responseName == "Element Size Field")
   {

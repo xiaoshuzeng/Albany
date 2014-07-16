@@ -19,6 +19,10 @@
       <Parameter name="Response 0" type="string" value="Solution Average"/>
       <Parameter name="Response 1" type="string" value="Solution Max Value"/>
       <Parameter name="Response 2" type="string" value="Solution Two Norm"/>
+      <Parameter name="Response 3" type="string" value="Aeras L2 Error"/>
+        <ParameterList name="ResponseParams 3">
+          <Parameter name="Field Name" type="string" value="Flow State"/>
+        </ParameterList>
     </ParameterList>
     <ParameterList name="Parameters">
       <Parameter name="Number" type="int" value="0"/>
