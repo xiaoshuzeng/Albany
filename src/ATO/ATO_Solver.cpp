@@ -321,6 +321,14 @@ ATO::Solver::createElasticityInputFile( const Teuchos::RCP<Teuchos::ParameterLis
 
   physics_probParams.setParameters(physics_subList);
 
+  // Discretization sublist processing
+  Teuchos::ParameterList& discList = appParams->sublist("Discretization");
+  Teuchos::ParameterList& physics_discList = physics_appParams->sublist("Discretization", false);
+  physics_discList.setParameters(discList);
+  if(exoOutputFile.length() > 0)
+    physics_discList.set("Exodus Output File Name",exoOutputFile);
+  else physics_discList.remove("Exodus Output File Name",false);
+
   return physics_appParams;
 
 }
