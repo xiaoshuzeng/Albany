@@ -52,7 +52,7 @@ namespace ATO {
 
     std::string defaultSubSolver;
     std::string problemNameBase;
-    std::map<std::string, Teuchos::RCP<Teuchos::ParameterList> > subProblemAppParams;
+    Teuchos::RCP<Teuchos::ParameterList> subProblemAppParams;
 
     Teuchos::RCP<const Epetra_Comm> _solverComm;
     Teuchos::RCP<Teuchos::ParameterList> _mainAppParams;
@@ -70,7 +70,6 @@ namespace ATO {
     Teuchos::RCP<Teuchos::ParameterList>
     createElasticityInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appParams,
                                int numDims,
-                               const std::string& specialProcessing,
                                const std::string& exoOutputFile ) const;
 
 

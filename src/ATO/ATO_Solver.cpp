@@ -61,15 +61,18 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
 
   // Create Solver parameter lists based on problem name
   if( problemNameBase == "Elasticity" ) {
-    subProblemAppParams["Elasticity"] = createElasticityInputFile( appParams, 
-                                                                   numDims, 
-                                                                   "none",
-                                                                   outputExo );
+    subProblemAppParams = createElasticityInputFile(appParams, 
+                                                    numDims, 
+                                                    outputExo );
     defaultSubSolver = "Elasticity";
   }
-  else TEUCHOS_TEST_FOR_EXCEPTION(true, Teuchos::Exceptions::InvalidParameter,
+  else TEUCHOS_TEST_FOR_EXCEPTION(true, 
+                                  Teuchos::Exceptions::InvalidParameter,
 				  std::endl << "Error in ATO::Solver constructor:  " <<
-				  "Invalid problem name base: " << problemNameBase << std::endl);
+				  "\n\tInvalid problem name: " << problemNameBase << 
+                                  "\n\tValid names are:" <<
+                                  "\n\t\tElasticity" <<
+                                  std::endl);
 
   // Get and set the default Piro parameters from a file, if given
   std::string piroFilename  = problemParams.get<std::string>("Piro Defaults Filename", "");
@@ -83,27 +86,15 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   }
 
   //Save the initial guess passed to the solver
-//TEV  saved_initial_guess = initial_guess;
+  //TEV  saved_initial_guess = initial_guess;
 
-  //Temporarily create a map of sub-solvers, used for obtaining the initial parameter vector and 
-  //   for figuring out what types of derivatives are supported.
-  std::map<std::string, SolverSubSolverData> subSolversData;
-  std::map<std::string, Teuchos::RCP<Teuchos::ParameterList> >::const_iterator itp;
-  for(itp = subProblemAppParams.begin(); itp != subProblemAppParams.end(); ++itp) {
-    const std::string& name = itp->first;
-    const Teuchos::RCP<Teuchos::ParameterList>& param_list = itp->second;
-    const SolverSubSolver& sub = CreateSubSolver( param_list , *comm);
+  SolverSubSolverData subSolversData;
+  const SolverSubSolver& sub = CreateSubSolver( subProblemAppParams, *comm);
+  subSolversData = CreateSubSolverData( sub );
 
-    subSolversData[ name ] = CreateSubSolverData( sub );
-
-    // Create Epetra map for solution vector (second response vector).  Assume 
-    //  each subSolver has the same map, so just get the first one.
-    if(itp == subProblemAppParams.begin()) {
-      Teuchos::RCP<const Epetra_Map> sub_x_map = sub.app->getMap();
-      TEUCHOS_TEST_FOR_EXCEPT( sub_x_map == Teuchos::null );
-      _epetra_x_map = Teuchos::rcp(new Epetra_Map( *sub_x_map ));
-    }    
-  }
+  Teuchos::RCP<const Epetra_Map> sub_x_map = sub.app->getMap();
+  TEUCHOS_TEST_FOR_EXCEPT( sub_x_map == Teuchos::null );
+  _epetra_x_map = Teuchos::rcp(new Epetra_Map( *sub_x_map ));
 
 #ifndef EPETRA_NO_32BIT_GLOBAL_INDICES
   typedef int GlobalIndex;
@@ -151,14 +142,22 @@ ATO::Solver::getValidProblemParameters() const
 {
   Teuchos::RCP<Teuchos::ParameterList> validPL = Teuchos::createParameterList("ValidTopologicalOptimizationProblemParams");
 
-  validPL->set<std::string>( "Name", "", "String to designate Problem");
-  validPL->set<bool>( "Verbose Output", false, "Enable detailed output mode");
-  validPL->set<std::string>( "Piro Defaults Filename", "", "An xml file containing a default Piro parameterlist and its sublists");
+  // Basic set-up
+  validPL->set<std::string>("Name", "", "String to designate Problem");
+  validPL->set<bool>("Verbose Output", false, "Enable detailed output mode");
+  validPL->set<std::string>("Name", "", "String to designate Problem");
 
-  validPL->sublist("Elasticity Problem", false, "");
+  // Specify physics problem
+  validPL->sublist("Physics Problem", false, "");
 
+  // Physics solver options
+  validPL->set<std::string>("Piro Defaults Filename", "", "An xml file containing a default Piro parameterlist and its sublists");
 
-  // Candidates for deprecation. Pertain to the solution rather than the problem definition.
+  // Optimization options
+  validPL->set<int>("Optimization Maximum Iterations",1,"Maximum optimization iterations");
+  validPL->set<double>("Optimization Iterative Tolerance",1.e-7,"Tolerance for topological optimization step");
+
+  // Candidate for deprecation.
   validPL->set<std::string>("Solution Method", "Steady", "Flag for Steady, Transient, or Continuation");
 
   return validPL;
@@ -305,144 +304,22 @@ ATO::Solver::CreateSubSolverData(const ATO::SolverSubSolver& sub) const
 Teuchos::RCP<Teuchos::ParameterList> 
 ATO::Solver::createElasticityInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appParams,
                                         int numDims, 
-                                        const std::string& specialProcessing,
                                         const std::string& exoOutputFile ) const
 {   
 
-  Teuchos::ParameterList& physics_problemParams = appParams->sublist("Problem");
-    
   // Get physics (pde) problem sublists
-  Teuchos::ParameterList& physics_subList = physics_problemParams.sublist("Elasticity Problem", false);
-   
+  Teuchos::ParameterList& physics_subList = appParams->sublist("Problem").sublist("Physics Problem", false);
+
   // Create input parameter list for physics app which mimics a separate input file
   Teuchos::RCP<Teuchos::ParameterList> physics_appParams =
-    Teuchos::createParameterList("Elasticity Subapplication Parameters - " + specialProcessing);
+    Teuchos::createParameterList("Elasticity Subapplication Parameters");
   Teuchos::ParameterList& physics_probParams = physics_appParams->sublist("Problem",false);
-
-
-  physics_probParams.set("Solution Method", "ATO Elasticity");
+  
   std::ostringstream name;
   name << "Elasticity " << numDims << "D";
   physics_probParams.set("Name", name.str());
 
-/*TEV
-  poisson_probParams.set("Name", QCAD::strdim("Poisson",numDims));
-  poisson_probParams.set("Phalanx Graph Visualization Detail", vizDetail);
-  poisson_probParams.set("Length Unit In Meters",lenUnit);
-  poisson_probParams.set("Energy Unit In Electron Volts",energyUnit);
-  poisson_probParams.set("MaterialDB Filename", matrlFile);
-  if(Temp >= 0) poisson_probParams.set("Temperature",Temp);
-
-  // Poisson Source sublist processing
-  {
-    Teuchos::ParameterList auto_sourceList;
-    auto_sourceList.set("Factor",1.0);
-    auto_sourceList.set("Device","elementblocks");
-
-    if(specialProcessing == "initial poisson") {
-      auto_sourceList.set("Quantum Region Source", "semiclassical");
-      auto_sourceList.set("Non Quantum Region Source", "semiclassical");
-
-    } else if (specialProcessing == "couple to schrodinger") {
-      auto_sourceList.set("Quantum Region Source", "schrodinger");
-      auto_sourceList.set("Non Quantum Region Source", bQBOnly ? "semiclassical" : "schrodinger");
-      auto_sourceList.set("Eigenvectors to Import", nEigen);
-      auto_sourceList.set("Eigenvectors are Real", bRealEvecs);
-      auto_sourceList.set("Use predictor-corrector method", bUsePCMethod);
-      auto_sourceList.set("Include exchange-correlation potential", bXCPot);
-      auto_sourceList.set("Fixed Quantum Occupation", fixedPSOcc);
-
-    } else if (specialProcessing == "Coulomb") {
-      auto_sourceList.set("Quantum Region Source", "coulomb");
-      auto_sourceList.set("Non Quantum Region Source", "none");
-      auto_sourceList.set("Imaginary Part of Coulomb Source", false);
-      auto_sourceList.set("Eigenvectors to Import", nEigen);
-      auto_sourceList.set("Eigenvectors are Real", bRealEvecs);
-
-    } else if (specialProcessing != "none")
-      TEUCHOS_TEST_FOR_EXCEPTION( true, Teuchos::Exceptions::InvalidParameter,
-                                  "Invalid special processing for Elasticity input: " << specialProcessing);
-
-    Teuchos::ParameterList& sourceList = poisson_probParams.sublist("Poisson Source", false);
-    if(poisson_subList.isSublist("Poisson Source"))
-      sourceList.setParameters( poisson_subList.sublist("Poisson Source") );
-    sourceList.setParametersNotAlreadySet( auto_sourceList );
-  }
-
-  // Permittivity sublist processing
-  {
-    Teuchos::ParameterList auto_permList;
-    auto_permList.set("Permittivity Type","Block Dependent");
-
-    Teuchos::ParameterList& permList = poisson_probParams.sublist("Permittivity", false);
-    if(poisson_subList.isSublist("Permittivity"))
-      permList.setParameters( poisson_subList.sublist("Permittivity") );
-    permList.setParametersNotAlreadySet( auto_permList );
-  }
-
-
-  // Dirichlet BC sublist processing
-  if(poisson_subList.isSublist("Dirichlet BCs")) {
-    Teuchos::ParameterList& poisson_dbcList = poisson_probParams.sublist("Dirichlet BCs", false);
-    poisson_dbcList.setParameters(poisson_subList.sublist("Dirichlet BCs"));
-  }
-  else if(schro_subList.isSublist("Dirichlet BCs")) {
-    Teuchos::ParameterList& poisson_dbcList = poisson_probParams.sublist("Dirichlet BCs", false);
-    const Teuchos::ParameterList& schro_dbcList = schro_subList.sublist("Dirichlet BCs");
-    Teuchos::ParameterList::ConstIterator it; double* dummy = NULL;
-    for(it = schro_dbcList.begin(); it != schro_dbcList.end(); ++it) {
-      std::string dbcName = schro_dbcList.name(it);
-      std::size_t k = dbcName.find("psi");
-      if( k != std::string::npos ) {
-        dbcName.replace(k, 3, "Phi");  // replace Phi -> psi
-        poisson_dbcList.set( dbcName, schro_dbcList.entry(it).getValue(dummy) ); //copy all schrodinger DBCs
-      }
-    }
-  }
-
-  // Parameters sublist processing
-  if( specialProcessing == "Coulomb" || specialProcessing == "Coulomb imaginary" ) {
-    //! Add source eigenvector indices as parameters
-    Teuchos::ParameterList& paramList = poisson_probParams.sublist("Parameters", false);
-    if(poisson_subList.isSublist("Parameters"))
-      paramList.setParameters(poisson_subList.sublist("Parameters"));
-
-    int nParams = paramList.get<int>("Number", 0);
-    paramList.set("Number", nParams + 2); //assumes Source Eigenvector X are not already params
-    paramList.set(Albany::strint("Parameter",nParams), "Source Eigenvector 1");
-    paramList.set(Albany::strint("Parameter",nParams+1), "Source Eigenvector 2");
-  }
-  else if(specialProcessing == "couple to schrodinger" ) {
-    Teuchos::ParameterList& paramList = poisson_probParams.sublist("Parameters", false);
-    if(poisson_subList.isSublist("Parameters"))
-      paramList.setParameters(poisson_subList.sublist("Parameters"));
-
-    int nParams = paramList.get<int>("Number", 0);
-    paramList.set("Number", nParams + 1);
-    paramList.set(Albany::strint("Parameter",nParams), "Previous Quantum Density Mixing Factor");
-  }
-  else {
-    Teuchos::ParameterList& poisson_paramsList = poisson_probParams.sublist("Parameters", false);
-    if(poisson_subList.isSublist("Parameters"))
-      poisson_paramsList.setParameters(poisson_subList.sublist("Parameters"));
-    else poisson_paramsList.set("Number", 0);
-  }
-
-  // Initial Condition sublist processing: copy list from main problem if it exists
-  if(problemParams.isSublist("Initial Condition"))
-  {
-    Teuchos::ParameterList& icList = poisson_probParams.sublist("Initial Condition", false);
-    icList.setParameters( problemParams.sublist("Initial Condition") );
-  }
-
-  // Discretization sublist processing
-  Teuchos::ParameterList& discList = appParams->sublist("Discretization");
-  Teuchos::ParameterList& poisson_discList = poisson_appParams->sublist("Discretization", false);
-  poisson_discList.setParameters(discList);
-  if(exoOutputFile.length() > 0)
-    poisson_discList.set("Exodus Output File Name",exoOutputFile);
-  else poisson_discList.remove("Exodus Output File Name",false);
-TEV*/
+  physics_probParams.setParameters(physics_subList);
 
   return physics_appParams;
 
