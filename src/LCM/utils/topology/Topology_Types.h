@@ -53,6 +53,8 @@ using stk_classic::mesh::EntityRank;
 using stk_classic::mesh::EntityVector;
 using stk_classic::mesh::Field;
 using stk_classic::mesh::PairIterRelation;
+using stk_classic::mesh::Part;
+using stk_classic::mesh::PartVector;
 using stk_classic::mesh::Relation;
 using stk_classic::mesh::RelationVector;
 

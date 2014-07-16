@@ -5,57 +5,60 @@
 //*****************************************************************//
 
 #include "Teuchos_TestForException.hpp"
-#include "Teuchos_VerboseObject.hpp"
-#include "Teuchos_RCP.hpp"
 #include "Phalanx_DataLayout.hpp"
-#include "Sacado_ParameterRegistration.hpp"
 
 #include "Intrepid_FunctionSpaceTools.hpp"
-#include "Aeras_Layouts.hpp"
 
 namespace Aeras {
 
 //**********************************************************************
 template<typename EvalT, typename Traits>
-XZHydrostatic_DensityWeightedVelx<EvalT, Traits>::
-XZHydrostatic_DensityWeightedVelx(const Teuchos::ParameterList& p,
-              const Teuchos::RCP<Aeras::Layouts>& dl) :
-  density    (p.get<std::string> ("Density"),     dl->node_scalar_level),
-  velx       (p.get<std::string> ("Velx"),        dl->node_scalar_level),
-  dvelx      (p.get<std::string> ("DensityVelx"), dl->node_scalar_level),
-
+DOFInterpolationLevels<EvalT, Traits>::
+DOFInterpolationLevels(Teuchos::ParameterList& p,
+                 const Teuchos::RCP<Aeras::Layouts>& dl) :
+  val_node    (p.get<std::string>   ("Variable Name"), dl->node_scalar_level),
+  BF          (p.get<std::string>   ("BF Name"),       dl->node_qp_scalar),
+  val_qp      (p.get<std::string>   ("Variable Name"), dl->qp_scalar_level),
   numNodes   (dl->node_scalar             ->dimension(1)),
+  numQPs     (dl->node_qp_scalar          ->dimension(2)),
   numLevels  (dl->node_scalar_level       ->dimension(2))
 {
-  this->addDependentField(density);
-  this->addDependentField(velx);
+  this->addDependentField(val_node);
+  this->addDependentField(BF);
+  this->addEvaluatedField(val_qp);
 
-  this->addEvaluatedField(dvelx);
-  this->setName("Aeras::XZHydrostatic_Density"+PHX::TypeString<EvalT>::value);
+  this->setName("Aeras::DOFInterpolationLevels"+PHX::TypeString<EvalT>::value);
 }
 
 //**********************************************************************
 template<typename EvalT, typename Traits>
-void XZHydrostatic_DensityWeightedVelx<EvalT, Traits>::
+void DOFInterpolationLevels<EvalT, Traits>::
 postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& fm)
 {
-  this->utils.setFieldData(density,   fm);
-  this->utils.setFieldData(velx   ,   fm);
-  this->utils.setFieldData(dvelx  ,   fm);
+  this->utils.setFieldData(val_node,fm);
+  this->utils.setFieldData(BF,fm);
+  this->utils.setFieldData(val_qp,fm);
 }
 
 //**********************************************************************
 template<typename EvalT, typename Traits>
-void XZHydrostatic_DensityWeightedVelx<EvalT, Traits>::
+void DOFInterpolationLevels<EvalT, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
+  //Intrepid version:
+  // for (int i=0; i < val_qp.size() ; i++) val_qp[i] = 0.0;
+  // Intrepid::FunctionSpaceTools:: evaluate<ScalarT>(val_qp, val_node, BF);
   for (int cell=0; cell < workset.numCells; ++cell) {
-    for (int node=0; node < numNodes; ++node) {
+    for (int qp=0; qp < numQPs; ++qp) {
       for (int level=0; level < numLevels; ++level) {
-        dvelx(cell,node,level) = density(cell,node,level)*velx(cell,node,level);
+        ScalarT& vqp = val_qp(cell,qp,level) = 0;
+        for (int node=0; node < numNodes; ++node) {
+          vqp += val_node(cell, node, level) * BF(cell, node, qp);
+        }
       }
     }
   }
 }
 }
+

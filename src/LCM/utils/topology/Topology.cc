@@ -5,8 +5,10 @@
 //*****************************************************************//
 #include <boost/foreach.hpp>
 
+#include "stk_mesh/fem/FEMHelpers.hpp"
 #include "Subgraph.h"
 #include "Topology.h"
+#include "Topology_FractureCriterion.h"
 #include "Topology_Utils.h"
 
 namespace LCM {
@@ -77,7 +79,11 @@ Topology::Topology(
   probability = 0.01;
 
   setFractureCriterion(
-      Teuchos::rcp(new FractureCriterionRandom(probability))
+      Teuchos::rcp(new FractureCriterionRandom(
+          *this,
+          "bulk",
+          "interface",
+          probability))
   );
 
   // Create the full mesh representation. This must be done prior to
@@ -108,10 +114,23 @@ Topology(RCP<Albany::AbstractDiscretization> & discretization) :
   probability = 0.1;
 
   setFractureCriterion(
-      Teuchos::rcp(new FractureCriterionRandom(probability))
+      Teuchos::rcp(new FractureCriterionRandom(
+          *this,
+          "bulk",
+          "interface",
+          probability))
   );
 
   return;
+}
+
+//
+// Check fracture criterion
+//
+bool
+Topology::checkOpen(Entity const & e)
+{
+  return fracture_criterion_->check(e);
 }
 
 //
@@ -186,7 +205,7 @@ Topology::createDiscretization()
 //
 void Topology::graphInitialization()
 {
-  stk_classic::mesh::PartVector add_parts;
+  PartVector add_parts;
   stk_classic::mesh::create_adjacent_entities(*(getBulkData()), add_parts);
 
   getBulkData()->modification_begin();
@@ -457,15 +476,15 @@ Topology::getBoundaryEntityNodes(Entity const & boundary_entity)
 void
 Topology::createBoundary()
 {
-  stk_classic::mesh::Part &
-  boundary_part = *(getMetaData()->get_part("boundary"));
+  Part &
+  interface_part = *(getMetaData()->get_part("interface"));
 
-  stk_classic::mesh::PartVector
+  PartVector
   add_parts;
 
-  add_parts.push_back(&boundary_part);
+  add_parts.push_back(&interface_part);
 
-  stk_classic::mesh::PartVector const
+  PartVector const
   part_vector = getMetaData()->get_parts();
 
   for (size_t i = 0; i < part_vector.size(); ++i) {
@@ -787,7 +806,7 @@ Topology::createSurfaceElementConnectivity(
   both.reserve(top.size() + bottom.size());
 
   both.insert(both.end(), top.begin(), top.end());
-  both.insert(both.end(), bottom.begin(), bottom.end());
+  both.insert(both.end(), bottom.rbegin(), bottom.rend());
 
   return both;
 }
@@ -851,9 +870,12 @@ Topology::splitOpenFaces()
   std::set<EntityPair>
   fractured_faces;
 
+  BulkData &
+  bulk_data = *getBulkData();
+
   stk_classic::mesh::get_selected_entities(
       selector_owned,
-      getBulkData()->buckets(NODE_RANK),
+      bulk_data.buckets(NODE_RANK),
       points);
 
   // Collect open points
@@ -867,7 +889,7 @@ Topology::splitOpenFaces()
     }
   }
 
-  getBulkData()->modification_begin();
+  bulk_data.modification_begin();
 
   // Iterate over open points and fracture them.
   for (EntityVector::iterator i = open_points.begin();
@@ -988,7 +1010,7 @@ Topology::splitOpenFaces()
         new_face_key = subgraph.localToGlobal(new_face_vertex);
 
         Entity *
-        new_face = getBulkData()->get_entity(new_face_key);
+        new_face = bulk_data.get_entity(new_face_key);
 
         // Reset fracture state for both old and new faces
         setFractureState(*face, CLOSED);
@@ -1092,18 +1114,32 @@ Topology::splitOpenFaces()
         j != new_connectivity.end(); ++j) {
 
       Entity &
-      new_node = *((*j).second);
+      new_point = *((*j).second);
 
-      getBulkData()->copy_entity_fields(point, new_node);
+      bulk_data.copy_entity_fields(point, new_point);
     }
 
   }
 
-  getBulkData()->modification_end();
+  bulk_data.modification_end();
 
-  getBulkData()->modification_begin();
+  bulk_data.modification_begin();
 
-  // Create the cohesive connectivity
+  EntityRank const
+  interface_rank = getCellRank() - 1;
+
+  Part &
+  interface_part = fracture_criterion_->getInterfacePart();
+
+  PartVector
+  interface_parts_vector;
+
+  interface_parts_vector.push_back(&interface_part);
+
+  EntityId
+  new_id = getNumberEntitiesByRank(bulk_data, interface_rank);
+
+  // Create the interface connectivity
   for (std::set<EntityPair>::iterator i =
       fractured_faces.begin(); i != fractured_faces.end(); ++i) {
 
@@ -1111,13 +1147,15 @@ Topology::splitOpenFaces()
     Entity & face2 = *((*i).second);
 
     EntityVector
-    cohesive_connectivity = createSurfaceElementConnectivity(face1, face2);
+    interface_connectivity = createSurfaceElementConnectivity(face1, face2);
 
-    // TODO: Insert the surface element element
+    // Insert the surface element
+    bulk_data.declare_entity(interface_rank, new_id, interface_parts_vector);
 
+    ++new_id;
   }
 
-  getBulkData()->modification_end();
+  bulk_data.modification_end();
   return;
 }
 
@@ -1341,6 +1379,27 @@ Topology::outputToGraphviz(
   gviz_out.close();
 
   return;
+}
+
+//
+// \brief This returns the number of entities of a given rank
+//
+EntityVector::size_type
+Topology::getNumberEntitiesByRank(
+    BulkData const & bulk_data,
+    EntityRank entity_rank)
+{
+  std::vector<Bucket*>
+  buckets = bulk_data.buckets(entity_rank);
+
+  EntityVector::size_type
+  number_entities = 0;
+
+  for (EntityVector::size_type i = 0; i < buckets.size(); ++i) {
+    number_entities += buckets[i]->size();
+  }
+
+  return number_entities;
 }
 
 } // namespace LCM

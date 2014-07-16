@@ -11,10 +11,12 @@
 #include <stk_mesh/base/FieldData.hpp>
 
 #include "Topology_Types.h"
-#include "Topology_FractureCriterion.h"
 #include "Topology_Utils.h"
 
 namespace LCM {
+
+// Forward declaration
+class AbstractFractureCriterion;
 
 class Topology {
 public:
@@ -256,7 +258,7 @@ public:
   /// \brief Number of entities of a specific rank
   ///
   EntityVector::size_type
-  getNumberEntitiesByRank(BulkData const & mesh, EntityRank entity_rank);
+  getNumberEntitiesByRank(BulkData const & bulk_date, EntityRank entity_rank);
 
   ///
   /// \brief Gets the local relation id (0,1,2,...) between two entities
@@ -661,11 +663,11 @@ public:
     return isInternal(e) == true && isOpen(e) == true;
   }
 
+  ///
+  /// Check fracture criterion
+  ///
   bool
-  checkOpen(Entity const & e)
-  {
-    return fracture_criterion_->check(e);
-  }
+  checkOpen(Entity const & e);
 
   ///
   /// Initialization of the open field for fracture

@@ -104,6 +104,105 @@ Albany::GenericSTKMeshStruct::~GenericSTKMeshStruct()
   delete bulkData;
 }
 
+#ifdef ALBANY_LCM
+
+namespace shards {
+
+namespace {
+
+CellTopology
+interfaceCellTopogyFromBulkCellTopogy(
+    CellTopology const & bulk_cell_topology
+)
+{
+  CellTopology
+  interface_cell_topology;
+
+  std::string const &
+  bulk_cell_topology_name = bulk_cell_topology.getName();
+
+  if (bulk_cell_topology_name == "Triangle_3") {
+    interface_cell_topology = CellTopology(getCellTopologyData<Quadrilateral<4> >());
+  } else if (bulk_cell_topology_name == "Quadrilateral_4") {
+    interface_cell_topology = CellTopology(getCellTopologyData<Quadrilateral<4> >());
+  } else if (bulk_cell_topology_name == "Tetrahedron_4") {
+    interface_cell_topology = CellTopology(getCellTopologyData<Wedge<6> >());
+  } else if (bulk_cell_topology_name == "Hexahedron_8") {
+    interface_cell_topology = CellTopology(getCellTopologyData<Hexahedron<8> >());
+  } else {
+    TEUCHOS_TEST_FOR_EXCEPTION(
+      false,
+      std::logic_error,
+      "LogicError: Interface cell topology not implemented for:" <<
+      bulk_cell_topology_name << std::endl
+    );
+  }
+
+  return interface_cell_topology;
+}
+
+} // anonymous namespace
+
+} // namespace shards
+
+namespace {
+
+void createInterfaceParts(
+    Teuchos::RCP<Teuchos::ParameterList> const & adapt_params,
+    stk_classic::mesh::fem::FEMMetaData & fem_meta_data
+)
+{
+  bool const
+  do_adaption = adapt_params.is_null() == false;
+
+  if (do_adaption == false) return;
+
+  std::string const &
+  adaption_method_name = adapt_params->get<std::string>("Method");
+
+  bool const
+  is_topology_modification = adaption_method_name == "Topmod";
+
+  if (is_topology_modification == false) return;
+
+  std::string const &
+  bulk_part_name = adapt_params->get<std::string>("Bulk Block Name");
+
+  stk_classic::mesh::Part &
+  bulk_part = *(fem_meta_data.get_part(bulk_part_name));
+
+  shards::CellTopology const &
+  bulk_cell_topology = fem_meta_data.get_cell_topology(bulk_part);
+
+  std::string const &
+  interface_part_name(adapt_params->get<std::string>("Interface Block Name"));
+
+  shards::CellTopology const
+  interface_cell_topology =
+      shards::interfaceCellTopogyFromBulkCellTopogy(bulk_cell_topology);
+
+  stk_classic::mesh::EntityRank const
+  interface_dimension = interface_cell_topology.getDimension();
+
+  stk_classic::mesh::Part &
+  interface_part =
+      fem_meta_data.declare_part(interface_part_name, interface_dimension);
+
+  stk_classic::mesh::fem::set_cell_topology(
+      interface_part, interface_cell_topology
+  );
+
+#ifdef ALBANY_SEACAS
+  stk_classic::io::put_io_part_attribute(interface_part);
+#endif // ALBANY_SEACAS
+
+  return;
+}
+
+} // anonymous namespace
+
+#endif //ALBANY_LCM
+
 void Albany::GenericSTKMeshStruct::SetupFieldData(
 		  const Teuchos::RCP<const Epetra_Comm>& comm,
                   const int neq_,
@@ -125,14 +224,8 @@ void Albany::GenericSTKMeshStruct::SetupFieldData(
                           Albany::getMpiCommFromEpetraComm(*comm), worksetSize );
 
 #ifdef ALBANY_LCM
-  // If adaptation in LCM, create a new part for boundary
-  if (adaptParams.is_null() == false) {
-    stk_classic::mesh::Part &
-    boundary_part = metaData->declare_part("boundary");
-#ifdef ALBANY_SEACAS
-    stk_classic::io::put_io_part_attribute(boundary_part);
-#endif
-  }
+  // If adaptation in LCM, create a new part for interface elements
+  createInterfaceParts(adaptParams, *metaData);
 #endif // ALBANY_LCM
 
   // Build the container for the STK fields
