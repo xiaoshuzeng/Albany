@@ -82,7 +82,7 @@ public:
   getBulkPart() {return bulk_part_;}
 
   stk_classic::mesh::Part &
-  getInterfacePart() {return bulk_part_;}
+  getInterfacePart() {return interface_part_;}
 
 protected:
 

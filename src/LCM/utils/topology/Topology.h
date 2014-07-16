@@ -151,12 +151,6 @@ public:
   outputBoundary(std::string const & output_filename);
 
   ///
-  /// \brief Create boundary mesh
-  ///
-  void
-  createBoundary();
-
-  ///
   /// \brief Get a connectivity list of the boundary
   ///
   std::vector<std::vector<EntityId> >
@@ -610,6 +604,24 @@ public:
   RCP<AbstractFractureCriterion> &
   getFractureCriterion()
   {return fracture_criterion_;}
+
+  Part &
+  getFractureBulkPart();
+
+  Part &
+  getFractureInterfacePart();
+
+  Part &
+  getLocalPart()
+  {return getMetaData()->locally_owned_part();}
+
+  Selector
+  getLocalBulkSelector()
+  {return Selector(getLocalPart() & getFractureBulkPart());}
+
+  Selector
+  getLocalInterfaceSelector()
+  {return Selector(getLocalPart() & getFractureInterfacePart());}
 
   bool
   isLocalEntity(Entity const & e)

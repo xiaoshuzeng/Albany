@@ -57,6 +57,7 @@ using stk_classic::mesh::Part;
 using stk_classic::mesh::PartVector;
 using stk_classic::mesh::Relation;
 using stk_classic::mesh::RelationVector;
+using stk_classic::mesh::Selector;
 
 using Teuchos::RCP;
 

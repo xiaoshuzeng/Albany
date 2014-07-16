@@ -36,14 +36,8 @@ beta_(beta)
 bool
 FractureCriterionTraction::check(Entity const & interface)
 {
-  // Check first whether this interface is in the relevant block
-  stk_classic::mesh::Bucket const &
-  interface_bucket = interface.bucket();
-
-  //if (interface_bucket.member(interface_part_) == false) return false;
-
-  // Now check the adjacent bulk elements. Proceed if at least
-  // one is part of the bulk block.
+  // Check the adjacent bulk elements. Proceed only
+  // if both elements belong to the bulk part.
   stk_classic::mesh::PairIterRelation const
   relations_up = relations_one_up(interface);
 

@@ -140,8 +140,8 @@ Topology::checkOpen(Entity const & e)
 void
 Topology::initializeFractureState()
 {
-  stk_classic::mesh::Selector
-  local_selector = getMetaData()->locally_owned_part();
+  Selector
+  local_part = getLocalPart();
 
   for (EntityRank rank = NODE_RANK; rank < getCellRank(); ++rank) {
 
@@ -151,7 +151,7 @@ Topology::initializeFractureState()
     EntityVector
     entities;
 
-    stk_classic::mesh::get_selected_entities(local_selector, buckets, entities);
+    stk_classic::mesh::get_selected_entities(local_part, buckets, entities);
 
     for (EntityVector::size_type i = 0; i < entities.size(); ++i) {
 
@@ -181,8 +181,8 @@ Topology::createDiscretization()
 
   // Get the topology of the elements. NOTE: Assumes one element
   // type in mesh.
-  stk_classic::mesh::Selector
-  local_selector = getMetaData()->locally_owned_part();
+  Selector
+  local_selector = getLocalPart();
 
   std::vector<Bucket*> const &
   buckets = getBulkData()->buckets(getCellRank());
@@ -471,86 +471,12 @@ Topology::getBoundaryEntityNodes(Entity const & boundary_entity)
 }
 
 //
-// Create boundary mesh
-//
-void
-Topology::createBoundary()
-{
-  Part &
-  interface_part = *(getMetaData()->get_part("interface"));
-
-  PartVector
-  add_parts;
-
-  add_parts.push_back(&interface_part);
-
-  PartVector const
-  part_vector = getMetaData()->get_parts();
-
-  for (size_t i = 0; i < part_vector.size(); ++i) {
-    std::cout << part_vector[i]->name() << '\n';
-  }
-
-  EntityRank const
-  boundary_entity_rank = getCellRank() - 1;
-
-  stk_classic::mesh::Selector
-  local_selector = getMetaData()->locally_owned_part();
-
-  std::vector<Bucket*> const &
-  buckets = getBulkData()->buckets(boundary_entity_rank);
-
-  EntityVector
-  entities;
-
-  stk_classic::mesh::get_selected_entities(local_selector, buckets, entities);
-
-  getBulkData()->modification_begin();
-  for (EntityVector::size_type i = 0; i < entities.size(); ++i) {
-
-    Entity &
-    entity = *(entities[i]);
-
-    PairIterRelation
-    relations = relations_one_up(entity);
-
-    size_t const
-    number_connected_cells = std::distance(relations.begin(), relations.end());
-
-    switch (number_connected_cells) {
-
-    default:
-      std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
-      std::cerr << '\n';
-      std::cerr << "Invalid number of connected cells: ";
-      std::cerr << number_connected_cells;
-      std::cerr << '\n';
-      exit(1);
-      break;
-
-    case 1:
-      getBulkData()->change_entity_parts(entity, add_parts);
-      break;
-
-    case 2:
-      // Internal face, do nothing.
-      break;
-
-    }
-
-  }
-  getBulkData()->modification_end();
-
-  return;
-}
-
-//
 // Get nodal coordinates
 //
 std::vector<Intrepid::Vector<double> >
 Topology::getNodalCoordinates()
 {
-  stk_classic::mesh::Selector
+  Selector
   local_selector = getMetaData()->locally_owned_part();
 
   std::vector<Bucket*> const &
@@ -718,8 +644,8 @@ Topology::getBoundary()
   EntityRank const
   boundary_entity_rank = getCellRank() - 1;
 
-  stk_classic::mesh::Selector
-  local_selector = getMetaData()->locally_owned_part();
+  Selector
+  local_part = getLocalPart();
 
   std::vector<Bucket*> const &
   buckets = getBulkData()->buckets(boundary_entity_rank);
@@ -727,7 +653,7 @@ Topology::getBoundary()
   EntityVector
   entities;
 
-  stk_classic::mesh::get_selected_entities(local_selector, buckets, entities);
+  stk_classic::mesh::get_selected_entities(local_part, buckets, entities);
 
   std::vector<std::vector<EntityId> >
   connectivity;
@@ -864,8 +790,8 @@ Topology::splitOpenFaces()
   EntityVector
   open_points;
 
-  stk_classic::mesh::Selector
-  selector_owned = getMetaData()->locally_owned_part();
+  Selector
+  local_bulk = getLocalBulkSelector();
 
   std::set<EntityPair>
   fractured_faces;
@@ -874,7 +800,7 @@ Topology::splitOpenFaces()
   bulk_data = *getBulkData();
 
   stk_classic::mesh::get_selected_entities(
-      selector_owned,
+      local_bulk,
       bulk_data.buckets(NODE_RANK),
       points);
 
@@ -1125,8 +1051,9 @@ Topology::splitOpenFaces()
 
   bulk_data.modification_begin();
 
+  // Same rank as bulk cells!
   EntityRank const
-  interface_rank = getCellRank() - 1;
+  interface_rank = getCellRank();
 
   Part &
   interface_part = fracture_criterion_->getInterfacePart();
@@ -1137,7 +1064,7 @@ Topology::splitOpenFaces()
   interface_parts_vector.push_back(&interface_part);
 
   EntityId
-  new_id = getNumberEntitiesByRank(bulk_data, interface_rank);
+  new_id = getNumberEntitiesByRank(bulk_data, interface_rank) + 1;
 
   // Create the interface connectivity
   for (std::set<EntityPair>::iterator i =
@@ -1168,11 +1095,11 @@ Topology::setEntitiesOpen()
   EntityVector
   boundary_entities;
 
-  stk_classic::mesh::Selector
-  select_owned = getMetaData()->locally_owned_part();
+  Selector
+  local_bulk = getLocalBulkSelector();
 
   stk_classic::mesh::get_selected_entities(
-      select_owned,
+      local_bulk,
       getBulkData()->buckets(getBoundaryRank()) ,
       boundary_entities);
 
@@ -1400,6 +1327,19 @@ Topology::getNumberEntitiesByRank(
   }
 
   return number_entities;
+}
+
+
+Part &
+Topology::getFractureBulkPart()
+{
+  return fracture_criterion_->getBulkPart();
+}
+
+Part &
+Topology::getFractureInterfacePart()
+{
+  return fracture_criterion_->getInterfacePart();
 }
 
 } // namespace LCM
