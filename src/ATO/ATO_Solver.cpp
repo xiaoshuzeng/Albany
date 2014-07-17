@@ -321,7 +321,13 @@ ATO::Solver::evalModel(const InArgs& inArgs,
   if(_is_verbose)
     *out << "Well, got here at least ... ATO Loop" << std::endl;
  
-  // get physics solver...
+  const SolverSubSolver& sub = CreateSubSolver( subProblemAppParams, *_solverComm);
+
+  const SolverSubSolver& physics_solver = CreateSubSolver( subProblemAppParams, *_solverComm);  
+//TEV what is this   fillSingleSubSolverParams(inArgs, "Poisson", subSolvers[ "InitPoisson" ], 1)
+  physics_solver.model->evalModel((*physics_solver.params_in),(*physics_solver.responses_out));
+
+  return;
 }
 
 

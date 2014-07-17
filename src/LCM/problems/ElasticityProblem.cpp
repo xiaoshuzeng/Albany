@@ -190,6 +190,12 @@ Albany::ElasticityProblem::getValidProblemParameters() const
 
   validPL->set<bool>("Compute Error", false, "");
 
+//TEV for topological optimization. First pass to evaluate sets
+// ... these so on second pass they need to be here to validate
+  validPL->set<bool>("avgJ", false, "");
+  validPL->set<bool>("volavgJ", false, "");
+  validPL->set<bool>("weighted_Volume_Averaged_J", false, "");
+
   if (matModel == "CapExplicit"|| matModel == "CapImplicit")
   {
 	validPL->set<double>("A", false, "");
