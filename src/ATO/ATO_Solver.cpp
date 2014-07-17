@@ -177,28 +177,6 @@ Teuchos::RCP<const Epetra_Map> ATO::Solver::get_g_map(int j) const
   return Teuchos::null;
 }
 
-void 
-ATO::Solver::evalModel(const InArgs& inArgs,
-                       const OutArgs& outArgs ) const
-{
-  std::map<std::string, SolverSubSolver> subSolvers;
-  Teuchos::RCP<Teuchos::FancyOStream> out(Teuchos::VerboseObjectBase::getDefaultOStream());
-
-/*TEV
-  if( problemNameBase == "Elasticity" ) {
-      if(_is_verbose) *out << "ATO Solve: Elasticity" << std::endl;
-
-      //Create Poisson solver & fill its parameters
-      subSolvers[ "Elasticity" ] = CreateSubSolver( getSubSolverParams("Elasticity"), 
-                                                   *_solverComm, 
-                                                    0x0);
-      fillSingleSubSolverParams(inArgs, "Elasticity", subSolvers[ "Elasticity" ]);
-
-      ATO::SolveModel(subSolvers["Elasticity"]);
-  }
-TEV*/
-}
-
 ATO::SolverSubSolver
 ATO::Solver::CreateSubSolver( const Teuchos::RCP<Teuchos::ParameterList> appParams, 
                               const Epetra_Comm& comm,
@@ -331,6 +309,19 @@ ATO::Solver::createElasticityInputFile( const Teuchos::RCP<Teuchos::ParameterLis
 
   return physics_appParams;
 
+}
+
+void
+ATO::Solver::evalModel(const InArgs& inArgs,
+                       const OutArgs& outArgs ) const
+{
+
+  Teuchos::RCP<Teuchos::FancyOStream> out(Teuchos::VerboseObjectBase::getDefaultOStream());
+
+  if(_is_verbose)
+    *out << "Well, got here at least ... ATO Loop" << std::endl;
+ 
+  // get physics solver...
 }
 
 
