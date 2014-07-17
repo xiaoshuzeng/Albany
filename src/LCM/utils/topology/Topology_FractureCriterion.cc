@@ -38,7 +38,7 @@ FractureCriterionTraction::check(Entity const & interface)
 {
   // Check the adjacent bulk elements. Proceed only
   // if both elements belong to the bulk part.
-  stk_classic::mesh::PairIterRelation const
+  PairIterRelation const
   relations_up = relations_one_up(interface);
 
   assert(relations_up.size() == 2);
@@ -49,10 +49,10 @@ FractureCriterionTraction::check(Entity const & interface)
   Entity const &
   element_1 = *(relations_up[1].entity());
 
-  stk_classic::mesh::Bucket const &
+  Bucket const &
   bucket_0 = element_0.bucket();
 
-  stk_classic::mesh::Bucket const &
+  Bucket const &
   bucket_1 = element_1.bucket();
 
   bool const

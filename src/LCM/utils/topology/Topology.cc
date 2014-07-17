@@ -761,6 +761,8 @@ Topology::createStar(
     Entity &
     source = *(relation.entity());
 
+    if (isInterfaceCell(source) == true) continue;
+
     stkEdge
     edge;
 

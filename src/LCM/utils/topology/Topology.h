@@ -627,6 +627,22 @@ public:
   isLocalEntity(Entity const & e)
   {return getBulkData()->parallel_rank() == e.owner_rank();}
 
+  bool
+  isInBulk(Entity const & e)
+  {return e.bucket().member(getFractureBulkPart());}
+
+  bool
+  isBulkCell(Entity const & e)
+  {return (e.entity_rank() == getCellRank()) && isInBulk(e);}
+
+  bool
+  isInInterface(Entity const & e)
+  {return e.bucket().member(getFractureInterfacePart());}
+
+  bool
+  isInterfaceCell(Entity const & e)
+  {return (e.entity_rank() == getCellRank()) && isInInterface(e);}
+
   //
   // Set fracture state. Do nothing for cells (elements).
   //
