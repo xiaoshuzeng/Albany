@@ -43,6 +43,7 @@ namespace Aeras {
     //! Basis Functions
     PHX::MDField<RealType,Cell,Node,QuadPoint> BF;
     std::size_t numQPs, numDims, numNodes, vecDim;
+    int responseSize; //length of response vector; 3 for this response
 
     std::string refSolName; //name of reference solution
     enum REF_SOL_NAME {ZERO, TC2};

@@ -77,7 +77,7 @@ ShallowWaterResponseL2Error(Teuchos::ParameterList& p,
   //1.) The absolute error in the solution
   //2.) The norm of the reference solution.
   //3.) The relative error in the solution w.r.t. the reference solution.
-  int responseSize = 3; 
+  responseSize = 3; 
   Teuchos::RCP<PHX::DataLayout> local_response_layout = Teuchos::rcp(new MDALayout<Cell, Dim>(worksetSize, responseSize));
   Teuchos::RCP<PHX::DataLayout> global_response_layout = Teuchos::rcp(new MDALayout<Dim>(responseSize));
   PHX::Tag<ScalarT> local_response_tag(local_response_name, local_response_layout);
@@ -206,6 +206,8 @@ evaluateFields(typename Traits::EvalData workset)
    ScalarT err_sq = 0.0;
     ScalarT norm_ref_sq = 0.0;
     for (std::size_t cell=0; cell < workset.numCells; ++cell) {
+      this->local_response(cell,2) = 0.0;  
+      this->global_response(2) = 0.0; 
       for (std::size_t qp=0; qp < numQPs; ++qp) {
         for (std::size_t dim=0; dim < vecDim; ++dim) {
            //L^2 error squared w.r.t. flow_state_field_ref -- first component of global_response
@@ -235,6 +237,16 @@ postEvaluate(typename Traits::PostEvalData workset)
   Teuchos::RCP< Teuchos::ValueTypeSerializer<int,ScalarT> > serializer =
     workset.serializerManager.template getValue<EvalT>();
 
+
+  //perform reduction for each of the components of the response
+  //for (int i=0; i<responseSize; i++) {
+  std::cout << "size: " << this->global_response.size() << std::endl; 
+  Teuchos::reduceAll(
+      *workset.comm, *serializer, Teuchos::REDUCE_SUM,
+      this->global_response.size(), &this->global_response[0], 
+      &this->global_response[0]);
+   //}
+  
   ScalarT abs_err_sq = this->global_response[0];
   ScalarT norm_ref_sq = this->global_response[1];
   this-> global_response[0] = sqrt(abs_err_sq); //absolute error in solution w.r.t. reference solution.
@@ -244,14 +256,6 @@ postEvaluate(typename Traits::PostEvalData workset)
     *out << "Aeras::ShallowWaterResponseL2Error::postEvaluate WARNING: norm of reference solution is 0.  Aeras Shallow Water L2 Error response" <<
             "will report 'nan' or 'inf' for the relative error, so please look at the absolute error." << std::endl;
   }
-
-  //perform reduction for each of the 3 components of the response
-  for (int i=0; i<3; i++) {
-    Teuchos::reduceAll(
-      *workset.comm, *serializer, Teuchos::REDUCE_SUM,
-      this->global_response.size(), &this->global_response[i], 
-      &this->global_response[i]);
-   }
 
   // Do global scattering
   PHAL::SeparableScatterScalarResponse<EvalT,Traits>::postEvaluate(workset);
