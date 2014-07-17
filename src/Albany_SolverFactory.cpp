@@ -272,30 +272,6 @@ Albany::SolverFactory::createAndGetAlbanyApp(
 #endif /* ALBANY_ATO */
     }
 
-    if (solutionMethod == "ATO Elasticity") {
-#ifdef ALBANY_ATO
-/*
-      const RCP<ATO::Elasticity> ps_model = rcp(new ATO::Elasticity(appParams, solverComm, initial_guess));
-      const RCP<ParameterList> piroParams = Teuchos::sublist(appParams, "Piro");
-
-      // Create and setup the Piro solver factory
-      Piro::Epetra::SolverFactory piroFactory;
-      {
-        // Do we need: Observers for output from time-stepper ??
-        const RCP<Piro::ProviderBase<NOX::Epetra::Observer> > noxObserverProvider =
-          rcp(new QCAD::CoupledPS_NOXObserverConstructor(ps_model));
-          //  rcp(new NOXObserverConstructor(poisson_app));
-        piroFactory.setSource<NOX::Epetra::Observer>(noxObserverProvider);
-
-        // LOCA auxiliary objects -- needed?
-      }
-      return piroFactory.createSolver(piroParams, ps_model);
-*/
-#else /* ALBANY_QCAD */
-      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "Must activate QCAD\n");
-#endif /* ALBANY_QCAD */
-    }
-
     // Solver uses a single app, create it here along with observer
     RCP<Albany::Application> app;
     const RCP<EpetraExt::ModelEvaluator> model = createAlbanyAppAndModel(app, appComm, initial_guess);
@@ -375,8 +351,7 @@ Albany::SolverFactory::createThyraSolverAndGetAlbanyApp(
 
     if ( solutionMethod == "QCAD Multi-Problem" || 
          solutionMethod == "QCAD Poisson-Schrodinger" ||
-         solutionMethod == "ATO Problem" ||
-         solutionMethod == "ATO Elasticity" ) {
+         solutionMethod == "ATO Problem" ) {
        // These QCAD and ATO solvers do not contain a primary Albany::Application instance and so albanyApp is null.
        // For now, do not resize the response vectors. FIXME sort out this issue.
        const RCP<Thyra::ModelEvaluator<double> > thyraModel = Thyra::epetraModelEvaluator(model, lowsFactory);
@@ -397,8 +372,7 @@ Albany::SolverFactory::createThyraSolverAndGetAlbanyApp(
 
   if ( solutionMethod == "QCAD Multi-Problem" ||
        solutionMethod == "QCAD Poisson-Schrodinger" ||
-       solutionMethod == "ATO Problem" ||
-       solutionMethod == "ATO Elasticity" ) {
+       solutionMethod == "ATO Problem" ) {
     return Thyra::epetraModelEvaluator(epetraSolver, Teuchos::null);
   }
   else {
