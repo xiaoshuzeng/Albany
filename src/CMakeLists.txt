@@ -194,7 +194,7 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_GatherSurfaceVelocity.cpp
   evaluators/PHAL_GatherVelocityRMS.cpp
   evaluators/PHAL_GatherScalarNodalParameter.cpp
-  evaluators/Aeras_ResponseL2Error.cpp
+  evaluators/Aeras_ShallowWaterResponseL2Error.cpp
   )
 SET(PDE_SRCS ${PDE_SRCS}
   evaluators/PHAL_Constant.cpp
@@ -312,8 +312,8 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_GatherVelocityRMS_Def.hpp
   evaluators/PHAL_GatherScalarNodalParameter.hpp
   evaluators/PHAL_GatherScalarNodalParameter_Def.hpp
-  evaluators/Aeras_ResponseL2Error.hpp
-  evaluators/Aeras_ResponseL2Error_Def.hpp
+  evaluators/Aeras_ShallowWaterResponseL2Error.hpp
+  evaluators/Aeras_ShallowWaterResponseL2Error_Def.hpp
   )
 
 SET(PDE_HDRS ${PDE_HDRS}

@@ -99,7 +99,7 @@ createResponseFunction(
 	   name == "Field Value" ||
 	   name == "Field Average" ||
 	   name == "Surface Velocity Mismatch" ||
-           name == "Aeras L2 Error" || 
+           name == "Aeras Shallow Water L2 Error" || 
 	   name == "Center Of Mass" ||
 	   name == "Save Field" ||
 	   name == "Region Boundary" ||

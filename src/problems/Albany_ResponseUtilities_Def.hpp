@@ -25,7 +25,7 @@
 #include "IPtoNodalField.hpp"
 #endif
 #ifdef ALBANY_AERAS
-#include "Aeras_ResponseL2Error.hpp"
+#include "Aeras_ShallowWaterResponseL2Error.hpp"
 #endif
 
 template<typename EvalT, typename Traits>
@@ -145,10 +145,10 @@ Albany::ResponseUtilities<EvalT,Traits>::constructResponses(
   }
   
 #ifdef ALBANY_AERAS
-  else if (responseName == "Aeras L2 Error")
+  else if (responseName == "Aeras Shallow Water L2 Error")
   {
-    RCP<Aeras::ResponseL2Error<EvalT,Traits> > res_ev =
-      rcp(new Aeras::ResponseL2Error<EvalT,Traits>(*p, dl));
+    RCP<Aeras::ShallowWaterResponseL2Error<EvalT,Traits> > res_ev =
+      rcp(new Aeras::ShallowWaterResponseL2Error<EvalT,Traits>(*p, dl));
     fm.template registerEvaluator<EvalT>(res_ev);
     response_tag = res_ev->getResponseFieldTag();
     fm.requireField<EvalT>(*(res_ev->getEvaluatedFieldTag()));
