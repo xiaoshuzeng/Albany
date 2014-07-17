@@ -885,8 +885,7 @@ Topology::splitOpenFaces()
       last_edge = subgraph_edges.end();
 
       Subgraph
-      subgraph(getSTKMeshStruct(),
-          first_entity, last_entity, first_edge, last_edge);
+      subgraph(*this, first_entity, last_entity, first_edge, last_edge);
 
 #if defined(LCM_GRAPHVIZ)
       {
@@ -1001,12 +1000,7 @@ Topology::splitOpenFaces()
     last_edge = subgraph_edges.end();
 
     Subgraph
-    subgraph(
-        getSTKMeshStruct(),
-        first_entity,
-        last_entity,
-        first_edge,
-        last_edge);
+    subgraph(*this, first_entity, last_entity, first_edge, last_edge);
 
     Vertex
     node = subgraph.globalToLocal(point.key());
@@ -1059,9 +1053,9 @@ Topology::splitOpenFaces()
   interface_part = fracture_criterion_->getInterfacePart();
 
   PartVector
-  interface_parts_vector;
+  interface_parts;
 
-  interface_parts_vector.push_back(&interface_part);
+  interface_parts.push_back(&interface_part);
 
   EntityId
   new_id = getNumberEntitiesByRank(bulk_data, interface_rank) + 1;
@@ -1074,10 +1068,26 @@ Topology::splitOpenFaces()
     Entity & face2 = *((*i).second);
 
     EntityVector
-    interface_connectivity = createSurfaceElementConnectivity(face1, face2);
+    interface_points = createSurfaceElementConnectivity(face1, face2);
 
     // Insert the surface element
-    bulk_data.declare_entity(interface_rank, new_id, interface_parts_vector);
+    Entity &
+    new_surface = bulk_data.declare_entity(
+        interface_rank,
+        new_id,
+        interface_parts);
+
+    // Connect to faces
+    bulk_data.declare_relation(new_surface, face1, 0);
+    bulk_data.declare_relation(new_surface, face2, 1);
+
+    // Connect to points
+    for (EntityVector::size_type j = 0; j < interface_points.size(); ++j) {
+      Entity &
+      point = *(points[j]);
+
+      bulk_data.declare_relation(new_surface, point, j);
+    }
 
     ++new_id;
   }

@@ -4,6 +4,7 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 #include "Subgraph.h"
+#include "Topology.h"
 #include "Topology_Utils.h"
 
 namespace LCM {
@@ -11,12 +12,13 @@ namespace LCM {
 //
 // Create a subgraph given a vertex list and an edge list.
 //
-Subgraph::Subgraph(RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct,
+Subgraph::Subgraph(
+    Topology & topology,
     std::set<EntityKey>::iterator first_vertex,
     std::set<EntityKey>::iterator last_vertex,
     std::set<stkEdge>::iterator first_edge,
     std::set<stkEdge>::iterator last_edge) :
-    stk_mesh_struct_(stk_mesh_struct)
+    topology_(topology)
 {
   // Insert vertices and create the vertex map
   for (std::set<EntityKey>::iterator vertex_iterator = first_vertex;
@@ -100,6 +102,57 @@ Subgraph::Subgraph(RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct,
 
   return;
 }
+
+//
+// Accessors and mutators
+//
+Topology &
+Subgraph::getTopology()
+{return topology_;}
+
+size_t const
+Subgraph::getSpaceDimension()
+{return getTopology().getSpaceDimension();}
+
+RCP<Albany::AbstractSTKMeshStruct> &
+Subgraph::getSTKMeshStruct()
+{return getTopology().getSTKMeshStruct();}
+
+BulkData *
+Subgraph::getBulkData()
+{return getTopology().getBulkData();}
+
+stk_classic::mesh::fem::FEMMetaData *
+Subgraph::getMetaData()
+{return getTopology().getMetaData();}
+
+EntityRank const
+Subgraph::getCellRank()
+{return getTopology().getCellRank();}
+
+EntityRank const
+Subgraph::getBoundaryRank()
+{return getTopology().getBoundaryRank();}
+
+IntScalarFieldType &
+Subgraph::getFractureState()
+{return getTopology().getFractureState();}
+
+void
+Subgraph::setFractureState(Entity const & e, FractureState const fs)
+{getTopology().setFractureState(e, fs);}
+
+FractureState
+Subgraph::getFractureState(Entity const & e)
+{return getTopology().getFractureState(e);}
+
+bool
+Subgraph::isOpen(Entity const & e)
+{return getTopology().isOpen(e);}
+
+bool
+Subgraph::isInternalAndOpen(Entity const & e)
+{return getTopology().isInternalAndOpen(e);}
 
 //
 // Map a vertex in the subgraph to a entity in the stk mesh.
