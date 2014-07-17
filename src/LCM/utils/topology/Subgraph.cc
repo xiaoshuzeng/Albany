@@ -257,7 +257,7 @@ Subgraph::removeVertex(Vertex const vertex)
   PairIterRelation
   relations = entity->relations();
 
-  for (size_t i = 0; i < relations.size(); ++i) {
+  for (RelationVectorIndex i = 0; i < relations.size(); ++i) {
 
     EdgeId
     edge_id = relations[i].identifier();
@@ -632,7 +632,7 @@ Subgraph::updateElementNodeConnectivity(Entity & point, ElementNodeMap & map)
     bool
     found = false;
 
-    for (size_t j = 0; j < relations.size(); ++j) {
+    for (RelationVectorIndex j = 0; j < relations.size(); ++j) {
       if (relations[j].entity() == &point) {
         edge_id = relations[j].identifier();
         found = true;
@@ -681,7 +681,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
   std::vector<Vertex>
   new_vertices(number_components - 1);
 
-  for (size_t i = 0; i < new_vertices.size(); ++i) {
+  for (std::vector<Vertex>::size_type i = 0; i < new_vertices.size(); ++i) {
     Vertex
     new_vertex = addVertex(vertex_rank);
 
@@ -729,7 +729,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
   }
 
   // Copy the out edges of the original vertex to the new vertex
-  for (size_t i = 0; i < new_vertices.size(); ++i) {
+  for (std::vector<Vertex>::size_type i = 0; i < new_vertices.size(); ++i) {
     cloneOutEdges(vertex, new_vertices[i]);
   }
 
@@ -831,7 +831,7 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
   PairIterRelation
   old_relations = relations_one_down(old_entity);
 
-  for (size_t i = 0; i < old_relations.size(); ++i) {
+  for (RelationVectorIndex i = 0; i < old_relations.size(); ++i) {
     PairIterRelation
     new_relations = relations_one_down(new_entity);
 
@@ -839,7 +839,7 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
     bool
     exists = false;
 
-    for (size_t j = 0; j < new_relations.size(); ++j) {
+    for (RelationVectorIndex j = 0; j < new_relations.size(); ++j) {
       if (old_relations[i].entity() == new_relations[j].entity()) {
         exists = true;
         break;

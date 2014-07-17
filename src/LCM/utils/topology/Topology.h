@@ -153,7 +153,7 @@ public:
   ///
   /// \brief Get a connectivity list of the boundary
   ///
-  std::vector<std::vector<EntityId> >
+  Connectivity
   getBoundary();
 
   ///
@@ -251,7 +251,7 @@ public:
   ///
   /// \brief Number of entities of a specific rank
   ///
-  EntityVector::size_type
+  EntityVectorIndex
   getNumberEntitiesByRank(BulkData const & bulk_date, EntityRank entity_rank);
 
   ///

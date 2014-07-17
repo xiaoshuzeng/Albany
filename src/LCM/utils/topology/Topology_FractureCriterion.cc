@@ -57,8 +57,7 @@ FractureCriterionTraction::check(Entity const & interface)
 
   bool const
   is_embedded =
-      bucket_0.member(getBulkPart()) &&
-      bucket_1.member(getBulkPart());
+      bucket_0.member(getBulkPart()) && bucket_1.member(getBulkPart());
 
   if (is_embedded == false) return false;
 
@@ -66,7 +65,7 @@ FractureCriterionTraction::check(Entity const & interface)
   EntityVector
   nodes = getTopology().getBoundaryEntityNodes(interface);
 
-  EntityVector::size_type const
+  EntityVectorIndex const
   number_nodes = nodes.size();
 
   Intrepid::Tensor<double>
@@ -79,7 +78,7 @@ FractureCriterionTraction::check(Entity const & interface)
 
   // The traction is evaluated at centroid of face, so a simple
   // average yields the value.
-  for (EntityVector::size_type i = 0; i < number_nodes; ++i) {
+  for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
 
     Entity &
     node = *(nodes[i]);
@@ -138,7 +137,7 @@ FractureCriterionTraction::computeNormals()
 
   stk_classic::mesh::get_selected_entities(local_selector, node_buckets, nodes);
 
-  EntityVector::size_type const
+  EntityVectorIndex const
   number_nodes = nodes.size();
 
   std::vector<Intrepid::Vector<double> >
@@ -147,7 +146,7 @@ FractureCriterionTraction::computeNormals()
   Teuchos::ArrayRCP<double> &
   node_coordinates = getSTKDiscretization().getCoordinates();
 
-  for (EntityVector::size_type i = 0; i < number_nodes; ++i) {
+  for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
 
     double const * const
     pointer_coordinates = &(node_coordinates[getDimension() * i]);
@@ -168,12 +167,12 @@ FractureCriterionTraction::computeNormals()
 
   stk_classic::mesh::get_selected_entities(local_selector, face_buckets, faces);
 
-  EntityVector::size_type const
+  EntityVectorIndex const
   number_normals = faces.size();
 
   normals_.resize(number_normals);
 
-  for (EntityVector::size_type i = 0; i < number_normals; ++i) {
+  for (EntityVectorIndex i = 0; i < number_normals; ++i) {
 
     Entity const &
     face = *(faces[i]);
