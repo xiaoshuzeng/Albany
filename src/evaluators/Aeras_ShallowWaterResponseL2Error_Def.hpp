@@ -43,15 +43,21 @@ ShallowWaterResponseL2Error(Teuchos::ParameterList& p,
 
  
   // User-specified parameters
-  refSolName = plist->get<std::string>("Reference Solution Name", "Zero"); //no reference solution by default.
+  refSolName = plist->get<std::string>("Reference Solution Name"); //no reference solution by default.
   *out << "Reference Solution Name for Aeras::ShallowWaterResponseL2Error response: " << refSolName << std::endl; 
   inputData = plist->get<double>("Reference Solution Data", 0.0);
-  
+   
   if (refSolName == "Zero")
     ref_sol_name = ZERO;
   else if (refSolName == "TC2")
     ref_sol_name  = TC2;
   //Add other test case reference solutions here...
+  else { 
+    TEUCHOS_TEST_FOR_EXCEPTION(
+      true, Teuchos::Exceptions::InvalidParameter,
+      std::endl << "Error!  Unknown reference solution name " << ref_sol_name <<
+      "!" << std::endl;);
+  }
 
   // add dependent fields
   this->addDependentField(sphere_coord);

@@ -194,7 +194,6 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_GatherSurfaceVelocity.cpp
   evaluators/PHAL_GatherVelocityRMS.cpp
   evaluators/PHAL_GatherScalarNodalParameter.cpp
-  evaluators/Aeras_ShallowWaterResponseL2Error.cpp
   )
 SET(PDE_SRCS ${PDE_SRCS}
   evaluators/PHAL_Constant.cpp
@@ -312,8 +311,6 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_GatherVelocityRMS_Def.hpp
   evaluators/PHAL_GatherScalarNodalParameter.hpp
   evaluators/PHAL_GatherScalarNodalParameter_Def.hpp
-  evaluators/Aeras_ShallowWaterResponseL2Error.hpp
-  evaluators/Aeras_ShallowWaterResponseL2Error_Def.hpp
   )
 
 SET(PDE_HDRS ${PDE_HDRS}
@@ -379,6 +376,17 @@ IF (ALBANY_FELIX)
   SET(HEADERS ${HEADERS}
     evaluators/FELIX_ResponseSurfaceVelocityMismatch.hpp
     evaluators/FELIX_ResponseSurfaceVelocityMismatch_Def.hpp
+  )
+ENDIF()
+
+# AERAS
+IF (ALBANY_AERAS)
+  SET(SOURCES ${SOURCES}
+    evaluators/Aeras_ShallowWaterResponseL2Error.cpp
+  )
+  SET(HEADERS ${HEADERS}
+    evaluators/Aeras_ShallowWaterResponseL2Error.hpp
+    evaluators/Aeras_ShallowWaterResponseL2Error_Def.hpp
   )
 ENDIF()
 
