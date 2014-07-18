@@ -97,6 +97,7 @@ namespace Aeras {
 #include "PHAL_Neumann.hpp"
 
 #include "Aeras_ShallowWaterResid.hpp"
+#include "Aeras_ShallowWaterSource.hpp"
 #include "Aeras_SurfaceHeight.hpp"
 #include "Aeras_Atmosphere.hpp"
 
@@ -301,6 +302,7 @@ Aeras::ShallowWaterProblem::constructEvaluators(
     //Input
     p->set<std::string>("Spherical Coord Name", "Lat-Long");
     p->set<std::string>("Coordinate Vector Name", "Coord Vec");
+    p->set<std::string>("Shallow Water Source QP Variable Name", "Shallow Water Source");
     p->set<std::string>("QP Variable Name", dof_names[0]);
     p->set<std::string>("Residual Name In", "Pre Atmosphere Residual");
     
@@ -317,6 +319,23 @@ Aeras::ShallowWaterProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(ev);
     
   }
+
+  { // Aeras source for shallow water equations
+
+    RCP<ParameterList> p = rcp(new ParameterList("Shallow Water Source"));
+
+    //Input
+    p->set<std::string>("Spherical Coord Name", "Lat-Long");
+    p->set<RCP<ParamLib> >("Parameter Library", paramLib);
+    Teuchos::ParameterList& paramList = params->sublist("Shallow Water Problem");
+    p->set<Teuchos::ParameterList*>("Parameter List", &paramList);
+
+    //Output
+    p->set<std::string>("Shallow Water Source QP Variable Name", "Shallow Water Source");
+    ev = rcp(new Aeras::ShallowWaterSource<EvalT,AlbanyTraits>(*p,dl));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+ 
 /*
   { // Aeras viscosity
     RCP<ParameterList> p = rcp(new ParameterList("Aeras Viscosity"));

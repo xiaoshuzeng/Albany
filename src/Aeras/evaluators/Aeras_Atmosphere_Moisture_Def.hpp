@@ -289,11 +289,10 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_i
 
 
     // Time split loop, fallout done with flux upstream
-    for (int k=0; k<Km; ++k) {    //do k = kts, kte-1
+    for (int k=0; k<Km-1; ++k) {    //do k = kts, kte-1
       qrk[k] = qrk[k] - factor[k] * ( rhok[k] * qrk[k] * vt[k] 
                                     - rhok[k+1] * qrk[k+1] * vt[k+1] );
     } 
-
     // Update rain at model top
     qrk[Km-1] = qrk[Km-1] - factor[Km-1]*qrk[Km-1]*vt[Km-1];
 
