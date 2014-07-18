@@ -123,8 +123,6 @@ evaluateFields(typename Traits::EvalData workset)
        i<this->local_response.size(); i++)
     this->local_response[i] = 0.0;
 
-//  if( ebNames.size() == 0 || 
-//      std::find(ebNames.begin(), ebNames.end(), workset.EBName) != ebNames.end() ) {
 
   Intrepid::FieldContainer<ScalarT> flow_state_field_qp(workset.numCells, numQPs, vecDim); //flow_state_field at quad points
   Intrepid::FieldContainer<ScalarT> flow_state_field_ref_qp(workset.numCells, numQPs, vecDim); //flow_state_field_ref (exact solution) at quad points
@@ -144,6 +142,11 @@ evaluateFields(typename Traits::EvalData workset)
      }
     }
 
+  //Get final time from workset.  This is for setting time-dependent exact solution.  
+  Teuchos::RCP<Teuchos::FancyOStream> out(Teuchos::VerboseObjectBase::getDefaultOStream());
+  const RealType final_time  = workset.current_time;
+  *out << "final time = " << final_time << std::endl; 
+ 
   //Set reference solution at quadrature points
   if (ref_sol_name == ZERO) { //zero reference solution 
     for (std::size_t cell=0; cell < workset.numCells; ++cell) 
@@ -239,13 +242,10 @@ postEvaluate(typename Traits::PostEvalData workset)
 
 
   //perform reduction for each of the components of the response
-  //for (int i=0; i<responseSize; i++) {
-  std::cout << "size: " << this->global_response.size() << std::endl; 
   Teuchos::reduceAll(
       *workset.comm, *serializer, Teuchos::REDUCE_SUM,
       this->global_response.size(), &this->global_response[0], 
       &this->global_response[0]);
-   //}
   
   ScalarT abs_err_sq = this->global_response[0];
   ScalarT norm_ref_sq = this->global_response[1];
