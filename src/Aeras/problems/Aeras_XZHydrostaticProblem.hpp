@@ -145,7 +145,6 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     Eta<EvalT>::self(Ptop, P0, numLevels);
   }
 
-
   RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > >
     intrepidBasis = Albany::getIntrepidBasis(meshSpecs.ctd);
   RCP<shards::CellTopology> cellType = rcp(new shards::CellTopology (&meshSpecs.ctd));
