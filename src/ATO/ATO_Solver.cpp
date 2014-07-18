@@ -34,7 +34,7 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
 
   string problemName = problemParams.get<string>("Name");
   string problemDimStr = problemName.substr( problemName.length()-2 ); // "xD" where x = 1, 2, or 3
-  problemNameBase = problemName.substr( 0, problemName.length()-3 ); //remove " xD" where x = 1, 2, or 3
+  _problemNameBase = problemName.substr( 0, problemName.length()-3 ); //remove " xD" where x = 1, 2, or 3
   
   if(problemDimStr == "1D") numDims = 1;
   else if(problemDimStr == "2D") numDims = 2;
@@ -44,13 +44,18 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
 				   << problemName << std::endl);
 
   // set problem (pde constraint)
-  if( !(problemNameBase == "Elasticity" ))
+  // ... currently only supports src/LCM/ElasticityProblem
+  if( !(_problemNameBase == "Elasticity" ))
     TEUCHOS_TEST_FOR_EXCEPTION (true, Teuchos::Exceptions::InvalidParameter, std::endl 
 				<< "Error!  Invalid problem base name: "
-				<< problemNameBase << std::endl);
+				<< _problemNameBase << std::endl);
   
   // set verbosity
   _is_verbose = (comm->MyPID() == 0) && problemParams.get<bool>("Verbose Output", false);
+
+  // set optimization parameters
+  _optMaxIter = problemParams.get<int>("Optimization Maximum Iterations");
+  _optConvTol = problemParams.get<double>("Optimization Convergence Tolerance");
   
   // set parameters and responses
   _num_parameters = 0; //TEV: assume no parameters or responses for now...
@@ -60,16 +65,15 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   std::string outputExo = appParams->sublist("Discretization").get<std::string>("Exodus Output File Name");
 
   // Create Solver parameter lists based on problem name
-  if( problemNameBase == "Elasticity" ) {
-    subProblemAppParams = createElasticityInputFile(appParams, 
+  if( _problemNameBase == "Elasticity" ) {
+    _subProblemAppParams = createElasticityInputFile(appParams, 
                                                     numDims, 
                                                     outputExo );
-    defaultSubSolver = "Elasticity";
   }
   else TEUCHOS_TEST_FOR_EXCEPTION(true, 
                                   Teuchos::Exceptions::InvalidParameter,
 				  std::endl << "Error in ATO::Solver constructor:  " <<
-				  "\n\tInvalid problem name: " << problemNameBase << 
+				  "\n\tInvalid problem name: " << _problemNameBase << 
                                   "\n\tValid names are:" <<
                                   "\n\t\tElasticity" <<
                                   std::endl);
@@ -89,7 +93,7 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   //TEV  saved_initial_guess = initial_guess;
 
   SolverSubSolverData subSolversData;
-  const SolverSubSolver& sub = CreateSubSolver( subProblemAppParams, *comm);
+  const SolverSubSolver& sub = CreateSubSolver( _subProblemAppParams, *comm);
   subSolversData = CreateSubSolverData( sub );
 
   Teuchos::RCP<const Epetra_Map> sub_x_map = sub.app->getMap();
@@ -140,6 +144,7 @@ ATO::Solver::createOutArgs() const
 Teuchos::RCP<const Teuchos::ParameterList>
 ATO::Solver::getValidProblemParameters() const
 {
+
   Teuchos::RCP<Teuchos::ParameterList> validPL = Teuchos::createParameterList("ValidTopologicalOptimizationProblemParams");
 
   // Basic set-up
@@ -155,10 +160,19 @@ ATO::Solver::getValidProblemParameters() const
 
   // Optimization options
   validPL->set<int>("Optimization Maximum Iterations",1,"Maximum optimization iterations");
-  validPL->set<double>("Optimization Iterative Tolerance",1.e-7,"Tolerance for topological optimization step");
+  validPL->set<double>("Optimization Convergence Tolerance",1.e-7,"Tolerance for topological optimization step");
 
   // Candidate for deprecation.
   validPL->set<std::string>("Solution Method", "Steady", "Flag for Steady, Transient, or Continuation");
+
+  // Add additional parameters that can be expected to be added by Physics but gets set too late
+  // ... eg. in Elasticity the following are set in an evaluator rather that in getValidProblemParameters()
+  // ... as (apparently) they arn't parsable. 
+  if(_problemNameBase=="Elasticity") {
+    validPL->set<bool>("avgJ", false, "");
+    validPL->set<bool>("volavgJ", false, "");
+    validPL->set<bool>("weighted_Volume_Averaged_J", false, "");
+  }
 
   return validPL;
 }
@@ -319,13 +333,29 @@ ATO::Solver::evalModel(const InArgs& inArgs,
   Teuchos::RCP<Teuchos::FancyOStream> out(Teuchos::VerboseObjectBase::getDefaultOStream());
 
   if(_is_verbose)
-    *out << "Well, got here at least ... ATO Loop" << std::endl;
+    *out << "*** Performing Topology Optimization Loop ***" << std::endl;
  
-  const SolverSubSolver& sub = CreateSubSolver( subProblemAppParams, *_solverComm);
+  // loop on solution
+  bool optimization_converged = false;
+  std::size_t iter = 0;
+  Teuchos::RCP<Epetra_Vector> initial_guess = Teuchos::null;
+  while(!optimization_converged && iter < _optMaxIter) {
+    const SolverSubSolver& physics_solver = CreateSubSolver( _subProblemAppParams, 
+                                                            *_solverComm,
+                                                             initial_guess );
+    // actual solve
+    physics_solver.model->evalModel((*physics_solver.params_in),(*physics_solver.responses_out));
 
-  const SolverSubSolver& physics_solver = CreateSubSolver( subProblemAppParams, *_solverComm);  
-//TEV what is this   fillSingleSubSolverParams(inArgs, "Poisson", subSolvers[ "InitPoisson" ], 1)
-  physics_solver.model->evalModel((*physics_solver.params_in),(*physics_solver.responses_out));
+    // Optimizer goes here...
+
+   
+    // Prepare for next pass ...
+    // First response vector is the solution... 
+    // ... grab it as guess for next pass
+    initial_guess = physics_solver.responses_out->get_g(0);
+
+    iter++;
+  }
 
   return;
 }

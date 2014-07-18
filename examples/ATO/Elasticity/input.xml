@@ -6,7 +6,7 @@
     <Parameter name="Verbose Output" type="bool" value="1" />
 
     <Parameter name="Optimization Maximum Iterations" type="int" value="1" />
-    <Parameter name="Optimization Iterative Tolerance" type="double" value="1e-9" />
+    <Parameter name="Optimization Convergence Tolerance" type="double" value="1e-9" />
 
     <ParameterList name="Physics Problem">    
   

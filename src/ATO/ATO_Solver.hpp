@@ -27,9 +27,9 @@ namespace ATO {
   class Solver : public EpetraExt::ModelEvaluator {
   public:
 
-      Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
-	     const Teuchos::RCP<const Epetra_Comm>& comm,
-	     const Teuchos::RCP<const Epetra_Vector>& initial_guess);
+     Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
+            const Teuchos::RCP<const Epetra_Comm>& comm,
+            const Teuchos::RCP<const Epetra_Vector>& initial_guess);
 
     ~Solver();
 
@@ -48,11 +48,14 @@ namespace ATO {
     Teuchos::RCP<Epetra_LocalMap> _epetra_response_map;
     Teuchos::RCP<Epetra_Map>      _epetra_x_map;
 
-    bool _is_verbose;
+    // optimization solver data
+    int     _optMaxIter; // maximum iterations for optimization solver
+    double  _optConvTol; // maximum iterations for optimization solver
 
-    std::string defaultSubSolver;
-    std::string problemNameBase;
-    Teuchos::RCP<Teuchos::ParameterList> subProblemAppParams;
+    bool _is_verbose;    // verbose or not for topological optimization solver
+
+    std::string _problemNameBase;
+    Teuchos::RCP<Teuchos::ParameterList> _subProblemAppParams;
 
     Teuchos::RCP<const Epetra_Comm> _solverComm;
     Teuchos::RCP<Teuchos::ParameterList> _mainAppParams;
@@ -62,7 +65,8 @@ namespace ATO {
 
     Teuchos::RCP<const Epetra_Map> get_g_map(int j) const;
 
-    SolverSubSolver CreateSubSolver(const Teuchos::RCP<Teuchos::ParameterList> appParams, const Epetra_Comm& comm,
+    SolverSubSolver CreateSubSolver(const Teuchos::RCP<Teuchos::ParameterList> appParams, 
+                                    const Epetra_Comm& comm,
 				    const Teuchos::RCP<const Epetra_Vector>& initial_guess  = Teuchos::null) const;
 
     SolverSubSolverData CreateSubSolverData(const ATO::SolverSubSolver& sub) const;
