@@ -36,7 +36,8 @@ ShallowWaterResid(const Teuchos::ParameterList& p,
   intrepidBasis (p.get<Teuchos::RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > > > ("Intrepid Basis") ),
   cubature      (p.get<Teuchos::RCP <Intrepid::Cubature<RealType> > >("Cubature")),
   spatialDim(p.get<std::size_t>("spatialDim")),
-  GradBF        (p.get<std::string>  ("Gradient BF Name"),  dl->node_qp_gradient),
+  //og not used
+  //GradBF        (p.get<std::string>  ("Gradient BF Name"),  dl->node_qp_gradient),
   sphere_coord  (p.get<std::string>  ("Spherical Coord Name"), dl->qp_gradient ),
   gravity (Aeras::ShallowWaterConstants::self().gravity),
   Omega(2.0*(Aeras::ShallowWaterConstants::self().pi)/(24.*3600.))
@@ -58,7 +59,7 @@ ShallowWaterResid(const Teuchos::ParameterList& p,
   this->addDependentField(UDot);
   this->addDependentField(wBF);
   this->addDependentField(wGradBF);
-  this->addDependentField(GradBF);
+  //this->addDependentField(GradBF);
   this->addDependentField(mountainHeight);
   this->addDependentField(sphere_coord);
   this->addDependentField(source);
@@ -75,11 +76,11 @@ ShallowWaterResid(const Teuchos::ParameterList& p,
 
   std::vector<PHX::DataLayout::size_type> dims;
     
-    //why dims from grad phi? what is in dims[0]
-    wGradBF.fieldTag().dataLayout().dimensions(dims);
-    numNodes = dims[1];
-    numQPs   = dims[2];
-    numDims  = dims[3];
+  //why dims from grad phi? what is in dims[0]
+  wGradBF.fieldTag().dataLayout().dimensions(dims);
+  numNodes = dims[1];
+  numQPs   = dims[2];
+  numDims  = dims[3];
 
   refWeights        .resize               (numQPs);
   grad_at_cub_points.resize     (numNodes, numQPs, 2);
@@ -133,7 +134,7 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(UDot,fm);
   this->utils.setFieldData(wBF,fm);
   this->utils.setFieldData(wGradBF,fm);
-  this->utils.setFieldData(GradBF,fm);
+  //this->utils.setFieldData(GradBF,fm);
   this->utils.setFieldData(mountainHeight,fm);
 
   this->utils.setFieldData(sphere_coord,fm);

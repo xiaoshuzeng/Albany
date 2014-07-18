@@ -287,7 +287,45 @@ class AerasTCGalewskyInit : public AnalyticFunction {
         const double beta =  1./15.;
         const double hhat = 120.; //meters
 };
+  
+//-------------------------------------------------------------------
+class AerasTC4Init : public AnalyticFunction {
+  public:
+    AerasTC4Init(int neq_, int spatialDim_, Teuchos::Array<double> data_);
+    void compute(double* x, const double* X);
     
+  private:
+    int spatialDim; // size of coordinate vector X
+    int neq;    // size of solution vector x
+    
+    Teuchos::Array<double> data;
+    
+  private:
+    
+    double earthRadius; //Earth radius
+    //double testDuration; // =12 days, in seconds, should be a param from data_
+    double myPi; // a local copy of pi
+    
+    const double su0 = 20.;
+    const double phi0 = 1.0e5;
+    double rlon0;
+    double rlat0;
+  
+    double alfa; //spelling is correct
+    double sigma;
+    double npwr;
+  
+  double Omega;
+  double gravity;
+  
+  double phicon(const double lat);
+  double bubfnc(const double lat);
+  double dbubf(const double lon);
+  
+};
+
+//----------------------------------------------------------------------------
+  
 class AerasPlanarCosineBell : public AnalyticFunction {
   public:
     AerasPlanarCosineBell(int neq_, int numDim_, Teuchos::Array<double> data_);

@@ -82,6 +82,9 @@ Teuchos::RCP<AAdapt::AnalyticFunction> AAdapt::createAnalyticFunction(
     
   else if(name == "Aeras TCGalewskyInit")
       F = Teuchos::rcp(new AAdapt::AerasTCGalewskyInit(neq, numDim, data));
+ 
+  else if(name == "Aeras TC4Init")
+    F = Teuchos::rcp(new AAdapt::AerasTC4Init(neq, numDim, data));
   
   else
     TEUCHOS_TEST_FOR_EXCEPTION(name != "Valid Initial Condition Function",
@@ -644,7 +647,7 @@ double AAdapt::AerasTCGalewskyInit::ucomponent(const double lat){
 double AAdapt::AerasTCGalewskyInit::hperturb(const double lon, const double lat){
     
     double lon2=lon;
-    if (lon2 > myPi){
+    if (lon2 >= myPi){
         lon2=lon - 2*myPi;
     }
     return (hhat*cos(lat)*exp(-lon2*lon2/al/al)*exp( -((phi2-lat)/beta)*((phi2-lat)/beta) ));
@@ -676,7 +679,7 @@ void AAdapt::AerasTCGalewskyInit::compute(double* solution, const double* X) {
     else if (lambda < 0) lambda += 2*myPi;
     //end note 1
     
-    double h = h0;
+    double h = h0+158.3;// this const is from HOMME's code, clarify with MT
     
     //integrating height numerically
     const int integration_steps = 1000;//make this a const in class
@@ -711,6 +714,152 @@ void AAdapt::AerasTCGalewskyInit::compute(double* solution, const double* X) {
 
 }
 
+
+//*****************************************************************************
+//TC4
+//Velocity is init-ed, not const wrt time though
+
+AAdapt::AerasTC4Init::AerasTC4Init(int neq_, int spatialDim_, Teuchos::Array<double> data_)
+: spatialDim(spatialDim_), neq(neq_), data(data_) {
+  TEUCHOS_TEST_FOR_EXCEPTION( (neq!=3 || spatialDim!=3 || data.size()!=0) ,
+                             std::logic_error,
+                             "Error! Invalid call of Aeras TC4Init with " << neq
+                             << " " << spatialDim <<  " "<< data.size()<< std::endl);
+  myPi = Aeras::ShallowWaterConstants::self().pi;
+  
+  earthRadius = Aeras::ShallowWaterConstants::self().earthRadius;
+  
+  //testDuration = 24*24*3600.;//better to get number of days as a param in data_
+  //it is not actually used in galewsky
+  
+  rlon0 = 0.;
+  rlat0 = myPi/4.;
+  npwr = 14.;
+  
+  Omega = 2.0*myPi/(24.*3600.); //this should be sitting in SW class
+  gravity = Aeras::ShallowWaterConstants::self().gravity;
+}
+
+void AAdapt::AerasTC4Init::compute(double* solution, const double* X) {
+  
+  //code repeated over and over again
+  
+  //like SW constants
+  const double a = Aeras::ShallowWaterConstants::self().earthRadius;
+  
+  //const double h0g = data[0];
+  
+  const double x = X[0];  //assume that the mesh has unit radius
+  const double y = X[1];
+  const double z = X[2];
+  
+  //begin note 1
+  const double theta  = std::asin(z); // this is a repeated code
+  // should be in SW class again?
+  
+  double lambda = std::atan2(y,x);
+  
+  static const double DIST_THRESHOLD = Aeras::ShallowWaterConstants::self().distanceThreshold;
+  if (std::abs(std::abs(theta)-myPi/2) < DIST_THRESHOLD) lambda = 0;
+  else if (lambda < 0) lambda += 2*myPi;
+  //end note 1
+  //end of repeated code
+  
+  
+  alfa = -0.03*(phi0/(2.*Omega*sin(myPi/4.)));
+  sigma = (2.*a/1.0e6)*(2.*a/1.0e6);
+  
+  
+  double ai = 1./a;
+  double a2i = ai*ai;
+  
+  double snj = sin(theta);
+  double csj = cos(theta)*cos(theta);
+  double srcsj = cos(theta);
+  double tmpry = tan(theta);
+  double tmpry2 = tmpry*tmpry;
+  double den = 1./cos(theta);
+  double aacsji = 1./(a*a*csj);
+  double corr = 2.*Omega*snj;
+  
+  
+  double ucon = bubfnc(theta);
+  double bigubr = ucon*srcsj; ///
+  double dbub = dbubf(theta); ///
+  
+  double c = sin(rlat0)*snj + cos(rlat0)*srcsj*cos(lambda - rlon0);
+  double psib = alfa*exp(-sigma*((1.-c)/(1.+c)));
+  
+  double dcdm = sin(rlat0)-cos(lambda-rlon0)*cos(rlat0)*tmpry;
+  double dcdl = -cos(rlat0)*srcsj*sin(lambda-rlon0);
+  double d2cdm = -cos(rlat0)*cos(lambda-rlon0)*(1.+tmpry2)/srcsj;
+  double d2cdl = -cos(rlat0)*srcsj*cos(lambda-rlon0);
+  
+  double tmp1 = 2.*sigma*psib/((1.+c)*(1.+c));
+  double tmp2 = (sigma - (1.0+c))/((1.+c)*(1.+c));
+  double dkdm = tmp1*dcdm;
+  double dkdl = tmp1*dcdl;
+  
+  double d2kdm  = tmp1*(d2cdm + 2.0*(dcdm*dcdm)*tmp2);
+  double d2kdl  = tmp1*(d2cdl + 2.0*(dcdl*dcdl)*tmp2);
+  
+  double u, v, h;
+  
+  u = bigubr*den - srcsj*ai*dkdm;
+  v = (dkdl*ai)*den;
+  h = phicon(theta)+corr*psib/gravity;
+  
+  if ( (fabs(lambda) < .1) && (fabs(theta - myPi/4.) < .1)) {
+  std::cout<<"  phicon(theta) "<<phicon(theta)<<" +rest "<<corr*psib/gravity<<std::endl;
+  }
+  
+  solution[0] = h;
+  solution[1] = u;
+  solution[2] = v;
+  
+}
+
+
+double AAdapt::AerasTC4Init::dbubf(const double lat){
+  double rmu = sin(lat);
+  double coslat = cos(lat);
+  return 2.*su0*std::pow(2.*rmu*coslat,npwr-1.)
+           *(npwr-(2.*npwr+1)*rmu*rmu);
+}
+
+double AAdapt::AerasTC4Init::bubfnc(const double lat){
+  return su0*std::pow((2.*sin(lat)*cos(lat)), npwr);
+}
+
+double AAdapt::AerasTC4Init::phicon(const double lat){
+  
+  double a = earthRadius;
+  
+  const int integration_steps = 5000;
+  
+  double h =0.;
+  
+  const double deltat = (lat+myPi/2.0)/integration_steps;
+  for(int i=0; i<integration_steps; i++){
+    
+    double midpoint1 = -myPi/2.0 + (i-1)*deltat;
+    double midpoint2 = -myPi/2.0 + i*deltat;
+    
+    double loc_u = bubfnc(midpoint1);
+    
+    h -= a*deltat*(2*Omega*sin(midpoint1)+loc_u*tan(midpoint1)/a)*loc_u/2.;
+    
+    loc_u = bubfnc(midpoint2);
+    
+    h -= a*deltat*(2*Omega*sin(midpoint2)+loc_u*tan(midpoint2)/a)*loc_u/2.;
+    
+  }
+
+  h = (phi0 + h)/gravity;
+  
+  return h;
+  
+}
 
 
 //*****************************************************************************

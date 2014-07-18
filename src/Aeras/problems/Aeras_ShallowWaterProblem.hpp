@@ -329,6 +329,34 @@ Aeras::ShallowWaterProblem::constructEvaluators(
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Shallow Water Problem");
     p->set<Teuchos::ParameterList*>("Parameter List", &paramList);
+    
+    
+    
+    p->set<std::string>("Weighted BF Name", "wBF");
+    p->set<std::string>("Weighted Gradient BF Name", "wGrad BF");
+    p->set<std::string>("QP Variable Name", dof_names[0]);
+    p->set<std::string>("Nodal Variable Name", dof_names[0]);
+    p->set<std::string>("QP Time Derivative Variable Name", dof_names_dot[0]);
+    p->set<std::string>("Gradient QP Variable Name", "Flow State Gradient");
+    p->set<std::string>("Aeras Surface Height QP Variable Name", "Aeras Surface Height");
+
+    p->set<string>("Coordinate Vector Name",          "Coord Vec");
+    p->set<string>("Spherical Coord Name",       "Lat-Long");
+    
+    p->set<string>("Gradient BF Name",          "Grad BF");
+    p->set<string>("Weights Name",          "Weights");
+    p->set<string>("Jacobian Name",          "Jacobian");
+    p->set<string>("Jacobian Inv Name",          "Jacobian Inv");
+    p->set<string>("Jacobian Det Name",          "Jacobian Det");
+    p->set< RCP<Intrepid::Cubature<RealType> > >("Cubature", cubature);
+    p->set< RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > > > ("Intrepid Basis", intrepidBasis);
+    
+    p->set<std::size_t>("spatialDim", spatialDim);
+    
+    p->set<RCP<ParamLib> >("Parameter Library", paramLib);
+
+    
+    
 
     //Output
     p->set<std::string>("Shallow Water Source QP Variable Name", "Shallow Water Source");

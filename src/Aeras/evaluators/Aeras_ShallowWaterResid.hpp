@@ -88,7 +88,8 @@ private:
   std::size_t numDims;
   std::size_t vecDim;
   std::size_t spatialDim;
-  PHX::MDField<MeshScalarT,Cell,Node,QuadPoint,Dim> GradBF;
+  //not used og
+  //PHX::MDField<MeshScalarT,Cell,Node,QuadPoint,Dim> GradBF;
 
   void divergence(const Intrepid::FieldContainer<ScalarT>  & fieldAtNodes,
       std::size_t cell, Intrepid::FieldContainer<ScalarT>  & div);
