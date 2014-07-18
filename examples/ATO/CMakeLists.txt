@@ -10,4 +10,5 @@
 #                ${CMAKE_CURRENT_BINARY_DIR}/default_piro_params.xml COPYONLY)
 
 add_subdirectory(Elasticity)
+add_subdirectory(ATOLinearElasticity)
 

@@ -24,6 +24,7 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
        const Teuchos::RCP<const Epetra_Vector>& initial_guess)
 : _solverComm(comm), _mainAppParams(appParams)
 {
+
   using std::string;
 
   // Get sub-problem input xml files from problem parameters
@@ -45,7 +46,7 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
 
   // set problem (pde constraint)
   // ... currently only supports src/LCM/ElasticityProblem
-  if( !(_problemNameBase == "Elasticity" ))
+  if( !(_problemNameBase == "Elasticity") )
     TEUCHOS_TEST_FOR_EXCEPTION (true, Teuchos::Exceptions::InvalidParameter, std::endl 
 				<< "Error!  Invalid problem base name: "
 				<< _problemNameBase << std::endl);
@@ -164,15 +165,6 @@ ATO::Solver::getValidProblemParameters() const
 
   // Candidate for deprecation.
   validPL->set<std::string>("Solution Method", "Steady", "Flag for Steady, Transient, or Continuation");
-
-  // Add additional parameters that can be expected to be added by Physics but gets set too late
-  // ... eg. in Elasticity the following are set in an evaluator rather that in getValidProblemParameters()
-  // ... as (apparently) they arn't parsable. 
-  if(_problemNameBase=="Elasticity") {
-    validPL->set<bool>("avgJ", false, "");
-    validPL->set<bool>("volavgJ", false, "");
-    validPL->set<bool>("weighted_Volume_Averaged_J", false, "");
-  }
 
   return validPL;
 }
@@ -308,7 +300,7 @@ ATO::Solver::createElasticityInputFile( const Teuchos::RCP<Teuchos::ParameterLis
   Teuchos::ParameterList& physics_probParams = physics_appParams->sublist("Problem",false);
   
   std::ostringstream name;
-  name << "Elasticity " << numDims << "D";
+  name << _problemNameBase << " " << numDims << "D";
   physics_probParams.set("Name", name.str());
 
   physics_probParams.setParameters(physics_subList);
@@ -335,6 +327,9 @@ ATO::Solver::evalModel(const InArgs& inArgs,
   if(_is_verbose)
     *out << "*** Performing Topology Optimization Loop ***" << std::endl;
  
+  // state variables
+  Albany::StateArrays* ptr_to_statearray = NULL;
+
   // loop on solution
   bool optimization_converged = false;
   std::size_t iter = 0;
@@ -347,7 +342,11 @@ ATO::Solver::evalModel(const InArgs& inArgs,
     physics_solver.model->evalModel((*physics_solver.params_in),(*physics_solver.responses_out));
 
     // Optimizer goes here...
+    // ... perhaps get to weighted basis somehow and modify.
+    ptr_to_statearray = &(physics_solver.app->getStateMgr().getStateArrays());
 
+    if(_problemNameBase == "Elasticity") 
+      computeStrainEnergy(*ptr_to_statearray);
    
     // Prepare for next pass ...
     // First response vector is the solution... 
@@ -358,6 +357,31 @@ ATO::Solver::evalModel(const InArgs& inArgs,
   }
 
   return;
+}
+
+void
+ATO::Solver::computeStrainEnergy(Albany::StateArrays &state_data) const
+{
+  // TEV ... BELOW IS JUST AN EXAMPLE. NOT READY YET
+  // do stuff...  This is currently just and example of accessing state data
+  // ... need to stuff strains into state data as well if want to use them
+  // ... below (in this way). Strain would have to be registered as state
+  // ... data so it can be accesses here...
+  Albany::StateArrayVec &src = state_data.elemStateArrays;
+  int number_of_worksets = src.size();
+  
+  std::string stress_name("STRESS");
+  std::vector<int> dims;
+  for (int ws=0; ws<number_of_worksets; ws++) {
+    src[ws][stress_name].dimensions(dims); // apparently returns dims()
+    int num_cells = dims[0];
+    for(int cell=0; cell<num_cells; cell++) {
+      int num_qp = dims[1];
+      for(int quad_pnt=0; quad_pnt<num_qp; quad_pnt++) {
+        src[ws]["STRESS"](cell,quad_pnt) *= 2.;  // TEV hackity hack hack
+      } 
+    }
+  }
 }
 
 

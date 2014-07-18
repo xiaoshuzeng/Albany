@@ -76,6 +76,9 @@ namespace ATO {
                                int numDims,
                                const std::string& exoOutputFile ) const;
 
+    void
+    computeStrainEnergy(Albany::StateArrays& state_data) const;
+
 
   };
 
