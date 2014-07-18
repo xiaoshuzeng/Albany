@@ -370,7 +370,7 @@ ATO::Solver::computeStrainEnergy(Albany::StateArrays &state_data) const
   Albany::StateArrayVec &src = state_data.elemStateArrays;
   int number_of_worksets = src.size();
   
-  std::string stress_name("STRESS");
+  std::string stress_name("Stress");
   std::vector<int> dims;
   for (int ws=0; ws<number_of_worksets; ws++) {
     src[ws][stress_name].dimensions(dims); // apparently returns dims()
@@ -378,7 +378,7 @@ ATO::Solver::computeStrainEnergy(Albany::StateArrays &state_data) const
     for(int cell=0; cell<num_cells; cell++) {
       int num_qp = dims[1];
       for(int quad_pnt=0; quad_pnt<num_qp; quad_pnt++) {
-        src[ws]["STRESS"](cell,quad_pnt) *= 2.;  // TEV hackity hack hack
+        src[ws][stress_name](cell,quad_pnt) *= 2.;  // TEV hackity hack hack
       } 
     }
   }
