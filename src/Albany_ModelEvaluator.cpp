@@ -12,6 +12,20 @@
 #include "Stokhos_EpetraMultiVectorOrthogPoly.hpp"
 #include "Stokhos_EpetraOperatorOrthogPoly.hpp"
 
+//IK, 7/15/14: adding option to write the mass matrix to matrix market file, which is needed 
+//for some applications.  Uncomment the following line to turn on.
+//#define WRITE_MASS_MATRIX_TO_MM_FILE
+
+#ifdef WRITE_MASS_MATRIX_TO_MM_FILE
+#include "EpetraExt_RowMatrixOut.h"
+#include "EpetraExt_BlockMapOut.h"
+#endif
+
+//IK, 7/17/14: added this variable to be passed to evaluateResponse as, for some reason, 
+//curr_time is always 0 when passed to evaluateResponse, when it should be equal to the final time in 
+//the case of a transient simulation. 
+double final_time = 0.0; 
+
 Albany::ModelEvaluator::ModelEvaluator(
   const Teuchos::RCP<Albany::Application>& app_,
   const Teuchos::RCP<Teuchos::ParameterList>& appParams)
@@ -456,6 +470,7 @@ Albany::ModelEvaluator::evalModel(const InArgs& inArgs,
     omega = inArgs.get_omega();
     beta = inArgs.get_beta();
     curr_time  = inArgs.get_t();
+    final_time = curr_time; 
   }
   for (int i=0; i<num_param_vecs; i++) {
     Teuchos::RCP<const Epetra_Vector> p = inArgs.get_p(i);
@@ -479,9 +494,21 @@ Albany::ModelEvaluator::evalModel(const InArgs& inArgs,
 
   // Cast W to a CrsMatrix, throw an exception if this fails
   Teuchos::RCP<Epetra_CrsMatrix> W_out_crs;
-
-  if (W_out != Teuchos::null)
+#ifdef WRITE_MASS_MATRIX_TO_MM_FILE
+  //IK, 7/15/14: adding object to hold mass matrix to be written to matrix market file
+  Teuchos::RCP<Epetra_CrsMatrix> Mass;
+  //IK, 7/15/14: needed for writing mass matrix out to matrix market file
+  EpetraExt::ModelEvaluator::Evaluation<Epetra_Vector> ftmp = outArgs.get_f();
+#endif
+  
+  if (W_out != Teuchos::null) {
     W_out_crs = Teuchos::rcp_dynamic_cast<Epetra_CrsMatrix>(W_out, true);
+#ifdef WRITE_MASS_MATRIX_TO_MM_FILE
+    //IK, 7/15/14: adding object to hold mass matrix to be written to matrix market file
+    Mass = Teuchos::rcp_dynamic_cast<Epetra_CrsMatrix>(W_out, true);
+#endif
+  }
+
 
 int test_var = 0;
 if(test_var != 0){
@@ -503,6 +530,18 @@ x->Print(std::cout);
   if (W_out != Teuchos::null) {
     app->computeGlobalJacobian(alpha, beta, omega, curr_time, x_dot.get(), x_dotdot.get(),*x,
                                sacado_param_vec, f_out.get(), *W_out_crs);
+#ifdef WRITE_MASS_MATRIX_TO_MM_FILE
+    //IK, 7/15/14: write mass matrix to matrix market file
+    //Warning: to read this in to MATLAB correctly, code must be run in serial.
+    //Otherwise Mass will have a distributed Map which would also need to be read in to MATLAB for proper
+    //reading in of Mass.
+    app->computeGlobalJacobian(1.0, 0.0, 0.0, curr_time, x_dot.get(), x_dotdot.get(), *x, 
+                               sacado_param_vec, ftmp.get(), *Mass);
+    EpetraExt::RowMatrixToMatrixMarketFile("mass.mm", *Mass);
+    EpetraExt::BlockMapToMatrixMarketFile("rowmap.mm", Mass->RowMap());
+    EpetraExt::BlockMapToMatrixMarketFile("colmap.mm", Mass->ColMap());
+    Teuchos::RCP<Teuchos::FancyOStream> out = Teuchos::VerboseObjectBase::getDefaultOStream();
+#endif
     f_already_computed=true;
 if(test_var != 0){
 //std::cout << "The current rhs length is: " << f_out->MyLength() << std::endl;
@@ -631,9 +670,8 @@ f_out->Print(std::cout);
     }
 
     // Need to handle dg/dp for distributed p
-
     if (g_out != Teuchos::null && !g_computed)
-      app->evaluateResponse(i, curr_time, x_dot.get(), x_dotdot.get(), *x, sacado_param_vec,
+      app->evaluateResponse(i, final_time, x_dot.get(), x_dotdot.get(), *x, sacado_param_vec,
                             *g_out);
   }
 
