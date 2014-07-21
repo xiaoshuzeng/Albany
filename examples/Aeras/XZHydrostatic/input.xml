@@ -8,7 +8,6 @@
       <Parameter name="Tracers" type="Array(string)" value="{Vapor,Rain,Cloud}"/>
       <Parameter name="P0" type="double" value="101325.0"/>
       <Parameter name="Ptop" type="double" value="101.325"/>
-      <Parameter name="Compute Cloud Physics" type="bool" value="false"/>
     </ParameterList>
     <ParameterList name="Initial Condition">
        <Parameter name="Function" type="string" value="Aeras XZ Hydrostatic"/>
