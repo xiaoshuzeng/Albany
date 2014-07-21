@@ -390,7 +390,7 @@ void AAdapt::AerasXZHydrostaticGaussianBall::compute(double* x, const double* X)
   const double sig_z   =       data[9];
   std::vector<double> q0(numTracers);
   for (int nt = 0; nt<numTracers; ++nt) {
-    q0[nt] = data[5+nt];
+    q0[nt] = data[10+nt];
   }
 
   int offset = 0;
