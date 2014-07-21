@@ -75,6 +75,8 @@ void kessler(const int Km, const double dt_in,
   const Teuchos::ArrayRCP<std::string> tracerSrcNames;
   std::map<std::string, std::string>   namesToSrc;
  
+  bool compute_cloud_physics;
+
   const int numQPs;
   const int numDims;
   const int numLevels;

@@ -40,6 +40,11 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
   numDims         (dl->node_qp_gradient        ->dimension(3)),
   numLevels       (dl->node_scalar_level       ->dimension(2))
 {  
+
+  Teuchos::ParameterList* xzhydrostatic_params = p.get<Teuchos::ParameterList*>("XZHydrostatic Problem");
+  compute_cloud_physics = xzhydrostatic_params->get<bool>("Compute Cloud Physics", false); 
+  std::cout << "Atmosphere_Moisture: Computing Cloud Physics = " << compute_cloud_physics << std::endl;
+
   Teuchos::ArrayRCP<std::string> RequiredTracers(3);
   RequiredTracers[0] = "Vapor";
   RequiredTracers[1] = "Cloud";
@@ -95,60 +100,56 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
   unsigned int numCells = workset.numCells;
   //Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > wsCoords = workset.wsCoords;
 
-   const double dt_in = workset.current_time - workset.previous_time;
-   double rainnc, rainncv;
-   const double zbot = 25.0;
-   const double ztop = 10000.0;
-
-   std::vector<double> rho(numLevels, 0.0);
-   std::vector<double> p(numLevels, 0.0);
-   std::vector<double> t(numLevels, 0.0);
-   std::vector<double> exner(numLevels, 0.0);
-   std::vector<double> qv(numLevels, 0.0);
-   std::vector<double> qc(numLevels, 0.0);
-   std::vector<double> qr(numLevels, 0.0);
-   std::vector<double> z(numLevels, 0.0);
-   std::vector<double> dz8w(numLevels, 0.0);
+  const double dt_in = workset.current_time - workset.previous_time;
+  double rainnc, rainncv;
+  const double zbot = 25.0;
+  const double ztop = 10000.0;
 
   for (int i=0; i < TempSrc.size(); ++i) TempSrc(i)=0.0;
 
   for (int t=0; t < TracerSrc.size(); ++t)  
     for (int i=0; i < TracerSrc[tracerSrcNames[t]].size(); ++i) TracerSrc[tracerSrcNames[t]](i)=0.0;
 
-  for (int cell=0; cell < numCells; ++cell) {
-    for (int qp=0; qp < numQPs; ++qp) {
-      for (int level=0; level < numLevels; ++level) { 
+  if (compute_cloud_physics == true) {
 
-        rho[level]   = Albany::ADValue( Density(cell,qp,level) );
-        p[level]     = Albany::ADValue( Pressure(cell,qp,level) );
-        t[level]     = Albany::ADValue( Temp(cell,qp,level) );
-        exner[level] = pow( (p[level]/1000.0),(0.286) );
-        rho[level]   = Albany::ADValue( Density(cell,qp,level) );
-        qv[level]    = Albany::ADValue( TracerIn["Vapor"](cell,qp,level) );
-        qc[level]    = Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
-        qr[level]    = Albany::ADValue( TracerIn["Rain"](cell,qp,level) );
-        z[level]     = (1.0-Albany::ADValue( E.eta(level)) ) * ztop + zbot;
-        dz8w[level]  = z[level];
-      }
-
-      kessler(numLevels, dt_in,
-              rho, p, exner, dz8w,
-              t, qv, qc, qr,
-              rainnc,  rainncv,
-              z);
-
-      for (int level=0; level < numLevels; ++level) { 
-        TracerSrc[namesToSrc["Vapor"]](cell,qp,level) += 0 * TracerIn["Vapor"] (cell,qp,level);
-        TracerSrc[namesToSrc["Cloud"]] (cell,qp,level) += 0 * TracerIn["Cloud"]  (cell,qp,level);
-        TracerSrc[namesToSrc["Rain"]] (cell,qp,level) += 0 * TracerIn["Rain"]  (cell,qp,level);
-      }
-    }
-  }
-
-  for (int cell=0; cell < numCells; ++cell) {
-    for (int qp=0; qp < numQPs; ++qp) {
-      for (int level=0; level < numLevels; ++level) {
-        TempSrc(cell,qp,level) += 0 * Temp(cell,qp,level);
+    std::vector<double> rho(numLevels, 0.0);
+    std::vector<double> p(numLevels, 0.0);
+    std::vector<double> t(numLevels, 0.0);
+    std::vector<double> exner(numLevels, 0.0);
+    std::vector<double> qv(numLevels, 0.0);
+    std::vector<double> qc(numLevels, 0.0);
+    std::vector<double> qr(numLevels, 0.0);
+    std::vector<double> z(numLevels, 0.0);
+    std::vector<double> dz8w(numLevels, 0.0);
+  
+    for (int cell=0; cell < numCells; ++cell) {
+      for (int qp=0; qp < numQPs; ++qp) {
+  
+        for (int level=0; level < numLevels; ++level) { 
+          rho[level]   = Albany::ADValue( Density(cell,qp,level) );
+          p[level]     = Albany::ADValue( Pressure(cell,qp,level) );
+          t[level]     = Albany::ADValue( Temp(cell,qp,level) );
+          exner[level] = pow( (p[level]/1000.0),(0.286) );
+          rho[level]   = Albany::ADValue( Density(cell,qp,level) );
+          qv[level]    = Albany::ADValue( TracerIn["Vapor"](cell,qp,level) );
+          qc[level]    = Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
+          qr[level]    = Albany::ADValue( TracerIn["Rain"](cell,qp,level) );
+          z[level]     = (1.0-Albany::ADValue( E.eta(level)) ) * ztop + zbot;
+          dz8w[level]  = z[level];
+        }
+  
+        kessler(numLevels, dt_in,
+                rho, p, exner, dz8w,
+                t, qv, qc, qr,
+                rainnc,  rainncv,
+                z);
+  
+        for (int level=0; level < numLevels; ++level) { 
+          TempSrc                       (cell,qp,level) -= ( t[level]  - Temp             (cell,qp,level) ) / dt_in;
+          TracerSrc[namesToSrc["Vapor"]](cell,qp,level) -= ( qv[level] - TracerIn["Vapor"](cell,qp,level) ) / dt_in;
+          TracerSrc[namesToSrc["Cloud"]](cell,qp,level) -= ( qc[level] - TracerIn["Cloud"](cell,qp,level) ) / dt_in;
+          TracerSrc[namesToSrc["Rain"]] (cell,qp,level) -= ( qr[level] - TracerIn["Rain"] (cell,qp,level) ) / dt_in;
+        }
       }
     }
   }
@@ -356,20 +357,11 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_i
     qc[k]     = qc[k] + prodct;
     qr[k]     = qr[k] - qrevap;
  
-     //std::cout << "gam,prodct,qrevap: " << " " << gam << " " << prodct << " " << qrevap << std::endl;
-     //std::cout << "rho,p,t,qv,qc,qr: " << rho[k] << " " << p[k] << " " << t[k] << " " << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
+     std::cout << "gam,prodct,qrevap: " << " " << gam << " " << prodct << " " << qrevap << std::endl;
+     std::cout << "z,rho,p,t,qv,qc,qr: " 
+               << z[k] << " " << rho[k] << " " << p[k] << " " << t[k] << " " 
+               << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
   } //enddo
-  
-
-  //for (int k=0; k<Km; ++k) {
-  //  std::cout << "t: " << t[k] << std::endl;
-  //}
-
 }
-
-
-
-
-
 
 }
