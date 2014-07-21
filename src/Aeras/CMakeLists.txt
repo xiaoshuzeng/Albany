@@ -42,6 +42,8 @@
        evaluators/Aeras_DOFGradInterpolationLevels.cpp
        evaluators/Aeras_Atmosphere_Moisture.cpp
        evaluators/Aeras_ShallowWaterSource.cpp
+       responses/Aeras_TotalVolume.cpp
+
    )
    
   SET(HEADERS
@@ -111,12 +113,15 @@
        evaluators/Aeras_Atmosphere_Moisture_Def.hpp
        evaluators/Aeras_ShallowWaterSource_Def.hpp
        evaluators/Aeras_ShallowWaterSource.hpp
+       responses/Aeras_TotalVolume.hpp
+       responses/Aeras_TotalVolume_Def.hpp
+       
   )
   
 include_directories (${Trilinos_INCLUDE_DIRS}  ${Trilinos_TPL_INCLUDE_DIRS}
                      ${Albany_SOURCE_DIR}/src ${Albany_SOURCE_DIR}/src/evaluators 
                      ${Albany_SOURCE_DIR}/src/problems ${Albany_SOURCE_DIR}/src/responses 
-                     ./problems ./evaluators
+                     ./problems ./evaluators ./responses
                     )
 
 add_library(Aeras ${Albany_LIBRARY_TYPE} ${SOURCES} ${HEADERS})
