@@ -175,8 +175,18 @@ class AerasXZHydrostatic : public AnalyticFunction {
     AerasXZHydrostatic(int neq_, int numDim_, Teuchos::Array<double> data_);
     void compute(double* x, const double* X);
   private:
-    int numDim; // size of coordinate vector X
-    int neq;    // size of solution vector x
+    const int numDim; // size of coordinate vector X
+    const int neq;    // size of solution vector x
+    Teuchos::Array<double> data;
+};
+
+class AerasXZHydrostaticGaussianBall : public AnalyticFunction {
+  public:
+    AerasXZHydrostaticGaussianBall(int neq_, int numDim_, Teuchos::Array<double> data_);
+    void compute(double* x, const double* X);
+  private:
+    const int numDim; // size of coordinate vector X
+    const int neq;    // size of solution vector x
     Teuchos::Array<double> data;
 };
 
