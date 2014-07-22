@@ -59,6 +59,9 @@ Teuchos::RCP<AAdapt::AnalyticFunction> AAdapt::createAnalyticFunction(
   else if(name == "Aeras XZ Hydrostatic Gaussian Ball")
     F = Teuchos::rcp(new AAdapt::AerasXZHydrostaticGaussianBall(neq, numDim, data));
 
+  else if(name == "Aeras XZ Hydrostatic Gaussian Ball In Shear")
+    F = Teuchos::rcp(new AAdapt::AerasXZHydrostaticGaussianBallInShear(neq, numDim, data));
+
   else if(name == "Aeras Hydrostatic")
     F = Teuchos::rcp(new AAdapt::AerasHydrostatic(neq, numDim, data));
 
@@ -371,13 +374,6 @@ AAdapt::AerasXZHydrostaticGaussianBall::AerasXZHydrostaticGaussianBall(int neq_,
                              << " " << numDim << std::endl);
 }
 void AAdapt::AerasXZHydrostaticGaussianBall::compute(double* x, const double* X) {
-  //Flattened data layout
-  //x[0]                                = SP
-  //x[1]             ... x[1*numLevels] = u
-  //x[1*numLevels+1] ... x[2*numLevels] = T
-  //x[2*numLevesl+1] ... x[3*numLevels] = q0
-  //x[3*numLevesl+1] ... x[4*numLevels] = q1
-  //x[4*numLevesl+1] ... x[5*numLevels] = q2
   const int numLevels  = (int) data[0];
   const int numTracers = (int) data[1];
   const double SP0     =       data[2];
@@ -399,7 +395,51 @@ void AAdapt::AerasXZHydrostaticGaussianBall::compute(double* x, const double* X)
   
   //Velx
   for (int i=0; i<numLevels; ++i) {
-     x[offset++] = U0;
+     x[offset++] = U0 + i/6.0 - 10;
+     x[offset++] = T0;
+  }
+
+  //Tracers
+  for (int nt=0; nt<numTracers; ++nt) {
+    for (int i=0; i<numLevels; ++i) {
+      x[offset++] = q0[nt] + amp*std::exp( -( ((i-z0)*(i-z0)/(sig_z*sig_z)) + ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
+    }
+  }
+
+}
+
+//*****************************************************************************
+AAdapt::AerasXZHydrostaticGaussianBallInShear::AerasXZHydrostaticGaussianBallInShear(int neq_, int numDim_, Teuchos::Array<double> data_)
+  : numDim(numDim_), neq(neq_), data(data_) {
+  TEUCHOS_TEST_FOR_EXCEPTION((numDim > 1),
+                             std::logic_error,
+                             "Error! Invalid call of Aeras XZ Hydrostatic Gaussian Ball Model " << neq
+                             << " " << numDim << std::endl);
+}
+void AAdapt::AerasXZHydrostaticGaussianBallInShear::compute(double* x, const double* X) {
+  const int numLevels  = (int) data[0];
+  const int numTracers = (int) data[1];
+  const double SP0     =       data[2];
+  const double U0      =       data[3];
+  const double deltaU  =       data[4];
+  const double T0      =       data[5];
+  const double amp     =       data[6];
+  const double x0      =       data[7];
+  const double z0      =       data[8];
+  const double sig_x   =       data[9];
+  const double sig_z   =       data[10];
+  std::vector<double> q0(numTracers);
+  for (int nt = 0; nt<numTracers; ++nt) {
+    q0[nt] = data[11+nt];
+  }
+
+  int offset = 0;
+  //Surface Pressure
+  x[offset++] = SP0;
+  
+  //Velx
+  for (int i=0; i<numLevels; ++i) {
+     x[offset++] = U0 + i/deltaU;
      x[offset++] = T0;
   }
 
