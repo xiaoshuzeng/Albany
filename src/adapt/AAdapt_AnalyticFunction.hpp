@@ -320,7 +320,7 @@ class AerasTC4Init : public AnalyticFunction {
   
   double phicon(const double lat);
   double bubfnc(const double lat);
-  double dbubf(const double lon);
+  double dbubf(const double lat);
   
 };
 

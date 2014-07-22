@@ -44,6 +44,8 @@ public:
 
 private:
 
+          
+  void get_coriolis(std::size_t cell, Intrepid::FieldContainer<ScalarT>  & coriolis);
 
   // Input:// og what does this mean, input???
   PHX::MDField<MeshScalarT,Cell,QuadPoint, Dim> sphere_coord;
@@ -88,25 +90,34 @@ private:
           
   ScalarT gravity; // gravity parameter -- Sacado-ized for sensitivities
   ScalarT Omega;   //rotation of earth  -- Sacado-ized for sensitivities
+
           
-  void divergence(const Intrepid::FieldContainer<ScalarT>  & fieldAtNodes,
-                          std::size_t cell, Intrepid::FieldContainer<ScalarT>  & div);
+          ScalarT earthRadius; //Earth radius
+          //double testDuration; // =12 days, in seconds, should be a param from data_
+          ScalarT myPi; // a local copy of pi
           
-  //gradient returns vector in physical basis
-  void gradient(const Intrepid::FieldContainer<ScalarT>  & fieldAtNodes,
-                        std::size_t cell, Intrepid::FieldContainer<ScalarT>  & gradField);
+          const ScalarT SU0 = 20.;
+          const ScalarT PHI0 = 1.0e5;
+          ScalarT RLON0;
+          ScalarT RLAT0;
           
-  // curl only returns the component in the radial direction
-  void curl(const Intrepid::FieldContainer<ScalarT>  & fieldAtNodes,
-                    std::size_t cell, Intrepid::FieldContainer<ScalarT>  & curl);
+          ScalarT ALFA; //spelling is correct
+          ScalarT SIGMA;
+          ScalarT NPWR;
           
-  void fill_nodal_metrics(std::size_t cell);
+          //double Omega;
+          //double gravity;
           
-  void get_coriolis(std::size_t cell, Intrepid::FieldContainer<ScalarT>  & coriolis);
-          
+          ScalarT dbubf(const ScalarT lat);
+          ScalarT bubfnc(const ScalarT lat);
+          ScalarT d2bubf(const ScalarT lat);
           
           
 };
+  
+  
+
+  
 
 }
 

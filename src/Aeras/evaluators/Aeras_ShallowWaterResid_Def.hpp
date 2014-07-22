@@ -475,4 +475,5 @@ ShallowWaterResid<EvalT,Traits>::get_coriolis(std::size_t cell, Intrepid::FieldC
   }
 
 }
+  
 }

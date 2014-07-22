@@ -766,6 +766,8 @@ void AAdapt::AerasTC4Init::compute(double* solution, const double* X) {
   //end of repeated code
   
   
+  double tol = 1.e-10;
+  
   alfa = -0.03*(phi0/(2.*Omega*sin(myPi/4.)));
   sigma = (2.*a/1.0e6)*(2.*a/1.0e6);
   
@@ -788,15 +790,25 @@ void AAdapt::AerasTC4Init::compute(double* solution, const double* X) {
   double dbub = dbubf(theta); ///
   
   double c = sin(rlat0)*snj + cos(rlat0)*srcsj*cos(lambda - rlon0);
-  double psib = alfa*exp(-sigma*((1.-c)/(1.+c)));
+  
+  //if-statements about ~fabs(c+1) is due to singularities ~1/(c+1)
+  //in derivatives. However, they are overtaken by the presence of
+  //multipliers ~exp(-1/(c+1)).
+  double psib = 0.;
+  if(fabs(c+1.)>tol)
+     psib = alfa*exp(-sigma*((1.-c)/(1.+c)));
   
   double dcdm = sin(rlat0)-cos(lambda-rlon0)*cos(rlat0)*tmpry;
   double dcdl = -cos(rlat0)*srcsj*sin(lambda-rlon0);
   double d2cdm = -cos(rlat0)*cos(lambda-rlon0)*(1.+tmpry2)/srcsj;
   double d2cdl = -cos(rlat0)*srcsj*cos(lambda-rlon0);
   
-  double tmp1 = 2.*sigma*psib/((1.+c)*(1.+c));
-  double tmp2 = (sigma - (1.0+c))/((1.+c)*(1.+c));
+  double tmp1 = 0.;
+  if(fabs(c+1.)>tol)
+    tmp1 = 2.*sigma*psib/((1.+c)*(1.+c));
+  double tmp2 = 0.;
+  if(fabs(c+1.)>tol)
+    tmp2 = (sigma - (1.0+c))/((1.+c)*(1.+c));
   double dkdm = tmp1*dcdm;
   double dkdl = tmp1*dcdl;
   
@@ -809,9 +821,26 @@ void AAdapt::AerasTC4Init::compute(double* solution, const double* X) {
   v = (dkdl*ai)*den;
   h = phicon(theta)+corr*psib/gravity;
   
-  if ( (fabs(lambda) < .1) && (fabs(theta - myPi/4.) < .1)) {
-  std::cout<<"  phicon(theta) "<<phicon(theta)<<" +rest "<<corr*psib/gravity<<std::endl;
+  //if ( (fabs(lambda) < .1) && (fabs(theta - myPi/4.) < .1)) {
+  //std::cout<<"  phicon(theta) "<<phicon(theta)<<" +rest "<<corr*psib/gravity<<std::endl;
+  //}
+  
+  /*if(fabs(u)>1000){
+    std::cout << "debug u, bigubr, den, srcsj, ai, dkdm"<<u<<" "<<
+    bigubr<<" "<<den<<" "<<srcsj<<" "<<ai<<" "<<dkdm<<std::endl;
   }
+  
+  if ( (fabs(lambda-myPi) < .1) && (fabs(theta + myPi/4.) < .1)) {
+    std::cout << "debug u, dcdm tmp1 c tmpry"<<u<<" "<<
+    dcdm<<" "<<tmp1<<" "<<c<<" "<< tmpry<<" "<< 1. <<std::endl;
+    
+    std::cout << "c     ----"<< sin(rlat0)<<" "<<
+    snj<<" "<<cos(rlat0)<<" "<<srcsj<<" "<< cos(lambda-rlon0)<<" "<< 1. <<std::endl;
+    
+    std::cout << "psib and  "<<psib <<std::endl;
+    
+  }*/
+  
   
   solution[0] = h;
   solution[1] = u;
