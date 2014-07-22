@@ -15,6 +15,8 @@
 #include "Albany_FieldManagerScalarResponseFunction.hpp"
 #include "Albany_SolutionResponseFunction.hpp"
 #include "Albany_KLResponseFunction.hpp"
+
+
 #ifdef ALBANY_QCAD
 #include "QCAD_SaddleValueResponseFunction.hpp"
 #endif
@@ -100,6 +102,7 @@ createResponseFunction(
 	   name == "Field Average" ||
 	   name == "Surface Velocity Mismatch" ||
            name == "Aeras Shallow Water L2 Error" || 
+           name == "Aeras Total Volume" ||
 	   name == "Center Of Mass" ||
 	   name == "Save Field" ||
 	   name == "Region Boundary" ||

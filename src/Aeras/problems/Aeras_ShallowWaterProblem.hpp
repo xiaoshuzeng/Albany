@@ -103,7 +103,6 @@ namespace Aeras {
 
 #include "Aeras_ComputeBasisFunctions.hpp"
 #include "Aeras_GatherCoordinateVector.hpp"
-
 template <typename EvalT>
 Teuchos::RCP<const PHX::FieldTag>
 Aeras::ShallowWaterProblem::constructEvaluators(
@@ -386,6 +385,8 @@ Aeras::ShallowWaterProblem::constructEvaluators(
   }
 */
 
+
+
   if (fieldManagerChoice == Albany::BUILD_RESID_FM)  {
     PHX::Tag<typename EvalT::ScalarT> res_tag("Scatter ShallowWater", dl->dummy);
     fm0.requireField<EvalT>(res_tag);
@@ -394,6 +395,7 @@ Aeras::ShallowWaterProblem::constructEvaluators(
     Albany::ResponseUtilities<EvalT, PHAL::AlbanyTraits> respUtils(dl);
     return respUtils.constructResponses(fm0, *responseList, Teuchos::null, stateMgr);
   }
+
 
   return Teuchos::null;
 }

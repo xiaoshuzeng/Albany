@@ -26,6 +26,7 @@
 #endif
 #ifdef ALBANY_AERAS
 #include "Aeras_ShallowWaterResponseL2Error.hpp"
+#include "Aeras/responses/Aeras_TotalVolume.hpp"
 #endif
 
 template<typename EvalT, typename Traits>
@@ -149,6 +150,14 @@ Albany::ResponseUtilities<EvalT,Traits>::constructResponses(
   {
     RCP<Aeras::ShallowWaterResponseL2Error<EvalT,Traits> > res_ev =
       rcp(new Aeras::ShallowWaterResponseL2Error<EvalT,Traits>(*p, dl));
+    fm.template registerEvaluator<EvalT>(res_ev);
+    response_tag = res_ev->getResponseFieldTag();
+    fm.requireField<EvalT>(*(res_ev->getEvaluatedFieldTag()));
+  }
+  else if (responseName == "Aeras Total Volume")
+  {
+    RCP<Aeras::TotalVolume<EvalT,Traits> > res_ev =
+      rcp(new Aeras::TotalVolume<EvalT,Traits>(*p, dl));
     fm.template registerEvaluator<EvalT>(res_ev);
     response_tag = res_ev->getResponseFieldTag();
     fm.requireField<EvalT>(*(res_ev->getEvaluatedFieldTag()));

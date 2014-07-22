@@ -87,10 +87,12 @@ evaluateFields(typename Traits::EvalData workset)
 
   for (int cell=0; cell < workset.numCells; ++cell) {
     for (int qp=0; qp < numQPs; ++qp) {
+      ScalarT pdotp0 = 0;
+      for (int j=0; j<numLevels; ++j) pdotp0 -= gradpivelx(cell,qp,j) * E.delta(j);
       for (int level=0; level < numLevels; ++level) {
         ScalarT integral = 0;
         for (int j=level; j<numLevels; ++j) integral += gradpivelx(cell,qp,j) * E.delta(j);
-        etadotpi[level] = -E.B(level-.5)*pdotP0(cell,qp) - integral;
+        etadotpi[level] = -E.B(level-.5)*pdotp0 - integral;
       }
       etadotpi[0] = etadotpi[numLevels] = 0;
 

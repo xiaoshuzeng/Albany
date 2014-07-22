@@ -225,6 +225,7 @@ evaluateFields(typename Traits::EvalData workset)
     }
   }
 
+
   // Velocity Equations
   if (usePrescribedVelocity) {
     for (std::size_t cell=0; cell < workset.numCells; ++cell) {

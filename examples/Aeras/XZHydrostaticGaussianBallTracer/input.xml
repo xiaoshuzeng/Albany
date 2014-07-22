@@ -11,8 +11,9 @@
       <Parameter name="Compute Cloud Physics" type="bool" value="false"/>
     </ParameterList>
     <ParameterList name="Initial Condition">
-       <Parameter name="Function" type="string" value="Aeras XZ Hydrostatic"/>
-       <Parameter name="Function Data" type="Array(double)" value="{30, 3, 101325.0, 10.0, 300.0, 0.111, 0.333, 0.555}"/>
+       <Parameter name="Function" type="string" value="Aeras XZ Hydrostatic Gaussian Ball"/>
+                                                              <!-- numlevels, numtracers,      p_0,  u_0,   T_0, Amplitude, x_0, z_0, sig_x, sig_z,   Tr_0,  Tr_1,  T2_2 --> 
+       <Parameter name="Function Data" type="Array(double)" value="{30,                3, 101325.0, 10.0, 300.0,       0.5, 150,  15,    11,     3,  0.111, 0.333, 0.555}"/>
     </ParameterList>
     <ParameterList name="Response Functions">
       <Parameter name="Number" type="int" value="1"/>

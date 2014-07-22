@@ -21,11 +21,6 @@
 #include "EpetraExt_BlockMapOut.h"
 #endif
 
-//IK, 7/17/14: added this variable to be passed to evaluateResponse as, for some reason, 
-//curr_time is always 0 when passed to evaluateResponse, when it should be equal to the final time in 
-//the case of a transient simulation. 
-double final_time = 0.0; 
-
 Albany::ModelEvaluator::ModelEvaluator(
   const Teuchos::RCP<Albany::Application>& app_,
   const Teuchos::RCP<Teuchos::ParameterList>& appParams)
@@ -470,7 +465,6 @@ Albany::ModelEvaluator::evalModel(const InArgs& inArgs,
     omega = inArgs.get_omega();
     beta = inArgs.get_beta();
     curr_time  = inArgs.get_t();
-    final_time = curr_time; 
   }
   for (int i=0; i<num_param_vecs; i++) {
     Teuchos::RCP<const Epetra_Vector> p = inArgs.get_p(i);
@@ -628,6 +622,8 @@ f_out->Print(std::cout);
 
   // Response functions
   for (int i=0; i<outArgs.Ng(); i++) {
+    //Set curr_time to final time at which response occurs.
+    curr_time  = inArgs.get_t();
     Teuchos::RCP<Epetra_Vector> g_out = outArgs.get_g(i);
     bool g_computed = false;
 
@@ -670,9 +666,10 @@ f_out->Print(std::cout);
     }
 
     // Need to handle dg/dp for distributed p
-    if (g_out != Teuchos::null && !g_computed)
-      app->evaluateResponse(i, final_time, x_dot.get(), x_dotdot.get(), *x, sacado_param_vec,
+    if (g_out != Teuchos::null && !g_computed) {
+      app->evaluateResponse(i, curr_time, x_dot.get(), x_dotdot.get(), *x, sacado_param_vec,
                             *g_out);
+    }
   }
 
   //
