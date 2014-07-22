@@ -4,48 +4,52 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-#ifndef AERAS_XZHYDROSTATIC_DENSITYWEIGHTEDVELX_HPP
-#define AERAS_XZHYDROSTATIC_DENSITYWEIGHTEDVELX_HPP
+#ifndef AERAS_DOF_INTERPOLATION_LEVELS_HPP
+#define AERAS_DOF_INTERPOLATION_LEVELS_HPP
 
 #include "Phalanx_ConfigDefs.hpp"
 #include "Phalanx_Evaluator_WithBaseImpl.hpp"
 #include "Phalanx_Evaluator_Derived.hpp"
 #include "Phalanx_MDField.hpp"
+
 #include "Aeras_Layouts.hpp"
 
 namespace Aeras {
-/** \brief Density for XZHydrostatic atmospheric model
+/** \brief Finite Element Interpolation Evaluator
 
-    This evaluator computes the density for the XZHydrostatic model
-    of atmospheric dynamics.
+    This evaluator interpolates nodal DOF values to quad points.
 
 */
 
 template<typename EvalT, typename Traits>
-class XZHydrostatic_DensityWeightedVelx : public PHX::EvaluatorWithBaseImpl<Traits>,
-                   public PHX::EvaluatorDerived<EvalT, Traits> {
+class DOFInterpolationLevels : public PHX::EvaluatorWithBaseImpl<Traits>,
+ 			 public PHX::EvaluatorDerived<EvalT, Traits>  {
 
 public:
   typedef typename EvalT::ScalarT ScalarT;
-  typedef typename EvalT::MeshScalarT MeshScalarT;
 
-  XZHydrostatic_DensityWeightedVelx(const Teuchos::ParameterList& p,
-                const Teuchos::RCP<Aeras::Layouts>& dl);
+  DOFInterpolationLevels(Teuchos::ParameterList& p,
+                   const Teuchos::RCP<Aeras::Layouts>& dl);
 
   void postRegistrationSetup(typename Traits::SetupData d,
-			     PHX::FieldManager<Traits>& vm);
+                             PHX::FieldManager<Traits>& vm);
 
   void evaluateFields(typename Traits::EvalData d);
 
 private:
+  // Input:
+  //! Values at nodes
+  PHX::MDField<ScalarT,Cell,Node,Node> val_node;
+  //! Basis Functions
+  PHX::MDField<RealType,Cell,Node,QuadPoint> BF;
+
   // Output:
-  PHX::MDField<ScalarT,Cell,Node> density;
-  PHX::MDField<ScalarT,Cell,Node> velx;
-  PHX::MDField<ScalarT,Cell,Node> dvelx;
+  //! Values at quadrature points
+  PHX::MDField<ScalarT,Cell,QuadPoint,Node> val_qp;
 
   const int numNodes;
+  const int numQPs;
   const int numLevels;
-
 };
 }
 
