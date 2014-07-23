@@ -357,10 +357,10 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_i
     qc[k]     = qc[k] + prodct;
     qr[k]     = qr[k] - qrevap;
  
-    //std::cout << "gam,prodct,qrevap: " << " " << gam << " " << prodct << " " << qrevap << std::endl;
-    //std::cout << "z,rho,p,t,qv,qc,qr: " 
-    //          << z[k] << " " << rho[k] << " " << p[k] << " " << t[k] << " " 
-    //          << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
+    std::cout << "gam,prodct,qrevap: " << " " << gam << " " << prodct << " " << qrevap << std::endl;
+    std::cout << "k,z,rho,p,t,qv,qc,qr: " 
+              << k << " " << z[k] << " " << rho[k] << " " << p[k] << " " << t[k] << " " 
+              << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
   } //enddo
 }
 
