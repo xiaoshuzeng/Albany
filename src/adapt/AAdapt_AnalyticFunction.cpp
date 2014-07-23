@@ -455,6 +455,9 @@ void AAdapt::AerasXZHydrostaticGaussianBallInShear::compute(double* x, const dou
 
 }
 
+#include "Aeras_Eta.hpp"
+struct DoubleType   { typedef double  ScalarT; typedef double MeshScalarT; };
+
 //*****************************************************************************
 AAdapt::AerasXZHydrostaticHotBubble::AerasXZHydrostaticHotBubble(int neq_, int numDim_, Teuchos::Array<double> data_)
   : numDim(numDim_), neq(neq_), data(data_) {
@@ -479,15 +482,49 @@ void AAdapt::AerasXZHydrostaticHotBubble::compute(double* x, const double* X) {
     q0[nt] = data[10+nt];
   }
 
+  const double Ptop = 101.325;
+  const double P0   = 101325;
+  const double Ps   = 101325;
+  const double R    = 287;
+
+  const Aeras::Eta<DoubleType> &E = Aeras::Eta<DoubleType>::self(Ptop,P0,numLevels);
+
+
+  std::vector<double> Pressure(numLevels);
+  std::vector<double> Pi(numLevels);
+  std::vector<double> T(numLevels);
+  for (int i=0; i<numLevels; ++i) Pressure[i] = E.A(i)*E.p0() + E.B(i)*Ps;
+  
+  for (int i=0; i<numLevels; ++i) {
+    const double pp   = i<numLevels-1 ? 0.5*(Pressure[i] + Pressure[i+1]) : Ps;
+    const double pm   = i             ? 0.5*(Pressure[i] + Pressure[i-1]) : E.ptop();
+    Pi[i] = (pp - pm) /E.delta(i);
+  }
+
+  for (int i=0; i<numLevels; ++i) T[i] = Pressure[i]/(R*Pi[i]*E.delta(i));
+
+
+  static bool first_time=true;
+  if (first_time) {
+    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__<<" Pressure["<<i<<"]="<<Pressure[i]<<std::endl;
+    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__<<" Pi["<<i<<"]="<<Pi[i]<<std::endl;
+    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__<<" T["<<i<<"]="<<T[i]<<std::endl;
+  }
+
   int offset = 0;
   //Surface Pressure
   x[offset++] = SP0;
   
   //Velx
+  const double pi = 3.14159265;
   for (int i=0; i<numLevels; ++i) {
     x[offset++] = U0;
-    x[offset++] = T0 + amp*std::exp( -( ((i-z0)*(i-z0)/(sig_z*sig_z)) + ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
+    const double s = i * (numLevels-1-i) * std::sin(X[0]*pi/25) / (25 * numLevels*numLevels);
+    x[offset++] = 300 * T[i] * (1 + s) / T[numLevels-1];
+if (first_time) std::cout<<__FILE__<<" final T["<<i<<"]="<<x[offset-1]<<std::endl;
+    //x[offset++] = T[i] * 1000 * (1 + amp*std::exp( -( ((i-z0)*(i-z0)/(sig_z*sig_z)) + ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) ))  ;
   }
+  first_time = false;
 
   //Tracers
   for (int nt=0; nt<numTracers; ++nt) {
