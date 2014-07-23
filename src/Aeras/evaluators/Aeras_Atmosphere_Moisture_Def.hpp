@@ -126,16 +126,17 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
       for (int qp=0; qp < numQPs; ++qp) {
   
         for (int level=0; level < numLevels; ++level) { 
-          rho[level]   = Albany::ADValue( Density(cell,qp,level) );
-          p[level]     = Albany::ADValue( Pressure(cell,qp,level) );
-          t[level]     = Albany::ADValue( Temp(cell,qp,level) );
-          exner[level] = pow( (p[level]/1000.0),(0.286) );
-          rho[level]   = Albany::ADValue( Density(cell,qp,level) );
-          qv[level]    = Albany::ADValue( TracerIn["Vapor"](cell,qp,level) );
-          qc[level]    = Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
-          qr[level]    = Albany::ADValue( TracerIn["Rain"](cell,qp,level) );
-          z[level]     = (1.0-Albany::ADValue( E.eta(level)) ) * ztop + zbot;
-          dz8w[level]  = z[level];
+          int k    = numLevels - level - 1;
+          rho[k]   = Albany::ADValue( Density(cell,qp,level) );
+          p[k]     = Albany::ADValue( Pressure(cell,qp,level) );
+          t[k]     = Albany::ADValue( Temp(cell,qp,level) );
+          exner[k] = pow( (p[k]/1000.0),(0.286) );
+          rho[k]   = Albany::ADValue( Density(cell,qp,level) );
+          qv[k]    = Albany::ADValue( TracerIn["Vapor"](cell,qp,level) );
+          qc[k]    = Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
+          qr[k]    = Albany::ADValue( TracerIn["Rain"](cell,qp,level) );
+          z[k]     = (1.0-Albany::ADValue( E.eta(level)) ) * ztop + zbot;
+          dz8w[k]  = z[k];
         }
   
         kessler(numLevels, dt_in,
@@ -145,10 +146,11 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
                 z);
   
         for (int level=0; level < numLevels; ++level) { 
-          TempSrc                       (cell,qp,level) -= ( t[level]  - Temp             (cell,qp,level) ) / dt_in;
-          TracerSrc[namesToSrc["Vapor"]](cell,qp,level) -= ( qv[level] - TracerIn["Vapor"](cell,qp,level) ) / dt_in;
-          TracerSrc[namesToSrc["Cloud"]](cell,qp,level) -= ( qc[level] - TracerIn["Cloud"](cell,qp,level) ) / dt_in;
-          TracerSrc[namesToSrc["Rain"]] (cell,qp,level) -= ( qr[level] - TracerIn["Rain"] (cell,qp,level) ) / dt_in;
+          int k                                          = numLevels - level - 1;
+          TempSrc                       (cell,qp,level) -= ( t[k]  - Temp             (cell,qp,level) ) / dt_in;
+          TracerSrc[namesToSrc["Vapor"]](cell,qp,level) -= ( qv[k] - TracerIn["Vapor"](cell,qp,level) ) / dt_in;
+          TracerSrc[namesToSrc["Cloud"]](cell,qp,level) -= ( qc[k] - TracerIn["Cloud"](cell,qp,level) ) / dt_in;
+          TracerSrc[namesToSrc["Rain"]] (cell,qp,level) -= ( qr[k] - TracerIn["Rain"] (cell,qp,level) ) / dt_in;
         }
       }
     }
