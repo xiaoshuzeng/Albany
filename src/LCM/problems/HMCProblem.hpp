@@ -43,7 +43,9 @@ namespace Albany {
     HMCProblem(
 		      const Teuchos::RCP<Teuchos::ParameterList>& params_,
 		      const Teuchos::RCP<ParamLib>& paramLib_,
-		      const int numDim_);
+		      const int numDim_,
+                      const Teuchos::RCP<const Epetra_Comm>& comm);
+
 
     //! Destructor
     virtual ~HMCProblem();
@@ -84,6 +86,9 @@ namespace Albany {
     void parseMaterialModel(Teuchos::RCP<Teuchos::ParameterList>& p,
                        const Teuchos::RCP<Teuchos::ParameterList>& params) const;
 
+    Teuchos::RCP<QCAD::MaterialDatabase> material_db_;
+
+
   public:
 
     //! Main problem setup routine. Not directly called, but indirectly by following functions
@@ -123,20 +128,21 @@ namespace Albany {
 #include "Albany_ProblemUtils.hpp"
 #include "Albany_ResponseUtilities.hpp"
 #include "Albany_EvaluatorUtils.hpp"
-#include "HMC_EvaluatorUtils.hpp"
 #include "HMC_StrainDifference.hpp"
 #include "HMC_TotalStress.hpp"
+#include "FieldNameMap.hpp"
 
 #include "Strain.hpp"
 #include "DefGrad.hpp"
 #include "HMC_Stresses.hpp"
 #include "PHAL_SaveStateField.hpp"
 #include "ElasticityResid.hpp"
-#include "HMC_Residual.hpp"
+#include "HMC_MicroResidual.hpp"
 
 #include "Time.hpp"
-#include "CapExplicit.hpp"
-#include "CapImplicit.hpp"
+#include "ConstitutiveModelParameters.hpp"
+#include "ConstitutiveModelInterface.hpp"
+
 
 #include <sstream>
 
@@ -158,7 +164,22 @@ Albany::HMCProblem::constructEvaluators(
    using PHAL::AlbanyTraits;
 
   // get the name of the current element block
-   std::string elementBlockName = meshSpecs.ebName;
+   std::string eb_name = meshSpecs.ebName;
+
+  // get the name of the material model to be used (and make sure there is one)
+  std::string material_model_name =
+      material_db_->
+          getElementBlockSublist(eb_name, "Material Model").get<std::string>(
+          "Model Name");
+  TEUCHOS_TEST_FOR_EXCEPTION(material_model_name.length() == 0, std::logic_error,
+      "A material model must be defined for block: "
+          + eb_name);
+
+#ifdef ALBANY_VERBOSE
+  *out << "In MechanicsProblem::constructEvaluators" << std::endl;
+  *out << "element block name: " << eb_name << std::endl;
+  *out << "material model name: " << material_model_name << std::endl;
+#endif
 
    RCP<shards::CellTopology> cellType = rcp(new shards::CellTopology (&meshSpecs.ctd));
    RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > >
@@ -186,12 +207,7 @@ Albany::HMCProblem::constructEvaluators(
    TEUCHOS_TEST_FOR_EXCEPTION(dl->vectorAndGradientLayoutsAreEquivalent==false, std::logic_error,
                               "Data Layout Usage in Mechanics problems assume vecDim = numDim");
 
-   Albany::HMCEvaluatorUtils<EvalT, PHAL::AlbanyTraits> evalUtilsHMC(dl);
    Albany::EvaluatorUtils<EvalT, PHAL::AlbanyTraits> evalUtils(dl);
-
-
-   // remove this 
-   bool supportsTransient=true;
 
    const int numMacroScales = 1;
 
@@ -220,332 +236,265 @@ Albany::HMCProblem::constructEvaluators(
    Teuchos::ArrayRCP< Teuchos::ArrayRCP<std::string> > micro_dof_names_dotdot(numMicroScales);
    Teuchos::ArrayRCP< Teuchos::ArrayRCP<std::string> > micro_resid_names_dotdot(numMicroScales);
    Teuchos::ArrayRCP< Teuchos::ArrayRCP<std::string> > micro_scatter_names_dotdot(numMicroScales);
-   if (supportsTransient){
-     macro_dof_names_dotdot[0] = macro_dof_names[0]+"_dotdot";
-     macro_resid_names_dotdot[0] = macro_resid_names[0]+" Residual";
-     for(int i=0;i<numMicroScales;i++){
-       micro_dof_names_dotdot[i].resize(1);
-       micro_resid_names_dotdot[i].resize(1);
-       micro_scatter_names_dotdot[i].resize(1);
-       micro_dof_names_dotdot[i][0] = micro_dof_names[i][0]+"_dotdot";
-       micro_resid_names_dotdot[i][0] = micro_resid_names_dotdot[i][0]+" Residual";
-       micro_scatter_names_dotdot[i][0] = micro_scatter_names_dotdot[i][0]+" Scatter";
-     }
+   macro_dof_names_dotdot[0] = macro_dof_names[0]+"_dotdot";
+   macro_resid_names_dotdot[0] = macro_resid_names[0]+" Residual";
+   for(int i=0;i<numMicroScales;i++){
+     micro_dof_names_dotdot[i].resize(1);
+     micro_resid_names_dotdot[i].resize(1);
+     micro_scatter_names_dotdot[i].resize(1);
+     micro_dof_names_dotdot[i][0] = micro_dof_names[i][0]+"_dotdot";
+     micro_resid_names_dotdot[i][0] = micro_resid_names_dotdot[i][0]+" Residual";
+     micro_scatter_names_dotdot[i][0] = micro_scatter_names_dotdot[i][0]+" Scatter";
    }
 
 
-// 1.1 Gather Solution (displacement and acceleration)
+// Gather Solution (displacement and acceleration)
 /*\begin{text} 
-   New evaluator:  Gather solution data from solver data structures to grid based structures.  Note that accelerations are added as an evaluated field if appropriate.\\
-   \textbf{Dependent Fields:} \\
+  Gather solution data from solver data structures to grid based structures.  \\
+   \textbf{DEPENDENT FIELDS:} \\
      None. \\
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
   \begin{tabular}{l l l l}
-     $u_{iI}$ & Nodal displacements & ("Variable Name", "Displacement") & dims(cell,nNodes,vecDim) \\
-     $a_{iI}$ & Nodal accelerations & ("Variable Name", "Displacement\_dotdot") & dims(cell,nNodes,vecDim)
-  \end{tabular} \\
-
-  For implementation see: \\ 
-    problems/Albany\_EvaluatorUtils\_Def.hpp \\
-    evaluators/PHAL\_GatherSolution\_Def.hpp
+     $u_{Ii}$ & Nodal displacements & "Displacement"         & dims(cell,I=nNodes,i=vecDim) \\
+     $a_{Ii}$ & Nodal accelerations & "Displacement\_dotdot" & dims(cell,I=nNodes,i=vecDim)
+  \end{tabular}
 \end{text}*/
 
-   if (supportsTransient) fm0.template registerEvaluator<EvalT>
-       (evalUtils.constructGatherSolutionEvaluator_withAcceleration(true, macro_dof_names, Teuchos::null, macro_dof_names_dotdot));
-   else fm0.template registerEvaluator<EvalT>
-       (evalUtils.constructGatherSolutionEvaluator_noTransient(true, macro_dof_names));
+   int vectorRank = 1;
+   fm0.template registerEvaluator<EvalT>
+     (evalUtils.constructGatherSolutionEvaluator_withAcceleration(vectorRank, macro_dof_names, Teuchos::null, macro_dof_names_dotdot));
 
+// Gather Solution (microstrains and micro accelerations)
+/*\begin{text} 
+  Gather solution data from solver data structures to grid based structures.  \\
+   \textbf{DEPENDENT FIELDS:} \\
+     None. \\
+  \textbf{EVALUATED FIELDS:} \\
+  \begin{tabular}{l l l l}
+     $\epsilon^n_{Iij}$        & Nodal microstrains at scale 'n'        & "Microstrain\_n"         & dims(cell,I=nNodes,i=vecDim,j=vecDim) \\
+     $\ddot{\epsilon}^n_{Iij}$ & Nodal micro accelerations at scale 'n' & "Microstrain\_n\_dotdot" & dims(cell,I=nNodes,i=vecDim,j=vecDim)
+  \end{tabular} \\
+\end{text}*/
    int dof_offset = numDim; // dof layout is {x, y, ..., xx, xy, xz, yx, ...}
    int dof_stride = numDim*numDim;
-
-// 1.1 Gather Solution (microstrains and micro accelerations)
-/*\begin{text} 
-   New evaluator:  Gather solution data from solver data structures to grid based structures.  Note that micro accelerations are added as an evaluated field if appropriate.\\
-   \textbf{Dependent Fields:} \\
-     None. \\
-  \textbf{Evaluated Fields:} \\
-  \begin{tabular}{l l l l}
-     $\epsilon^n_{ijI}$ & Nodal microstrains at scale 'n' & ("Solution Name", "Microstrain\_1") & dims(cell,nNodes,vecDim,vecDim) \\
-     $\ddot{\epsilon}^n_{iI}$ & Nodal micro accelerations at scale 'n' & ("Solution Name", "Microstrain\_1\_dotdot") & dims(cell,nNodes,vecDim,vecDim)
-  \end{tabular} \\
-
-  For implementation see: \\ 
-    problems/HMC\_EvaluatorUtils\_Def.hpp \\
-    evaluators/PHAL\_GatherSolution\_Def.hpp
-\end{text}*/
+   int tensorRank = 2;
    for(int i=0;i<numMicroScales;i++){
-     if (supportsTransient) fm0.template registerEvaluator<EvalT>
-       (evalUtilsHMC.constructGatherSolutionEvaluator_withAcceleration(
-          micro_dof_names[i], 
-          Teuchos::null, 
-          micro_dof_names_dotdot[i],
-          dof_offset+i*dof_stride));
-     else fm0.template registerEvaluator<EvalT>
-       (evalUtilsHMC.constructGatherSolutionEvaluator_noTransient(
-          micro_dof_names[i],
-          dof_offset+i*dof_stride));
+     fm0.template registerEvaluator<EvalT>
+       (evalUtils.constructGatherSolutionEvaluator_withAcceleration(
+          tensorRank, micro_dof_names[i], Teuchos::null, micro_dof_names_dotdot[i], dof_offset+i*dof_stride) );
    }
 
-// 1.2  Gather Coordinates
+// Gather Coordinates
 /*\begin{text}
-   New evaluator: Gather coordinate data from solver data structures to grid based structures.
-   \textbf{Dependent Fields:} \\
+  Gather coordinate data from solver data structures to grid based structures. \\
+   \textbf{DEPENDENT FIELDS:} \\
      None. \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
    \begin{tabular}{l l l l}
-     $x_{iI}$ & Nodal coordinates & ("Coordinate Vector Name", "Coord Vec") & dims(cell,nNodes,vecDim) \\
+     $x_{Ii}$ & Nodal coordinates & "Coord Vec" & dims(cell,I=nNodes,i=vecDim) \\
    \end{tabular} \\
-
-  For implementation see: \\ 
-    problems/Albany\_EvaluatorUtils\_Def.hpp \\
-    evaluators/PHAL\_GatherCoordinateVector\_Def.hpp
 \end{text}*/
    fm0.template registerEvaluator<EvalT>
      (evalUtils.constructGatherCoordinateVectorEvaluator());
 
-// 2.1  Compute gradient matrix and weighted basis function values in current coordinates
+// Compute gradient matrix and weighted basis function values in current coordinates
 /*\begin{text} 
-    Register new evaluator.\\
-    \textbf{Dependent Fields:}\\
+    Register new evaluator. \\
+    \textbf{DEPENDENT FIELDS:}\\
     \begin{tabular}{l l l l}
-    $x_{iI}$ & Nodal coordinates & ("Cordinate Vector Name", "Coord Vec") & dims(cell,nNodes,vecDim) \\
+    $x_{Ii}$ & Nodal coordinates & "Coord Vec" & dims(cell,I=nNodes,i=vecDim) \\
     \end{tabular} \\
-
-    \textbf{Evaluated Fields:} \\
+    \textbf{EVALUATED FIELDS:} \\
     \begin{tabular}{l l l l}
     $det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p$ &
-    Weighted measure & ("Weights Name", "Weights") & dims(cell,nQPs)\\
+    Weighted measure & "Weights" & dims(cell,p=nQPs)\\
     %
     $det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right)$ &
-    Jacobian determinant & ("Jacobian Det Name", Jacobian Det") & dims(cell,nQPs) \\
+    Jacobian determinant & Jacobian Det" & dims(cell,p=nQPs) \\
     %
     $N_I(\mathbf{x}_p)$ &
-    Basis function values & ("BF Name", "BF") & dims(cell,nNodes,nQPs)\\
+    Basis function values & "BF" & dims(cell,I=nNodes,p=nQPs)\\
     %
     $N_I(\mathbf{x}_p)\ det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p$ &
-    Weighted ... & ("Weighted BF Name", "wBF") & dims(cell,nNode,nQPs)\\
+    Weighted basis function values & "wBF" & dims(cell,I=nNode,p=nQPs)\\
     %
-    $\frac{\partial N_I (x_p)}{\partial \xi_k} J^{-1}_{kj}$ &
-    Gradient matrix wrt physical frame & ("Gradient BF Name", "Gradient BF") & dims(cell,nNodes,nQPs,spcDim)\\
+    $\frac{\partial N_I (\mathbf{x}_p)}{\partial \xi_k} J^{-1}_{kj}$ &
+    Gradient matrix wrt physical frame & "Grad BF" & dims(cell,I=nNodes,p=nQPs,j=spcDim)\\
     %
-    $\frac{\partial N_I (x_p)}{\partial \xi_k} J^{-1}_{kj} det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p$ &
-    Weighted ... & ("Weighted Gradient BF Name", "Weighted Gradient BF") & dims(cell,nNodes,nQPs,spcDim)\\
+    $\frac{\partial N_I (\mathbf{x}_p)}{\partial \xi_k} J^{-1}_{kj} det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p$ &
+    Weighted gradient matrix wrt current config & "wGrad BF" & dims(cell,I=nNodes,p=nQPs,j=spcDim)\\
     \end{tabular} \\
-
-    For implementation see: \\ 
-      problems/Albany\_EvaluatorUtils\_Def.hpp \\
-      evaluators/PHAL\_ComputeBasisFunctions\_Def.hpp
  \end{text}*/
    fm0.template registerEvaluator<EvalT>
      (evalUtils.constructComputeBasisFunctionsEvaluator(cellType, intrepidBasis, cubature));
 
-// 3.1  Project displacements to Gauss points
+// Project displacements to Gauss points
 /*\begin{text} 
-   New evaluator:
+   Register new evaluator: \\
   \begin{align*}
-     u_i(\xi_p)&=N_I(\xi_p) u_{iI}\\
+     u_i(\xi_p)&=N_I(\xi_p) u_{Ii}\\
      (c,p,i)&=(c,I,p)*(c,I,i)
   \end{align*}
-   \textbf{Dependent Fields:} \\
+   \textbf{DEPENDENT FIELDS:} \\
    \begin{tabular}{l l l l}
-     $u_{iI}$ & Nodal Displacements & ("Variable Name", "Displacements") & dims(cell,nNodes,vecDim) \\
-     $N_I(\xi_p)$ & Basis Functions & ("BF Name", "BF") & dims(cell,nNodes,nQPs) \\
+     $u_{Ii}$      & Nodal Displacements  & "Displacements"  & dims(cell,I=nNodes,i=vecDim) \\
+     $N_I(\xi_p)$  & Basis Functions      & "BF"             & dims(cell,I=nNodes,p=nQPs)   \\
    \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
   \begin{tabular}{l l l l}
-     $u_i(\xi_p)$ & Displacements at quadrature points & ("Variable Name", "Displacements") & dims(cell,nQPs,vecDim)
+     $u_i(\xi_p)$ & Displacements at quadrature points & "Displacements" & dims(cell,p=nQPs,i=vecDim)
   \end{tabular} \\
-
-  For implementation see: \\ 
-    problems/Albany\_EvaluatorUtils\_Def.hpp \\
-    evaluators/PHAL\_DOFVecInterpolation\_Def.hpp
 \end{text}*/
    fm0.template registerEvaluator<EvalT>
      (evalUtils.constructDOFVecInterpolationEvaluator(macro_dof_names[0]));
 
-// 3.2  Project microstrains to Gauss points
+// Project microstrains to Gauss points
 /*\begin{text} 
-   New evaluator:
+   Register new evaluator: \\
   \begin{align*}
-     \epsilon_{ij}(\xi_p)&=N_I(\xi_p) \epsilon_{ijI}\\
+     \epsilon^n_{ij}(\xi_p)&=N_I(\xi_p) \epsilon^n_{ijI}\\
      (c,p,i,j)&=(c,I,p)*(c,I,i,j)
   \end{align*}
-   \textbf{Dependent Fields:} \\
+   \textbf{DEPENDENT FIELDS:} \\
    \begin{tabular}{l l l l}
-     $\epsilon^n_{ijI}$ & Nodal microstrains at scale 'n' & ("Variable Name", "Microstrain\_1") & dims(cell,nNodes,vecDim) \\
-     $N_I(\xi_p)$ & Basis Functions & ("BF Name", "BF") & dims(cell,nNodes,nQPs) \\
+     $\epsilon^n_{Iij}$  & Nodal microstrains at scale 'n'  & "Microstrain\_n"  & dims(cell,I=nNodes,i=vecDim,j=vecDim) \\
+     $N_I(\xi_p)$        & Basis Functions                  & "BF"              & dims(cell,I=nNodes,p=nQPs)            \\
    \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
   \begin{tabular}{l l l l}
-     $\epsilon_{ij}(\xi_p)$ & Microstrains at quadrature points & ("Variable Name", "Microstrain\_1") & dims(cell,nQPs,vecDim,spcDim)
+     $\epsilon^n_{ij}(\xi_p)$ & Microstrains at scale 'n' at quadrature points  & "Microstrain\_n"  & dims(cell,p=nQPs,i=vecDim,j=spcDim)
   \end{tabular} \\
-
-  For implementation see: \\ 
-    HMC/problems/HMC\_EvaluatorUtils\_Def.hpp \\
-    HMC/evaluators/PHAL\_DOFVecInterpolation\_Def.hpp
 \end{text}*/
    for(int i=0;i<numMicroScales;i++)
      fm0.template registerEvaluator<EvalT>
-       (evalUtilsHMC.constructDOFTensorInterpolationEvaluator(micro_dof_names[i][0],
+       (evalUtils.constructDOFTensorInterpolationEvaluator(micro_dof_names[i][0],
         dof_offset+i*dof_stride));
 
-// 3.3  Project accelerations to Gauss points
+// Project accelerations to Gauss points
 /*\begin{text} 
-   \newpage
-   New evaluator:
+   Register new evaluator: \\
   \begin{align*}
-     a_i(\xi_p)&=N_I(\xi_p) a_{iI}\\
+     a_i(\xi_p)&=N_I(\xi_p) a_{Ii}\\
      (c,p,i)&=(c,I,p)*(c,I,i)
   \end{align*}
-   \textbf{Dependent Fields:} \\
+   \textbf{DEPENDENT FIELDS:} \\
    \begin{tabular}{l l l l}
-     $a_{iI}$ & Nodal Acceleration & ("Variable Name", "Displacement\_dotdot") & dims(cell,nNodes,vecDim)\\
-     $N_I(\xi_p)$ & Basis Functions & ("BF Name", "BF") & dims(cell,nNodes,nQPs) \\
+     $a_{Ii}$      & Nodal Acceleration  & "Displacement\_dotdot"  & dims(cell,I=nNodes,i=vecDim) \\
+     $N_I(\xi_p)$  & Basis Functions     & "BF"                    & dims(cell,I=nNodes,p=nQPs)   \\
    \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
   \begin{tabular}{l l l l}
-     $a_i(\xi_p)$ & Acceleration at quadrature points & ("Variable Name", "Dsplacement\_dotdot") & dims(cell,nQPs,vecDim)
+     $a_i(\xi_p)$ & Acceleration at quadrature points  & "Displacement\_dotdot"  & dims(cell,p=nQPs,i=vecDim)
   \end{tabular} \\
-
-  For implementation see: \\ 
-    problems/Albany\_EvaluatorUtils\_Def.hpp \\
-    evaluators/PHAL\_DOFVecInterpolation\_Def.hpp
 \end{text}*/
-   if(supportsTransient) fm0.template registerEvaluator<EvalT>
+   fm0.template registerEvaluator<EvalT>
      (evalUtils.constructDOFVecInterpolationEvaluator(macro_dof_names_dotdot[0]));
 
-// 3.4  Project micro accelerations to Gauss points
+// Project micro accelerations to Gauss points
 /*\begin{text} 
-   \newpage
-   New evaluator:
+   Register new evaluator:
   \begin{align*}
-     \ddot{\epsilon}^n_{ij}(\xi_p)&=N_I(\xi_p) \ddot{\epsilon}^n_{ijI}\\
+     \ddot{\epsilon}^n_{ij}(\xi_p)&=N_I(\xi_p) \ddot{\epsilon}^n_{Iij}\\
      (c,p,i,j)&=(c,I,p)*(c,I,i,j)
   \end{align*}
-   \textbf{Dependent Fields:} \\
+   \textbf{DEPENDENT FIELDS:} \\
    \begin{tabular}{l l l l}
-     $\ddot{\epsilon}^n_{ijI}$ & Nodal micro acceleration & ("Variable Name", "Microstrain\_1\_dotdot") & dims(cell,nNodes,vecDim,vecDim)\\
-     $N_I(\xi_p)$ & Basis Functions & ("BF Name", "BF") & dims(cell,nNodes,nQPs) \\
+     $\ddot{\epsilon}^n_{Iij}$  & Nodal micro acceleration at scale 'n'  & "Microstrain\_n\_dotdot"  & dims(cell,I=nNodes,i=vecDim,j=vecDim)\\
+     $N_I(\xi_p)$               & Basis Functions                        & "BF"                      & dims(cell,I=nNodes,p=nQPs) \\
    \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
   \begin{tabular}{l l l l}
-     $\ddot{\epsilon}^n_{ij}(\xi_p)$ & Micro acceleration at quadrature points & ("Variable Name", "Microstrain\_1\_dotdot") & dims(cell,nQPs,vecDim,vecDim)
+     $\ddot{\epsilon}^n_{ij}(\xi_p)$  & Micro acceleration at scale 'n' at quadrature points &  "Microstrain\_n\_dotdot"  & dims(cell,p=nQPs,i=vecDim,j=vecDim)
   \end{tabular} \\
-
-  For implementation see: \\ 
-    HMC/problems/HMC\_EvaluatorUtils\_Def.hpp \\
-    HMC/evaluators/PHAL\_DOFTensorInterpolation\_Def.hpp
 \end{text}*/
-   if(supportsTransient) 
-     for(int i=0;i<numMicroScales;i++)
-       fm0.template registerEvaluator<EvalT>
-         (evalUtilsHMC.constructDOFTensorInterpolationEvaluator(micro_dof_names_dotdot[i][0],
-          dof_offset+i*dof_stride));
+   for(int i=0;i<numMicroScales;i++)
+     fm0.template registerEvaluator<EvalT>
+       (evalUtils.constructDOFTensorInterpolationEvaluator(micro_dof_names_dotdot[i][0],
+        dof_offset+i*dof_stride));
 
-// 3.5  Project nodal coordinates to Gauss points
+// Project nodal coordinates to Gauss points
 /*\begin{text}
-   New evaluator: Compute Gauss point locations from nodal locations.
+   Register new evaluator: Compute Gauss point locations from nodal locations.
   \begin{align*}
-     x_{pi} &= N_{I}(\xi_p) x_{iI}\\
+     x_{pi} &= N_{I}(\xi_p) x_{Ii}\\
    (c,p,i) &= (c,I,p)*(c,I,i)
   \end{align*}
-   \textbf{Dependent Fields:} \\
+   \textbf{DEPENDENT FIELDS:} \\
    \begin{tabular}{l l l l}
-     $x_{iI}$ & Nodal coordinates & ("Coordinate Vector Name", "Coord Vec") & dims(cell,nNodes,vecDim) \\
+     $x_{Ii}$  & Nodal coordinates        & "Coord Vec"  & dims(cell,I=nNodes,i=vecDim) \\
    \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
    \begin{tabular}{l l l l}
-     $x_{pi}$ & Gauss point coordinates & ("Coordinate Vector Name", "Coord Vec") & dims(cell,nQPs,vecDim) \\
+     $x_{pi}$  & Gauss point coordinates  & "Coord Vec"  & dims(cell,p=nQPs,i=vecDim) \\
    \end{tabular} \\
-
-  For implementation see: \\ 
-    problems/Albany\_EvaluatorUtils\_Def.hpp \\
-    evaluators/PHAL\_MapToPhysicalFrame\_Def.hpp
 \end{text}*/
    fm0.template registerEvaluator<EvalT>
      (evalUtils.constructMapToPhysicalFrameEvaluator(cellType, cubature));
 
-// 3.6  Compute displacement gradient
+// Compute displacement gradient
 /*\begin{text} 
    New evaluator:
   \begin{align*}
      \left.\frac{\partial u_i}{\partial x_j}\right|_{\xi_p} &= \partial_j N_{I}(\xi_p) u_{iI}\\
    (c,p,i,j) &= (c,I,p,j)*(c,I,i)
   \end{align*}
-   \textbf{Dependent Fields:} \\
+   \textbf{DEPENDENT FIELDS:} \\
    \begin{tabular}{l l l l}
-     $u_{iI}$ & Nodal Displacement & ("Variable Name", "Displacement") & dims(cell,nNodes,vecDim) \\
-     $B_I(\xi_p)$ & Gradient of Basis Functions & ("Gradient BF Name", "Grad BF") & dims(cell,nNodes,nQPs,vecDim) \\
+     $u_{Ii}$      & Nodal Displacement           & "Displacement"  & dims(cell,I=nNodes,i=vecDim)        \\
+     $B_I(\xi_p)$  & Gradient of Basis Functions  & "Grad BF"       & dims(cell,I=nNodes,p=nQPs,i=vecDim) \\
    \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
   \begin{tabular}{l l l l}
-     $\left.\frac{\partial u_i}{\partial x_j}\right|_{\xi_p}$ & Gradient of node vector & ("Gradient Variable Name", "Displacement Gradient") & dims(cell,nQPs,vecDim,spcDim)
+     $\left.\frac{\partial u_i}{\partial x_j}\right|_{\xi_p}$  \\
+     & Gradient of node vector  & "Displacement Gradient"  & dims(cell,p=nQPs,i=vecDim,j=spcDim)
   \end{tabular} \\
-
-  For implementation see: \\ 
-    problems/Albany\_EvaluatorUtils\_Def.hpp \\
-    evaluators/PHAL\_DOFVecGradInterpolation\_Def.hpp
 \end{text}*/
    fm0.template registerEvaluator<EvalT>
      (evalUtils.constructDOFVecGradInterpolationEvaluator(macro_dof_names[0]));
  
-// 3.5  Compute microstrain gradient
+// Compute microstrain gradient
 /*\begin{text} 
-   New evaluator:
+   Register new evaluator:
   \begin{align*}
-     \left.\frac{\partial \epsilon^n_{ij}}{\partial x_k}\right|_{\xi_p} &= \partial_k N_{I}(\xi_p) \epsilon^n_{ijI}\\
+     \left.\frac{\partial \epsilon^n_{ij}}{\partial x_k}\right|_{\xi_p} &= \partial_k N_{I}(\xi_p) \epsilon^n_{Iij}\\
    (c,p,i,j,k) &= (c,I,p,k)*(c,I,i,j)
   \end{align*}
-   \textbf{Dependent Fields:} \\
+   \textbf{DEPENDENT FIELDS:} \\
    \begin{tabular}{l l l l}
-     $\epsilon^n_{ijI}$ & Nodal microstrain at scale 'n' & ("Variable Name", "Microstrain\_1") & dims(cell,nNodes,vecDim,vecDim) \\
-     $B_I(\xi_p)$ & Gradient of Basis Functions & ("Gradient BF Name", "Grad BF") & dims(cell,nNodes,nQPs,vecDim) \\
+     $\epsilon^n_{Iij}$  & Nodal microstrain at scale 'n'  & "Microstrain\_n"  & dims(cell,I=nNodes,i=vecDim,j=vecDim) \\
+     $B_I(\xi_p)$        & Gradient of Basis Functions     & "Grad BF"         & dims(cell,I=nNodes,p=nQPs,i=vecDim)   \\
    \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
   \begin{tabular}{l l l l}
-     $\left.\frac{\partial \epsilon^n_{ij}}{\partial x_k}\right|_{\xi_p}$ & Microstrain gradient & ("Gradient Variable Name", "DOFTensorGrad Interpolation Microstrain\_1") & dims(cell,nQPs,vecDim,vecDim,spcDim)
+     $\left.\frac{\partial \epsilon^n_{ij}}{\partial x_k}\right|_{\xi_p}$ 
+     & Microstrain gradient at scale 'n'  & "Microstrain\_n Gradient"  & dims(cell,p=nQPs,i=vecDim,j=vecDim,k=spcDim)
   \end{tabular} \\
-
-  For implementation see: \\ 
-    HMC/problems/HMC\_EvaluatorUtils\_Def.hpp \\
-    HMC/evaluators/PHAL\_DOFTensorGradInterpolation\_Def.hpp
 \end{text}*/
    for(int i=0;i<numMicroScales;i++)
      fm0.template registerEvaluator<EvalT>
-       (evalUtilsHMC.constructDOFTensorGradInterpolationEvaluator(micro_dof_names[i][0],dof_offset+i*dof_stride));
+       (evalUtils.constructDOFTensorGradInterpolationEvaluator(micro_dof_names[i][0],dof_offset+i*dof_stride));
  
   // Temporary variable used numerous times below
   Teuchos::RCP<PHX::Evaluator<AlbanyTraits> > ev;
 
-// 4.1  Compute strain
+// Compute strain
 /*\begin{text} 
-   New evaluator:
+   New evaluator:\\
   \begin{align*}
      \epsilon^p_{ij} &=  
                \frac{1}{2}\left(\left.\frac{\partial u_i}{\partial x_j}\right|_{\xi_p}
                                +\left.\frac{\partial u_j}{\partial x_i}\right|_{\xi_p} \right)\\
    (c,p,i,j) &= ((c,p,i,j)+(c,p,j,i)/2.0)
   \end{align*}
-   \textbf{Dependent Fields:} \\
+   \textbf{DEPENDENT FIELDS:} \\
    \begin{tabular}{l l l l}
-     $\left.\frac{\partial u_i}{\partial x_j}\right|_{\xi_p}$ & Gradient of node vector & ("Gradient Variable Name", "Displacement Gradient") & dims(cell,nQPs,vecDim,spcDim)
+     $\left.\frac{\partial u_i}{\partial x_j}\right|_{\xi_p}$ 
+     & Gradient of displacement  & "Displacement Gradient"  & dims(cell, p=nQPs, i=vecDim, j=spcDim)
    \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
   \begin{tabular}{l l l l}
-     $\epsilon^p_{ij}$ & Infinitesimal strain & ("Strain Name", "Strain") & dims(cell,nQPs,vecDim,spcDim) \\
+     $\epsilon^p_{ij}$ & Infinitesimal strain  & "Strain" & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
   \end{tabular} \\
-
-  For implementation see: \\ 
-    LCM/evaluators/Strain\_Def.hpp
 \end{text}*/
   { 
     RCP<ParameterList> p = rcp(new ParameterList("Strain"));
@@ -560,25 +509,21 @@ Albany::HMCProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
-// 4.2  Compute microstrain difference
+// Compute microstrain difference
 /*\begin{text} 
-   New evaluator:
+   Register new evaluator:
   \begin{align*}
-     = \epsilon^p_{ij} - \epsilon^{np}_{ij}\\
+     \Delta\epsilon^{np}_{ij} = \epsilon^p_{ij} - \epsilon^{np}_{ij}\\
   \end{align*}
-   \textbf{Dependent Fields:} \\
+   \textbf{DEPENDENT FIELDS:} \\
    \begin{tabular}{l l l l}
-     $\epsilon^p_{ij}$ & Macro strain & ("Macro Strain Name", "Strain") & dims(cell,nQPs,vecDim,spcDim) \\
-     $\epsilon^n_{ijI}$ & Nodal microstrains at scale 'n' & ("Micro Strain Name", "Microstrain\_1") & dims(cell,nNodes,vecDim,vecDim) \\
+     $\epsilon^p_{ij}$   & Macro strain                     & "Strain"          & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
+     $\epsilon^n_{ijI}$  & Nodal microstrains at scale 'n'  & "Microstrain\_1"  & dims(cell, I=nNodes, i=vecDim, j=vecDim) \\
    \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
   \begin{tabular}{l l l l}
-     $\epsilon^p_{ij}$ & Strain Difference & ("Strain Difference Name", "Strain Difference 1") & dims(cell,nQPs,vecDim,spcDim) \\
+     $\Delta\epsilon^{np}_{ij}$ & Strain Difference at scale 'n'  & "Strain Difference n"  & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
   \end{tabular} \\
-
-  For implementation see: \\ 
-    evaluators/HMC\_StrainDifference\_Def.hpp
 \end{text}*/
   for(int i=0;i<numMicroScales;i++){
     RCP<ParameterList> p = rcp(new ParameterList("Strain Difference"));
@@ -596,76 +541,96 @@ Albany::HMCProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
-// 5.1 Compute stresses
-/*\begin{text} 
-   New evaluator:
-  \begin{align*}
-   \{\sigma^p_{ij}, \bar{\beta}^{np}_{ij}, \bar{\bar{\beta}}^{np}_{ijk}\}
-      = f(\{\epsilon^p_{ij}, \epsilon^p_{ij}-\epsilon^{np}_{ij}, \epsilon^{np}_{ij,k}\})
-  \end{align*}
-   \textbf{Dependent Fields:} \\
-   \begin{tabular}{l l l l}
-     $\epsilon^p_{ij}$ & Macro strain & ("Strain Name", "Strain") & dims(cell,nQPs,vecDim,spcDim)\\
-     $\epsilon^p_{ij}$ & Strain Difference & ("Strain Difference Name", "Strain Difference 1") & dims(cell,nQPs,vecDim,spcDim) \\
-     $\left.\frac{\partial \epsilon^n_{ij}}{\partial x_k}\right|_{\xi_p}$ & Microstrain gradient & ("Gradient Variable Name", "DOFTensorGrad Interpolation Microstrain\_1") & dims(cell,nQPs,vecDim,vecDim,spcDim)
-   \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
-  \begin{tabular}{l l l l}
-     $\sigma^p_{ij}$ & Stress & ("Stress Name", "Stress") & dims(cell,nQPs,vecDim,spcDim) \\
-     $\bar{beta}^{np}_{ij}$ & Stress & ("Micro Stress Name", "Micro Stress") & dims(cell,nQPs,vecDim,spcDim) \\
-     $\bar{\bar{beta}}^{np}_{ij,k}$ & Stress & ("Double Stress Name", "Double Stress") & dims(cell,nQPs,vecDim,spcDim,spcDim) \\
-  \end{tabular} \\
 
-  For implementation see: \\ 
-    LCM/evaluators/Stress\_Def.hpp \\
-\end{text}*/
-  {
-      RCP<ParameterList> p = rcp(new ParameterList("Stress"));
+  { // Constitutive Model Parameters
+    RCP<ParameterList> p = rcp(
+        new ParameterList("Constitutive Model Parameters"));
+    std::string matName = material_db_->getElementBlockParam<std::string>(
+        eb_name, "material");
+    Teuchos::ParameterList& param_list =
+        material_db_->getElementBlockSublist(eb_name, matName);
 
-      p->set<int>("Additional Scales", numMicroScales);
+    // pass through material properties
+    p->set<Teuchos::ParameterList*>("Material Parameters", &param_list);
 
-      //Input
-      //  Macro strain
-      p->set<std::string>("Strain Name", "Strain");
-      p->set< RCP<DataLayout> >("QP 2Tensor Data Layout", dl->qp_tensor);
-
-      //  Micro strains and micro strain gradients
-      for(int i=0;i<numMicroScales;i++){
-        std::stringstream sdname; sdname << "Strain Difference " << i;
-        std::string sd(sdname.str());
-        sdname << " Name";
-        p->set<std::string>(sdname.str(), sd);
-
-        std::stringstream sdgradname; 
-        sdgradname << "Micro Strain Gradient " << i << " Name";
-        p->set<std::string>(sdgradname.str(), micro_dof_names[i][0]+" Gradient");
-      }
-      p->set< RCP<DataLayout> >("QP 3Tensor Data Layout", dl->qp_tensor3);
-
-      //Output
-      p->set<std::string>("Stress Name", "Stress"); //dl->qp_tensor also
-      //
-      //  Micro stresses
-      for(int i=0;i<numMicroScales;i++){
-        std::string ms = Albany::strint("Micro Stress",i);
-        std::string msname(ms); msname += " Name";
-        p->set<std::string>(msname, ms);
-
-        std::string ds = Albany::strint("Double Stress",i);
-        std::string dsname(ds); dsname += " Name";
-        p->set<std::string>(dsname, ds);
-      }
-
-      //Parse material model constants
-      parseMaterialModel(p,params);
-
-      ev = rcp(new HMC::Stresses<EvalT,AlbanyTraits>(*p));
-      fm0.template registerEvaluator<EvalT>(ev);
-
+    RCP<LCM::ConstitutiveModelParameters<EvalT, AlbanyTraits> > cmpEv =
+        rcp(new LCM::ConstitutiveModelParameters<EvalT, AlbanyTraits>(*p, dl));
+    fm0.template registerEvaluator<EvalT>(cmpEv);
   }
 
-// 5.2 Compute total stress
+// Compute stresses
+/*\begin{text} 
+   Register new evaluator:
+  \begin{align*}
+   \{\sigma^p_{ij}, \bar{\beta}^{np}_{ij}, \bar{\bar{\beta}}^{np}_{ijk}\}
+      = f(\{\epsilon^p_{ij}, \Delta\epsilon^{np}_{ij}, \epsilon^{np}_{ij,k}\})
+  \end{align*}
+   \textbf{DEPENDENT FIELDS:} \\
+   \begin{tabular}{l l l l}
+     $\epsilon^p_{ij}$          & Macro strain             & "Strain"                   & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
+     $\Delta\epsilon^{np}_{ij}$ & Strain Difference 'n'    & "Strain Difference 1"      & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
+     $\epsilon^{np}_{ij,k}$     & Microstrain gradient 'n' & "Microstrain\_n Gradient"  & dims(cell, p=nQPs, i=vecDim, j=vecDim, k=spcDim)
+   \end{tabular} \\
+  \textbf{EVALUATED FIELDS:} \\
+  \begin{tabular}{l l l l}
+     $\sigma^p_{ij}$               & Macro Stress       & "Stress"           & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
+     $\bar{beta}^{np}_{ij}$        & Micro stress 'n'   & "Micro Stress n"   & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
+     $\bar{\bar{beta}}^{np}_{ijk}$ & Double stress 'n'  & "Double Stress n"  & dims(cell, p=nQPs, i=vecDim, j=spcDim, k=spcDim) \\
+  \end{tabular} \\
+\end{text}*/
+  {
+    RCP<ParameterList> p = rcp(new ParameterList("Constitutive Model Interface"));
+    std::string matName = material_db_->getElementBlockParam<std::string>(eb_name, "material");
+    Teuchos::ParameterList& param_list = material_db_->getElementBlockSublist(eb_name, matName);
+    
+    // construct field name map
+    // required 
+    LCM::FieldNameMap
+    field_name_map(false);
+    RCP<std::map<std::string, std::string> >
+    fnm = field_name_map.getMap();
+    param_list.set<RCP<std::map<std::string, std::string> > >("Name Map", fnm);
+    p->set<Teuchos::ParameterList*>("Material Parameters", &param_list);
+    // end required
+
+    p->set<Teuchos::ParameterList*>("Material Parameters", &param_list);
+
+    RCP<LCM::ConstitutiveModelInterface<EvalT, AlbanyTraits> > cmiEv =
+        rcp(new LCM::ConstitutiveModelInterface<EvalT, AlbanyTraits>(*p, dl));
+    fm0.template registerEvaluator<EvalT>(cmiEv);
+
+    // register state variables
+    for (int sv(0); sv < cmiEv->getNumStateVars(); ++sv) {
+      cmiEv->fillStateVariableStruct(sv);
+      p = stateMgr.registerStateVariable(cmiEv->getName(),
+          cmiEv->getLayout(),
+          dl->dummy,
+          eb_name,
+          cmiEv->getInitType(),
+          cmiEv->getInitValue(),
+          cmiEv->getStateFlag(),
+          cmiEv->getOutputFlag());
+      ev = rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      fm0.template registerEvaluator<EvalT>(ev);
+    }
+  }
+
+// Compute total stress
+/*\begin{text} 
+   Register new evaluator:
+  \begin{align*}
+    \sigma^{tp}_{ij} = \sigma^p_{ij} + \sum_n \bar{\beta}^{np}_{ij}
+  \end{align*}
+   \textbf{DEPENDENT FIELDS:} \\
+   \begin{tabular}{l l l l}
+     $\sigma^{tp}_{ij}$            & Total stress       & "Total Stress"     & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
+   \end{tabular} \\
+  \textbf{EVALUATED FIELDS:} \\
+  \begin{tabular}{l l l l}
+     $\sigma^p_{ij}$               & Macro Stress       & "Stress"           & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
+     $\bar{beta}^{np}_{ij}$        & Micro stress 'n'   & "Micro Stress n"   & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
+  \end{tabular} \\
+\end{text}*/
   {
     RCP<ParameterList> p = rcp(new ParameterList("Total Stress"));
 
@@ -687,33 +652,29 @@ Albany::HMCProblem::constructEvaluators(
   }
     
 
-// 6.1 Compute residual (stress divegence + inertia term)
+// Compute macro residual
 /*\begin{text} 
-   New evaluator:
+   Register new evaluator:
   \begin{align*}
-    f_{iI} = \sum_p 
-    \frac{\partial N_I (\mathbf{x}_p)}{\partial \xi_k} J^{-1}_{kj} det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p \sigma^p_{ij}
+    f_{Ii} = \sum_p 
+    \frac{\partial N_I (\mathbf{x}_p)}{\partial \xi_k} J^{-1}_{kj} det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p \sigma^{tp}_{ij}
    + \sum_p N_I(\mathbf{x}_p)\ det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p a^p_i
   \end{align*}
-   \textbf{Dependent Fields:} \\
+   \textbf{DEPENDENT FIELDS:} \\
    \begin{tabular}{l l l l}
-     $\sigma^p_{ij}$ & Stress & ("Stress Name", "Stress") & dims(cell,nQPs,vecDim,spcDim) \\
+     $\sigma^{tp}_{ij}$ & Total stress &  "Total Stress" & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
      $\frac{\partial N_I (\mathbf{x}_p)}{\partial \xi_k} J^{-1}_{kj} det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p$ &
-     Weighted GradBF & ("Weighted Gradient BF Name", "Weighted Gradient BF") & dims(cell,nNodes,nQPs,spcDim)\\
-     $a^p_i$ & Acceleration at quadrature points & ("Variable Name", "Dsplacement\_dotdot") & dims(cell,nQPs,vecDim)\\
+     Weighted Gradient matrix wrt current config & "wGrad BF" & dims(cell, I=nNodes, p=nQPs, i=spcDim)\\
+     $a^p_i$ & Acceleration at quadrature points & "Displacement\_dotdot" & dims(cell, p=nQPs, i=vecDim)\\
      $N_I(\mathbf{x}_p)\ det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p$ &
-     Weighted BF & ("Weighted BF Name", "wBF") & dims(cell,nNode,nQPs)\\
+     Weighted BF &  "wBF"  & dims(cell, I=nNodes, p=nQPs)\\
    \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
   \begin{tabular}{l l l l}
-     $f_{iI}(x_iI)$ & Residual & ("Residual Name", "Residual") & dims(cell,nNodes,spcDim)\\
+     $f_{Ii}$ & Macroscale Residual  & "Displacement Residual"  & dims(cell, I=nNodes, i=spcDim)\\
   \end{tabular} \\
-
-  For implementation see: \\ 
-    LCM/evaluators/ElasticityResid\_Def.hpp \\
 \end{text}*/
-  { // Displacement Resid
+  {
     RCP<ParameterList> p = rcp(new ParameterList("Displacement Resid"));
 
     //Input
@@ -736,7 +697,34 @@ Albany::HMCProblem::constructEvaluators(
     ev = rcp(new LCM::ElasticityResid<EvalT,AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
-  for(int i=0;i<numMicroScales;i++){ // Microstrain Residuals 
+// Compute micro residuals
+/*\begin{text} 
+   Register new evaluator:
+  \begin{align*}
+    f^n_{Iij} = \sum_p 
+    \frac{\partial N_I (\mathbf{x}_p)}{\partial \xi_l} J^{-1}_{lk} \bar{\bar{\beta}}^{np}_{ijk}\}
+       det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p 
+   + \sum_p N_I(\mathbf{x}_p) \bar{\beta}^{np}_{ij}
+      \det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p
+   + \sum_p N_I(\mathbf{x}_p) \ddot{\epsilon}^{np}_{ij}
+      \det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p
+  \end{align*}
+   \textbf{DEPENDENT FIELDS:} \\
+   \begin{tabular}{l l l l}
+     $\bar{beta}^{np}_{ij}$         & Micro stress 'n'         & "Micro Stress n"         & dims(cell, p=nQPs, i=vecDim, j=spcDim) \\
+     $\bar{\bar{beta}}^{np}_{ijk}$  & Double stress 'n'        & "Double Stress n"        & dims(cell, p=nQPs, i=vecDim, j=spcDim, k=spcDim) \\
+     $\ddot{\epsilon}^n_{Iij}$      & micro accel at scale 'n' & "Microstrain\_n\_dotdot" & dims(cell,I=nNodes,i=vecDim,j=vecDim) \\
+     $\frac{\partial N_I (\mathbf{x}_p)}{\partial \xi_l} J^{-1}_{lk} det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p$ &
+     Weighted Gradient matrix wrt current config & "wGrad BF" & dims(cell, I=nNodes, p=nQPs, i=spcDim)\\
+     $N_I(\mathbf{x}_p)\ det\left(\frac{\partial x_{ip}}{\partial \xi_j}\right) \omega_p$ &
+     Weighted BF &  "wBF"  & dims(cell, I=nNodes, p=nQPs)\\
+   \end{tabular} \\
+  \textbf{EVALUATED FIELDS:} \\
+  \begin{tabular}{l l l l}
+     $f^n_{Iij}$  & Residual at scale 'n'  & "Microstrain\_n Residual"  & dims(cell, I=nNodes, i=vecDim, j=vecDim)\\
+  \end{tabular} \\
+\end{text}*/
+  for(int i=0;i<numMicroScales;i++){ 
     RCP<ParameterList> p = rcp(new ParameterList("Microstrain Resid"));
 
     //Input: Micro stresses
@@ -766,29 +754,34 @@ Albany::HMCProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
-// X.X  Scatter nodal forces
+// Scatter macroscale forces
 /*\begin{text}
-   New evaluator: Scatter the nodal forces (i.e., "Displacement Residual") from the grid based structures to the solver data structures.
-   \textbf{Dependent Fields:} \\
+   Register new evaluator: Scatter the nodal forces from grid based structures to solver data structures.\\
+   \textbf{DEPENDENT FIELDS:} \\
    \begin{tabular}{l l l l}
-     $u_{iI}$ & Displacement residual & ("Residual Name", "Displacement Residual") & dims(cell,nNodes,vecDim) \\
+     $f_{Ii}$ & Macroscale Residual  & "Displacement Residual"  & dims(cell, I=nNodes, i=vecDim) \\
    \end{tabular} \\
- 
-  \textbf{Evaluated Fields:} \\
+  \textbf{EVALUATED FIELDS:} \\
      None. \\
-
-  For implementation see: \\ 
-    problems/Albany\_EvaluatorUtils\_Def.hpp \\
-    evaluators/PHAL\_ScatterResidual\_Def.hpp
 \end{text}*/
    fm0.template registerEvaluator<EvalT>
-     (evalUtils.constructScatterResidualEvaluator(true, macro_resid_names));
+     (evalUtils.constructScatterResidualEvaluator(vectorRank, macro_resid_names));
 
+// Scatter microscale forces
+/*\begin{text}
+   Register new evaluator: Scatter the nodal forces from grid based structures to solver data structures.\\
+   \textbf{DEPENDENT FIELDS:} \\
+   \begin{tabular}{l l l l}
+     $f^n_{Iij}$ & Microscale Residual  & "Microstrain\_n Residual"  & dims(cell, I=nNodes, i=vecDim, j=vecDim) \\
+   \end{tabular} \\
+  \textbf{EVALUATED FIELDS:} \\
+     None. \\
+\end{text}*/
   int numTensorFields = numDim*numDim;
   int dofOffset = numDim;
   for(int i=0;i<numMicroScales;i++){ // Micro forces
     fm0.template registerEvaluator<EvalT>
-      (evalUtilsHMC.constructScatterResidualEvaluator(micro_resid_names[i], dofOffset, micro_scatter_names[i][0]));
+      (evalUtils.constructScatterResidualEvaluator(tensorRank, micro_resid_names[i], dofOffset, micro_scatter_names[i][0]));
     dofOffset += numTensorFields;
   }
 
@@ -803,7 +796,7 @@ Albany::HMCProblem::constructEvaluators(
 
     ev = rcp(new LCM::Time<EvalT,AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
-    p = stateMgr.registerStateVariable("Time",dl->workset_scalar, dl->dummy, elementBlockName, "scalar", 0.0, true);
+    p = stateMgr.registerStateVariable("Time",dl->workset_scalar, dl->dummy, eb_name, "scalar", 0.0, true);
     ev = rcp(new PHAL::SaveStateField<EvalT,AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }

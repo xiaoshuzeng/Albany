@@ -6,8 +6,8 @@
 
 #include "PHAL_AlbanyTraits.hpp"
 
-#include "HMC_ScatterResidual.hpp"
-#include "HMC_ScatterResidual_Def.hpp"
+#include "HMC_MicroResidual.hpp"
+#include "HMC_MicroResidual_Def.hpp"
 
-PHAL_INSTANTIATE_TEMPLATE_CLASS(HMC::ScatterResidual)
+PHAL_INSTANTIATE_TEMPLATE_CLASS(HMC::MicroResidual)
 

@@ -22,6 +22,8 @@
 #include "PHAL_DOFGradInterpolation.hpp"
 #include "PHAL_DOFVecInterpolation.hpp"
 #include "PHAL_DOFVecGradInterpolation.hpp"
+#include "PHAL_DOFTensorInterpolation.hpp"
+#include "PHAL_DOFTensorGradInterpolation.hpp"
 
 /********************  Problem Utils Class  ******************************/
 
@@ -49,13 +51,42 @@ Albany::EvaluatorUtils<EvalT,Traits>::constructGatherSolutionEvaluator(
     RCP<ParameterList> p = rcp(new ParameterList("Gather Solution"));
     p->set< Teuchos::ArrayRCP<string> >("Solution Names", dof_names);
 
-    p->set<bool>("Vector Field", isVectorField);
+    if(isVectorField)
+      p->set<int>("Tensor Rank", 1);
+    else
+      p->set<int>("Tensor Rank", 0);
+
+    p->set<int>("Offset of First DOF", offsetToFirstDOF);
+
+    p->set< Teuchos::ArrayRCP<string> >("Time Dependent Solution Names", dof_names_dot);
+    return rcp(new PHAL::GatherSolution<EvalT,Traits>(*p,dl));
+} 
+
+
+template<typename EvalT, typename Traits>
+Teuchos::RCP< PHX::Evaluator<Traits> >
+Albany::EvaluatorUtils<EvalT,Traits>::constructGatherSolutionEvaluator(
+       int tensorRank,
+       Teuchos::ArrayRCP<std::string> dof_names,
+       Teuchos::ArrayRCP<std::string> dof_names_dot,
+       int offsetToFirstDOF)
+{
+    using Teuchos::RCP;
+    using Teuchos::rcp;
+    using Teuchos::ParameterList;
+    using std::string;
+
+    RCP<ParameterList> p = rcp(new ParameterList("Gather Solution"));
+    p->set< Teuchos::ArrayRCP<string> >("Solution Names", dof_names);
+
+    p->set<int>("Tensor Rank", tensorRank);
 
     p->set<int>("Offset of First DOF", offsetToFirstDOF);
 
     p->set< Teuchos::ArrayRCP<string> >("Time Dependent Solution Names", dof_names_dot);
     return rcp(new PHAL::GatherSolution<EvalT,Traits>(*p,dl));
 }
+
 
 template<typename EvalT, typename Traits>
 Teuchos::RCP< PHX::Evaluator<Traits> >
@@ -74,7 +105,10 @@ Albany::EvaluatorUtils<EvalT,Traits>::constructGatherSolutionEvaluator_withAccel
     RCP<ParameterList> p = rcp(new ParameterList("Gather Solution"));
     p->set< Teuchos::ArrayRCP<string> >("Solution Names", dof_names);
 
-    p->set<bool>("Vector Field", isVectorField);
+    if(isVectorField)
+      p->set<int>("Tensor Rank", 1);
+    else
+      p->set<int>("Tensor Rank", 0);
 
     p->set<int>("Offset of First DOF", offsetToFirstDOF);
 
@@ -93,6 +127,41 @@ Albany::EvaluatorUtils<EvalT,Traits>::constructGatherSolutionEvaluator_withAccel
 
 template<typename EvalT, typename Traits>
 Teuchos::RCP< PHX::Evaluator<Traits> >
+Albany::EvaluatorUtils<EvalT,Traits>::constructGatherSolutionEvaluator_withAcceleration(
+       int tensorRank,
+       Teuchos::ArrayRCP<std::string> dof_names,
+       Teuchos::ArrayRCP<std::string> dof_names_dot,
+       Teuchos::ArrayRCP<std::string> dof_names_dotdot,
+       int offsetToFirstDOF)
+{
+    using Teuchos::RCP;
+    using Teuchos::rcp;
+    using Teuchos::ParameterList;
+    using std::string;
+
+    RCP<ParameterList> p = rcp(new ParameterList("Gather Solution"));
+    p->set< Teuchos::ArrayRCP<string> >("Solution Names", dof_names);
+
+    p->set<int>("Tensor Rank", tensorRank);
+
+    p->set<int>("Offset of First DOF", offsetToFirstDOF);
+
+    if (dof_names_dot != Teuchos::null)
+      p->set< Teuchos::ArrayRCP<string> >("Time Dependent Solution Names", dof_names_dot);
+    else
+      p->set<bool>("Disable Transient", true);
+
+    if (dof_names_dotdot != Teuchos::null) {
+      p->set< Teuchos::ArrayRCP<string> >("Solution Acceleration Names", dof_names_dotdot);
+      p->set<bool>("Enable Acceleration", true);
+    }
+
+    return rcp(new PHAL::GatherSolution<EvalT,Traits>(*p,dl));
+}
+
+
+template<typename EvalT, typename Traits>
+Teuchos::RCP< PHX::Evaluator<Traits> >
 Albany::EvaluatorUtils<EvalT,Traits>::constructGatherSolutionEvaluator_noTransient(
        bool isVectorField,
        Teuchos::ArrayRCP<std::string> dof_names,
@@ -106,13 +175,40 @@ Albany::EvaluatorUtils<EvalT,Traits>::constructGatherSolutionEvaluator_noTransie
     RCP<ParameterList> p = rcp(new ParameterList("Gather Solution"));
     p->set< Teuchos::ArrayRCP<string> >("Solution Names", dof_names);
 
-    p->set<bool>("Vector Field", isVectorField);
+    if(isVectorField)
+      p->set<int>("Tensor Rank", 1);
+    else
+      p->set<int>("Tensor Rank", 0);
 
     p->set<int>("Offset of First DOF", offsetToFirstDOF);
     p->set<bool>("Disable Transient", true);
 
     return rcp(new PHAL::GatherSolution<EvalT,Traits>(*p,dl));
 }
+
+template<typename EvalT, typename Traits>
+Teuchos::RCP< PHX::Evaluator<Traits> >
+Albany::EvaluatorUtils<EvalT,Traits>::constructGatherSolutionEvaluator_noTransient(
+       int tensorRank,
+       Teuchos::ArrayRCP<std::string> dof_names,
+       int offsetToFirstDOF)
+{
+    using Teuchos::RCP;
+    using Teuchos::rcp;
+    using Teuchos::ParameterList;
+    using std::string;
+
+    RCP<ParameterList> p = rcp(new ParameterList("Gather Solution"));
+    p->set< Teuchos::ArrayRCP<string> >("Solution Names", dof_names);
+
+    p->set<int>("Tensor Rank", tensorRank);
+
+    p->set<int>("Offset of First DOF", offsetToFirstDOF);
+    p->set<bool>("Disable Transient", true);
+
+    return rcp(new PHAL::GatherSolution<EvalT,Traits>(*p,dl));
+}
+
 
 
 template<typename EvalT, typename Traits>
@@ -130,7 +226,33 @@ Albany::EvaluatorUtils<EvalT,Traits>::constructScatterResidualEvaluator(
     RCP<ParameterList> p = rcp(new ParameterList("Scatter Residual"));
     p->set< Teuchos::ArrayRCP<string> >("Residual Names", resid_names);
 
-    p->set<bool>("Vector Field", isVectorField);
+    if(isVectorField)
+      p->set<int>("Tensor Rank", 1);
+    else
+      p->set<int>("Tensor Rank", 0);
+
+    p->set<int>("Offset of First DOF", offsetToFirstDOF);
+    p->set<string>("Scatter Field Name", scatterName);
+
+    return rcp(new PHAL::ScatterResidual<EvalT,Traits>(*p,dl));
+}
+
+template<typename EvalT, typename Traits>
+Teuchos::RCP< PHX::Evaluator<Traits> >
+Albany::EvaluatorUtils<EvalT,Traits>::constructScatterResidualEvaluator(
+       int tensorRank,
+       Teuchos::ArrayRCP<std::string> resid_names,
+       int offsetToFirstDOF, std::string scatterName)
+{
+    using Teuchos::RCP;
+    using Teuchos::rcp;
+    using Teuchos::ParameterList;
+    using std::string;
+
+    RCP<ParameterList> p = rcp(new ParameterList("Scatter Residual"));
+    p->set< Teuchos::ArrayRCP<string> >("Residual Names", resid_names);
+
+    p->set<int>("Tensor Rank", tensorRank);
 
     p->set<int>("Offset of First DOF", offsetToFirstDOF);
     p->set<string>("Scatter Field Name", scatterName);
@@ -407,4 +529,49 @@ Albany::EvaluatorUtils<EvalT,Traits>::constructDOFVecGradInterpolationEvaluator(
     p->set<string>("Gradient Variable Name", dof_name+" Gradient");
 
     return rcp(new PHAL::DOFVecGradInterpolation<EvalT,Traits>(*p,dl));
+}
+
+template<typename EvalT, typename Traits>
+Teuchos::RCP< PHX::Evaluator<Traits> >
+Albany::EvaluatorUtils<EvalT,Traits>::constructDOFTensorInterpolationEvaluator(
+       std::string& dof_name,
+       int offsetToFirstDOF)
+{
+    using Teuchos::RCP;
+    using Teuchos::rcp;
+    using Teuchos::ParameterList;
+    using std::string;
+
+    RCP<ParameterList> p = rcp(new ParameterList("DOFTensor Interpolation "+dof_name));
+    // Input
+    p->set<string>("Variable Name", dof_name);
+    p->set<string>("BF Name", "BF");
+    p->set<int>("Offset of First DOF", offsetToFirstDOF);
+
+    // Output (assumes same Name as input)
+
+    return rcp(new PHAL::DOFTensorInterpolation<EvalT,Traits>(*p,dl));
+}
+
+template<typename EvalT, typename Traits>
+Teuchos::RCP< PHX::Evaluator<Traits> >
+Albany::EvaluatorUtils<EvalT,Traits>::constructDOFTensorGradInterpolationEvaluator(
+       std::string& dof_name,
+       int offsetToFirstDOF)
+{
+    using Teuchos::RCP;
+    using Teuchos::rcp;
+    using Teuchos::ParameterList;
+    using std::string;
+
+    RCP<ParameterList> p = rcp(new ParameterList("DOFTensorGrad Interpolation "+dof_name));
+    // Input
+    p->set<string>("Variable Name", dof_name);
+    p->set<string>("Gradient BF Name", "Grad BF");
+    p->set<int>("Offset of First DOF", offsetToFirstDOF);
+
+    // Output (assumes same Name as input)
+    p->set<string>("Gradient Variable Name", dof_name+" Gradient");
+
+    return rcp(new PHAL::DOFTensorGradInterpolation<EvalT,Traits>(*p,dl));
 }

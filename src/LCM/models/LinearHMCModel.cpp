@@ -6,8 +6,8 @@
 
 #include "PHAL_AlbanyTraits.hpp"
 
-#include "HMC_Residual.hpp"
-#include "HMC_Residual_Def.hpp"
+#include "LinearHMCModel.hpp"
+#include "LinearHMCModel_Def.hpp"
 
-PHAL_INSTANTIATE_TEMPLATE_CLASS(HMC::MicroResidual)
+PHAL_INSTANTIATE_TEMPLATE_CLASS(LCM::LinearHMCModel)
 
