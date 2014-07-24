@@ -114,8 +114,10 @@ evaluateFields(typename Traits::EvalData workset)
         etadotdVelx(cell,qp,level) = factor * ( etadotpi_p*dVx_p + etadotpi_m*dVx_m );
 
         for (int i = 0; i < tracerNames.size(); ++i) {
-          const ScalarT q_m = 0.5*( Tracer[tracerNames[i]](cell,qp,level)   + Tracer[tracerNames[i]](cell,qp,level_m) );
-          const ScalarT q_p = 0.5*( Tracer[tracerNames[i]](cell,qp,level_p) + Tracer[tracerNames[i]](cell,qp,level) );
+          const ScalarT q_m = 0.5*( Tracer[tracerNames[i]](cell,qp,level)   / Pi(cell,qp,level)   
+                                  + Tracer[tracerNames[i]](cell,qp,level_m) / Pi(cell,qp,level_m) );
+          const ScalarT q_p = 0.5*( Tracer[tracerNames[i]](cell,qp,level_p) / Pi(cell,qp,level_p) 
+                                  + Tracer[tracerNames[i]](cell,qp,level)   / Pi(cell,qp,level)   );
           etadotdTracer[tracerNames[i]](cell,qp,level) = ( etadotpi_p*q_p - etadotpi_m*q_m ) / E.delta(level);
         }
       }
