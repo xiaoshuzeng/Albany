@@ -41,6 +41,7 @@
 #include "LCM/problems/ConcurrentMultiscaleProblem.hpp"
 #include "LCM/problems/SchwarzMultiscaleProblem.hpp"
 #include "LCM/problems/PeridigmProblem.hpp"
+#include "LCM/problems/HMCProblem.hpp"
 #if defined(ALBANY_LAME) || defined(ALBANY_LAMENT)
 #include "LCM/problems/lame/LameProblem.hpp"
 #endif
@@ -56,10 +57,6 @@
 #include "FELIX/problems/FELIX_Stokes.hpp"
 #include "FELIX/problems/FELIX_StokesFO.hpp"
 #include "FELIX/problems/FELIX_StokesL1L2.hpp"
-#endif
-
-#ifdef ALBANY_HMC
-#include "HMC/problems/HMCProblem.hpp"
 #endif
 
 #ifdef ALBANY_AERAS
@@ -271,6 +268,15 @@ Albany::ProblemFactory::create()
   else if (method == "ThermoMechanical") {
     strategy = rcp(new Albany::ThermoMechanicalProblem(problemParams, paramLib, 3));
   }
+  else if (method == "HMC 1D") {
+    strategy = rcp(new Albany::HMCProblem(problemParams, paramLib, 1, comm));
+  }
+  else if (method == "HMC 2D") {
+    strategy = rcp(new Albany::HMCProblem(problemParams, paramLib, 2, comm));
+  }
+  else if (method == "HMC 3D") {
+    strategy = rcp(new Albany::HMCProblem(problemParams, paramLib, 3, comm));
+  }
 #endif
 #ifdef ALBANY_HYDRIDE
   else if (method == "Hydride 2D") {
@@ -293,17 +299,6 @@ Albany::ProblemFactory::create()
   }
   else if (method == "LaplaceBeltrami 3D") {
     strategy = rcp(new Albany::LaplaceBeltramiProblem(problemParams, paramLib, 3, comm));
-  }
-#endif
-#ifdef ALBANY_HMC
-  else if (method == "HMC 1D") {
-    strategy = rcp(new Albany::HMCProblem(problemParams, paramLib, 1));
-  }
-  else if (method == "HMC 2D") {
-    strategy = rcp(new Albany::HMCProblem(problemParams, paramLib, 2));
-  }
-  else if (method == "HMC 3D") {
-    strategy = rcp(new Albany::HMCProblem(problemParams, paramLib, 3));
   }
 #endif
 #ifdef ALBANY_FELIX

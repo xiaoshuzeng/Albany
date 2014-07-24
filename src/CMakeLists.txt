@@ -165,6 +165,8 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_DOFGradInterpolation.cpp
   evaluators/PHAL_DOFVecInterpolation.cpp
   evaluators/PHAL_DOFVecGradInterpolation.cpp
+  evaluators/PHAL_DOFTensorInterpolation.cpp
+  evaluators/PHAL_DOFTensorGradInterpolation.cpp
   evaluators/PHAL_MapToPhysicalFrame.cpp
   evaluators/PHAL_SaveStateField.cpp
   evaluators/PHAL_LoadStateField.cpp
@@ -253,6 +255,10 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_DOFVecInterpolation_Def.hpp
   evaluators/PHAL_DOFVecGradInterpolation.hpp
   evaluators/PHAL_DOFVecGradInterpolation_Def.hpp
+  evaluators/PHAL_DOFTensorInterpolation.hpp
+  evaluators/PHAL_DOFTensorInterpolation_Def.hpp
+  evaluators/PHAL_DOFTensorGradInterpolation.hpp
+  evaluators/PHAL_DOFTensorGradInterpolation_Def.hpp
   evaluators/PHAL_MapToPhysicalFrame.hpp
   evaluators/PHAL_MapToPhysicalFrame_Def.hpp
   evaluators/PHAL_SaveStateField.hpp
@@ -517,14 +523,12 @@ include_directories (${Trilinos_INCLUDE_DIRS}
                      ./LCM/models
                      ./LCM/utils
                      ./LCM/utils/topology
-                     ./HMC/evaluators
                      ./FELIX/problems
                      ./FELIX/evaluators
                      ./Aeras/problems
                      ./Aeras/evaluators
                      ./Hydride/problems
                      ./Hydride/evaluators
-                     ./HMC/problems
                      ./QCAD
                      ./QCAD/problems
                      ./QCAD/evaluators
@@ -700,13 +704,6 @@ ENDIF()
 IF(ALBANY_CATALYST)
   SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} albanyCatalyst)
 endif()
-
-IF (ALBANY_HMC)
-  #HMC requires LCM
-  SET(ALBANY_LCM ON)
-  add_subdirectory(HMC)
-  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} HMC)
-ENDIF()
 
 IF (ALBANY_LCM)
   add_subdirectory(LCM)

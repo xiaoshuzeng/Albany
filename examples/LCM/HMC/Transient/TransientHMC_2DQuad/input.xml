@@ -1,35 +1,11 @@
 <ParameterList>
   <ParameterList name="Problem">
-    <Parameter name="Name" type="string" value="HMC 2D"/>
     <Parameter name="Phalanx Graph Visualization Detail" type="int" value="2"/>
+    <Parameter name="Name" type="string" value="HMC 2D"/>
+    <Parameter name="Additional Scales" type="int" value="1"/>
+    <Parameter name="MaterialDB Filename" type="string" value="materials.xml"/>
     <Parameter name="Solution Method" type="string" value="Transient"/>
     <Parameter name="Second Order" type="string" value="Newmark"/>
-    <Parameter name="Additional Scales" type="int" value="1"/>
-    <ParameterList name="Hierarchical Elasticity Model">
-      <Parameter name="C11" type="double" value="1e10"/>
-      <Parameter name="C33" type="double" value="1e10"/>
-      <Parameter name="C12" type="double" value="6e9"/>
-      <Parameter name="C23" type="double" value="6e9"/>
-      <Parameter name="C44" type="double" value="4e9"/>
-      <Parameter name="C66" type="double" value="4e9"/>
-      <ParameterList name="Microscale 1">
-        <Parameter name="Length Scale" type="double" value="1e-4"/>
-        <Parameter name="Beta Constant" type="double" value="0.3"/>
-      </ParameterList>
-<!--
-      <ParameterList name="Microscale 2">
-        <Parameter name="Length Scale" type="double" value="1e-2"/>
-        <Parameter name="Beta Constant" type="double" value="0.1"/>
-      </ParameterList>
--->
-    </ParameterList>
-<!--
-    <ParameterList name="Dirichlet BCs">
-      <Parameter name="DBC on NS nodelist_1 for DOF Z" type="double" value="0.0"/>
-      <Parameter name="DBC on NS nodelist_1 for DOF Y" type="double" value="0.0"/>
-      <Parameter name="DBC on NS nodelist_1 for DOF X" type="double" value="0.0"/>
-    </ParameterList>
--->
     <ParameterList name="Initial Condition">
       <Parameter name="Function" type="string" value="Constant"/>
       <Parameter name="Function Data" 
@@ -37,12 +13,6 @@
                  value="{0.0, 0.0, \
                          0.0, 0.0, 0.0, 0.0}"/>
     </ParameterList>
-<!--
-    <ParameterList name="Initial Condition Dot">
-      <Parameter name="Function" type="string" value="Linear Y"/>
-      <Parameter name="Function Data" type="Array(double)" value="{0.02}"/>
-    </ParameterList>
--->
     <ParameterList name="Neumann BCs">
       <Parameter name="NBC on SS surface_1 for DOF sig_y set dudn" type="Array(double)" value="{4.5e4}"/>
     </ParameterList>

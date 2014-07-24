@@ -3,22 +3,7 @@
     <Parameter name="Name" type="string" value="HMC 2D"/>
     <Parameter name="Phalanx Graph Visualization Detail" type="int" value="2"/>
     <Parameter name="Additional Scales" type="int" value="2"/>
-    <ParameterList name="Hierarchical Elasticity Model">
-      <Parameter name="C11" type="double" value="1e10"/>
-      <Parameter name="C33" type="double" value="1e10"/>
-      <Parameter name="C12" type="double" value="6e9"/>
-      <Parameter name="C23" type="double" value="6e9"/>
-      <Parameter name="C44" type="double" value="4e9"/>
-      <Parameter name="C66" type="double" value="4e9"/>
-      <ParameterList name="Microscale 1">
-        <Parameter name="Length Scale" type="double" value="1e-4"/>
-        <Parameter name="Beta Constant" type="double" value="0.3"/>
-      </ParameterList>
-      <ParameterList name="Microscale 2">
-        <Parameter name="Length Scale" type="double" value="1e-2"/>
-        <Parameter name="Beta Constant" type="double" value="0.1"/>
-      </ParameterList>
-    </ParameterList>
+    <Parameter name="MaterialDB Filename" type="string" value="materials.xml"/>
     <ParameterList name="Dirichlet BCs">
       <Parameter name="DBC on NS nodelist_1 for DOF Y" type="double" value="0.0"/>
       <Parameter name="DBC on NS nodelist_2 for DOF X" type="double" value="0.0"/>

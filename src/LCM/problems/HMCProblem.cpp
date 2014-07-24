@@ -5,7 +5,8 @@
 Albany::HMCProblem::
 HMCProblem(const Teuchos::RCP<Teuchos::ParameterList>& params_,
 		  const Teuchos::RCP<ParamLib>& paramLib_,
-		  const int numDim_) :
+		  const int numDim_,
+                  const Teuchos::RCP<const Epetra_Comm>& comm) :
   Albany::AbstractProblem(params_, paramLib_, numDim_+params_->get("Additional Scales",1)*numDim_*numDim_),
   haveSource(false),
   numDim(numDim_),
@@ -14,6 +15,17 @@ HMCProblem(const Teuchos::RCP<Teuchos::ParameterList>& params_,
  
   std::string& method = params->get("Name", "HMC ");
   *out << "Problem Name = " << method << std::endl;
+
+  bool validMaterialDB(false);
+  if(params->isType<std::string>("MaterialDB Filename")){
+    validMaterialDB = true;
+    std::string filename = params->get<std::string>("MaterialDB Filename");
+    material_db_ = Teuchos::rcp(new QCAD::MaterialDatabase(filename, comm));
+  }
+  TEUCHOS_TEST_FOR_EXCEPTION(!validMaterialDB,
+                             std::logic_error,
+                             "Mechanics Problem Requires a Material Database");
+
 
 // the following function returns the problem information required for setting the rigid body modes (RBMs) for elasticity problems
 //written by IK, Feb. 2012
@@ -172,6 +184,8 @@ Albany::HMCProblem::getValidProblemParameters() const
     this->getGenericProblemParams("ValidHMCProblemParams");
 
   validPL->set<int>("Additional Scales", false, "1");
+  validPL->set<std::string>("MaterialDB Filename","materials.xml",
+                            "Filename of material database xml file");
   validPL->sublist("Hierarchical Elasticity Model", false, "");
 
   return validPL;

@@ -4,6 +4,7 @@ set(testName ${testDirName})
 
 # Copy Input file from source to binary dir
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/input.xml ${CMAKE_CURRENT_BINARY_DIR}/input.xml COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/materials.xml ${CMAKE_CURRENT_BINARY_DIR}/materials.xml COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${testName}.gen  ${CMAKE_CURRENT_BINARY_DIR}/${testName}.gen COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${testName}.gen.4.0  ${CMAKE_CURRENT_BINARY_DIR}/${testName}.gen.4.0 COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${testName}.gen.4.1  ${CMAKE_CURRENT_BINARY_DIR}/${testName}.gen.4.1 COPYONLY)

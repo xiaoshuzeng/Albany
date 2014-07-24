@@ -18,11 +18,13 @@ GatherSolutionBase(const Teuchos::ParameterList& p,
                    const Teuchos::RCP<Albany::Layouts>& dl): numNodes(0)
 {
   
-  tensorRank = 0; // scalar field unless told otherwise
-  if(p.isType<bool>("Vector Field")){
-    if(p.get<bool>("Vector Field")) tensorRank = 1;
-  } else if (p.isType<bool>("Tensor Field")){
-    if(p.get<bool>("Tensor Field")) tensorRank = 2;
+  if (p.isType<int>("Tensor Rank"))
+    tensorRank = p.get<int>("Tensor Rank");
+  else
+  if (p.isType<bool>("Vector Field")){
+    if (p.get<bool>("Vector Field") == true)
+      tensorRank = 1;
+    else tensorRank = 0;
   }
 
   if (p.isType<bool>("Disable Transient"))
