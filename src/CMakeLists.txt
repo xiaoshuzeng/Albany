@@ -385,6 +385,17 @@ IF (ALBANY_FELIX)
   )
 ENDIF()
 
+# AERAS
+IF (ALBANY_AERAS)
+  SET(SOURCES ${SOURCES}
+    evaluators/Aeras_ShallowWaterResponseL2Error.cpp
+  )
+  SET(HEADERS ${HEADERS}
+    evaluators/Aeras_ShallowWaterResponseL2Error.hpp
+    evaluators/Aeras_ShallowWaterResponseL2Error_Def.hpp
+  )
+ENDIF()
+
 # ASCR
 IF(ALBANY_ASCR)
   SET(SOURCES ${SOURCES}

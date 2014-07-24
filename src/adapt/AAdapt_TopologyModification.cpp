@@ -53,7 +53,13 @@ AAdapt::TopologyMod::TopologyMod(
   base_exo_filename_ = stk_mesh_struct_->exoOutFile;
 
   std::string const
-  stress_name = "nodal_Cauchy_Stress";
+  bulk_block_name = params->get<std::string>("Bulk Block Name");
+
+  std::string const
+  interface_block_name = params->get<std::string>("Interface Block Name");
+
+  std::string const
+  stress_name = "nodal_PK1";
 
   double const
   critical_traction = params->get<double>("Critical Traction");
@@ -67,7 +73,12 @@ AAdapt::TopologyMod::TopologyMod(
   fracture_criterion_ =
     Teuchos::rcp(
         new LCM::FractureCriterionTraction(
-            *topology_, stress_name, critical_traction, beta)
+            *topology_,
+            bulk_block_name,
+            interface_block_name,
+            stress_name,
+            critical_traction,
+            beta)
   );
 
   topology_->setFractureCriterion(fracture_criterion_);
@@ -129,14 +140,6 @@ AAdapt::TopologyMod::adaptMesh(
   // Start the mesh update process
 
   // Modifies mesh for graph algorithm
-  // Function must be called each time before there are changes to the mesh
-
-  // Check for failure criterion
-  // std::map<EntityKey, bool> local_entity_open;
-  // std::map<EntityKey, bool> global_entity_open;
-  topology_->setEntitiesOpen();
-
-  // getGlobalOpenList(local_entity_open, global_entity_open);
 
   // begin mesh update
 

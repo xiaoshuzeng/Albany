@@ -4,9 +4,10 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-#include "AAdapt_STKAdapt.hpp"
+//#include "AAdapt_STKAdapt.hpp"
+#include "Albany_STKDiscretization.hpp"
+#include "Albany_GenericSTKMeshStruct.hpp"
 #include "Intrepid_MiniTensor.h"
-#include "PerceptMesh.hpp"
 #include "Phalanx_DataLayout.hpp"
 #include "Sacado_ParameterRegistration.hpp"
 #include "Teuchos_TestForException.hpp"

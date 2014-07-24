@@ -48,19 +48,19 @@ public:
   
   void evaluateFields(typename Traits::EvalData d);
   
-void kessler(int Km, double dt_in,
-             std::vector<double> & rho, 
-             std::vector<double> & p, 
-             std::vector<double> & exner, 
-             std::vector<double> & dz8w,
+private:
+void kessler(const int Km, const double dt_in,
+             const std::vector<double> & rho, 
+             const std::vector<double> & p, 
+             const std::vector<double> & exner, 
+             const std::vector<double> & dz8w,
              std::vector<double> & t,  
              std::vector<double> & qv, 
              std::vector<double> & qc, 
              std::vector<double> & qr,
              double &rainnc,  double &rainncv,
-             std::vector<double> &z);
+             const std::vector<double> &z);
 
-private:
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Velx;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Temp;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Density;
@@ -75,6 +75,8 @@ private:
   const Teuchos::ArrayRCP<std::string> tracerSrcNames;
   std::map<std::string, std::string>   namesToSrc;
  
+  bool compute_cloud_physics;
+
   const int numQPs;
   const int numDims;
   const int numLevels;
