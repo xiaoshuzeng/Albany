@@ -179,13 +179,13 @@ Albany::CahnHillProblem::constructEvaluators(
 
   for (unsigned int i=0; i<neq; i++) {
     fm0.template registerEvaluator<EvalT>
-      (evalUtils.constructDOFInterpolationEvaluator(dof_names[i],i));
+      (evalUtils.constructDOFInterpolationEvaluator(dof_names[i]));
 
     fm0.template registerEvaluator<EvalT>
-      (evalUtils.constructDOFInterpolationEvaluator(dof_names_dot[i],i));
+      (evalUtils.constructDOFInterpolationEvaluator(dof_names_dot[i]));
 
     fm0.template registerEvaluator<EvalT>
-      (evalUtils.constructDOFGradInterpolationEvaluator(dof_names[i],i));
+      (evalUtils.constructDOFGradInterpolationEvaluator(dof_names[i]));
   }
 
 
