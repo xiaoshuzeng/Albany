@@ -602,6 +602,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<std::string>("EtaDotPi",                   "EtaDotPi");
     p->set<std::string>("EtaDotdT",                   "EtaDotdT");
     p->set<std::string>("EtaDotdVelx",                "EtaDotdVelx");
+    p->set<std::string>("PiDot",                      "PiDot");
     p->set< Teuchos::ArrayRCP<std::string> >("Tracer EtaDotd Names", dof_names_tracers_deta);
     
     ev = rcp(new Aeras::XZHydrostatic_EtaDotPi<EvalT,AlbanyTraits>(*p,dl));
@@ -621,6 +622,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<std::string>("QP Temperature",                 dof_names_levels[1]);
     p->set<std::string>("QP Pressure",                    "Pressure");
     p->set<std::string>("QP Pi",                          "Pi");
+    p->set<std::string>("PiDot",                          "PiDot");
     p->set<std::string>("Temperature Source",             dof_names_levels_src[1]);
     p->set<std::string>("QP Density",                     "Density");
     p->set< Teuchos::ArrayRCP<std::string> >("Tracer Names",        dof_names_tracers);
