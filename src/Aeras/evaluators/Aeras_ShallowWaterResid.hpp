@@ -82,13 +82,15 @@ private:
   ScalarT Omega;   //rotation of earth  -- Sacado-ized for sensitivities
  
   double ViscCoeff; //viscosity or hv coeff
+                     
+  double AlphaAngle;
 
   std::size_t numNodes;
   std::size_t numQPs;
   std::size_t numDims;
   std::size_t vecDim;
   std::size_t spatialDim;
-  //not used og
+  //og: not used
   //PHX::MDField<MeshScalarT,Cell,Node,QuadPoint,Dim> GradBF;
 
   void divergence(const Intrepid::FieldContainer<ScalarT>  & fieldAtNodes,

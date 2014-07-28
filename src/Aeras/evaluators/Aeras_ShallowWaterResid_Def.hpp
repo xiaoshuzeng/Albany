@@ -53,6 +53,8 @@ ShallowWaterResid(const Teuchos::ParameterList& p,
   
   ViscCoeff = shallowWaterList->get<double>("Viscosity Coefficient", 0.0); //Default: 0.0
 
+  AlphaAngle = shallowWaterList->get<double>("Rotation Angle", 0.0); //Default: 0.0
+  
   this->addDependentField(U);
   this->addDependentField(UNodal);
   this->addDependentField(Ugrad);
@@ -197,8 +199,8 @@ evaluateFields(typename Traits::EvalData workset)
       ScalarT surfaceHeight = UNodal(cell,node,0);
       ScalarT ulambda = UNodal(cell, node,1);
       ScalarT utheta  = UNodal(cell, node,2);
-        huAtNodes(node,0) = surfaceHeight*ulambda;
-        huAtNodes(node,1) = surfaceHeight*utheta;
+      huAtNodes(node,0) = surfaceHeight*ulambda;
+      huAtNodes(node,1) = surfaceHeight*utheta;
     }
     
     for (std::size_t node=0; node < numNodes; ++node) {
@@ -466,7 +468,7 @@ void
 ShallowWaterResid<EvalT,Traits>::get_coriolis(std::size_t cell, Intrepid::FieldContainer<ScalarT>  & coriolis) {
 
   coriolis.initialize();
-    double alpha = 0.0;//1.047;  /*must match what is in initial condition for TC2 and TC5.
+  double alpha = AlphaAngle; /*must match what is in initial condition for TC2 and TC5.
                       //see AAdatpt::AerasZonal analytic function. */
 
   for (std::size_t qp=0; qp < numQPs; ++qp) {

@@ -5,7 +5,7 @@ load "~/local/ncl/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 begin
 
 
-f=addfile("~/albany/Albany-rep/build/examples/Aeras/ShallowWater/TC3/tc3.nc","r");
+f=addfile("TC3.nc","r");
 
 numnodes=dimsizes(f->node_num_map);
 

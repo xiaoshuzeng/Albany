@@ -7,7 +7,7 @@ begin
 
 myPi = 3.1415926;
 
-f = addfile("~/albany/Albany-rep/build/examples/Aeras/ShallowWater/TC4/TC4.nc", "r");
+f = addfile("TC4.nc", "r");
 
 ds = dimsizes(f->variable_0);
 lasttime = ds(0)-1;

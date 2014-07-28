@@ -54,13 +54,6 @@ end
 
 
 
-
-
-
-
-
-
-
 begin
 
 myPi = 3.1415926;
@@ -102,7 +95,9 @@ latsize = size(0);
   ai = 1./a;
   a2i = ai*ai;
 
-time = 3*86400;
+;;;;;;;;;;;;;;;;;;;;;NOTE THAT YOU NEED TO SET A DAY
+day = 3;
+time = day*86400;
 tmshft = su0*time/a;
 
  var1(:,:) = 0.d;
@@ -176,57 +171,18 @@ do j=0,latsize-1
   end do
 
    
-       wks = gsn_open_wks("pdf","tc4_an")
-       gsn_define_colormap(wks,"rainbow")             ; Change color map
+  wks = gsn_open_wks("pdf","tc4_an")
+  gsn_define_colormap(wks,"rainbow")             ; Change color map
 
 ;---Resources to share between both plots
-    res                     = True              ; Plot modes desired.
+  res                     = True              ; Plot modes desired.
     
-;     res@sfXArray           = lon
- ;    res@sfYArray           = lat
+  res@cnFillOn            = True              ; color plot desired
+  res@cnLinesOn           = False            ; turn off contour lines
 
-;    res@gsnDraw             = False
-;    res@gsnFrame            = False
-;    res@gsnMaximize         = True              ; Maximize plot
-    res@cnFillOn            = True              ; color plot desired
-    res@cnLinesOn           = False            ; turn off contour lines
-;    res@cnLineLabelsOn      = False             ; turn off contour labels
-;    res@cnFillMode          = "RasterFill"      ; turn raster on      
-;    res@lbLabelBarOn        = False    ; Will turn on in panel later.
-;    res@mpFillOn            = False
-;    res@mpOutlineOn = False;
-;    res@trGridType         = "TriangularMesh"  ; allow missing coordinates
-;    res@gsnAddCyclic       = False
+  res@tiMainString          = "vorticity"
+  map = gsn_csm_contour_map(wks,var1(:,:),res)
     
-;---Resources for plotting regridded data
-;    res@gsnAddCyclic       = False
-;    dims2 = tostring(dimsizes(height_regrid))
-;    res@tiMainString          = "Data regridded to 0.25 degree grid (" + \
-;                                str_join(dims2," x ") + ")"
-                                
-;    plot_regrid = gsn_csm_contour_map(wks,height_regrid,res)
-
-;---VORTICITY
-;   res@cnLevelSelectionMode = "ManualLevels";
-;  res@cnMinLevelValF = min(vort);
-;  res@cnMaxLevelValF = max(vort);
-;  res@cnLevelSpacingF = 0.00002;
-  
-;    res@gsnAddCyclic       = False
-    res@tiMainString          = "vorticity"
-    map = gsn_csm_contour_map(wks,var1(:,:),res)
-
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-     
   end
   
   

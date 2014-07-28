@@ -269,13 +269,18 @@ evaluateFields(typename Traits::EvalData workset)
     
   
     const RealType time = workset.current_time; //current time from workset
+    
+    //        std::cout <<"time = "<< time <<std::endl;
+    
     for(std::size_t cell = 0; cell < workset.numCells; ++cell) {
       for(std::size_t qp = 0; qp < numQPs; ++qp) {
         //for (std::size_t i = 0; i < vecDim; ++i) { //loop over # of dofs/node
           const MeshScalarT theta = sphere_coord(cell, qp, 0);
           const MeshScalarT lambda = sphere_coord(cell, qp, 1);
           
-          
+        
+
+        
           //source(cell, qp, i) = 0.0; //set this to some function involving time
 
     

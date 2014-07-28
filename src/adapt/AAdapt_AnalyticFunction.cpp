@@ -670,22 +670,29 @@ void AAdapt::AerasTC5Init::compute(double* solution, const double* X) {
 
 AAdapt::AerasTCGalewskyInit::AerasTCGalewskyInit(int neq_, int spatialDim_, Teuchos::Array<double> data_)
 : spatialDim(spatialDim_), neq(neq_), data(data_) {
-    TEUCHOS_TEST_FOR_EXCEPTION( (neq!=3 || spatialDim!=3 || data.size()!=1) ,
+    TEUCHOS_TEST_FOR_EXCEPTION( (neq!=3 || spatialDim!=3 || data.size()!=0) ,
                                std::logic_error,
                                "Error! Invalid call of Aeras TCGalewskyInit with " << neq
                                << " " << spatialDim <<  " "<< data.size()<< std::endl);
     myPi = Aeras::ShallowWaterConstants::self().pi;
-    
+    gravity = Aeras::ShallowWaterConstants::self().gravity;
     earthRadius = Aeras::ShallowWaterConstants::self().earthRadius;
-    
-    //testDuration = 24*24*3600.;//better to get number of days as a param in data_
-    //it is not actually used in galewsky
+    Omega = 2.0*myPi/(24.*3600.);
     
     phi0 = myPi/7.;
     phi1 = myPi/2. - phi0;
     en = exp(-4./(phi1-phi0)/(phi1-phi0));
     phi2 = myPi/4.;
-    
+  
+    umax = 80.;
+    h0 = 10158.2951; //note that this const was grabbed from homme
+    //because otherwise global integration
+    //is needed
+  
+    al = 1./3.;
+    beta = 1./15.;
+    hhat = 120.;
+  
 }
 
 double AAdapt::AerasTCGalewskyInit::ucomponent(const double lat){
@@ -701,19 +708,15 @@ double AAdapt::AerasTCGalewskyInit::hperturb(const double lon, const double lat)
     
     double lon2=lon;
     if (lon2 >= myPi){
-        lon2=lon - 2*myPi;
+        lon2=lon - 2.*myPi;
     }
     return (hhat*cos(lat)*exp(-lon2*lon2/al/al)*exp( -((phi2-lat)/beta)*((phi2-lat)/beta) ));
 
 }
 
 void AAdapt::AerasTCGalewskyInit::compute(double* solution, const double* X) {
-    
-    const double gravity = Aeras::ShallowWaterConstants::self().gravity;
-    
-    const double Omega = 2.0*myPi/(24.*3600.); //this should be sitting in SW class
-                                               //like SW constants
-    const double a = Aeras::ShallowWaterConstants::self().earthRadius;
+  
+    const double a = earthRadius;
     
     //const double h0g = data[0];
     
@@ -732,8 +735,8 @@ void AAdapt::AerasTCGalewskyInit::compute(double* solution, const double* X) {
     else if (lambda < 0) lambda += 2*myPi;
     //end note 1
     
-    double h = h0+158.3;// this const is from HOMME's code, clarify with MT
-    
+    double h = h0;
+  
     //integrating height numerically
     const int integration_steps = 1000;//make this a const in class
     const double deltat = (theta+myPi/2.0)/integration_steps;
@@ -770,7 +773,7 @@ void AAdapt::AerasTCGalewskyInit::compute(double* solution, const double* X) {
 
 //*****************************************************************************
 //TC4
-//Velocity is init-ed, not const wrt time though
+
 
 AAdapt::AerasTC4Init::AerasTC4Init(int neq_, int spatialDim_, Teuchos::Array<double> data_)
 : spatialDim(spatialDim_), neq(neq_), data(data_) {
@@ -779,8 +782,10 @@ AAdapt::AerasTC4Init::AerasTC4Init(int neq_, int spatialDim_, Teuchos::Array<dou
                              "Error! Invalid call of Aeras TC4Init with " << neq
                              << " " << spatialDim <<  " "<< data.size()<< std::endl);
   myPi = Aeras::ShallowWaterConstants::self().pi;
-  
   earthRadius = Aeras::ShallowWaterConstants::self().earthRadius;
+  gravity = Aeras::ShallowWaterConstants::self().gravity;
+  
+  Omega = 2.0*myPi/(24.*3600.); //this should be sitting in SW class
   
   //testDuration = 24*24*3600.;//better to get number of days as a param in data_
   //it is not actually used in galewsky
@@ -789,18 +794,15 @@ AAdapt::AerasTC4Init::AerasTC4Init(int neq_, int spatialDim_, Teuchos::Array<dou
   rlat0 = myPi/4.;
   npwr = 14.;
   
-  Omega = 2.0*myPi/(24.*3600.); //this should be sitting in SW class
-  gravity = Aeras::ShallowWaterConstants::self().gravity;
+  su0 = 20.;
+  phi0 = 1.0e5;
+
 }
 
 void AAdapt::AerasTC4Init::compute(double* solution, const double* X) {
   
-  //code repeated over and over again
-  
   //like SW constants
-  const double a = Aeras::ShallowWaterConstants::self().earthRadius;
-  
-  //const double h0g = data[0];
+  const double a = earthRadius;
   
   const double x = X[0];  //assume that the mesh has unit radius
   const double y = X[1];
@@ -874,27 +876,6 @@ void AAdapt::AerasTC4Init::compute(double* solution, const double* X) {
   v = (dkdl*ai)*den;
   h = phicon(theta)+corr*psib/gravity;
   
-  //if ( (fabs(lambda) < .1) && (fabs(theta - myPi/4.) < .1)) {
-  //std::cout<<"  phicon(theta) "<<phicon(theta)<<" +rest "<<corr*psib/gravity<<std::endl;
-  //}
-  
-  /*if(fabs(u)>1000){
-    std::cout << "debug u, bigubr, den, srcsj, ai, dkdm"<<u<<" "<<
-    bigubr<<" "<<den<<" "<<srcsj<<" "<<ai<<" "<<dkdm<<std::endl;
-  }
-  
-  if ( (fabs(lambda-myPi) < .1) && (fabs(theta + myPi/4.) < .1)) {
-    std::cout << "debug u, dcdm tmp1 c tmpry"<<u<<" "<<
-    dcdm<<" "<<tmp1<<" "<<c<<" "<< tmpry<<" "<< 1. <<std::endl;
-    
-    std::cout << "c     ----"<< sin(rlat0)<<" "<<
-    snj<<" "<<cos(rlat0)<<" "<<srcsj<<" "<< cos(lambda-rlon0)<<" "<< 1. <<std::endl;
-    
-    std::cout << "psib and  "<<psib <<std::endl;
-    
-  }*/
-  
-  
   solution[0] = h;
   solution[1] = u;
   solution[2] = v;
@@ -917,9 +898,9 @@ double AAdapt::AerasTC4Init::phicon(const double lat){
   
   double a = earthRadius;
   
-  const int integration_steps = 5000;
+  const int integration_steps = 1000;
   
-  double h =0.;
+  double h = 0.;
   
   const double deltat = (lat+myPi/2.0)/integration_steps;
   for(int i=0; i<integration_steps; i++){
@@ -961,22 +942,26 @@ AAdapt::AerasTC3Init::AerasTC3Init(int neq_, int spatialDim_, Teuchos::Array<dou
     
     u0 = 2.*myPi*earthRadius/testDuration;  // magnitude of wind
     
-    
-    
+    Omega = 2.0*myPi/(24.*3600.);
+  
+    gravity = Aeras::ShallowWaterConstants::self().gravity;
+  
+    h0g = 2.94e04;
+  
+    xe = 0.3;
+  
+    thetae = myPi/2.0;
+  
+    thetab = -myPi/6.0;
 }
 
 double AAdapt::AerasTC3Init::ucomponent(const double lon){
-
-    const double xe = 0.3;
-    const double thetae = myPi/2.0;
-    const double thetab = -myPi/6.0;
-    
-    const double xx = xe*(lon - thetab)/(thetae-thetab);
+  
+    double xx = xe*(lon - thetab)/(thetae-thetab);
     
     double res = u0*exp(4.0/xe)*bx(xx)*bx(xe-xx);
     
     return res;
-    
 }
 
 double AAdapt::AerasTC3Init::bx(const double x){
@@ -985,7 +970,8 @@ double AAdapt::AerasTC3Init::bx(const double x){
     return res;
 }
 
-void AAdapt::AerasTC3Init::rotate(const double lon, const double lat, const double alpha, double& rotlon, double& rotlat){
+void AAdapt::AerasTC3Init::rotate(const double lon, const double lat,
+                                  const double alpha, double& rotlon, double& rotlat){
 
     if(alpha == 0.0){
         rotlon = lon;
@@ -995,13 +981,14 @@ void AAdapt::AerasTC3Init::rotate(const double lon, const double lat, const doub
         
         if(test > 1.0){
             rotlat = myPi/2.;
-        }else
+        }else{
             if (test < -1.0) {
                 rotlat = -myPi/2.;
             }else{
                 rotlat = asin(test);
             }
-        
+        }
+      
         test = cos(rotlat);
         if (test == 0.0) {
             rotlon = 0.0;
@@ -1028,24 +1015,17 @@ void AAdapt::AerasTC3Init::rotate(const double lon, const double lat, const doub
 
 
 void AAdapt::AerasTC3Init::compute(double* solution, const double* X) {
-    
-    const double gravity = Aeras::ShallowWaterConstants::self().gravity;
-    
-    const double Omega = 2.0*myPi/(24.*3600.);
-    const double a = Aeras::ShallowWaterConstants::self().earthRadius;
+  
+    const double a = earthRadius;
 
-    const double h0g = data[0];
-    
-    const double alpha = 0.0;//1.047; /* must match value in ShallowWaterResidDef
+    const double alpha = data[0];//1.047; /* must match value in ShallowWaterResidDef
                              //don't know how to get data from input into this class and that one. */
-    
-    const double cosAlpha = std::cos(alpha);
-    const double sinAlpha = std::sin(alpha);
-    
+  
     const double x = X[0];  //assume that the mesh has unit radius
     const double y = X[1];
     const double z = X[2];
-    
+  
+    //repeated code
     const double theta  = std::asin(z);
     
     double lambda = std::atan2(y,x);
@@ -1053,37 +1033,24 @@ void AAdapt::AerasTC3Init::compute(double* solution, const double* X) {
     static const double DIST_THRESHOLD = Aeras::ShallowWaterConstants::self().distanceThreshold;
     if (std::abs(std::abs(theta)-myPi/2) < DIST_THRESHOLD) lambda = 0;
     else if (lambda < 0) lambda += 2*myPi;
-    
-    const double sinTheta = std::sin(theta);//unused
-    const double cosTheta = std::cos(theta);//un
-    
-    const double sinLambda = std::sin(lambda);//un
-    const double cosLambda = std::cos(lambda);//un
-    
-    const double h0 = h0g/gravity;
-    
-    double h = h0;
+    //end of repeated code
+  
+    double h = h0g/gravity;
     
     double rotlambda, rottheta;
     
     rotate(lambda, theta, alpha, rotlambda, rottheta);
     
     //integrating height numerically
-    const int integration_steps = 5000;
+    const int integration_steps = 1000;
     const double deltat = (rottheta+myPi/2.0)/integration_steps;
     for(int i=0; i<integration_steps; i++){
-
         double midpoint1 = -myPi/2.0 + (i-1)*deltat;
         double midpoint2 = -myPi/2.0 + i*deltat;
-        
         double loc_u = ucomponent(midpoint1);
-        
         h -= a/gravity*deltat*(2*Omega*sin(midpoint1)+loc_u*tan(midpoint1)/a)*loc_u/2.;
-        
         loc_u = ucomponent(midpoint2);
-        
         h -= a/gravity*deltat*(2*Omega*sin(midpoint2)+loc_u*tan(midpoint2)/a)*loc_u/2.;
-    
     }
     
     double u, v;
@@ -1092,33 +1059,12 @@ void AAdapt::AerasTC3Init::compute(double* solution, const double* X) {
         u = ucomponent(theta);
         v = 0.0;
     }else{
-        u = ucomponent(rottheta)*(cos(alpha)*sin(rotlambda)*sin(lambda)+cos(lambda)*cos(rotlambda));
+        u = ucomponent(rottheta)*(cos(alpha)*sin(rotlambda)*sin(lambda)
+                                +cos(lambda)*cos(rotlambda));
         v = ucomponent(rottheta)*(cos(alpha)*cos(lambda)*sin(rotlambda)*sin(theta)
-                                               -cos(rotlambda)*sin(lambda)*sin(theta)
-                                               -sin(alpha)*sin(rotlambda)*cos(theta));
+                                -cos(rotlambda)*sin(lambda)*sin(theta)
+                                -sin(alpha)*sin(rotlambda)*cos(theta));
     }
-    
-    
-    /*
-    IF (ALPHA .NE. 0.0) THEN
-    UIC12(I,J) = US(ROTLAT)*(COS(ALPHA)*SIN(ROTLON)
-                             $                      *SIN(RLON)+COS(RLON)*COS(ROTLON))
-    VIC12(I,J) = US(ROTLAT)*(COS(ALPHA)*COS(RLON)
-                             $                      * SIN(ROTLON)*SIN(RLAT)
-                             $                      - COS(ROTLON)*SIN(RLON)*SIN(RLAT)
-                             $                      - SIN(ALPHA)*SIN(ROTLON)*COS(RLAT))
-    PIC12(I,J) = (PHI0-PHITMP)/GRAV
-    ELSE
-    C
-    C              NO ROTATION -> ORIGINAL FIELD
-    C
-    UIC12(I,J) = US(RLAT)
-    VIC12(I,J) = 0.0
-    PIC12(I,J) = (PHI0-PHITMP)/GRAV
-    ENDIF
-*/
-    
-    
     
     solution[0] = h;
     solution[1] = u;
