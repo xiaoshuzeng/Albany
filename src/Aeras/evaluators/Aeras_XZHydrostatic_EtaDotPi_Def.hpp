@@ -31,6 +31,7 @@ XZHydrostatic_EtaDotPi(const Teuchos::ParameterList& p,
   etadotdtracerNames    (p.get< Teuchos::ArrayRCP<std::string> >("Tracer EtaDotd Names")),
   etadotdT       (p.get<std::string> ("EtaDotdT"),              dl->qp_scalar_level),
   etadotdVelx    (p.get<std::string> ("EtaDotdVelx"),           dl->qp_scalar_level),
+  Pidot          (p.get<std::string> ("PiDot"),                 dl->qp_scalar_level),
 
   numQPs     (dl->node_qp_scalar          ->dimension(2)),
   numLevels  (dl->node_scalar_level       ->dimension(2))
@@ -46,6 +47,7 @@ XZHydrostatic_EtaDotPi(const Teuchos::ParameterList& p,
 
   this->addEvaluatedField(etadotdT);
   this->addEvaluatedField(etadotdVelx);
+  this->addEvaluatedField(Pidot);
 
   for (int i = 0; i < tracerNames.size(); ++i) {
     PHX::MDField<ScalarT,Cell,QuadPoint> in   (tracerNames[i],   dl->qp_scalar_level);
@@ -72,6 +74,7 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(Velx       ,   fm);
   this->utils.setFieldData(etadotdT   ,   fm);
   this->utils.setFieldData(etadotdVelx,   fm);
+  this->utils.setFieldData(Pidot,         fm);
   for (int i = 0; i < Tracer.size();  ++i)       this->utils.setFieldData(Tracer[tracerNames[i]], fm);
   for (int i = 0; i < etadotdTracer.size(); ++i) this->utils.setFieldData(etadotdTracer[tracerNames[i]],fm);
 }
@@ -114,10 +117,15 @@ evaluateFields(typename Traits::EvalData workset)
         etadotdVelx(cell,qp,level) = factor * ( etadotpi_p*dVx_p + etadotpi_m*dVx_m );
 
         for (int i = 0; i < tracerNames.size(); ++i) {
-          const ScalarT q_m = 0.5*( Tracer[tracerNames[i]](cell,qp,level)   + Tracer[tracerNames[i]](cell,qp,level_m) );
-          const ScalarT q_p = 0.5*( Tracer[tracerNames[i]](cell,qp,level_p) + Tracer[tracerNames[i]](cell,qp,level) );
+          const ScalarT q_m = 0.5*( Tracer[tracerNames[i]](cell,qp,level)   / Pi(cell,qp,level)   
+                                  + Tracer[tracerNames[i]](cell,qp,level_m) / Pi(cell,qp,level_m) );
+          const ScalarT q_p = 0.5*( Tracer[tracerNames[i]](cell,qp,level_p) / Pi(cell,qp,level_p) 
+                                  + Tracer[tracerNames[i]](cell,qp,level)   / Pi(cell,qp,level)   );
           etadotdTracer[tracerNames[i]](cell,qp,level) = ( etadotpi_p*q_p - etadotpi_m*q_m ) / E.delta(level);
         }
+
+        Pidot(cell,qp,level) = - gradpivelx(cell,qp,level) - (etadotpi_p - etadotpi_m)/E.delta(level);
+
       }
     }
   }
