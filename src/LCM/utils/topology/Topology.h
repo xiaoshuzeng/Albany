@@ -11,10 +11,12 @@
 #include <stk_mesh/base/FieldData.hpp>
 
 #include "Topology_Types.h"
-#include "Topology_FractureCriterion.h"
 #include "Topology_Utils.h"
 
 namespace LCM {
+
+// Forward declaration
+class AbstractFractureCriterion;
 
 class Topology {
 public:
@@ -149,15 +151,9 @@ public:
   outputBoundary(std::string const & output_filename);
 
   ///
-  /// \brief Create boundary mesh
-  ///
-  void
-  createBoundary();
-
-  ///
   /// \brief Get a connectivity list of the boundary
   ///
-  std::vector<std::vector<EntityId> >
+  Connectivity
   getBoundary();
 
   ///
@@ -255,8 +251,8 @@ public:
   ///
   /// \brief Number of entities of a specific rank
   ///
-  EntityVector::size_type
-  getNumberEntitiesByRank(BulkData const & mesh, EntityRank entity_rank);
+  EntityVectorIndex
+  getNumberEntitiesByRank(BulkData const & bulk_date, EntityRank entity_rank);
 
   ///
   /// \brief Gets the local relation id (0,1,2,...) between two entities
@@ -609,9 +605,43 @@ public:
   getFractureCriterion()
   {return fracture_criterion_;}
 
+  Part &
+  getFractureBulkPart();
+
+  Part &
+  getFractureInterfacePart();
+
+  Part &
+  getLocalPart()
+  {return getMetaData()->locally_owned_part();}
+
+  Selector
+  getLocalBulkSelector()
+  {return Selector(getLocalPart() & getFractureBulkPart());}
+
+  Selector
+  getLocalInterfaceSelector()
+  {return Selector(getLocalPart() & getFractureInterfacePart());}
+
   bool
   isLocalEntity(Entity const & e)
   {return getBulkData()->parallel_rank() == e.owner_rank();}
+
+  bool
+  isInBulk(Entity const & e)
+  {return e.bucket().member(getFractureBulkPart());}
+
+  bool
+  isBulkCell(Entity const & e)
+  {return (e.entity_rank() == getCellRank()) && isInBulk(e);}
+
+  bool
+  isInInterface(Entity const & e)
+  {return e.bucket().member(getFractureInterfacePart());}
+
+  bool
+  isInterfaceCell(Entity const & e)
+  {return (e.entity_rank() == getCellRank()) && isInInterface(e);}
 
   //
   // Set fracture state. Do nothing for cells (elements).
@@ -661,11 +691,11 @@ public:
     return isInternal(e) == true && isOpen(e) == true;
   }
 
+  ///
+  /// Check fracture criterion
+  ///
   bool
-  checkOpen(Entity const & e)
-  {
-    return fracture_criterion_->check(e);
-  }
+  checkOpen(Entity const & e);
 
   ///
   /// Initialization of the open field for fracture

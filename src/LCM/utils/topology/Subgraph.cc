@@ -4,6 +4,7 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 #include "Subgraph.h"
+#include "Topology.h"
 #include "Topology_Utils.h"
 
 namespace LCM {
@@ -11,12 +12,13 @@ namespace LCM {
 //
 // Create a subgraph given a vertex list and an edge list.
 //
-Subgraph::Subgraph(RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct,
+Subgraph::Subgraph(
+    Topology & topology,
     std::set<EntityKey>::iterator first_vertex,
     std::set<EntityKey>::iterator last_vertex,
     std::set<stkEdge>::iterator first_edge,
     std::set<stkEdge>::iterator last_edge) :
-    stk_mesh_struct_(stk_mesh_struct)
+    topology_(topology)
 {
   // Insert vertices and create the vertex map
   for (std::set<EntityKey>::iterator vertex_iterator = first_vertex;
@@ -100,6 +102,57 @@ Subgraph::Subgraph(RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct,
 
   return;
 }
+
+//
+// Accessors and mutators
+//
+Topology &
+Subgraph::getTopology()
+{return topology_;}
+
+size_t const
+Subgraph::getSpaceDimension()
+{return getTopology().getSpaceDimension();}
+
+RCP<Albany::AbstractSTKMeshStruct> &
+Subgraph::getSTKMeshStruct()
+{return getTopology().getSTKMeshStruct();}
+
+BulkData *
+Subgraph::getBulkData()
+{return getTopology().getBulkData();}
+
+stk_classic::mesh::fem::FEMMetaData *
+Subgraph::getMetaData()
+{return getTopology().getMetaData();}
+
+EntityRank const
+Subgraph::getCellRank()
+{return getTopology().getCellRank();}
+
+EntityRank const
+Subgraph::getBoundaryRank()
+{return getTopology().getBoundaryRank();}
+
+IntScalarFieldType &
+Subgraph::getFractureState()
+{return getTopology().getFractureState();}
+
+void
+Subgraph::setFractureState(Entity const & e, FractureState const fs)
+{getTopology().setFractureState(e, fs);}
+
+FractureState
+Subgraph::getFractureState(Entity const & e)
+{return getTopology().getFractureState(e);}
+
+bool
+Subgraph::isOpen(Entity const & e)
+{return getTopology().isOpen(e);}
+
+bool
+Subgraph::isInternalAndOpen(Entity const & e)
+{return getTopology().isInternalAndOpen(e);}
 
 //
 // Map a vertex in the subgraph to a entity in the stk mesh.
@@ -204,7 +257,7 @@ Subgraph::removeVertex(Vertex const vertex)
   PairIterRelation
   relations = entity->relations();
 
-  for (size_t i = 0; i < relations.size(); ++i) {
+  for (RelationVectorIndex i = 0; i < relations.size(); ++i) {
 
     EdgeId
     edge_id = relations[i].identifier();
@@ -579,7 +632,7 @@ Subgraph::updateElementNodeConnectivity(Entity & point, ElementNodeMap & map)
     bool
     found = false;
 
-    for (size_t j = 0; j < relations.size(); ++j) {
+    for (RelationVectorIndex j = 0; j < relations.size(); ++j) {
       if (relations[j].entity() == &point) {
         edge_id = relations[j].identifier();
         found = true;
@@ -628,7 +681,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
   std::vector<Vertex>
   new_vertices(number_components - 1);
 
-  for (size_t i = 0; i < new_vertices.size(); ++i) {
+  for (std::vector<Vertex>::size_type i = 0; i < new_vertices.size(); ++i) {
     Vertex
     new_vertex = addVertex(vertex_rank);
 
@@ -676,7 +729,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
   }
 
   // Copy the out edges of the original vertex to the new vertex
-  for (size_t i = 0; i < new_vertices.size(); ++i) {
+  for (std::vector<Vertex>::size_type i = 0; i < new_vertices.size(); ++i) {
     cloneOutEdges(vertex, new_vertices[i]);
   }
 
@@ -778,7 +831,7 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
   PairIterRelation
   old_relations = relations_one_down(old_entity);
 
-  for (size_t i = 0; i < old_relations.size(); ++i) {
+  for (RelationVectorIndex i = 0; i < old_relations.size(); ++i) {
     PairIterRelation
     new_relations = relations_one_down(new_entity);
 
@@ -786,7 +839,7 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
     bool
     exists = false;
 
-    for (size_t j = 0; j < new_relations.size(); ++j) {
+    for (RelationVectorIndex j = 0; j < new_relations.size(); ++j) {
       if (old_relations[i].entity() == new_relations[j].entity()) {
         exists = true;
         break;
