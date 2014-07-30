@@ -43,18 +43,19 @@ public:
 
   ScalarT     B(const double half_step) const { return  eta(half_step)*(eta(half_step)-Etatop)/(1-Etatop);}
 
+  Eta(const ScalarT ptop, const ScalarT p0, const int L) :
+    P0(p0),
+    Ptop(ptop),
+    Etatop(ptop/p0),
+    numLevels(L) {}
+
+  ~Eta(){}
 private:
   const ScalarT P0;
   const ScalarT Ptop;
   const ScalarT Etatop;
   const int     numLevels;
 
-  Eta(const ScalarT ptop, const ScalarT p0, const int L) :
-    P0(p0),
-    Ptop(ptop),
-    Etatop(ptop/p0),
-    numLevels(L)
-  {}
 };
 }
 
