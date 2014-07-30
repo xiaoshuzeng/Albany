@@ -51,7 +51,7 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
   RequiredTracers[0] = "Vapor";
   RequiredTracers[1] = "Cloud";
   RequiredTracers[2] = "Rain";
-  for (int i=0; i<3; ++i) {
+  for (int i=0; i<3 && compute_cloud_physics; ++i) {
     bool found = false;
     for (int j=0; j<3 && !found; ++j)
       if (RequiredTracers[i] == tracerNames[j]) found = true;
