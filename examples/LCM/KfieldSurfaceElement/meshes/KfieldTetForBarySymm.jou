@@ -91,12 +91,15 @@ mesh volume 7 13
 volume 8 14 scheme tetmesh
 mesh volume 8 14
 
+## smooth mesh
+### some smoothers can move surface nodes. This is necessary due to a coarser mesh at larger radii.
+volume all smooth scheme laplacian free
+smooth volume all
+#
+
 ## removing lower surface
 delete volume 3 5 9 11 4 10
 unmerge all
-
-## smooth mesh
-volume all smooth scheme condition number beta 1.5 cpu 10
 
 ## reflect smoothed mesh
 body all copy reflect y
@@ -105,6 +108,7 @@ body all copy reflect y
 surface 130 135 141 merge off
 
 ## merging bodies
+imprint all
 merge all
 
 # establish blocks

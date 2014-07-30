@@ -53,8 +53,11 @@ using stk_classic::mesh::EntityRank;
 using stk_classic::mesh::EntityVector;
 using stk_classic::mesh::Field;
 using stk_classic::mesh::PairIterRelation;
+using stk_classic::mesh::Part;
+using stk_classic::mesh::PartVector;
 using stk_classic::mesh::Relation;
 using stk_classic::mesh::RelationVector;
+using stk_classic::mesh::Selector;
 
 using Teuchos::RCP;
 
@@ -63,6 +66,13 @@ using Albany::STKDiscretization;
 namespace LCM {
 
 typedef stk_classic::mesh::RelationIdentifier EdgeId;
+typedef EntityVector::size_type EntityVectorIndex;
+typedef RelationVector::size_type RelationVectorIndex;
+typedef std::vector<Intrepid::Vector<double> > Coordinates;
+typedef Coordinates::size_type CoordinatesIndex;
+typedef std::vector<std::vector<EntityId> > Connectivity;
+typedef Connectivity::size_type ConnectivityIndex;
+
 
 typedef boost::vertex_name_t VertexName;
 typedef boost::edge_name_t EdgeName;
