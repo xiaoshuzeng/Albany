@@ -326,7 +326,6 @@ class AerasTC4Init : public AnalyticFunction {
   private:
     
     double earthRadius; //Earth radius
-    //double testDuration; // =12 days, in seconds, should be a param from data_
     double myPi; // a local copy of pi
     double Omega;
     double gravity;

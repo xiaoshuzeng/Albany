@@ -787,9 +787,6 @@ AAdapt::AerasTC4Init::AerasTC4Init(int neq_, int spatialDim_, Teuchos::Array<dou
   
   Omega = 2.0*myPi/(24.*3600.); //this should be sitting in SW class
   
-  //testDuration = 24*24*3600.;//better to get number of days as a param in data_
-  //it is not actually used in galewsky
-  
   rlon0 = 0.;
   rlat0 = myPi/4.;
   npwr = 14.;
@@ -802,7 +799,7 @@ AAdapt::AerasTC4Init::AerasTC4Init(int neq_, int spatialDim_, Teuchos::Array<dou
 void AAdapt::AerasTC4Init::compute(double* solution, const double* X) {
   
   //like SW constants
-  const double a = earthRadius;
+  double a = earthRadius;
   
   const double x = X[0];  //assume that the mesh has unit radius
   const double y = X[1];
