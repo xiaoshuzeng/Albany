@@ -28,12 +28,11 @@ ScatterResidualBase(const Teuchos::ParameterList& p,
   const Teuchos::ArrayRCP<std::string>& names =
     p.get< Teuchos::ArrayRCP<std::string> >("Residual Names");
 
-  if (p.isType<bool>("Vector Field"))
-          vectorField = p.get<bool>("Vector Field");
-  else vectorField = false;
+
+  tensorRank = p.get<int>("Tensor Rank");
 
   // scalar
-  if (!vectorField) {
+  if (tensorRank == 0 ) {
     numFieldsBase = names.size();
     const std::size_t num_val = numFieldsBase;
     val.resize(num_val);
@@ -43,14 +42,23 @@ ScatterResidualBase(const Teuchos::ParameterList& p,
       this->addDependentField(val[eq]);
     }
   }
-
   // vector
-  else {
+  else
+  if (tensorRank == 1 ) {
     valVec.resize(1);
     PHX::MDField<ScalarT,Cell,Node,Dim> mdf(names[0],dl->node_vector);
     valVec[0] = mdf;
     this->addDependentField(valVec[0]);
     numFieldsBase = dl->node_vector->dimension(2);
+  }
+  // tensor
+  else
+  if (tensorRank == 2 ) {
+    valTensor.resize(1);
+    PHX::MDField<ScalarT,Cell,Node,Dim,Dim> mdf(names[0],dl->node_tensor);
+    valTensor[0] = mdf;
+    this->addDependentField(valTensor[0]);
+    numFieldsBase = (dl->node_tensor->dimension(2))*(dl->node_tensor->dimension(3));
   }
 
   if (p.isType<int>("Offset of First DOF"))
@@ -68,14 +76,20 @@ void ScatterResidualBase<EvalT, Traits>::
 postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& fm)
 {
-  if (!vectorField) {
+  if (tensorRank == 0) {
     for (std::size_t eq = 0; eq < numFieldsBase; ++eq)
       this->utils.setFieldData(val[eq],fm);
     numNodes = val[0].dimension(1);
   }
-  else {
+  else 
+  if (tensorRank == 1) {
     this->utils.setFieldData(valVec[0],fm);
     numNodes = valVec[0].dimension(1);
+  }
+  else 
+  if (tensorRank == 2) {
+    this->utils.setFieldData(valTensor[0],fm);
+    numNodes = valTensor[0].dimension(1);
   }
 }
 
@@ -98,19 +112,31 @@ evaluateFields(typename Traits::EvalData workset)
 {
   Teuchos::RCP<Epetra_Vector> f = workset.f;
 
-  if (this->vectorField) {
+  if (this->tensorRank == 0) {
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
       const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
       for (std::size_t node = 0; node < this->numNodes; ++node)
         for (std::size_t eq = 0; eq < numFields; eq++)
-        (*f)[nodeID[node][this->offset + eq]] += (this->valVec[0])(cell,node,eq);
+          (*f)[nodeID[node][this->offset + eq]] += (this->val[eq])(cell,node);
     }
-  } else {
-  for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
-    const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
-    for (std::size_t node = 0; node < this->numNodes; ++node)
-      for (std::size_t eq = 0; eq < numFields; eq++)
-        (*f)[nodeID[node][this->offset + eq]] += (this->val[eq])(cell,node);
+  } else 
+  if (this->tensorRank == 1) {
+    for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
+      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
+      for (std::size_t node = 0; node < this->numNodes; ++node)
+        for (std::size_t eq = 0; eq < numFields; eq++)
+          (*f)[nodeID[node][this->offset + eq]] += (this->valVec[0])(cell,node,eq);
+    }
+  } else
+  if (this->tensorRank == 2) {
+    int numDims = this->valTensor[0].dimension(2);
+    for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
+      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
+      for (std::size_t node = 0; node < this->numNodes; ++node)
+        for (std::size_t i = 0; i < numDims; i++)
+          for (std::size_t j = 0; j < numDims; j++)
+            (*f)[nodeID[node][this->offset + i*numDims + j]] += (this->valTensor[0])(cell,node,i,j);
+  
     }
   }
 }
@@ -145,6 +171,9 @@ evaluateFields(typename Traits::EvalData workset)
   int nunk = neq*this->numNodes;
   col.resize(nunk);
 
+  int numDim=0;
+  if(this->tensorRank==2)
+    numDim = this->valTensor[0].dimension(2);
 
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
   const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
@@ -159,8 +188,11 @@ evaluateFields(typename Traits::EvalData workset)
     for (std::size_t node = 0; node < this->numNodes; ++node) {
 
       for (std::size_t eq = 0; eq < numFields; eq++) {
-          if (this->vectorField) valptr = &((this->valVec[0])(cell,node,eq));
-          else                   valptr = &(this->val[eq])(cell,node);
+          if (this->tensorRank == 0) valptr = &(this->val[eq])(cell,node);
+          else
+          if (this->tensorRank == 1) valptr = &((this->valVec[0])(cell,node,eq));
+          else
+          if (this->tensorRank == 2) valptr = &(this->valTensor[0])(cell,node, eq/numDim, eq%numDim);
 
         row = nodeID[node][this->offset + eq];
         if (loadResid) {
@@ -219,13 +251,20 @@ evaluateFields(typename Traits::EvalData workset)
     TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
                      "One of f, JV, or fp must be non-null! " << std::endl);
 
+  int numDim=0;
+  if(this->tensorRank==2)
+    numDim = this->valTensor[0].dimension(2);
+
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
     const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
 
     for (std::size_t node = 0; node < this->numNodes; ++node) {
       for (std::size_t eq = 0; eq < numFields; eq++) {
-          if (this->vectorField) valptr = &(this->valVec[0])(cell,node,eq);
-          else                   valptr = &(this->val[eq])(cell,node);
+          if (this->tensorRank == 0) valptr = &(this->val[eq])(cell,node);
+          else
+          if (this->tensorRank == 1) valptr = &((this->valVec[0])(cell,node,eq));
+          else
+          if (this->tensorRank == 2) valptr = &(this->valTensor[0])(cell,node, eq/numDim, eq%numDim);
 
         int row = nodeID[node][this->offset + eq];
 
@@ -267,6 +306,10 @@ evaluateFields(typename Traits::EvalData workset)
   int num_cols = workset.Vp->NumVectors();
   ScalarT *valptr;
 
+  int numDim=0;
+  if(this->tensorRank==2)
+    numDim = this->valTensor[0].dimension(2);
+
   if (trans) {
 
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
@@ -281,8 +324,12 @@ evaluateFields(typename Traits::EvalData workset)
           double val = 0.0;
           for (std::size_t node = 0; node < this->numNodes; ++node) {
             for (std::size_t eq = 0; eq < numFields; eq++) {
-              if (this->vectorField) valptr = &(this->valVec[0])(cell,node,eq);
-              else                   valptr = &(this->val[eq])(cell,node);
+              if (this->tensorRank == 0) valptr = &(this->val[eq])(cell,node);
+              else
+              if (this->tensorRank == 1) valptr = &((this->valVec[0])(cell,node,eq));
+              else
+              if (this->tensorRank == 2) valptr = &(this->valTensor[0])(cell,node, eq/numDim, eq%numDim);
+
               val += valptr->dx(i)*local_Vp[col][i];
             }
           }
@@ -305,8 +352,12 @@ evaluateFields(typename Traits::EvalData workset)
 
       for (std::size_t node = 0; node < this->numNodes; ++node) {
         for (std::size_t eq = 0; eq < numFields; eq++) {
-          if (this->vectorField) valptr = &(this->valVec[0])(cell,node,eq);
-          else                   valptr = &(this->val[eq])(cell,node);
+          if (this->tensorRank == 0) valptr = &(this->val[eq])(cell,node);
+          else
+          if (this->tensorRank == 1) valptr = &((this->valVec[0])(cell,node,eq));
+          else
+          if (this->tensorRank == 2) valptr = &(this->valTensor[0])(cell,node, eq/numDim, eq%numDim);
+
           const int row = nodeID[node][this->offset + eq];
           for (int col=0; col<num_cols; col++) {
             double val = 0.0;
@@ -343,6 +394,10 @@ evaluateFields(typename Traits::EvalData workset)
   Teuchos::RCP< Stokhos::EpetraVectorOrthogPoly > f = workset.sg_f;
   ScalarT *valptr;
 
+  int numDim=0;
+  if(this->tensorRank==2)
+    numDim = this->valTensor[0].dimension(2);
+
   int nblock = f->size();
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
     const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
@@ -350,8 +405,12 @@ evaluateFields(typename Traits::EvalData workset)
     for (std::size_t node = 0; node < this->numNodes; ++node) {
 
       for (std::size_t eq = 0; eq < numFields; eq++) {
-          if (this->vectorField) valptr = &(this->valVec[0])(cell,node,eq);
-          else                   valptr = &(this->val[eq])(cell,node);
+        if (this->tensorRank == 0) valptr = &(this->val[eq])(cell,node);
+        else
+        if (this->tensorRank == 1) valptr = &((this->valVec[0])(cell,node,eq));
+        else
+        if (this->tensorRank == 2) valptr = &(this->valTensor[0])(cell,node, eq/numDim, eq%numDim);
+
         for (int block=0; block<nblock; block++)
           (*f)[block][nodeID[node][this->offset + eq]] += valptr->coeff(block);
       }
@@ -389,14 +448,21 @@ evaluateFields(typename Traits::EvalData workset)
   int nblock_jac = Jac->size();
   double c; // use double since it goes into CrsMatrix
 
+  int numDim=0;
+  if(this->tensorRank==2)
+    numDim = this->valTensor[0].dimension(2);
+
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
     const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
 
     for (std::size_t node = 0; node < this->numNodes; ++node) {
 
       for (std::size_t eq = 0; eq < numFields; eq++) {
-          if (this->vectorField) valptr = &(this->valVec[0])(cell,node,eq);
-          else                   valptr = &(this->val[eq])(cell,node);
+        if (this->tensorRank == 0) valptr = &(this->val[eq])(cell,node);
+        else
+        if (this->tensorRank == 1) valptr = &((this->valVec[0])(cell,node,eq));
+        else
+        if (this->tensorRank == 2) valptr = &(this->valTensor[0])(cell,node, eq/numDim, eq%numDim);
 
         row = nodeID[node][this->offset + eq];
         int neq = nodeID[node].size();
@@ -472,13 +538,20 @@ evaluateFields(typename Traits::EvalData workset)
                        "One of sg_f, sg_JV, or sg_fp must be non-null! " <<
                        std::endl);
 
+  int numDim=0;
+  if(this->tensorRank==2)
+    numDim = this->valTensor[0].dimension(2);
+
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
     const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
 
     for (std::size_t node = 0; node < this->numNodes; ++node) {
       for (std::size_t eq = 0; eq < numFields; eq++) {
-          if (this->vectorField) valptr = &(this->valVec[0])(cell,node,eq);
-          else                   valptr = &(this->val[eq])(cell,node);
+        if (this->tensorRank == 0) valptr = &(this->val[eq])(cell,node);
+        else
+        if (this->tensorRank == 1) valptr = &((this->valVec[0])(cell,node,eq));
+        else
+        if (this->tensorRank == 2) valptr = &(this->valTensor[0])(cell,node, eq/numDim, eq%numDim);
 
         int row = nodeID[node][this->offset + eq];
 
@@ -521,6 +594,10 @@ evaluateFields(typename Traits::EvalData workset)
   Teuchos::RCP< Stokhos::ProductEpetraVector > f = workset.mp_f;
   ScalarT *valptr;
 
+  int numDim=0;
+  if(this->tensorRank==2)
+    numDim = this->valTensor[0].dimension(2);
+
   int nblock = f->size();
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
     const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
@@ -528,8 +605,11 @@ evaluateFields(typename Traits::EvalData workset)
     for (std::size_t node = 0; node < this->numNodes; ++node) {
 
       for (std::size_t eq = 0; eq < numFields; eq++) {
-          if (this->vectorField) valptr = &(this->valVec[0])(cell,node,eq);
-          else                   valptr = &(this->val[eq])(cell,node);
+        if (this->tensorRank == 0) valptr = &(this->val[eq])(cell,node);
+        else
+        if (this->tensorRank == 1) valptr = &((this->valVec[0])(cell,node,eq));
+        else
+        if (this->tensorRank == 2) valptr = &(this->valTensor[0])(cell,node, eq/numDim, eq%numDim);
         for (int block=0; block<nblock; block++)
           (*f)[block][nodeID[node][this->offset + eq]] += valptr->coeff(block);
       }
@@ -567,14 +647,21 @@ evaluateFields(typename Traits::EvalData workset)
   int nblock_jac = Jac->size();
   double c; // use double since it goes into CrsMatrix
 
+  int numDim=0;
+  if(this->tensorRank==2)
+    numDim = this->valTensor[0].dimension(2);
+
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
     const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
 
     for (std::size_t node = 0; node < this->numNodes; ++node) {
 
       for (std::size_t eq = 0; eq < numFields; eq++) {
-          if (this->vectorField) valptr = &(this->valVec[0])(cell,node,eq);
-          else                   valptr = &(this->val[eq])(cell,node);
+        if (this->tensorRank == 0) valptr = &(this->val[eq])(cell,node);
+        else
+        if (this->tensorRank == 1) valptr = &((this->valVec[0])(cell,node,eq));
+        else
+        if (this->tensorRank == 2) valptr = &(this->valTensor[0])(cell,node, eq/numDim, eq%numDim);
 
         row = nodeID[node][this->offset + eq];
         int neq = nodeID[node].size();
@@ -645,13 +732,20 @@ evaluateFields(typename Traits::EvalData workset)
                        "One of mp_f, mp_JV, or mp_fp must be non-null! " <<
                        std::endl);
 
+  int numDim=0;
+  if(this->tensorRank==2)
+    numDim = this->valTensor[0].dimension(2);
+
   for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
     const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  = workset.wsElNodeEqID[cell];
 
     for (std::size_t node = 0; node < this->numNodes; ++node) {
       for (std::size_t eq = 0; eq < numFields; eq++) {
-          if (this->vectorField) valptr = &(this->valVec[0])(cell,node,eq);
-          else                   valptr = &(this->val[eq])(cell,node);
+        if (this->tensorRank == 0) valptr = &(this->val[eq])(cell,node);
+        else
+        if (this->tensorRank == 1) valptr = &((this->valVec[0])(cell,node,eq));
+        else
+        if (this->tensorRank == 2) valptr = &(this->valTensor[0])(cell,node, eq/numDim, eq%numDim);
 
         int row = nodeID[node][this->offset + eq];
 

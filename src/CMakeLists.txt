@@ -165,6 +165,8 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_DOFGradInterpolation.cpp
   evaluators/PHAL_DOFVecInterpolation.cpp
   evaluators/PHAL_DOFVecGradInterpolation.cpp
+  evaluators/PHAL_DOFTensorInterpolation.cpp
+  evaluators/PHAL_DOFTensorGradInterpolation.cpp
   evaluators/PHAL_MapToPhysicalFrame.cpp
   evaluators/PHAL_SaveStateField.cpp
   evaluators/PHAL_LoadStateField.cpp
@@ -253,6 +255,10 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_DOFVecInterpolation_Def.hpp
   evaluators/PHAL_DOFVecGradInterpolation.hpp
   evaluators/PHAL_DOFVecGradInterpolation_Def.hpp
+  evaluators/PHAL_DOFTensorInterpolation.hpp
+  evaluators/PHAL_DOFTensorInterpolation_Def.hpp
+  evaluators/PHAL_DOFTensorGradInterpolation.hpp
+  evaluators/PHAL_DOFTensorGradInterpolation_Def.hpp
   evaluators/PHAL_MapToPhysicalFrame.hpp
   evaluators/PHAL_MapToPhysicalFrame_Def.hpp
   evaluators/PHAL_SaveStateField.hpp
@@ -709,8 +715,9 @@ IF (ALBANY_LCM)
   ELSE()
     SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} LCM)
   ENDIF()
-
 ENDIF()
+
+
 
 # Repeat libraries twice to catch circular dependencies
 SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ${ALBANY_LIBRARIES})

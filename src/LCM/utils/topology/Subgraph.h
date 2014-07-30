@@ -13,6 +13,9 @@
 
 namespace LCM {
 
+// Forward declaration
+class Topology;
+
 class Subgraph: public Graph {
 public:
 
@@ -32,7 +35,8 @@ public:
   /// changes to the subgraph are automatically mirrored in the stk
   /// mesh.
   ///
-  Subgraph(RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct,
+  Subgraph(
+      Topology & topology,
       std::set<EntityKey>::iterator first_vertex,
       std::set<EntityKey>::iterator last_vertex,
       std::set<stkEdge>::iterator first_edge,
@@ -253,56 +257,41 @@ public:
   ///
   /// Accessors and mutators
   ///
+  Topology &
+  getTopology();
+
   size_t const
-  getSpaceDimension() {return static_cast<size_t>(getSTKMeshStruct()->numDim);}
+  getSpaceDimension();
 
   RCP<Albany::AbstractSTKMeshStruct> &
-  getSTKMeshStruct()
-  {return stk_mesh_struct_;}
+  getSTKMeshStruct();
 
   BulkData *
-  getBulkData()
-  {return stk_mesh_struct_->bulkData;}
+  getBulkData();
 
   stk_classic::mesh::fem::FEMMetaData *
-  getMetaData()
-  {return stk_mesh_struct_->metaData;}
+  getMetaData();
 
   EntityRank const
-  getCellRank() {return getMetaData()->element_rank();}
+  getCellRank();
 
   EntityRank const
-  getBoundaryRank()
-  {
-    assert(getCellRank() > 0);
-    return getCellRank() - 1;
-  }
+  getBoundaryRank();
 
   IntScalarFieldType &
-  getFractureState()
-  {return *(stk_mesh_struct_->getFieldContainer()->getFractureState());}
+  getFractureState();
 
-  //
-  // Set fracture state. Do nothing for cells (elements).
-  //
   void
-  setFractureState(Entity const & e, FractureState const fs)
-  {
-    if (e.entity_rank() < getCellRank()) {
-      *(stk_classic::mesh::field_data(getFractureState(), e)) = static_cast<int>(fs);
-    }
-  }
+  setFractureState(Entity const & e, FractureState const fs);
 
-  //
-  // Get fracture state. Return CLOSED for cells (elements).
-  //
   FractureState
-  getFractureState(Entity const & e)
-  {
-    return e.entity_rank() >= getCellRank() ?
-    CLOSED :
-    static_cast<FractureState>(*(stk_classic::mesh::field_data(getFractureState(), e)));
-  }
+  getFractureState(Entity const & e);
+
+  bool
+  isOpen(Entity const & e);
+
+  bool
+  isInternalAndOpen(Entity const & e);
 
   bool
   isInternal(Entity const & e) {
@@ -320,16 +309,6 @@ public:
     return number_in_edges == 2;
   }
 
-  bool
-  isOpen(Entity const & e) {
-    return getFractureState(e) == OPEN;
-  }
-
-  bool
-  isInternalAndOpen(Entity const & e) {
-    return isInternal(e) == true && isOpen(e) == true;
-  }
-
 private:
 
   //! Private to prohibit copying
@@ -338,10 +317,13 @@ private:
   //! Private to prohibit copying
   Subgraph& operator=(const Subgraph&);
 
+private:
+
   ///
-  /// stk mesh data
+  /// topology
   ///
-  RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct_;
+  Topology &
+  topology_;
 
   ///
   /// map local vertex -> global entity key

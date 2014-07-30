@@ -2880,7 +2880,7 @@ void Albany::Application::postRegSetup(std::string eval)
         std::stringstream pg; pg << "phalanx_graph_" << ps;
         fm[ps]->writeGraphvizFile<PHAL::AlbanyTraits::Residual>(pg.str(),detail,detail);
       }
-      phxGraphVisDetail = -1;
+//      phxGraphVisDetail = -1;
     }
     else if (eval=="Jacobian") {
       *out << "Phalanx writing graphviz file for graph of Jacobian fill (detail ="
@@ -2944,9 +2944,10 @@ Albany::Application::determinePiroSolver(const Teuchos::RCP<Teuchos::ParameterLi
     TEUCHOS_TEST_FOR_EXCEPTION(
         secondOrder != "No" &&
         secondOrder != "Velocity Verlet" &&
+        secondOrder != "Newmark" &&
         secondOrder != "Trapezoid Rule",
         std::logic_error,
-        "Invalid value for Second Order: (No, Velocity Verlet, Trapezoid Rule): " <<
+        "Invalid value for Second Order: (No, Velocity Verlet, Newmark, Trapezoid Rule): " <<
         secondOrder <<
         "\n");
 
