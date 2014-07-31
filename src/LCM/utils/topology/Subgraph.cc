@@ -4,6 +4,7 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 #include "Subgraph.h"
+#include "Topology.h"
 #include "Topology_Utils.h"
 
 namespace LCM {
@@ -11,12 +12,13 @@ namespace LCM {
 //
 // Create a subgraph given a vertex list and an edge list.
 //
-Subgraph::Subgraph(RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct,
+Subgraph::Subgraph(
+    Topology & topology,
     std::set<EntityKey>::iterator first_vertex,
     std::set<EntityKey>::iterator last_vertex,
     std::set<stkEdge>::iterator first_edge,
     std::set<stkEdge>::iterator last_edge) :
-    stk_mesh_struct_(stk_mesh_struct)
+    topology_(topology)
 {
   // Insert vertices and create the vertex map
   for (std::set<EntityKey>::iterator vertex_iterator = first_vertex;
@@ -100,6 +102,53 @@ Subgraph::Subgraph(RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct,
 
   return;
 }
+
+//
+// Accessors and mutators
+//
+Topology &
+Subgraph::getTopology()
+{return topology_;}
+
+size_t const
+Subgraph::getSpaceDimension()
+{return getTopology().getSpaceDimension();}
+
+RCP<Albany::AbstractSTKMeshStruct> &
+Subgraph::getSTKMeshStruct()
+{return getTopology().getSTKMeshStruct();}
+
+BulkData *
+Subgraph::getBulkData()
+{return getTopology().getBulkData();}
+
+stk::mesh::MetaData *
+Subgraph::getMetaData()
+{return getTopology().getMetaData();}
+
+EntityRank const
+Subgraph::getBoundaryRank()
+{return getTopology().getBoundaryRank();}
+
+IntScalarFieldType &
+Subgraph::getFractureState(EntityRank rank)
+{return getTopology().getFractureState(rank);}
+
+void
+Subgraph::setFractureState(Entity e, FractureState const fs)
+{getTopology().setFractureState(e, fs);}
+
+FractureState
+Subgraph::getFractureState(Entity e)
+{return getTopology().getFractureState(e);}
+
+bool
+Subgraph::isOpen(Entity e)
+{return getTopology().isOpen(e);}
+
+bool
+Subgraph::isInternalAndOpen(Entity e)
+{return getTopology().isInternalAndOpen(e);}
 
 //
 // Map a vertex in the subgraph to a entity in the stk mesh.
@@ -427,7 +476,7 @@ Subgraph::testArticulationPoint(
     OutEdgeIterator
     out_edge_end;
 
-    boost::tie(out_edge_begin, out_edge_end) = out_edges(source, *this);
+    boost::tie(out_edge_begin, out_edge_end) = boost::out_edges(source, *this);
 
     for (OutEdgeIterator j = out_edge_begin; j != out_edge_end; ++j) {
 
@@ -613,7 +662,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
   std::vector<Vertex>
   new_vertices(number_components - 1);
 
-  for (size_t i = 0; i < new_vertices.size(); ++i) {
+  for (std::vector<Vertex>::size_type i = 0; i < new_vertices.size(); ++i) {
     Vertex
     new_vertex = addVertex(vertex_rank);
 
@@ -638,7 +687,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
       EntityRank
       current_rank = getVertexRank(current_vertex);
 
-      if (current_rank != getCellRank()) continue;
+      if (current_rank != stk::topology::ELEMENT_RANK) continue;
 
       if (component_number == number_components - 1) continue;
 
@@ -661,7 +710,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
   }
 
   // Copy the out edges of the original vertex to the new vertex
-  for (size_t i = 0; i < new_vertices.size(); ++i) {
+  for (std::vector<Vertex>::size_type i = 0; i < new_vertices.size(); ++i) {
     cloneOutEdges(vertex, new_vertices[i]);
   }
 
@@ -863,7 +912,7 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
     OutEdgeIterator
     out_edge_end;
 
-    boost::tie(out_edge_begin, out_edge_end) = out_edges(*i, *this);
+    boost::tie(out_edge_begin, out_edge_end) = boost::out_edges(*i, *this);
 
     for (OutEdgeIterator j = out_edge_begin; j != out_edge_end; ++j) {
 

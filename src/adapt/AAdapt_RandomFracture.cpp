@@ -307,7 +307,7 @@ AAdapt::RandomFracture::getGlobalOpenList(std::map<EntityKey, bool>& local_entit
       const unsigned entity_rank = stk::mesh::entity_rank( me.first);
       const stk::mesh::EntityId entity_id = stk::mesh::entity_id( me.first );
       const std::string & entity_rank_name = meta_data_->entity_rank_name( entity_rank );
-      Entity *entity = bulk_data_->get_entity(me.first);
+      Entity entity = bulk_data_->get_entity(me.first);
       std::cout<<"Single proc fracture list contains "<<" "<<entity_rank_name<<" ["<<entity_id<<"] Proc:"
       <<entity->owner_rank() <<std::endl;
     */

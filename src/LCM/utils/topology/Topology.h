@@ -11,10 +11,12 @@
 #include <stk_mesh/base/FieldBase.hpp>
 
 #include "Topology_Types.h"
-#include "Topology_FractureCriterion.h"
 #include "Topology_Utils.h"
 
 namespace LCM {
+
+// Forward declaration
+class AbstractFractureCriterion;
 
 class Topology {
 public:
@@ -142,15 +144,9 @@ public:
   outputBoundary(std::string const & output_filename);
 
   ///
-  /// \brief Create boundary mesh
-  ///
-  void
-  createBoundary();
-
-  ///
   /// \brief Get a connectivity list of the boundary
   ///
-  std::vector<std::vector<EntityId> >
+  Connectivity
   getBoundary();
 
   ///
@@ -248,8 +244,8 @@ public:
   ///
   /// \brief Number of entities of a specific rank
   ///
-  EntityVector::size_type
-  getNumberEntitiesByRank(BulkData const & mesh, EntityRank entity_rank);
+  EntityVectorIndex
+  getNumberEntitiesByRank(BulkData const & bulk_date, EntityRank entity_rank);
 
   ///
   /// \brief Gets the local relation id (0,1,2,...) between two entities
@@ -598,9 +594,43 @@ public:
   getFractureCriterion()
   {return fracture_criterion_;}
 
+  Part &
+  getFractureBulkPart();
+
+  Part &
+  getFractureInterfacePart();
+
+  Part &
+  getLocalPart()
+  {return getMetaData()->locally_owned_part();}
+
+  Selector
+  getLocalBulkSelector()
+  {return Selector(getLocalPart() & getFractureBulkPart());}
+
+  Selector
+  getLocalInterfaceSelector()
+  {return Selector(getLocalPart() & getFractureInterfacePart());}
+
   bool
   isLocalEntity(Entity e)
   {return getBulkData()->parallel_rank() == getBulkData()->parallel_owner_rank(e);}
+
+  bool
+  isInBulk(Entity e)
+  {return getBulkData()->bucket(e).member(getFractureBulkPart());}
+
+  bool
+  isBulkCell(Entity e)
+  {return (getBulkData()->entity_rank(e) == stk::topology::ELEMENT_RANK) && isInBulk(e);}
+
+  bool
+  isInInterface(Entity e)
+  {return getBulkData()->bucket(e).member(getFractureInterfacePart());}
+
+  bool
+  isInterfaceCell(Entity e)
+  {return (getBulkData()->entity_rank(e) == stk::topology::ELEMENT_RANK) && isInInterface(e);}
 
   //
   // Set fracture state. Do nothing for cells (elements).
@@ -649,11 +679,11 @@ public:
     return isInternal(e) == true && isOpen(e) == true;
   }
 
+  ///
+  /// Check fracture criterion
+  ///
   bool
-  checkOpen(Entity e)
-  {
-    return fracture_criterion_->check(*getBulkData(), e);
-  }
+  checkOpen(Entity e);
 
   ///
   /// Initialization of the open field for fracture

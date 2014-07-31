@@ -239,7 +239,7 @@ getGlobalOpenList(std::map<EntityKey, bool>& local_entity_open,
       const unsigned entity_rank = stk::mesh::entity_rank( me.first);
       const stk::mesh::EntityId entity_id = stk::mesh::entity_id( me.first );
       const std::string & entity_rank_name = metaData->entity_rank_name( entity_rank );
-      Entity *entity = bulk_data_->get_entity(me.first);
+      Entity entity = bulk_data_->get_entity(me.first);
       std::cout<<"Single proc fracture list contains "<<" "<<entity_rank_name<<" ["<<entity_id<<"] Proc:"
       <<entity->owner_rank() <<std::endl;
     */
@@ -284,16 +284,16 @@ getGlobalOpenList(std::map<EntityKey, bool>& local_entity_open,
       const unsigned entity_rank = stk::mesh::entity_rank( key);
       const stk::mesh::EntityId entity_id = stk::mesh::entity_id( key );
       const std::string & entity_rank_name = metaData->entity_rank_name( entity_rank );
-      Entity *entity = bulk_data_->get_entity(key);
+      Entity entity = bulk_data_->get_entity(key);
       if(!entity) { std::cout << "Error on this processor: Entity not addressible!!!!!!!!!!!!!" << std::endl;
 
       std::cout<<"Global proc fracture list contains "<<" "<<entity_rank_name<<" ["<<entity_id<<"]" << std::endl;
-    std::vector<Entity*> element_lst;
+    std::vector<Entity> element_lst;
     stk::mesh::get_entities(*(bulk_data_),elementRank,element_lst);
     for (int i = 0; i < element_lst.size(); ++i){
       std::cout << element_lst[i]->identifier() << std::endl;
       }
-    std::vector<Entity*> entity_lst;
+    std::vector<Entity> entity_lst;
     stk::mesh::get_entities(*(bulk_data_),entity_rank,entity_lst);
     for (int i = 0; i < entity_lst.size(); ++i){
       std::cout << entity_lst[i]->identifier() << std::endl;

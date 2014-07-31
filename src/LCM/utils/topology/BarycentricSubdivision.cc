@@ -15,7 +15,7 @@
 
 namespace LCM {
 
-//----------------------------------------------------------------------------
+
 //
 // \brief Determine highest id number for each entity rank.
 // Used to assign unique ids to newly created entities
@@ -140,18 +140,6 @@ Topology::getEntitiesByRank(const stk::mesh::BulkData & mesh,
     }
   }
   return entities;
-}
-
-//----------------------------------------------------------------------------
-//
-// \brief This returns the number of entities on the former mesh of
-// a given rank
-//
-std::vector<Entity>::size_type
-Topology::getNumberEntitiesByRank(const stk::mesh::BulkData & mesh,
-    EntityRank entity_rank)
-{
-  return mesh.buckets(entity_rank).size();
 }
 
 //----------------------------------------------------------------------------
@@ -1231,7 +1219,7 @@ void Topology::barycentricSubdivision()
         double v14x = coordinates[3][0] - coordinates[0][0];
         double v14y = coordinates[3][1] - coordinates[0][1];
         double v14z = coordinates[3][2] - coordinates[0][2];
-	volume = v12x * (v13y*v14z - v14y*v13z) - v12y * (v13x*v14z - v14x*v13z) + v12z * (v13x*v14y - v14x*v13y); 
+	volume = v12x * (v13y*v14z - v14y*v13z) - v12y * (v13x*v14z - v14x*v13z) + v12z * (v13x*v14y - v14x*v13y);
     }
     if(volume < 0){
         std::reverse(++entities.begin(), --entities.end());

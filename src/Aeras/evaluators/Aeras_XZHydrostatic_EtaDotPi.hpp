@@ -47,6 +47,7 @@ private:
 
   PHX::MDField<ScalarT,Cell,QuadPoint>  etadotdT;
   PHX::MDField<ScalarT,Cell,QuadPoint>  etadotdVelx;
+  PHX::MDField<ScalarT,Cell,QuadPoint>  Pidot;
 
   std::map<std::string, PHX::MDField<ScalarT,Cell,QuadPoint> > Tracer;
   std::map<std::string, PHX::MDField<ScalarT,Cell,QuadPoint> > etadotdTracer;

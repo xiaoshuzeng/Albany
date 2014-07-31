@@ -31,6 +31,7 @@ ShallowWaterResid(const Teuchos::ParameterList& p,
   jacobian_det  (p.get<std::string>  ("Jacobian Det Name"), dl->qp_scalar ),
   weighted_measure (p.get<std::string>  ("Weights Name"),   dl->qp_scalar ),
   jacobian  (p.get<std::string>  ("Jacobian Name"), dl->qp_tensor ),
+  source    (p.get<std::string> ("Shallow Water Source QP Variable Name"), dl->qp_vector),
   Residual (p.get<std::string> ("Residual Name"), dl->node_vector),
   intrepidBasis (p.get<Teuchos::RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > > > ("Intrepid Basis") ),
   cubature      (p.get<Teuchos::RCP <Intrepid::Cubature<RealType> > >("Cubature")),
@@ -58,6 +59,7 @@ ShallowWaterResid(const Teuchos::ParameterList& p,
   this->addDependentField(GradBF);
   this->addDependentField(mountainHeight);
   this->addDependentField(sphere_coord);
+  this->addDependentField(source);
 
   this->addDependentField(weighted_measure);
   this->addDependentField(jacobian);
@@ -124,6 +126,7 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(mountainHeight,fm);
 
   this->utils.setFieldData(sphere_coord,fm);
+  this->utils.setFieldData(source,fm);
 
   this->utils.setFieldData(weighted_measure, fm);
   this->utils.setFieldData(jacobian, fm);
@@ -173,20 +176,22 @@ evaluateFields(typename Traits::EvalData workset)
     for (std::size_t qp=0; qp < numQPs; ++qp) {
       for (std::size_t node=0; node < numNodes; ++node) {
 
-        Residual(cell,node,0) +=  UDot(cell,qp,0)*wBF(cell, node, qp) +  div_hU(qp)*wBF(cell, node, qp);
+        Residual(cell,node,0) +=  UDot(cell,qp,0)*wBF(cell, node, qp) +  div_hU(qp)*wBF(cell, node, qp) 
+                              + source(cell,qp,0)*wBF(cell, node, qp);
       }
     }
 
 
   }
 
+
   // Velocity Equations
   if (usePrescribedVelocity) {
     for (std::size_t cell=0; cell < workset.numCells; ++cell) {
       for (std::size_t qp=0; qp < numQPs; ++qp) {
         for (std::size_t node=0; node < numNodes; ++node) {
-          Residual(cell,node,1) += UDot(cell,qp,1)*wBF(cell,node,qp);
-          Residual(cell,node,2) += UDot(cell,qp,2)*wBF(cell,node,qp);
+          Residual(cell,node,1) += UDot(cell,qp,1)*wBF(cell,node,qp) + source(cell,qp,1)*wBF(cell, node, qp);
+          Residual(cell,node,2) += UDot(cell,qp,2)*wBF(cell,node,qp) + source(cell,qp,2)*wBF(cell, node, qp);
         }
       }
     }
@@ -228,9 +233,9 @@ evaluateFields(typename Traits::EvalData workset)
         for (std::size_t qp=0; qp < numQPs; ++qp) {
           for (std::size_t node=0; node < numNodes; ++node) {
             Residual(cell,node,1) += ( UDot(cell,qp,1) + gradKineticEnergy(qp,0) + gradPotentialEnergy(qp,0) - ( coriolis(qp) + curlU(qp) )*U(cell, qp, 2)
-            )*wBF(cell,node,qp);
+            )*wBF(cell,node,qp) + source(cell,qp,1)*wBF(cell,node,qp);
             Residual(cell,node,2) += ( UDot(cell,qp,2) + gradKineticEnergy(qp,1) + gradPotentialEnergy(qp,1) + ( coriolis(qp) + curlU(qp) )*U(cell, qp, 1)
-            )*wBF(cell,node,qp);
+            )*wBF(cell,node,qp) + source(cell,qp,2)*wBF(cell,node,qp);
           }
         }
       }
@@ -239,9 +244,9 @@ evaluateFields(typename Traits::EvalData workset)
         for (std::size_t qp=0; qp < numQPs; ++qp) {
           for (std::size_t node=0; node < numNodes; ++node) {
             Residual(cell,node,1) += ( UDot(cell,qp,1) + gradKineticEnergy(qp,0) - ( coriolis(qp) + curlU(qp) )*U(cell, qp, 2))*wBF(cell,node,qp)
-                                  - gravity*U(cell,qp,0)*wGradBF(cell,node,qp,0) ;
+                                  - gravity*U(cell,qp,0)*wGradBF(cell,node,qp,0) + source(cell,qp,1)*wBF(cell,node,qp);
             Residual(cell,node,2) += ( UDot(cell,qp,2) + gradKineticEnergy(qp,1) + ( coriolis(qp) + curlU(qp) )*U(cell, qp, 1))*wBF(cell,node,qp)
-                                  - gravity*U(cell,qp,0)*wGradBF(cell,node,qp,1) ;
+                                  - gravity*U(cell,qp,0)*wGradBF(cell,node,qp,1) + source(cell,qp,2)*wBF(cell,node,qp);
           }
         }
       }

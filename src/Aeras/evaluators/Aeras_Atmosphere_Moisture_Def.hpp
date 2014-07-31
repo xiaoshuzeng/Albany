@@ -32,6 +32,8 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
   Temp            (p.get<std::string> ("QP Temperature"),                dl->qp_scalar_level),
   Density         (p.get<std::string> ("QP Density"),                    dl->qp_scalar_level),
   Pressure        (p.get<std::string> ("QP Pressure"),                   dl->qp_scalar_level),
+  Pi              (p.get<std::string> ("QP Pi"),                         dl->qp_scalar_level),
+  PiDot           (p.get<std::string> ("PiDot"),                         dl->qp_scalar_level),
   TempSrc         (p.get<std::string> ("Temperature Source"),            dl->qp_scalar_level),
   tracerNames     (p.get< Teuchos::ArrayRCP<std::string> >("Tracer Names")),
   tracerSrcNames(p.get< Teuchos::ArrayRCP<std::string> >("Tracer Source Names")),
@@ -40,6 +42,11 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
   numDims         (dl->node_qp_gradient        ->dimension(3)),
   numLevels       (dl->node_scalar_level       ->dimension(2))
 {  
+
+  Teuchos::ParameterList* xzhydrostatic_params = p.get<Teuchos::ParameterList*>("XZHydrostatic Problem");
+  compute_cloud_physics = xzhydrostatic_params->get<bool>("Compute Cloud Physics", false); 
+  std::cout << "Atmosphere_Moisture: Computing Cloud Physics = " << compute_cloud_physics << std::endl;
+
   Teuchos::ArrayRCP<std::string> RequiredTracers(3);
   RequiredTracers[0] = "Vapor";
   RequiredTracers[1] = "Cloud";
@@ -55,6 +62,7 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
   this->addDependentField(Velx);
   this->addDependentField(Density);
   this->addDependentField(Pressure);
+  this->addDependentField(Pi);
   this->addDependentField(Temp);
 
   this->addEvaluatedField(TempSrc);
@@ -76,11 +84,13 @@ template<typename EvalT, typename Traits>
 void Atmosphere_Moisture<EvalT, Traits>::postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& fm)
 {
-  this->utils.setFieldData(Velx,    fm);
-  this->utils.setFieldData(Temp,    fm);
-  this->utils.setFieldData(Density, fm);
+  this->utils.setFieldData(Velx,     fm);
+  this->utils.setFieldData(Temp,     fm);
+  this->utils.setFieldData(Density,  fm);
   this->utils.setFieldData(Pressure, fm);
-  this->utils.setFieldData(TempSrc, fm);
+  this->utils.setFieldData(Pi,       fm);
+  this->utils.setFieldData(PiDot,    fm);
+  this->utils.setFieldData(TempSrc,  fm);
 
   for (int i = 0; i < TracerIn.size();  ++i) this->utils.setFieldData(TracerIn[tracerNames[i]], fm);
   for (int i = 0; i < TracerSrc.size(); ++i) this->utils.setFieldData(TracerSrc[tracerSrcNames[i]],fm);
@@ -95,60 +105,72 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
   unsigned int numCells = workset.numCells;
   //Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > wsCoords = workset.wsCoords;
 
-   const double dt_in = workset.current_time - workset.previous_time;
-   double rainnc, rainncv;
-   const double zbot = 25.0;
-   const double ztop = 10000.0;
-
-   std::vector<double> rho(numLevels, 0.0);
-   std::vector<double> p(numLevels, 0.0);
-   std::vector<double> t(numLevels, 0.0);
-   std::vector<double> exner(numLevels, 0.0);
-   std::vector<double> qv(numLevels, 0.0);
-   std::vector<double> qc(numLevels, 0.0);
-   std::vector<double> qr(numLevels, 0.0);
-   std::vector<double> z(numLevels, 0.0);
-   std::vector<double> dz8w(numLevels, 0.0);
+  const double dt_in = workset.current_time - workset.previous_time;
+  double rainnc, rainncv;
+  const double zbot = 25.0;
+  const double ztop = 10000.0;
 
   for (int i=0; i < TempSrc.size(); ++i) TempSrc(i)=0.0;
 
   for (int t=0; t < TracerSrc.size(); ++t)  
     for (int i=0; i < TracerSrc[tracerSrcNames[t]].size(); ++i) TracerSrc[tracerSrcNames[t]](i)=0.0;
 
-  for (int cell=0; cell < numCells; ++cell) {
-    for (int qp=0; qp < numQPs; ++qp) {
-      for (int level=0; level < numLevels; ++level) { 
+  if (compute_cloud_physics == true) {
 
-        rho[level]   = Albany::ADValue( Density(cell,qp,level) );
-        p[level]     = Albany::ADValue( Pressure(cell,qp,level) );
-        t[level]     = Albany::ADValue( Temp(cell,qp,level) );
-        exner[level] = pow( (p[level]/1000.0),(0.286) );
-        rho[level]   = Albany::ADValue( Density(cell,qp,level) );
-        qv[level]    = Albany::ADValue( TracerIn["Vapor"](cell,qp,level) );
-        qc[level]    = Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
-        qr[level]    = Albany::ADValue( TracerIn["Rain"](cell,qp,level) );
-        z[level]     = (1.0-Albany::ADValue( E.eta(level)) ) * ztop + zbot;
-        dz8w[level]  = z[level];
-      }
+    std::vector<double> rho(numLevels, 0.0);
+    std::vector<double> p(numLevels, 0.0);
+    std::vector<double> t(numLevels, 0.0);
+    std::vector<double> exner(numLevels, 0.0);
+    std::vector<double> qv(numLevels, 0.0);
+    std::vector<double> qc(numLevels, 0.0);
+    std::vector<double> qr(numLevels, 0.0);
+    std::vector<double> z(numLevels, 0.0);
+    std::vector<double> dz8w(numLevels, 0.0);
 
-      kessler(numLevels, dt_in,
-              rho, p, exner, dz8w,
-              t, qv, qc, qr,
-              rainnc,  rainncv,
-              z);
+    double Piinv, Pival, Pi_dot;
+  
+    for (int cell=0; cell < numCells; ++cell) {
+      for (int qp=0; qp < numQPs; ++qp) {
+  
+        for (int level=0; level < numLevels; ++level) { 
+          int k    = numLevels - level - 1;
+          rho[k]   = Albany::ADValue( Density(cell,qp,level) );
+          p[k]     = Albany::ADValue( Pressure(cell,qp,level) );
+          t[k]     = Albany::ADValue( Temp(cell,qp,level) );
+          exner[k] = pow( (p[k]/1000.0),(0.286) );
+          rho[k]   = Albany::ADValue( Density(cell,qp,level) );
+          Piinv    = 1.0/Albany::ADValue( Pi(cell,qp,level) );
+          qv[k]    = Piinv*Albany::ADValue( TracerIn["Vapor"](cell,qp,level) ); 
+          qc[k]    = Piinv*Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
+          qr[k]    = Piinv*Albany::ADValue( TracerIn["Rain"] (cell,qp,level) );
+          z[k]     = (1.0-Albany::ADValue( E.eta(level)) ) * ztop + zbot;
+          dz8w[k]  = z[k];
+        }
+  
+        kessler(numLevels, dt_in,
+                rho, p, exner, dz8w,
+                t, qv, qc, qr,
+                rainnc,  rainncv,
+                z);
+  
+        for (int level=0; level < numLevels; ++level) { 
+          int k                                          = numLevels - level - 1;
 
-      for (int level=0; level < numLevels; ++level) { 
-        TracerSrc[namesToSrc["Vapor"]](cell,qp,level) += 0 * TracerIn["Vapor"] (cell,qp,level);
-        TracerSrc[namesToSrc["Cloud"]] (cell,qp,level) += 0 * TracerIn["Cloud"]  (cell,qp,level);
-        TracerSrc[namesToSrc["Rain"]] (cell,qp,level) += 0 * TracerIn["Rain"]  (cell,qp,level);
-      }
-    }
-  }
+          TempSrc                       (cell,qp,level) -= ( t[k]        - Albany::ADValue(Temp             (cell,qp,level)) ) / dt_in;
 
-  for (int cell=0; cell < numCells; ++cell) {
-    for (int qp=0; qp < numQPs; ++qp) {
-      for (int level=0; level < numLevels; ++level) {
-        TempSrc(cell,qp,level) += 0 * Temp(cell,qp,level);
+          //src = pi*dqdt + q*dpidt
+          Pival  = Albany::ADValue( Pi(cell,qp,level) );
+          Pi_dot = Albany::ADValue( PiDot(cell,qp,level) );
+          Piinv  = 1.0/Albany::ADValue( Pi(cell,qp,level) );
+          
+          double qv_old = Piinv*Albany::ADValue( TracerIn["Vapor"](cell,qp,level) );
+          double qc_old = Piinv*Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
+          double qr_old = Piinv*Albany::ADValue( TracerIn["Rain"] (cell,qp,level) );
+
+          TracerSrc[namesToSrc["Vapor"]](cell,qp,level) -= Pival*( qv[k] - qv_old )/dt_in + qv_old * Pi_dot;
+          TracerSrc[namesToSrc["Cloud"]](cell,qp,level) -= Pival*( qc[k] - qc_old )/dt_in + qc_old * Pi_dot;
+          TracerSrc[namesToSrc["Rain"]] (cell,qp,level) -= Pival*( qr[k] - qr_old )/dt_in + qr_old * Pi_dot;
+        }
       }
     }
   }
@@ -273,11 +295,10 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_i
 
 
     // Time split loop, fallout done with flux upstream
-    for (int k=0; k<Km; ++k) {    //do k = kts, kte-1
+    for (int k=0; k<Km-1; ++k) {    //do k = kts, kte-1
       qrk[k] = qrk[k] - factor[k] * ( rhok[k] * qrk[k] * vt[k] 
                                     - rhok[k+1] * qrk[k+1] * vt[k+1] );
     } 
-
     // Update rain at model top
     qrk[Km-1] = qrk[Km-1] - factor[Km-1]*qrk[Km-1]*vt[Km-1];
 
@@ -357,20 +378,11 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_i
     qc[k]     = qc[k] + prodct;
     qr[k]     = qr[k] - qrevap;
  
-     //std::cout << "gam,prodct,qrevap: " << " " << gam << " " << prodct << " " << qrevap << std::endl;
-     //std::cout << "rho,p,t,qv,qc,qr: " << rho[k] << " " << p[k] << " " << t[k] << " " << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
+    //std::cout << "gam,prodct,qrevap: " << " " << gam << " " << prodct << " " << qrevap << std::endl;
+    //std::cout << "k,z,rho,p,t,qv,qc,qr: " 
+    //          << k << " " << z[k] << " " << rho[k] << " " << p[k] << " " << t[k] << " " 
+    //          << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
   } //enddo
-  
-
-  //for (int k=0; k<Km; ++k) {
-  //  std::cout << "t: " << t[k] << std::endl;
-  //}
-
 }
-
-
-
-
-
 
 }
