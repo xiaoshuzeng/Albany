@@ -116,7 +116,7 @@ namespace Aeras {
 #include "Albany_Utils.hpp"
 #include "Albany_ProblemUtils.hpp"
 #include "Albany_EvaluatorUtils.hpp"
-#include "Albany_ResponseUtilities.hpp"
+#include "Aeras/responses/Aeras_LayeredResponseUtilities.hpp"
 #include "PHAL_Neumann.hpp"
 
 template <typename EvalT>
@@ -710,13 +710,14 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
   if (fieldManagerChoice == Albany::BUILD_RESID_FM)  {
     PHX::Tag<typename EvalT::ScalarT> res_tag("Scatter XZHydrostatic", dl->dummy);
     fm0.requireField<EvalT>(res_tag);
+
   }
   else if (fieldManagerChoice == Albany::BUILD_RESPONSE_FM) {
-    Albany::ResponseUtilities<EvalT, PHAL::AlbanyTraits> respUtils(dl);
+    Aeras::LayeredResponseUtilities<EvalT, PHAL::AlbanyTraits> respUtils(dl);
     return respUtils.constructResponses(fm0, *responseList, Teuchos::null, stateMgr);
   }
 
 
-  return Teuchos::null;
+  return  Teuchos::null;
 }
 #endif // AERAS_XZHYDROSTATICPROBLEM_HPP
