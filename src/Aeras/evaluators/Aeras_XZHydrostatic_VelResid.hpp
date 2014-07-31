@@ -45,6 +45,7 @@ private:
 
   PHX::MDField<ScalarT,Cell,QuadPoint,Dim>  density;
   PHX::MDField<ScalarT,Cell,QuadPoint,Dim>  etadotdVelx;
+  PHX::MDField<ScalarT,Cell,QuadPoint,Dim>  Viscosity;
   PHX::MDField<ScalarT,Cell,QuadPoint,Dim>  pGrad;
   PHX::MDField<ScalarT,Cell,QuadPoint,Dim>  keGrad;
   PHX::MDField<ScalarT,Cell,QuadPoint,Dim>  PhiGrad;

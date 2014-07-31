@@ -28,6 +28,7 @@ XZHydrostatic_VelResid(const Teuchos::ParameterList& p,
   density     (p.get<std::string> ("QP Density"),                       dl->qp_scalar_level),
   pGrad       (p.get<std::string> ("Gradient QP Pressure"),             dl->qp_gradient_level),
   etadotdVelx (p.get<std::string> ("EtaDotdVelx"),                      dl->qp_scalar_level),
+  Viscosity   (p.get<std::string> ("Viscosity Name"),                   dl->qp_gradient_level),
   Residual    (p.get<std::string> ("Residual Name"),                    dl->node_scalar_level),
   numNodes    ( dl->node_scalar             ->dimension(1)),
   numQPs      ( dl->node_qp_scalar          ->dimension(2)),
@@ -38,6 +39,7 @@ XZHydrostatic_VelResid(const Teuchos::ParameterList& p,
   this->addDependentField(PhiGrad);
   this->addDependentField(density);
   this->addDependentField(etadotdVelx);
+  this->addDependentField(Viscosity);
   this->addDependentField(pGrad);
   this->addDependentField(uDot);
   this->addDependentField(wBF);
@@ -58,6 +60,7 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(PhiGrad    , fm);
   this->utils.setFieldData(density    , fm);
   this->utils.setFieldData(etadotdVelx, fm);
+  this->utils.setFieldData(Viscosity  , fm);
   this->utils.setFieldData(pGrad      , fm);
   this->utils.setFieldData(uDot       , fm);
   this->utils.setFieldData(wBF        , fm);
@@ -79,10 +82,12 @@ evaluateFields(typename Traits::EvalData workset)
         for (int qp=0; qp < numQPs; ++qp) {
           // Advection Term
           for (int j=0; j < numDims; ++j) {
-            Residual(cell,node,level) += ( keGrad(cell,qp,level,j) + PhiGrad(cell,qp,level,j) )*wBF(cell,node,qp);
-            Residual(cell,node,level) += ( pGrad(cell,qp,level,j)/density(cell,qp,level) + etadotdVelx(cell,qp,level) )*wBF(cell,node,qp);
+            Residual(cell,node,level) += ( keGrad   (cell,qp,level,j) + PhiGrad(cell,qp,level,j) )*wBF(cell,node,qp);
+            Residual(cell,node,level) += ( pGrad    (cell,qp,level,j)/density(cell,qp,level) )*wBF(cell,node,qp);
+            Residual(cell,node,level) += ( Viscosity(cell,qp,level,j) )*wBF(cell,node,qp);
           }
           // Transient Term
+          Residual(cell,node,level) += etadotdVelx(cell,qp,level) * wBF(cell,node,qp);
           Residual(cell,node,level) += uDot(cell,qp,level)*wBF(cell,node,qp);
         }
       }

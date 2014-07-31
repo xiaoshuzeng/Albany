@@ -540,10 +540,10 @@ void AAdapt::AerasXZHydrostaticHotBubble::compute(double* x, const double* X) {
   x[offset++] = SP0;
   
   //Velx
-  const double amp = 1.00;
+  const double amp = 0.10;
   for (int i=0; i<numLevels; ++i) {
-    //x[offset++] = U0 + amp*std::exp( -( ((i-z0)*(i-z0)/(sig_z*sig_z)) + ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
-    x[offset++] = U0 + amp*std::exp( -( ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
+    x[offset++] = U0 + amp*std::exp( -( ((i-z0)*(i-z0)/(sig_z*sig_z)) + ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
+    //x[offset++] = U0 + amp*std::exp( -( ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
     x[offset++] = Temperature[i];
   }
 

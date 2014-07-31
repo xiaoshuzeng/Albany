@@ -27,6 +27,7 @@
        evaluators/Aeras_XZHydrostatic_GeoPotential.cpp
        evaluators/Aeras_XZHydrostatic_Omega.cpp
        evaluators/Aeras_XZHydrostatic_PiVel.cpp
+       evaluators/Aeras_XZHydrostatic_Viscosity.cpp
        evaluators/Aeras_XZHydrostatic_Pressure.cpp
        evaluators/Aeras_XZHydrostatic_KineticEnergy.cpp
        evaluators/Aeras_XZHydrostatic_UTracer.cpp
@@ -90,6 +91,8 @@
        evaluators/Aeras_XZHydrostatic_Omega.hpp
        evaluators/Aeras_XZHydrostatic_PiVel_Def.hpp
        evaluators/Aeras_XZHydrostatic_PiVel.hpp
+       evaluators/Aeras_XZHydrostatic_Viscosity_Def.hpp
+       evaluators/Aeras_XZHydrostatic_Viscosity.hpp
        evaluators/Aeras_XZHydrostatic_KineticEnergy_Def.hpp
        evaluators/Aeras_XZHydrostatic_KineticEnergy.hpp
        evaluators/Aeras_XZHydrostatic_UTracer_Def.hpp
