@@ -95,25 +95,5 @@ evaluateFields(typename Traits::EvalData workset)
       }
     }
   }
-/*
-ScalarT r=0;
-for (int cell=0; cell < workset.numCells; ++cell)  
-for (int node=0; node < numNodes; ++node)  
-for (int level=0; level < numLevels; ++level)  
-for (int qp=0; qp < numQPs; ++qp)  
-for (int j=0; j < numDims; ++j)  r+= pow(viscosity*GradV(cell,qp,level,j)*wGradBF(cell,node,qp,j),2);
-std::cout<<__LINE__<<" GradV*wGradBF:"<< std::sqrt(r)<<std::endl;
-r = 0;
-for (int cell=0; cell < workset.numCells; ++cell)  
-for (int node=0; node < numNodes; ++node)  
-for (int level=0; level < numLevels; ++level)  
-for (int qp=0; qp < numQPs; ++qp)  {
-ScalarT s=0;
-for (int j=0; j < numDims; ++j)  s += viscosity*GradV(cell,qp,level,j)*wGradBF(cell,node,qp,j);
-r += s*s;
-}
-std::cout<<__LINE__<<" sum of GradV*wGradBF:"<< std::sqrt(r)<<std::endl;
-*/
-
 }
 }
