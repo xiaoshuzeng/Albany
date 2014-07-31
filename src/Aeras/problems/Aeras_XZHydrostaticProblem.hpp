@@ -36,7 +36,6 @@
 #include "Aeras_XZHydrostatic_KineticEnergy.hpp"
 #include "Aeras_XZHydrostatic_UTracer.hpp"
 #include "Aeras_XZHydrostatic_VirtualT.hpp"
-#include "Aeras_XZHydrostatic_Viscosity.hpp"
 
 namespace Aeras {
 
