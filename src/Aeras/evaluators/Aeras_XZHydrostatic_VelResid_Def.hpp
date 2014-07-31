@@ -28,8 +28,10 @@ XZHydrostatic_VelResid(const Teuchos::ParameterList& p,
   density     (p.get<std::string> ("QP Density"),                       dl->qp_scalar_level),
   pGrad       (p.get<std::string> ("Gradient QP Pressure"),             dl->qp_gradient_level),
   etadotdVelx (p.get<std::string> ("EtaDotdVelx"),                      dl->qp_scalar_level),
-  Viscosity   (p.get<std::string> ("Viscosity Name"),                   dl->qp_gradient_level),
+  GradV       (p.get<std::string>("Gradient Vel Name"), dl->qp_gradient_level),
   Residual    (p.get<std::string> ("Residual Name"),                    dl->node_scalar_level),
+
+  viscosity   (p.get<Teuchos::ParameterList*>("XZHydrostatic Problem")->get<double>("Viscosity",0.0)),
   numNodes    ( dl->node_scalar             ->dimension(1)),
   numQPs      ( dl->node_qp_scalar          ->dimension(2)),
   numDims     ( dl->node_qp_gradient        ->dimension(3)),
@@ -39,7 +41,7 @@ XZHydrostatic_VelResid(const Teuchos::ParameterList& p,
   this->addDependentField(PhiGrad);
   this->addDependentField(density);
   this->addDependentField(etadotdVelx);
-  this->addDependentField(Viscosity);
+  this->addDependentField(GradV);
   this->addDependentField(pGrad);
   this->addDependentField(uDot);
   this->addDependentField(wBF);
@@ -60,7 +62,7 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(PhiGrad    , fm);
   this->utils.setFieldData(density    , fm);
   this->utils.setFieldData(etadotdVelx, fm);
-  this->utils.setFieldData(Viscosity  , fm);
+  this->utils.setFieldData(GradV  , fm);
   this->utils.setFieldData(pGrad      , fm);
   this->utils.setFieldData(uDot       , fm);
   this->utils.setFieldData(wBF        , fm);
@@ -82,9 +84,9 @@ evaluateFields(typename Traits::EvalData workset)
         for (int qp=0; qp < numQPs; ++qp) {
           // Advection Term
           for (int j=0; j < numDims; ++j) {
-            Residual(cell,node,level) += ( keGrad   (cell,qp,level,j) + PhiGrad(cell,qp,level,j) )*wBF(cell,node,qp);
-            Residual(cell,node,level) += ( pGrad    (cell,qp,level,j)/density(cell,qp,level) )*wBF(cell,node,qp);
-            Residual(cell,node,level) += ( Viscosity(cell,qp,level,j) )*wBF(cell,node,qp);
+            Residual(cell,node,level) += ( keGrad(cell,qp,level,j) + PhiGrad(cell,qp,level,j) )*wBF(cell,node,qp);
+            Residual(cell,node,level) += ( pGrad (cell,qp,level,j)/density(cell,qp,level) )*wBF(cell,node,qp);
+            Residual(cell,node,level) += ( viscosity * GradV (cell,qp,level,j) )*wGradBF(cell,node,qp,j);
           }
           // Transient Term
           Residual(cell,node,level) += etadotdVelx(cell,qp,level) * wBF(cell,node,qp);
@@ -93,5 +95,25 @@ evaluateFields(typename Traits::EvalData workset)
       }
     }
   }
+/*
+ScalarT r=0;
+for (int cell=0; cell < workset.numCells; ++cell)  
+for (int node=0; node < numNodes; ++node)  
+for (int level=0; level < numLevels; ++level)  
+for (int qp=0; qp < numQPs; ++qp)  
+for (int j=0; j < numDims; ++j)  r+= pow(viscosity*GradV(cell,qp,level,j)*wGradBF(cell,node,qp,j),2);
+std::cout<<__LINE__<<" GradV*wGradBF:"<< std::sqrt(r)<<std::endl;
+r = 0;
+for (int cell=0; cell < workset.numCells; ++cell)  
+for (int node=0; node < numNodes; ++node)  
+for (int level=0; level < numLevels; ++level)  
+for (int qp=0; qp < numQPs; ++qp)  {
+ScalarT s=0;
+for (int j=0; j < numDims; ++j)  s += viscosity*GradV(cell,qp,level,j)*wGradBF(cell,node,qp,j);
+r += s*s;
+}
+std::cout<<__LINE__<<" sum of GradV*wGradBF:"<< std::sqrt(r)<<std::endl;
+*/
+
 }
 }

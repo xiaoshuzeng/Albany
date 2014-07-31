@@ -372,10 +372,9 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<std::string>("QP Density",                       "Density");
     p->set<std::string>("Gradient QP Pressure",             "Gradient QP Pressure");
     p->set<std::string>("EtaDotdVelx",                      "EtaDotdVelx");
-    p->set<std::string>("Viscosity Name",                   "Viscosity QP");
+    p->set<std::string>("Gradient Vel Name",                dof_names_levels_gradient[0]);
     
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
-
     Teuchos::ParameterList& paramList = params->sublist("XZHydrostatic Problem");
     p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
@@ -402,7 +401,6 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<std::string>("EtaDotdT",                       "EtaDotdT");
     
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
-
     Teuchos::ParameterList& paramList = params->sublist("XZHydrostatic Problem");
     p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
@@ -584,21 +582,6 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     ev = rcp(new Aeras::DOFGradInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
-  {//Viscosity 
-    RCP<ParameterList> p = rcp(new ParameterList("Viscosity"));
-
-    p->set<RCP<ParamLib> >("Parameter Library", paramLib);
-    Teuchos::ParameterList& paramList = params->sublist("XZHydrostatic Problem");
-    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
-    // Input
-    p->set<string>("Gradient BF Name",       "Grad BF");
-    p->set<string>("Gradient Vel Name",      dof_names_levels_gradient[0]);
-    p->set<string>("Viscosity Name",         "Viscosity QP");
-   
-    ev = rcp(new Aeras::XZHydrostatic_Viscosity<EvalT,AlbanyTraits>(*p,dl));
-    fm0.template registerEvaluator<EvalT>(ev);
-  }
-
   { // XZHydrostatic vertical velocity * Pi
     RCP<ParameterList> p = rcp(new ParameterList("XZHydrostatic_EtaDotPi"));
 
