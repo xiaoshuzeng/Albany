@@ -134,19 +134,11 @@ MechanicsProblem(const Teuchos::RCP<Teuchos::ParameterList>& params,
        << "\tStabilized Pressure variables : " << variableTypeToString(stab_pressure_type_)
        << std::endl;
 
-  bool I_Do_Not_Have_A_Valid_Material_DB(true);
-  if(params->isType<std::string>("MaterialDB Filename")){
-    I_Do_Not_Have_A_Valid_Material_DB = false;
-    std::string filename = params->get<std::string>("MaterialDB Filename");
-    material_db_ = Teuchos::rcp(new QCAD::MaterialDatabase(filename, comm));
-  }
-  TEUCHOS_TEST_FOR_EXCEPTION(I_Do_Not_Have_A_Valid_Material_DB,
-                             std::logic_error,
-                             "Mechanics Problem Requires a Material Database");
+  material_db_ = LCM::createMaterialDatabase(params, comm);
 
-//the following function returns the problem information required for
-//setting the rigid body modes (RBMs) for elasticity problems (in
-//src/Albany_SolverFactory.cpp) written by IK, Feb. 2012
+  //the following function returns the problem information required for
+  //setting the rigid body modes (RBMs) for elasticity problems (in
+  //src/Albany_SolverFactory.cpp) written by IK, Feb. 2012
 
   // Need numPDEs should be num_dims_ + nDOF for other governing equations  -SS
 

@@ -7,10 +7,22 @@
 
 namespace LCM {
 
-Teuchos::RCP<MaterialDatabase>
-createMaterialDatabase(std::string const & filename,
-    Teuchos::RCP<Epetra_Comm const> const & comm)
+RCP<MaterialDatabase>
+createMaterialDatabase(
+    RCP<ParameterList> const & params,
+    RCP<Epetra_Comm const> const & comm)
 {
+  bool
+  is_valid_material_db = params->isType<std::string>("MaterialDB Filename");
+
+  TEUCHOS_TEST_FOR_EXCEPTION(
+      is_valid_material_db == false,
+      std::logic_error,
+      "A required material database cannot be found.");
+
+  std::string
+  filename = params->get<std::string>("MaterialDB Filename");
+
   return Teuchos::rcp(new MaterialDatabase(filename, comm));
 }
 
