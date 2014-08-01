@@ -12,13 +12,23 @@
 
 #include <algorithm>
 
+#include "QCAD_MaterialDatabase.hpp"
+#include "Teuchos_RCP.hpp"
+
 namespace LCM {
+
+typedef QCAD::MaterialDatabase MaterialDatabase;
 
 template <typename Container, typename T>
 bool contains(Container const & c, T const & t)
 {
   return std::find(c.begin(), c.end(), t) != c.end();
 }
+
+Teuchos::RCP<MaterialDatabase>
+createMaterialDatabase(
+    std::string const & filename,
+    Teuchos::RCP<Epetra_Comm const> const & comm);
 
 } // namespace LCM
 

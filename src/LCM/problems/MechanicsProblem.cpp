@@ -3,9 +3,10 @@
 //    This Software is released under the BSD license detailed     //
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
-#include "MechanicsProblem.hpp"
-#include "Albany_Utils.hpp"
 #include "Albany_ProblemUtils.hpp"
+#include "Albany_Utils.hpp"
+#include "LCM_Utils.h"
+#include "MechanicsProblem.hpp"
 #include "PHAL_AlbanyTraits.hpp"
 
 void
