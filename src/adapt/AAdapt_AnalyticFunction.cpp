@@ -525,16 +525,6 @@ void AAdapt::AerasXZHydrostaticHotBubble::compute(double* x, const double* X) {
     D[i] = Pressure[i]/(R*Temperature[i]);
   }
 
-  static bool first_time=true;
-  if (first_time) {
-    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__
-    <<" Pressure["<<i<<"]="<<Pressure[i]
-    <<" Temperature["<<i<<"]="<<Temperature[i]
-    <<" Density["<<i<<"]="<<D[i]<<std::endl;
-    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__<<" Pi["<<i<<"]="<<Pi[i]<<std::endl;
-  }
-  first_time = false;
-
   int offset = 0;
   //Surface Pressure
   x[offset++] = SP0;

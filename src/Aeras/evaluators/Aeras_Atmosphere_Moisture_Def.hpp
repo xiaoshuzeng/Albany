@@ -28,7 +28,7 @@ template<typename EvalT, typename Traits>
 Atmosphere_Moisture<EvalT, Traits>::
 Atmosphere_Moisture(Teuchos::ParameterList& p,
            const Teuchos::RCP<Aeras::Layouts>& dl) :
-  Velx            (p.get<std::string> ("QP Velx"),                       dl->qp_scalar_level),
+  Velx            (p.get<std::string> ("QP Velx"),                       dl->qp_vector_level),
   Temp            (p.get<std::string> ("QP Temperature"),                dl->qp_scalar_level),
   Density         (p.get<std::string> ("QP Density"),                    dl->qp_scalar_level),
   Pressure        (p.get<std::string> ("QP Pressure"),                   dl->qp_scalar_level),
