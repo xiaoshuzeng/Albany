@@ -65,6 +65,8 @@ void kessler(const int Km, const double dt_in,
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Temp;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Density;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Pressure;
+  PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Pi;
+  PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> PiDot;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> TempSrc;
 
   std::map<std::string, PHX::MDField<ScalarT,Cell,QuadPoint> > TracerIn;
@@ -75,6 +77,8 @@ void kessler(const int Km, const double dt_in,
   const Teuchos::ArrayRCP<std::string> tracerSrcNames;
   std::map<std::string, std::string>   namesToSrc;
  
+  bool compute_cloud_physics;
+
   const int numQPs;
   const int numDims;
   const int numLevels;

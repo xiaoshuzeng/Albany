@@ -73,7 +73,7 @@ evaluateFields(typename Traits::EvalData workset)
       for (int level=0; level < numLevels; ++level) {
 
         ScalarT sum = Velx(cell,qp,level)*gradp(cell,qp,level) + 0.5*gradpivelx(cell,qp,level)*E.delta(level) ;
-        for (int j=0; j<level-1; ++j) {
+        for (int j=0; j<level; ++j) {
           sum -= gradpivelx(cell,qp,level) * E.delta(level);
         }  
         omega(cell,qp,level) = (1/(density(cell,qp,level)*Cp))*sum;

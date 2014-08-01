@@ -32,10 +32,23 @@ Albany heavily leverages the Trilinos Framework, available at:
 and optionally depends on the SCOREC Parallel Unstructured Mesh Infrastructure 
 [http://www.scorec.rpi.edu/pumi](http://www.scorec.rpi.edu/pumi)
 
+The SCOREC tools are on GitHub at:
+
+[http://github.com/SCOREC/core](http://github.com/SCOREC/core)
+
+The SCOREC repo can be cloned using:
+
+	git clone https://github.com/SCOREC/core.git
+
 ## Building Albany
 
-Detailed build instructions for both Trilinos and Albany are maintained at 
-[http://redmine.scorec.rpi.edu/projects/albany-rpi/wiki](http://redmine.scorec.rpi.edu/projects/albany-rpi/wiki)
+Detailed build instructions for both Trilinos and Albany are maintained on the Albany wiki at
+[https://github.com/gahansen/Albany/wiki/Building-Albany-and-supporting-tools](https://github.com/gahansen/Albany/wiki/Building-Albany-and-supporting-tools)
+
+These include builds on Linux, the RPI Blue Gene/Q, Vesta - the ALCF Blue Gene/Q, OSX Mountain Lion, etc.
+
+Other build instructions for both Trilinos and Albany are maintained at 
+[http://redmine.scorec.rpi.edu/projects/albany-rpi/wiki](http://redmine.scorec.rpi.edu/projects/albany-rpi/wiki).
 
 ## Nightly Build and Test Results
 

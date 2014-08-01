@@ -151,15 +151,9 @@ public:
   outputBoundary(std::string const & output_filename);
 
   ///
-  /// \brief Create boundary mesh
-  ///
-  void
-  createBoundary();
-
-  ///
   /// \brief Get a connectivity list of the boundary
   ///
-  std::vector<std::vector<EntityId> >
+  Connectivity
   getBoundary();
 
   ///
@@ -257,7 +251,7 @@ public:
   ///
   /// \brief Number of entities of a specific rank
   ///
-  EntityVector::size_type
+  EntityVectorIndex
   getNumberEntitiesByRank(BulkData const & bulk_date, EntityRank entity_rank);
 
   ///
@@ -611,9 +605,43 @@ public:
   getFractureCriterion()
   {return fracture_criterion_;}
 
+  Part &
+  getFractureBulkPart();
+
+  Part &
+  getFractureInterfacePart();
+
+  Part &
+  getLocalPart()
+  {return getMetaData()->locally_owned_part();}
+
+  Selector
+  getLocalBulkSelector()
+  {return Selector(getLocalPart() & getFractureBulkPart());}
+
+  Selector
+  getLocalInterfaceSelector()
+  {return Selector(getLocalPart() & getFractureInterfacePart());}
+
   bool
   isLocalEntity(Entity const & e)
   {return getBulkData()->parallel_rank() == e.owner_rank();}
+
+  bool
+  isInBulk(Entity const & e)
+  {return e.bucket().member(getFractureBulkPart());}
+
+  bool
+  isBulkCell(Entity const & e)
+  {return (e.entity_rank() == getCellRank()) && isInBulk(e);}
+
+  bool
+  isInInterface(Entity const & e)
+  {return e.bucket().member(getFractureInterfacePart());}
+
+  bool
+  isInterfaceCell(Entity const & e)
+  {return (e.entity_rank() == getCellRank()) && isInInterface(e);}
 
   //
   // Set fracture state. Do nothing for cells (elements).

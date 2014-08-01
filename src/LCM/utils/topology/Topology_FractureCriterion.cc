@@ -36,15 +36,9 @@ beta_(beta)
 bool
 FractureCriterionTraction::check(Entity const & interface)
 {
-  // Check first whether this interface is in the relevant block
-  stk_classic::mesh::Bucket const &
-  interface_bucket = interface.bucket();
-
-  //if (interface_bucket.member(interface_part_) == false) return false;
-
-  // Now check the adjacent bulk elements. Proceed if at least
-  // one is part of the bulk block.
-  stk_classic::mesh::PairIterRelation const
+  // Check the adjacent bulk elements. Proceed only
+  // if both elements belong to the bulk part.
+  PairIterRelation const
   relations_up = relations_one_up(interface);
 
   assert(relations_up.size() == 2);
@@ -55,16 +49,15 @@ FractureCriterionTraction::check(Entity const & interface)
   Entity const &
   element_1 = *(relations_up[1].entity());
 
-  stk_classic::mesh::Bucket const &
+  Bucket const &
   bucket_0 = element_0.bucket();
 
-  stk_classic::mesh::Bucket const &
+  Bucket const &
   bucket_1 = element_1.bucket();
 
   bool const
   is_embedded =
-      bucket_0.member(getBulkPart()) &&
-      bucket_1.member(getBulkPart());
+      bucket_0.member(getBulkPart()) && bucket_1.member(getBulkPart());
 
   if (is_embedded == false) return false;
 
@@ -72,7 +65,7 @@ FractureCriterionTraction::check(Entity const & interface)
   EntityVector
   nodes = getTopology().getBoundaryEntityNodes(interface);
 
-  EntityVector::size_type const
+  EntityVectorIndex const
   number_nodes = nodes.size();
 
   Intrepid::Tensor<double>
@@ -85,7 +78,7 @@ FractureCriterionTraction::check(Entity const & interface)
 
   // The traction is evaluated at centroid of face, so a simple
   // average yields the value.
-  for (EntityVector::size_type i = 0; i < number_nodes; ++i) {
+  for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
 
     Entity &
     node = *(nodes[i]);
@@ -144,7 +137,7 @@ FractureCriterionTraction::computeNormals()
 
   stk_classic::mesh::get_selected_entities(local_selector, node_buckets, nodes);
 
-  EntityVector::size_type const
+  EntityVectorIndex const
   number_nodes = nodes.size();
 
   std::vector<Intrepid::Vector<double> >
@@ -153,7 +146,7 @@ FractureCriterionTraction::computeNormals()
   Teuchos::ArrayRCP<double> &
   node_coordinates = getSTKDiscretization().getCoordinates();
 
-  for (EntityVector::size_type i = 0; i < number_nodes; ++i) {
+  for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
 
     double const * const
     pointer_coordinates = &(node_coordinates[getDimension() * i]);
@@ -174,12 +167,12 @@ FractureCriterionTraction::computeNormals()
 
   stk_classic::mesh::get_selected_entities(local_selector, face_buckets, faces);
 
-  EntityVector::size_type const
+  EntityVectorIndex const
   number_normals = faces.size();
 
   normals_.resize(number_normals);
 
-  for (EntityVector::size_type i = 0; i < number_normals; ++i) {
+  for (EntityVectorIndex i = 0; i < number_normals; ++i) {
 
     Entity const &
     face = *(faces[i]);

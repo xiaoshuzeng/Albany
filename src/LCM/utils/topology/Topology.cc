@@ -140,8 +140,8 @@ Topology::checkOpen(Entity const & e)
 void
 Topology::initializeFractureState()
 {
-  stk_classic::mesh::Selector
-  local_selector = getMetaData()->locally_owned_part();
+  Selector
+  local_part = getLocalPart();
 
   for (EntityRank rank = NODE_RANK; rank < getCellRank(); ++rank) {
 
@@ -151,9 +151,9 @@ Topology::initializeFractureState()
     EntityVector
     entities;
 
-    stk_classic::mesh::get_selected_entities(local_selector, buckets, entities);
+    stk_classic::mesh::get_selected_entities(local_part, buckets, entities);
 
-    for (EntityVector::size_type i = 0; i < entities.size(); ++i) {
+    for (EntityVectorIndex i = 0; i < entities.size(); ++i) {
 
       Entity const &
       entity = *(entities[i]);
@@ -181,8 +181,8 @@ Topology::createDiscretization()
 
   // Get the topology of the elements. NOTE: Assumes one element
   // type in mesh.
-  stk_classic::mesh::Selector
-  local_selector = getMetaData()->locally_owned_part();
+  Selector
+  local_selector = getLocalPart();
 
   std::vector<Bucket*> const &
   buckets = getBulkData()->buckets(getCellRank());
@@ -232,21 +232,21 @@ void Topology::removeNodeRelations()
 
   getBulkData()->modification_begin();
 
-  for (size_t i = 0; i < elements.size(); ++i) {
+  for (EntityVectorIndex i = 0; i < elements.size(); ++i) {
     PairIterRelation
     relations = elements[i]->relations(NODE_RANK);
 
     EntityVector
     nodes;
 
-    for (size_t j = 0; j < relations.size(); ++j) {
+    for (RelationVectorIndex j = 0; j < relations.size(); ++j) {
       Entity *
       node = relations[j].entity();
       nodes.push_back(node);
     }
     connectivity_.push_back(nodes);
 
-    for (size_t j = 0; j < nodes.size(); ++j) {
+    for (EntityVectorIndex j = 0; j < nodes.size(); ++j) {
       getBulkData()->destroy_relation(*(elements[i]), *(nodes[j]), j);
     }
   }
@@ -262,8 +262,9 @@ void Topology::removeNodeRelations()
 void Topology::removeMultiLevelRelations()
 {
   typedef std::vector<EdgeId> EdgeIdList;
+  typedef EdgeIdList::size_type EdgeIdListIndex;
 
-  size_t const
+  EntityRank const
   cell_node_rank_distance = getCellRank() - NODE_RANK;
 
   // Go from points to cells
@@ -274,7 +275,7 @@ void Topology::removeMultiLevelRelations()
 
     stk_classic::mesh::get_entities(*(getBulkData()), rank, entities);
 
-    for (size_t i = 0; i < entities.size(); ++i) {
+    for (RelationVectorIndex i = 0; i < entities.size(); ++i) {
 
       Entity &
       entity = *(entities[i]);
@@ -298,7 +299,7 @@ void Topology::removeMultiLevelRelations()
         EntityRank
         target_rank = relation.entity_rank();
 
-        size_t const
+        EntityRank const
         rank_distance =
             rank > target_rank ? rank - target_rank : target_rank - rank;
 
@@ -316,7 +317,7 @@ void Topology::removeMultiLevelRelations()
       }
 
       // Delete them
-      for (size_t i = 0; i < multilevel_relation_ids.size(); ++i) {
+      for (EdgeIdListIndex i = 0; i < multilevel_relation_ids.size(); ++i) {
 
         Entity &
         far_entity = *(far_entities[i]);
@@ -351,16 +352,19 @@ void Topology::restoreElementToNodeConnectivity()
   getBulkData()->modification_begin();
 
   // Add relations from element to nodes
-  for (size_t i = 0; i < elements.size(); ++i) {
+  for (EntityVectorIndex i = 0; i < elements.size(); ++i) {
+
     Entity &
     element = *(elements[i]);
 
     EntityVector
     element_connectivity = connectivity_[i];
 
-    for (size_t j = 0; j < element_connectivity.size(); ++j) {
+    for (EntityVectorIndex j = 0; j < element_connectivity.size(); ++j) {
+
       Entity &
       node = *(element_connectivity[j]);
+
       getBulkData()->declare_relation(element, node, j);
     }
   }
@@ -400,18 +404,18 @@ Topology::getElementToNodeConnectivity()
   element_to_node_connectivity;
 
   // Loop over the elements
-  EntityVector::size_type const
+  EntityVectorIndex const
   number_of_elements = element_list.size();
 
-  for (EntityVector::size_type i(0); i < number_of_elements; ++i) {
+  for (EntityVectorIndex i = 0; i < number_of_elements; ++i) {
 
     PairIterRelation
     relations = element_list[i]->relations(NODE_RANK);
 
-    size_t const
+    RelationVectorIndex const
     nodes_per_element = relations.size();
 
-    for (size_t j(0); j < nodes_per_element; ++j) {
+    for (RelationVectorIndex j = 0; j < nodes_per_element; ++j) {
 
       Entity*
       node = relations[j].entity();
@@ -448,11 +452,11 @@ Topology::getBoundaryEntityNodes(Entity const & boundary_entity)
   EdgeId const
   face_order = relations[0].identifier();
 
-  size_t const
+  RelationVectorIndex const
   number_face_nodes =
       getCellTopology().getNodeCount(boundary_rank, face_order);
 
-  for (size_t i = 0; i < number_face_nodes; ++i) {
+  for (RelationVectorIndex i = 0; i < number_face_nodes; ++i) {
     EdgeId const
     cell_order = getCellTopology().getNodeMap(boundary_rank, face_order, i);
 
@@ -460,7 +464,7 @@ Topology::getBoundaryEntityNodes(Entity const & boundary_entity)
     PairIterRelation
     node_relations = first_cell.relations(NODE_RANK);
 
-    for (size_t i = 0; i < node_relations.size(); ++i) {
+    for (RelationVectorIndex i = 0; i < node_relations.size(); ++i) {
       if (node_relations[i].identifier() == cell_order) {
         nodes.push_back(node_relations[i].entity());
       }
@@ -471,86 +475,12 @@ Topology::getBoundaryEntityNodes(Entity const & boundary_entity)
 }
 
 //
-// Create boundary mesh
-//
-void
-Topology::createBoundary()
-{
-  Part &
-  interface_part = *(getMetaData()->get_part("interface"));
-
-  PartVector
-  add_parts;
-
-  add_parts.push_back(&interface_part);
-
-  PartVector const
-  part_vector = getMetaData()->get_parts();
-
-  for (size_t i = 0; i < part_vector.size(); ++i) {
-    std::cout << part_vector[i]->name() << '\n';
-  }
-
-  EntityRank const
-  boundary_entity_rank = getCellRank() - 1;
-
-  stk_classic::mesh::Selector
-  local_selector = getMetaData()->locally_owned_part();
-
-  std::vector<Bucket*> const &
-  buckets = getBulkData()->buckets(boundary_entity_rank);
-
-  EntityVector
-  entities;
-
-  stk_classic::mesh::get_selected_entities(local_selector, buckets, entities);
-
-  getBulkData()->modification_begin();
-  for (EntityVector::size_type i = 0; i < entities.size(); ++i) {
-
-    Entity &
-    entity = *(entities[i]);
-
-    PairIterRelation
-    relations = relations_one_up(entity);
-
-    size_t const
-    number_connected_cells = std::distance(relations.begin(), relations.end());
-
-    switch (number_connected_cells) {
-
-    default:
-      std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
-      std::cerr << '\n';
-      std::cerr << "Invalid number of connected cells: ";
-      std::cerr << number_connected_cells;
-      std::cerr << '\n';
-      exit(1);
-      break;
-
-    case 1:
-      getBulkData()->change_entity_parts(entity, add_parts);
-      break;
-
-    case 2:
-      // Internal face, do nothing.
-      break;
-
-    }
-
-  }
-  getBulkData()->modification_end();
-
-  return;
-}
-
-//
 // Get nodal coordinates
 //
 std::vector<Intrepid::Vector<double> >
 Topology::getNodalCoordinates()
 {
-  stk_classic::mesh::Selector
+  Selector
   local_selector = getMetaData()->locally_owned_part();
 
   std::vector<Bucket*> const &
@@ -561,7 +491,7 @@ Topology::getNodalCoordinates()
 
   stk_classic::mesh::get_selected_entities(local_selector, buckets, entities);
 
-  EntityVector::size_type const
+  EntityVectorIndex const
   number_nodes = entities.size();
 
   std::vector<Intrepid::Vector<double> >
@@ -576,7 +506,7 @@ Topology::getNodalCoordinates()
   VectorFieldType &
   node_coordinates = *(getSTKMeshStruct()->getCoordinatesField());
 
-  for (EntityVector::size_type i = 0; i < number_nodes; ++i) {
+  for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
 
     Entity const &
     node = *(entities[i]);
@@ -622,28 +552,29 @@ Topology::outputBoundary(std::string const & output_filename)
   ofs << "DATASET UNSTRUCTURED_GRID\n";
 
   // Coordinates
-  std::vector<Intrepid::Vector<double> > const
+  Coordinates const
   coordinates = getNodalCoordinates();
 
-  size_t const
+  CoordinatesIndex const
   number_nodes = coordinates.size();
 
   ofs << "POINTS " << number_nodes << " double\n";
 
-  for (size_t i = 0; i < number_nodes; ++i) {
+  for (CoordinatesIndex i = 0; i < number_nodes; ++i) {
+
     Intrepid::Vector<double> const &
     X = coordinates[i];
 
-    for (size_t j = 0; j < X.get_dimension(); ++j) {
+    for (Intrepid::Index j = 0; j < X.get_dimension(); ++j) {
       ofs << std::setw(24) << std::scientific << std::setprecision(16) << X(j);
     }
     ofs << '\n';
   }
 
-  std::vector<std::vector<EntityId> > const
+  Connectivity const
   connectivity = getBoundary();
 
-  size_t const
+  ConnectivityIndex const
   number_cells = connectivity.size();
 
   size_t
@@ -712,14 +643,14 @@ Topology::outputBoundary(std::string const & output_filename)
 //
 // Create boundary mesh
 //
-std::vector<std::vector<EntityId> >
+Connectivity
 Topology::getBoundary()
 {
   EntityRank const
   boundary_entity_rank = getCellRank() - 1;
 
-  stk_classic::mesh::Selector
-  local_selector = getMetaData()->locally_owned_part();
+  Selector
+  local_part = getLocalPart();
 
   std::vector<Bucket*> const &
   buckets = getBulkData()->buckets(boundary_entity_rank);
@@ -727,15 +658,15 @@ Topology::getBoundary()
   EntityVector
   entities;
 
-  stk_classic::mesh::get_selected_entities(local_selector, buckets, entities);
+  stk_classic::mesh::get_selected_entities(local_part, buckets, entities);
 
-  std::vector<std::vector<EntityId> >
+  Connectivity
   connectivity;
 
-  EntityVector::size_type const
+  EntityVectorIndex const
   number_entities = entities.size();
 
-  for (EntityVector::size_type i = 0; i < number_entities; ++i) {
+  for (EntityVectorIndex i = 0; i < number_entities; ++i) {
 
     Entity &
     entity = *(entities[i]);
@@ -762,13 +693,13 @@ Topology::getBoundary()
         EntityVector const
         nodes = getBoundaryEntityNodes(entity);
 
-        EntityVector::size_type const
+        EntityVectorIndex const
         number_nodes = nodes.size();
 
         std::vector<EntityId>
         node_ids(number_nodes);
 
-        for (EntityVector::size_type i = 0; i < number_nodes; ++i) {
+        for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
           node_ids[i] = nodes[i]->identifier();
         }
         connectivity.push_back(node_ids);
@@ -835,6 +766,8 @@ Topology::createStar(
     Entity &
     source = *(relation.entity());
 
+    if (isInterfaceCell(source) == true) continue;
+
     stkEdge
     edge;
 
@@ -864,8 +797,8 @@ Topology::splitOpenFaces()
   EntityVector
   open_points;
 
-  stk_classic::mesh::Selector
-  selector_owned = getMetaData()->locally_owned_part();
+  Selector
+  local_bulk = getLocalBulkSelector();
 
   std::set<EntityPair>
   fractured_faces;
@@ -874,7 +807,7 @@ Topology::splitOpenFaces()
   bulk_data = *getBulkData();
 
   stk_classic::mesh::get_selected_entities(
-      selector_owned,
+      local_bulk,
       bulk_data.buckets(NODE_RANK),
       points);
 
@@ -959,8 +892,7 @@ Topology::splitOpenFaces()
       last_edge = subgraph_edges.end();
 
       Subgraph
-      subgraph(getSTKMeshStruct(),
-          first_entity, last_entity, first_edge, last_edge);
+      subgraph(*this, first_entity, last_entity, first_edge, last_edge);
 
 #if defined(LCM_GRAPHVIZ)
       {
@@ -1075,12 +1007,7 @@ Topology::splitOpenFaces()
     last_edge = subgraph_edges.end();
 
     Subgraph
-    subgraph(
-        getSTKMeshStruct(),
-        first_entity,
-        last_entity,
-        first_edge,
-        last_edge);
+    subgraph(*this, first_entity, last_entity, first_edge, last_edge);
 
     Vertex
     node = subgraph.globalToLocal(point.key());
@@ -1125,19 +1052,20 @@ Topology::splitOpenFaces()
 
   bulk_data.modification_begin();
 
+  // Same rank as bulk cells!
   EntityRank const
-  interface_rank = getCellRank() - 1;
+  interface_rank = getCellRank();
 
   Part &
   interface_part = fracture_criterion_->getInterfacePart();
 
   PartVector
-  interface_parts_vector;
+  interface_parts;
 
-  interface_parts_vector.push_back(&interface_part);
+  interface_parts.push_back(&interface_part);
 
   EntityId
-  new_id = getNumberEntitiesByRank(bulk_data, interface_rank);
+  new_id = getNumberEntitiesByRank(bulk_data, interface_rank) + 1;
 
   // Create the interface connectivity
   for (std::set<EntityPair>::iterator i =
@@ -1147,10 +1075,26 @@ Topology::splitOpenFaces()
     Entity & face2 = *((*i).second);
 
     EntityVector
-    interface_connectivity = createSurfaceElementConnectivity(face1, face2);
+    interface_points = createSurfaceElementConnectivity(face1, face2);
 
     // Insert the surface element
-    bulk_data.declare_entity(interface_rank, new_id, interface_parts_vector);
+    Entity &
+    new_surface = bulk_data.declare_entity(
+        interface_rank,
+        new_id,
+        interface_parts);
+
+    // Connect to faces
+    bulk_data.declare_relation(new_surface, face1, 0);
+    bulk_data.declare_relation(new_surface, face2, 1);
+
+    // Connect to points
+    for (EntityVectorIndex j = 0; j < interface_points.size(); ++j) {
+      Entity &
+      point = *(points[j]);
+
+      bulk_data.declare_relation(new_surface, point, j);
+    }
 
     ++new_id;
   }
@@ -1168,11 +1112,11 @@ Topology::setEntitiesOpen()
   EntityVector
   boundary_entities;
 
-  stk_classic::mesh::Selector
-  select_owned = getMetaData()->locally_owned_part();
+  Selector
+  local_bulk = getLocalBulkSelector();
 
   stk_classic::mesh::get_selected_entities(
-      select_owned,
+      local_bulk,
       getBulkData()->buckets(getBoundaryRank()) ,
       boundary_entities);
 
@@ -1180,7 +1124,7 @@ Topology::setEntitiesOpen()
   counter = 0;
 
   // Iterate over the boundary entities
-  for (size_t i = 0; i < boundary_entities.size(); ++i) {
+  for (EntityVectorIndex i = 0; i < boundary_entities.size(); ++i) {
 
     Entity &
     entity = *(boundary_entities[i]);
@@ -1206,11 +1150,11 @@ Topology::setEntitiesOpen()
     case VOLUME_RANK:
       {
         PairIterRelation segments = entity.relations(EDGE_RANK);
-        for (size_t j = 0; j < segments.size(); ++j) {
+        for (RelationVectorIndex j = 0; j < segments.size(); ++j) {
           Entity & segment = *(segments[j].entity());
           setFractureState(segment, OPEN);
           PairIterRelation points = segment.relations(NODE_RANK);
-          for (size_t k = 0; k < points.size(); ++k) {
+          for (RelationVectorIndex k = 0; k < points.size(); ++k) {
             Entity & point = *(points[k].entity());
             setFractureState(point, OPEN);
           }
@@ -1221,7 +1165,7 @@ Topology::setEntitiesOpen()
     case EDGE_RANK:
       {
         PairIterRelation points = entity.relations(NODE_RANK);
-        for (size_t j = 0; j < points.size(); ++j) {
+        for (RelationVectorIndex j = 0; j < points.size(); ++j) {
           Entity & point = *(points[j].entity());
           setFractureState(point, OPEN);
         }
@@ -1278,7 +1222,7 @@ Topology::outputToGraphviz(
 
     stk_classic::mesh::get_entities(*(getBulkData()), rank, entities);
 
-    for (EntityVector::size_type i = 0; i < entities.size(); ++i) {
+    for (EntityVectorIndex i = 0; i < entities.size(); ++i) {
 
       Entity &
       source_entity = *(entities[i]);
@@ -1291,7 +1235,7 @@ Topology::outputToGraphviz(
 
       gviz_out << dot_entity(source_entity.identifier(), rank, fracture_state);
 
-      for (size_t j = 0; j < relations.size(); ++j) {
+      for (RelationVectorIndex j = 0; j < relations.size(); ++j) {
 
         Relation const &
         relation = relations[j];
@@ -1384,7 +1328,7 @@ Topology::outputToGraphviz(
 //
 // \brief This returns the number of entities of a given rank
 //
-EntityVector::size_type
+EntityVectorIndex
 Topology::getNumberEntitiesByRank(
     BulkData const & bulk_data,
     EntityRank entity_rank)
@@ -1392,14 +1336,27 @@ Topology::getNumberEntitiesByRank(
   std::vector<Bucket*>
   buckets = bulk_data.buckets(entity_rank);
 
-  EntityVector::size_type
+  EntityVectorIndex
   number_entities = 0;
 
-  for (EntityVector::size_type i = 0; i < buckets.size(); ++i) {
+  for (EntityVectorIndex i = 0; i < buckets.size(); ++i) {
     number_entities += buckets[i]->size();
   }
 
   return number_entities;
+}
+
+
+Part &
+Topology::getFractureBulkPart()
+{
+  return fracture_criterion_->getBulkPart();
+}
+
+Part &
+Topology::getFractureInterfacePart()
+{
+  return fracture_criterion_->getInterfacePart();
 }
 
 } // namespace LCM
