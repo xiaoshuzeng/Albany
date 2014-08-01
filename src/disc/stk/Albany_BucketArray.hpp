@@ -62,6 +62,20 @@ public:
   }
 };
 
+template<typename Tag>
+inline size_t
+get_size()
+{
+  return Tag::Size;
+}
+
+template <>
+inline size_t
+get_size<void>()
+{
+  return 0;
+}
+
 //----------------------------------------------------------------------
 /** \brief  \ref stk::mesh::Field "Field" data \ref shards::Array "Array"
  *          for a given array field and bucket
@@ -92,7 +106,7 @@ public:
     if ( b.field_data_is_allocated(f) ) {
       std::cout << "FOR FIELD: " << f.name() << ", num scalars is: " << stk::mesh::field_scalars_per_entity(f, b) << ", rank is: " << f.field_array_rank() << std::endl;
 
-      int stride[2];
+      int stride[3];
       if (f.field_array_rank() == 1) {
         stride[0] = stk::mesh::field_scalars_per_entity(f, b);
       }
@@ -100,8 +114,17 @@ public:
         int dim0 = stk::mesh::find_restriction(f, b.entity_rank(), b.supersets()).dimension();
         std::cout << "  dim0 stride: " << dim0 << std::endl;
         stride[0] = dim0;
-        std::cout << "  dim1 stride: " << stk::mesh::field_scalars_per_entity(f, b) / dim0 << std::endl;
+        std::cout << "  dim1 stride: " << stk::mesh::field_scalars_per_entity(f, b) << std::endl;
         stride[1] = stk::mesh::field_scalars_per_entity(f, b) / dim0;
+      }
+      else if (f.field_array_rank() == 3) {
+        int dim0 = stk::mesh::find_restriction(f, b.entity_rank(), b.supersets()).dimension();
+        std::cout << "  dim0 stride: " << dim0 << std::endl;
+        stride[0] = dim0;
+        std::cout << "  dim1 stride: " << get_size<Tag2>() * dim0 << std::endl;
+        stride[1] = get_size<Tag2>() * dim0;
+        std::cout << "  dim2 stride: " << stk::mesh::field_scalars_per_entity(f, b) << std::endl;
+        stride[2] = stk::mesh::field_scalars_per_entity(f, b) / dim0;
       }
       else {
         assert(false);
