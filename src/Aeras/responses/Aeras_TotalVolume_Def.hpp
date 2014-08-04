@@ -18,15 +18,26 @@ namespace Aeras {
 template<typename EvalT, typename Traits>
 TotalVolume<EvalT, Traits>::
 TotalVolume(Teuchos::ParameterList& p,
-                     const Teuchos::RCP<Albany::Layouts>& dl) :
+                     const Teuchos::RCP<Aeras::Layouts>& dl) :
   coordVec("Coord Vec", dl->qp_vector),
-  weighted_measure("Weights", dl->qp_scalar)
+  weighted_measure("Weights", dl->qp_scalar),
+  density ("Density", dl->qp_scalar_level),
+  velocity("Velx",  dl->qp_scalar_level),
+  temperature("Temperature",dl->qp_scalar_level),
+  pie("Pi",  dl->qp_scalar_level),
+   numLevels(dl->node_scalar_level->dimension(2)),
+   Cpstar(1005.7)
+
+
 {
   Teuchos::ParameterList* plist =
     p.get<Teuchos::ParameterList*>("Parameter List");
   Teuchos::RCP<const Teuchos::ParameterList> reflist =
     this->getValidResponseParameters();
   plist->validateParameters(*reflist,0);
+
+  Phi0 = 0;
+   std::cout << "Total_Volume: Phi0 = " << Phi0 << std::endl;
 
   // number of quad points per cell and dimension of space
   Teuchos::RCP<PHX::DataLayout> scalar_dl = dl->qp_scalar;
@@ -39,6 +50,10 @@ TotalVolume(Teuchos::ParameterList& p,
 
 //  this->addDependentField(coordVec);
   this->addDependentField(weighted_measure);
+  this->addDependentField(density);
+  this->addDependentField(velocity);
+  this->addDependentField(temperature);
+  this->addDependentField(pie);
 
   this->setName("Aeras Total Volume");
 
@@ -49,16 +64,19 @@ TotalVolume(Teuchos::ParameterList& p,
   std::string local_response_name = "Local Response Aeras Total Volume";
   std::string global_response_name = "Global Response Aeras Total Volume";
   int worksetSize = scalar_dl->dimension(0);
-  int responseSize = 1;
-  Teuchos::RCP<PHX::DataLayout> local_response_layout =
-    Teuchos::rcp(new MDALayout<Cell,Dim>(worksetSize, responseSize));
-  Teuchos::RCP<PHX::DataLayout> global_response_layout =
-    Teuchos::rcp(new MDALayout<Dim>(responseSize));
+
+  int responseSize = 3;
+
+  Teuchos::RCP<PHX::DataLayout> local_response_layout = Teuchos::rcp(
+      new MDALayout<Cell,Dim>(worksetSize, responseSize));
   PHX::Tag<ScalarT> local_response_tag(local_response_name,
                                        local_response_layout);
+  p.set("Local Response Field Tag", local_response_tag);
+
+  Teuchos::RCP<PHX::DataLayout> global_response_layout = Teuchos::rcp(
+      new MDALayout<Dim>(responseSize));
   PHX::Tag<ScalarT> global_response_tag(global_response_name,
                                         global_response_layout);
-  p.set("Local Response Field Tag", local_response_tag);
   p.set("Global Response Field Tag", global_response_tag);
   PHAL::SeparableScatterScalarResponse<EvalT,Traits>::setup(p,dl);
 
@@ -70,10 +88,12 @@ void TotalVolume<EvalT, Traits>::
 postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& fm)
 {
-
-
 //  this->utils.setFieldData(coordVec,fm);
   this->utils.setFieldData(weighted_measure,fm);
+  this->utils.setFieldData(density,fm);
+  this->utils.setFieldData(velocity,fm);
+  this->utils.setFieldData(temperature,fm);
+  this->utils.setFieldData(pie,fm);
 
   PHAL::SeparableScatterScalarResponse<EvalT,Traits>::postRegistrationSetup(d,fm);
 }
@@ -98,22 +118,36 @@ template<typename EvalT, typename Traits>
 void TotalVolume<EvalT, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
+  std::cout << "TotalVolume evaluateFields()" << std::endl;
 
   for (typename PHX::MDField<ScalarT>::size_type i=0;
        i<this->local_response.size(); i++)
     this->local_response[i] = 0.0;
 
-  ScalarT integral, moment;
+  ScalarT volume;
+  ScalarT mass;
+  ScalarT energy;
 
+    for (std::size_t cell=0; cell < workset.numCells; ++cell)
+    {
+      for (std::size_t qp=0; qp < numQPs; ++qp) {
+        volume = weighted_measure(cell,qp);
+        for(std::size_t ell = 0; ell < numLevels; ++ell) {
+          this->local_response(cell, 0) += volume;
+          this->global_response(0) += volume;
 
-  for (std::size_t cell=0; cell < workset.numCells; ++cell)
-  {
-    for (std::size_t qp=0; qp < numQPs; ++qp) {
-      integral = weighted_measure(cell,qp);
-      this->local_response(cell, 0) += integral;
-      this->global_response(0) += integral;
+          mass = volume*density(cell, qp, ell);
+          this->local_response(cell, 1) += mass;
+          this->global_response(1) += mass;
+
+          energy = pie(cell, qp, ell)*(0.5*velocity(cell, qp, ell)*velocity(cell,qp,ell) +
+              Cpstar*temperature(cell,qp,ell) + Phi0 )*volume;
+
+          this->local_response(cell, 2) += energy;
+          this->global_response(2) += energy;
+ }
+
     }
-
   }
 
   // Do any local-scattering necessary
@@ -140,6 +174,8 @@ postEvaluate(typename Traits::PostEvalData workset)
   PHAL::SeparableScatterScalarResponse<EvalT,Traits>::postEvaluate(workset);
 
   std::cout << "Total Volume is " << this->global_response(0) << std::endl;
+  std::cout << "Total Mass is " << this->global_response(1) << std::endl;
+  std::cout << "Total Energy is " << this->global_response(2) << std::endl;
 
 }
 

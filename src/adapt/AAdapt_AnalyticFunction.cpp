@@ -483,12 +483,12 @@ void AAdapt::AerasXZHydrostaticHotBubble::compute(double* x, const double* X) {
   const int numTracers = (int) data[1];
   const double SP0     =       data[2];
   const double U0      =       data[3];
-  const double T0      =       data[4];
-  const double amp     =       data[5];
-  const double x0      =       data[6];
-  const double z0      =       data[7];
-  const double sig_x   =       data[8];
-  const double sig_z   =       data[9];
+  //const double T0      =       data[4];
+  //const double amp     =       data[5];
+  const double x0      =         20000;
+  const double z0      =            50;
+  const double sig_x   =          4000;
+  const double sig_z   =            10;
   std::vector<double> q0(numTracers);
   for (int nt = 0; nt<numTracers; ++nt) {
     q0[nt] = data[10+nt];
@@ -496,52 +496,70 @@ void AAdapt::AerasXZHydrostaticHotBubble::compute(double* x, const double* X) {
 
   const double Ptop = 101.325;
   const double P0   = 101325;
-  const double Ps   = 101325;
+  const double Ps   = P0;
+  const double Ttop = 235;
+  const double T0   = 288;
+  const double Ts   = T0;
+  const double DT   = 4.8e5;
   const double R    = 287;
+  const double g    = 9.80616;
+  const double Gamma= 0.005;  
+  const double Dtop = 0.00385;
+  const double Dbot = 1.225;
+  const double EtaT = 0.2;
+  const int    N    = numLevels-1;
 
-  const Aeras::Eta<DoubleType> &E = Aeras::Eta<DoubleType>::self(Ptop,P0,numLevels);
+  const Aeras::Eta<DoubleType> &EP = Aeras::Eta<DoubleType>::self(Ptop,P0,numLevels);
+  const Aeras::Eta<DoubleType> ET(Ttop,T0,numLevels);
 
 
   std::vector<double> Pressure(numLevels);
+  std::vector<double> Temperature(numLevels);
   std::vector<double> Pi(numLevels);
-  std::vector<double> T(numLevels);
-  for (int i=0; i<numLevels; ++i) Pressure[i] = E.A(i)*E.p0() + E.B(i)*Ps;
+  std::vector<double> D(numLevels);
+  for (int i=0; i<numLevels; ++i) Pressure[i]    = EP.A(i)*EP.p0() + EP.B(i)*Ps;
+
+  for (int i=0; i<numLevels; ++i) {
+    const double Eta =  EP.eta(i);
+    Temperature[i] =  T0 * std::pow(Eta,R*Gamma/g);
+    if (Eta < EtaT)Temperature[i] += DT*std::pow(EtaT-Eta, 5);
+  }
   
   for (int i=0; i<numLevels; ++i) {
-    const double pp   = i<numLevels-1 ? 0.5*(Pressure[i] + Pressure[i+1]) : Ps;
-    const double pm   = i             ? 0.5*(Pressure[i] + Pressure[i-1]) : E.ptop();
-    Pi[i] = (pp - pm) /E.delta(i);
+    const double pp   = i<N ? 0.5*(Pressure[i] + Pressure[i+1]) : Ps;
+    const double pm   = i   ? 0.5*(Pressure[i] + Pressure[i-1]) : EP.ptop();
+    Pi[i] = (pp - pm) /EP.delta(i);
   }
-
-  for (int i=0; i<numLevels; ++i) T[i] = Pressure[i]/(R*Pi[i]*E.delta(i));
-
+  for (int i=0; i<numLevels; ++i) {
+    D[i] = Pressure[i]/(R*Temperature[i]);
+  }
 
   static bool first_time=true;
   if (first_time) {
-    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__<<" Pressure["<<i<<"]="<<Pressure[i]<<std::endl;
+    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__
+    <<" Pressure["<<i<<"]="<<Pressure[i]
+    <<" Temperature["<<i<<"]="<<Temperature[i]
+    <<" Density["<<i<<"]="<<D[i]<<std::endl;
     for (int i=0; i<numLevels; ++i) std::cout<<__FILE__<<" Pi["<<i<<"]="<<Pi[i]<<std::endl;
-    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__<<" T["<<i<<"]="<<T[i]<<std::endl;
   }
+  first_time = false;
 
   int offset = 0;
   //Surface Pressure
   x[offset++] = SP0;
   
   //Velx
-  const double pi = 3.14159265;
+  const double amp = 0.10;
   for (int i=0; i<numLevels; ++i) {
-    x[offset++] = U0;
-    const double s = i * (numLevels-1-i) * std::sin(X[0]*pi/25) / (25 * numLevels*numLevels);
-    x[offset++] = 300 * T[i] * (1 + s) / T[numLevels-1];
-if (first_time) std::cout<<__FILE__<<" final T["<<i<<"]="<<x[offset-1]<<std::endl;
-    //x[offset++] = T[i] * 1000 * (1 + amp*std::exp( -( ((i-z0)*(i-z0)/(sig_z*sig_z)) + ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) ))  ;
+    x[offset++] = U0 + amp*std::exp( -( ((i-z0)*(i-z0)/(sig_z*sig_z)) + ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
+    //x[offset++] = U0 + amp*std::exp( -( ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
+    x[offset++] = Temperature[i];
   }
-  first_time = false;
 
   //Tracers
   for (int nt=0; nt<numTracers; ++nt) {
     for (int i=0; i<numLevels; ++i) {
-      x[offset++] = q0[nt];
+      x[offset++] = 0;//q0[nt];
     }
   }
 

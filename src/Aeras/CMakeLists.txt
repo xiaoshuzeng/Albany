@@ -1,9 +1,9 @@
 ##*****************************************************************//
-##    Albany 2.0:  Copyright 2012 Sandia Corporation               //
-##    This Software is released under the BSD license detailed     //
-##    in the file "license.txt" in the top-level Albany directory  //
-##*****************************************************************//
-# Aeras
+##    Albany 2.0: Copyright 2012 Sandia Corporation // This Software
+##    is released under the BSD license detailed // in the file
+##    "license.txt" in the top-level Albany directory //
+##    *****************************************************************//
+##    # Aeras
 
   SET(SOURCES 
        evaluators/Aeras_ComputeBasisFunctions.cpp
@@ -43,6 +43,7 @@
        evaluators/Aeras_Atmosphere_Moisture.cpp
        evaluators/Aeras_ShallowWaterSource.cpp
        responses/Aeras_TotalVolume.cpp
+       responses/Aeras_LayeredResponseUtilities.cpp
 
    )
    
@@ -115,6 +116,9 @@
        evaluators/Aeras_ShallowWaterSource.hpp
        responses/Aeras_TotalVolume.hpp
        responses/Aeras_TotalVolume_Def.hpp
+       responses/Aeras_LayeredResponseUtilities.hpp
+       responses/Aeras_LayeredResponseUtilities_Def.hpp
+       
        
   )
   
