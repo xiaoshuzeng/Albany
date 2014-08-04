@@ -34,6 +34,7 @@ ComputeBasisFunctions(const Teuchos::ParameterList& p,
   GradBF        (p.get<std::string>  ("Gradient BF Name"),  dl->node_qp_gradient),
   wGradBF       (p.get<std::string>  ("Weighted Gradient BF Name"), dl->node_qp_gradient),
   jacobian  (p.get<std::string>  ("Jacobian Name"), dl->qp_tensor ),
+  jacobian_invt  (p.get<std::string>  ("Jacobian InvT Name"), dl->qp_tensor ),
   earthRadius(ShallowWaterConstants::self().earthRadius)
 {
   this->addDependentField(coordVec);
@@ -47,6 +48,8 @@ ComputeBasisFunctions(const Teuchos::ParameterList& p,
   this->addEvaluatedField(GradBF);
   this->addEvaluatedField(wGradBF);
 
+    this->addEvaluatedField(jacobian_invt);
+  
   // Get Dimensions
   std::vector<PHX::DataLayout::size_type> dim;
   dl->node_qp_gradient->dimensions(dim);
@@ -65,6 +68,10 @@ ComputeBasisFunctions(const Teuchos::ParameterList& p,
 
   // Pre-Calculate reference element quantitites
   cubature->getCubature(refPoints, refWeights);
+  
+  //std::cout <<" refPoints " << refPoints << "  refWeights "<<refWeights <<std::endl;
+  
+  
   intrepidBasis->getValues(val_at_cub_points,  refPoints, Intrepid::OPERATOR_VALUE);
   intrepidBasis->getValues(grad_at_cub_points, refPoints, Intrepid::OPERATOR_GRAD);
 
@@ -82,11 +89,15 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(sphere_coord,fm);
   this->utils.setFieldData(jacobian_det,fm);
   this->utils.setFieldData(jacobian_inv,fm);
+  
   this->utils.setFieldData(jacobian,fm);
   this->utils.setFieldData(BF,fm);
   this->utils.setFieldData(wBF,fm);
   this->utils.setFieldData(GradBF,fm);
   this->utils.setFieldData(wGradBF,fm);
+  
+    this->utils.setFieldData(jacobian_invt,fm);
+  
 }
 
 //**********************************************************************
@@ -128,9 +139,9 @@ evaluateFields(typename Traits::EvalData workset)
     Intrepid::FieldContainer<MeshScalarT>   D3(numQPs,basisDim,spatialDim);
 
  // print out coords of vertices -- looks good
-//for (int e = 0; e<numelements;      ++e)
-//  for (int v = 0; v<numNodes;  ++v)
-//  std::cout << "XXX: coord vec: " << e << " v: " << v << " =  "  << coordVec(e,v,0) << " " << coordVec(e,v,1) << " " << coordVec(e,v,2) << " " <<std::endl;
+/*for (int e = 0; e<numelements;      ++e)
+    for (int v = 0; v<numNodes;  ++v)
+  std::cout << "XXX: coord vec: e=" << e << " v: " << v << " =  "  << coordVec(e,v,0) << " " << coordVec(e,v,1) << " " << coordVec(e,v,2) << " and numQPs="<< numQPs <<std::endl; */
 
     for (int e = 0; e<numelements;      ++e) {
       phi.initialize(); 
@@ -147,8 +158,12 @@ evaluateFields(typename Traits::EvalData workset)
       for (int q = 0; q<numQPs;          ++q)
         for (int b1= 0; b1<basisDim;     ++b1)
           for (int b2= 0; b2<basisDim;   ++b2)
-            for (int d = 0; d<spatialDim;++d)
+            for (int d = 0; d<spatialDim;++d){
+              
+              //there is no d index in jacobian(e,q,b1,b2)
               jacobian(e,q,b1,b2) = 0;
+              //jacobian_invt(e,q,b1,b2) = 0;
+            }
 
       for (int q = 0; q<numQPs;         ++q) 
         for (int d = 0; d<spatialDim;   ++d) 
@@ -237,13 +252,48 @@ evaluateFields(typename Traits::EvalData workset)
 
       for (int q = 0; q<numQPs;          ++q) 
         for (int b1= 0; b1<basisDim;     ++b1) 
-          for (int b2= 0; b2<basisDim;   ++b2) 
+          for (int b2= 0; b2<basisDim;   ++b2)
+            
+            //why norm(q)?
             jacobian(e,q,b1,b2) *= earthRadius/norm(q);
+            //jacobian(e,q,b1,b2) *= (-1.)*earthRadius/norm(q);
+      
+      /*if (e == 0) {
+        
+        std::cout << "For cell=0 print sphere_coords:"<<std::endl;
+        
+        for(int q = 0; q<numQPs; q++){
+        std::cout << "sph_coord(q="<<q<<")=" << sphere_coord(e,q,0)<<", "<<sphere_coord(e,q,1)<<std::endl;
+        }
+        
+        std::cout << "Jacobian at q=8:"<<std::endl;
+        std::cout <<" (0,0) = "<<jacobian(e,8,0,0)/earthRadius <<std::endl;
+        std::cout <<" (0,1) = "<<jacobian(e,8,0,1)/earthRadius <<std::endl;
+        std::cout <<" (1,0) = "<<jacobian(e,8,1,0)/earthRadius <<std::endl;
+        std::cout <<" (1,1) = "<<jacobian(e,8,1,1)/earthRadius <<std::endl;
+        
+      }*/
 
     }
-  }
+    
+  }//end else
   
   Intrepid::CellTools<MeshScalarT>::setJacobianInv(jacobian_inv, jacobian);
+  
+  /*for (int e = 0; e<numelements;      ++e) {
+  for (int q = 0; q<numQPs;          ++q)
+    for (int b1= 0; b1<basisDim;     ++b1)
+      for (int b2= 0; b2<basisDim;   ++b2){
+        
+        //q here is a quad pt, why norm(q)?
+        jacobian_invt(e,q,b1,b2) = jacobian_inv(e,q,b2,b1);
+  
+    std::cout << "e="<<e<<" q="<<q<<" b1="<<b1<<" b2="<<b2<<std::endl;
+    
+    std::cout<<"j(e,q,b1,b2)="<<jacobian_inv(e,q,b2,b1)<<std::endl;
+    
+  }}*/
+
 
   Intrepid::CellTools<MeshScalarT>::setJacobianDet(jacobian_det, jacobian);
 
@@ -263,6 +313,10 @@ evaluateFields(typename Traits::EvalData workset)
     (wBF, weighted_measure, BF);
   Intrepid::FunctionSpaceTools::HGRADtransformGRAD<MeshScalarT>
     (GradBF, jacobian_inv, grad_at_cub_points);
+  
+  //Intrepid::FunctionSpaceTools::HGRADtransformGRAD<MeshScalarT>
+  //(GradBF, jacobian_invt, grad_at_cub_points);
+  
   Intrepid::FunctionSpaceTools::multiplyMeasure<MeshScalarT>
     (wGradBF, weighted_measure, GradBF);
 

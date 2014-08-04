@@ -224,6 +224,9 @@ Aeras::ShallowWaterProblem::constructEvaluators(
     p->set<string>("Jacobian Det Name",          "Jacobian Det");
     p->set<string>("Jacobian Name",          "Jacobian");
     p->set<string>("Jacobian Inv Name",          "Jacobian Inv");
+    
+    p->set<string>("Jacobian InvT Name",          "Jacobian InvT");
+    
     p->set<std::size_t>("spatialDim", spatialDim);
 
     ev = rcp(new Aeras::ComputeBasisFunctions<EvalT,AlbanyTraits>(*p,dl));
@@ -254,6 +257,9 @@ Aeras::ShallowWaterProblem::constructEvaluators(
     p->set<string>("Weights Name",          "Weights");
     p->set<string>("Jacobian Name",          "Jacobian");
     p->set<string>("Jacobian Inv Name",          "Jacobian Inv");
+    
+    p->set<string>("Jacobian InvT Name",          "Jacobian InvT");
+    
     p->set<string>("Jacobian Det Name",          "Jacobian Det");
     p->set< RCP<Intrepid::Cubature<RealType> > >("Cubature", cubature);
     p->set< RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > > > ("Intrepid Basis", intrepidBasis);
@@ -347,6 +353,9 @@ Aeras::ShallowWaterProblem::constructEvaluators(
     p->set<string>("Jacobian Name",          "Jacobian");
     p->set<string>("Jacobian Inv Name",          "Jacobian Inv");
     p->set<string>("Jacobian Det Name",          "Jacobian Det");
+    
+    p->set<string>("Jacobian InvT Name",          "Jacobian InvT");
+    
     p->set< RCP<Intrepid::Cubature<RealType> > >("Cubature", cubature);
     p->set< RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > > > ("Intrepid Basis", intrepidBasis);
     

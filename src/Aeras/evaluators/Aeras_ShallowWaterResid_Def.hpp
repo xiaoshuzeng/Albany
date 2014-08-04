@@ -78,7 +78,7 @@ ShallowWaterResid(const Teuchos::ParameterList& p,
 
   std::vector<PHX::DataLayout::size_type> dims;
     
-  //why dims from grad phi? what is in dims[0]
+  //og why dims from grad phi? what is in dims[0]
   wGradBF.fieldTag().dataLayout().dimensions(dims);
   numNodes = dims[1];
   numQPs   = dims[2];
@@ -174,7 +174,7 @@ evaluateFields(typename Traits::EvalData workset)
   //container for surface height for viscosty
   Intrepid::FieldContainer<ScalarT> surf(numNodes);
   //conteiner for surface height gradient for viscosity
-  Intrepid::FieldContainer<ScalarT> hgradNodes(numNodes,2);
+  Intrepid::FieldContainer<ScalarT> hgradNodes(numQPs,2);
   
   //containers for U and V components separately, I don't know how to
   //pass to the gradient uAtNodes(:,0)
@@ -183,8 +183,8 @@ evaluateFields(typename Traits::EvalData workset)
   //containers for grads of velocity U, V components for viscosity
   //note that we do not implement it for the most generality (any dimension velocity)
   //because the rest of the code considers only 2D velocity (look at definition of uAtNodes)
-  Intrepid::FieldContainer<ScalarT> ugradNodes(numNodes,2);
-  Intrepid::FieldContainer<ScalarT> vgradNodes(numNodes,2);
+  Intrepid::FieldContainer<ScalarT> ugradNodes(numQPs,2);
+  Intrepid::FieldContainer<ScalarT> vgradNodes(numQPs,2);
   
   
   for (std::size_t cell=0; cell < workset.numCells; ++cell) {
@@ -209,11 +209,9 @@ evaluateFields(typename Traits::EvalData workset)
 
     divergence(huAtNodes, cell, div_hU);
     
-    if ( ViscCoeff > 0) {
+    if ( ViscCoeff != 0) {
       gradient(surf, cell, hgradNodes);
-    }//else{
-     // hgradNodes = 0.;
-    //}
+    }
 
     for (std::size_t qp=0; qp < numQPs; ++qp) {
         
@@ -225,6 +223,19 @@ evaluateFields(typename Traits::EvalData workset)
                               +  ViscCoeff*hgradNodes(qp,1)*wGradBF(cell,node,qp,1);
       }
     }
+    
+    /*for (std::size_t qp=0; qp < numQPs; ++qp) {
+      
+      for (std::size_t node=0; node < numNodes; ++node) {
+        
+        std::cout <<" value of basis function wBF(cell, node, qp) " << wBF(cell, node, qp) <<" cell="<<cell
+        <<" node="<<node<<" qp="<<qp<<std::endl;
+        
+
+      }
+    }*/
+    
+    
   }
 
 
@@ -251,6 +262,9 @@ evaluateFields(typename Traits::EvalData workset)
       kineticEnergyAtNodes.initialize();
       gradKineticEnergy.initialize();
       uAtNodes.initialize();
+      
+      ucomp.initialize();
+      vcomp.initialize();
 
       get_coriolis(cell, coriolis);
 
@@ -269,14 +283,11 @@ evaluateFields(typename Traits::EvalData workset)
         vcomp(node) = utheta;
       }
       
-      if (ViscCoeff> 0) {
+      if (ViscCoeff != 0) {
         //obtain grads of U, V comp
         gradient(ucomp, cell, ugradNodes);
         gradient(vcomp, cell, vgradNodes);
-      }//else{
-       // ugradNodes = 0.;
-       // vgradNodes = 0.;
-      //}
+      }
       
       if (ibpGradH == false) 
         gradient(potentialEnergyAtNodes, cell, gradPotentialEnergy);
@@ -291,14 +302,14 @@ evaluateFields(typename Traits::EvalData workset)
             Residual(cell,node,1) += (   UDot(cell,qp,1) + gradKineticEnergy(qp,0)
                                        + gradPotentialEnergy(qp,0)
                                        - ( coriolis(qp) + curlU(qp) )*U(cell, qp, 2)
-                                     )*wBF(cell,node,qp)
+                                      )*wBF(cell,node,qp)
                                   +  ViscCoeff*ugradNodes(qp,0)*wGradBF(cell,node,qp,0)
                                   +  ViscCoeff*ugradNodes(qp,1)*wGradBF(cell,node,qp,1);
             
             Residual(cell,node,2) += (   UDot(cell,qp,2) + gradKineticEnergy(qp,1)
                                        + gradPotentialEnergy(qp,1)
                                        + ( coriolis(qp) + curlU(qp) )*U(cell, qp, 1)
-                                     )*wBF(cell,node,qp)
+                                      )*wBF(cell,node,qp)
                                   +  ViscCoeff*vgradNodes(qp,0)*wGradBF(cell,node,qp,0)
                                   +  ViscCoeff*vgradNodes(qp,1)*wGradBF(cell,node,qp,1);
           }
