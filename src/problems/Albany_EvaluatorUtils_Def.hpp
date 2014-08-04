@@ -262,7 +262,7 @@ Albany::EvaluatorUtils<EvalT,Traits>::constructScatterResidualEvaluator(
 
 template<typename EvalT, typename Traits>
 Teuchos::RCP< PHX::Evaluator<Traits> >
-Albany::EvaluatorUtils<EvalT,Traits>::constructGatherCoordinateVectorEvaluator()
+Albany::EvaluatorUtils<EvalT,Traits>::constructGatherCoordinateVectorEvaluator(std::string strCurrentDisp)
 {
     using Teuchos::RCP;
     using Teuchos::rcp;
@@ -276,6 +276,9 @@ Albany::EvaluatorUtils<EvalT,Traits>::constructGatherCoordinateVectorEvaluator()
  
     // Output:: Coordindate Vector at vertices
     p->set<string>("Coordinate Vector Name", "Coord Vec");
+
+    if( strCurrentDisp != "" )
+      p->set<string>("Current Displacement Vector Name", strCurrentDisp);
  
     return rcp(new PHAL::GatherCoordinateVector<EvalT,Traits>(*p,dl));
 }
