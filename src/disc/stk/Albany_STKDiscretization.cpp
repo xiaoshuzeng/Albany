@@ -1406,6 +1406,16 @@ void Albany::STKDiscretization::setupExodusOutput()
     mesh_data = new stk::io::StkMeshIoBroker(Albany::getMpiCommFromEpetraComm(*comm));
     mesh_data->set_bulk_data(bulkData);
     outputFileIdx = mesh_data->create_output_mesh(str, stk::io::WRITE_RESULTS);
+
+    const stk::mesh::FieldVector &fields = mesh_data->meta_data().get_fields();
+    for (size_t i=0; i < fields.size(); i++) {
+      // Hacky, but doesn't appear to be a way to query if a field is already
+      // going to be output.
+      try {
+        mesh_data->add_field(outputFileIdx, *fields[i]);
+      }
+      catch (std::runtime_error const&) { }
+    }
   }
 #else
   if (stkMeshStruct->exoOutput)
