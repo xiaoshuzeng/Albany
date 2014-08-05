@@ -161,6 +161,54 @@ void createInterfaceParts(
   stk_classic::io::put_io_part_attribute(interface_part);
 #endif // ALBANY_SEACAS
 
+  // Augment the MeshSpecsStruct array with one additional entry for
+  // the interface block. Essentially copy the last entry from the array
+  // and modify some of its fields as needed.
+  Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> > &
+  mesh_specs_struct = stk_mesh_struct.getMeshSpecs();
+
+  Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >::size_type
+  number_blocks = mesh_specs_struct.size();
+
+  Albany::MeshSpecsStruct const &
+  last_mss = *(mesh_specs_struct[number_blocks - 1]);
+
+  CellTopologyData const &
+  ictd = *(interface_cell_topology.getCellTopologyData());
+
+  int const
+  dim = interface_cell_topology.getDimension();
+
+  int const
+  cub = last_mss.cubatureDegree;
+
+  std::vector<std::string>
+  ns, ss;
+
+  int const
+  wss = last_mss.worksetSize;
+
+  std::string const &
+  ebn = interface_part_name;
+
+  std::map<std::string, int>
+  ebn2i = last_mss.ebNameToIndex;
+
+  // Add entry to the map for this block
+  ebn2i.insert(std::make_pair(ebn, number_blocks));
+
+  bool const
+  ilo = last_mss.interleavedOrdering;
+
+  Intrepid::EIntrepidPLPoly const
+  cr = last_mss.cubatureRule;
+
+  mesh_specs_struct.resize(number_blocks + 1);
+
+  mesh_specs_struct[number_blocks] =
+      Teuchos::rcp(new Albany::MeshSpecsStruct(
+          ictd, dim, cub, ns, ss, wss, ebn, ebn2i, ilo, cr));
+
   return;
 }
 
