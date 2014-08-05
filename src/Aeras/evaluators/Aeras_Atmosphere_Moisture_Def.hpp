@@ -347,7 +347,7 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_i
   // Production of qc from supersaturation
   // Evaporation of qr
 
-  static bool first = true;
+  //static bool first = true;
 
   for (int k=0; k<Km; ++k) {  //do k = kts, kte
     factorn = 1.0 / (1.0+2.2*dt*std::max( 0.0,pow( qr[k],0.875 ) ));
@@ -388,16 +388,16 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_i
     qc[k]     = qc[k] + prodct;
     qr[k]     = qr[k] - qrevap;
  
-    if (first) {
-      std::cout << "gam,prodct,qrevap: " << " " << gam << " " << prodct << " " << qrevap << std::endl;
-      std::cout << "k,z,rho,p,t,qv,qc,qr: " 
-                << k << " " << z[k] << " " << rho[k] << " " << p[k] << " " << t[k] << " " 
-                << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
-    //if (qv[k] != 0.0) std::cout << k << " " << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
-    }
+    //if (first) {
+    //  std::cout << "gam,prodct,qrevap: " << " " << gam << " " << prodct << " " << qrevap << std::endl;
+    //  std::cout << "k,z,rho,p,t,qv,qc,qr: " 
+    //            << k << " " << z[k] << " " << rho[k] << " " << p[k] << " " << t[k] << " " 
+    //            << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
+    ////if (qv[k] != 0.0) std::cout << k << " " << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
+    //}
   } //enddo
 
-  first = false;
+  //first = false;
 }
 
 }
