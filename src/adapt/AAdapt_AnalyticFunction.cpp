@@ -335,13 +335,6 @@ AAdapt::AerasXZHydrostatic::AerasXZHydrostatic(int neq_, int numDim_, Teuchos::A
                              << " " << numDim << std::endl);
 }
 void AAdapt::AerasXZHydrostatic::compute(double* x, const double* X) {
-  //Flattened data layout
-  //x[0]                                = SP
-  //x[1]             ... x[1*numLevels] = u
-  //x[1*numLevels+1] ... x[2*numLevels] = T
-  //x[2*numLevesl+1] ... x[3*numLevels] = q0
-  //x[3*numLevesl+1] ... x[4*numLevels] = q1
-  //x[4*numLevesl+1] ... x[5*numLevels] = q2
   const int numLevels  = (int) data[0];
   const int numTracers = (int) data[1];
   const double SP0     = data[2];
@@ -586,6 +579,11 @@ void AAdapt::AerasXZHydrostaticCloud::compute(double* x, const double* X) {
   std::vector<double> Pi(numLevels);
   std::vector<double> Temperature(numLevels);
   std::vector<double> D(numLevels);
+  std::vector<double> qvs(numLevels);
+  std::vector<double> qv(numLevels);
+  std::vector<double> qc(numLevels);
+  std::vector<double> qr(numLevels);
+
   for (int i=0; i<numLevels; ++i) Pressure[i] = EP.A(i)*EP.p0() + EP.B(i)*Ps;
   
   for (int i=0; i<numLevels; ++i) {
@@ -604,12 +602,28 @@ void AAdapt::AerasXZHydrostaticCloud::compute(double* x, const double* X) {
     D[i] = Pressure[i]/(R*Temperature[i]);
   }
 
+  //Compute saturation mixture ratio qvs
+  double eps = 0.622;
+  for (int i=0; i<numLevels; ++i) {
+    double TC = Temperature[i] - 273.13;
+    double Pmb = Pressure[i] / 100.0;                          // (1bar/100000Pa)*(1000mbar/1bar)
+    qvs[i] = eps * 6.112 * exp( (17.67*TC)/(TC+243.5) ) / Pmb;
+  }
+
+  //Initialize qv, qc, qr
+  for (int i=0; i<numLevels; ++i) {
+    qv[i] = 0.1*qvs[i];
+    qc[i] = q0[1];
+    qr[i] = q0[2];
+  } 
+
   static bool first_time=true;
   if (first_time) {
     for (int i=0; i<numLevels; ++i) std::cout<<__FILE__
     <<" Pressure["<<i<<"]="<<Pressure[i]
     <<" Temperature["<<i<<"]="<<Temperature[i]
     <<" Density["<<i<<"]="<<D[i]
+    <<" qvs["<<i<<"]="<<qvs[i]
     <<" Pi["<<i<<"]="<<Pi[i]<<std::endl;
   }
   first_time = false;
@@ -625,13 +639,20 @@ void AAdapt::AerasXZHydrostaticCloud::compute(double* x, const double* X) {
     x[offset++] = Temperature[i];
   }
 
-  //Tracers
-  for (int nt=0; nt<numTracers; ++nt) {
-    for (int i=0; i<numLevels; ++i) {
-      x[offset++] = Pi[i]*q0[nt];
-    }
+  //Vapor
+  for (int i=0; i<numLevels; ++i) {
+    x[offset++] = Pi[i]*qv[i];
   }
 
+  //cloud water
+  for (int i=0; i<numLevels; ++i) {
+    x[offset++] = Pi[i]*qc[i];
+  }
+
+  //rain
+  for (int i=0; i<numLevels; ++i) {
+    x[offset++] = Pi[i]*qr[i];
+  }
 }
 
 //*****************************************************************************
@@ -643,13 +664,6 @@ AAdapt::AerasHydrostatic::AerasHydrostatic(int neq_, int numDim_, Teuchos::Array
                              << " " << numDim << std::endl);
 }
 void AAdapt::AerasHydrostatic::compute(double* x, const double* X) {
-  //Flattened data layout
-  //x[0]                                = SP
-  //x[1]             ... x[1*numLevels] = u
-  //x[1*numLevels+1] ... x[2*numLevels] = T
-  //x[2*numLevesl+1] ... x[3*numLevels] = q0
-  //x[3*numLevesl+1] ... x[4*numLevels] = q1
-  //x[4*numLevesl+1] ... x[5*numLevels] = q2
   int numLevels  = (int) data[0];
   int numTracers = (int) data[1];
   double SP0     = data[2];

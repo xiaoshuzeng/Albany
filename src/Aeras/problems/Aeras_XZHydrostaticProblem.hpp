@@ -517,7 +517,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     ev = rcp(new Aeras::XZHydrostatic_Density<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
-  {
+  {//QP Density
     RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation Density"));
     p->set<string>("Variable Name", "Density");
     p->set<string>("BF Name", "BF");
@@ -544,7 +544,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
-  { // XZHydrostatic GeoPotential
+  {// XZHydrostatic GeoPotential
     RCP<ParameterList> p = rcp(new ParameterList("XZHydrostatic_GeoPotential"));
 
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
@@ -562,6 +562,16 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     ev = rcp(new Aeras::XZHydrostatic_GeoPotential<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
+
+  { //QP GeoPotential
+    RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation GeoPotential"));
+    p->set<string>("Variable Name", "GeoPotential");
+    p->set<string>("BF Name", "BF");
+    
+    ev = rcp(new Aeras::DOFInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+
   {//Gradient QP GeoPotential 
       RCP<ParameterList> p = rcp(new ParameterList("Gradient GeoPotential"));
       // Input
@@ -573,7 +583,7 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
       fm0.template registerEvaluator<EvalT>(ev);
   }
 
-  { // XZHydrostatic Pi weighted velocity
+  {// XZHydrostatic Pi weighted velocity
     RCP<ParameterList> p = rcp(new ParameterList("XZHydrostatic_PiVel"));
 
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
@@ -649,13 +659,14 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<std::string>("QP Pressure",                    "Pressure");
     p->set<std::string>("QP Pi",                          "Pi");
     p->set<std::string>("PiDot",                          "PiDot");
-    p->set<std::string>("Temperature Source",             dof_names_levels_src[1]);
     p->set<std::string>("QP Density",                     "Density");
+    p->set<std::string>("QP GeoPotential",                "GeoPotential");
     p->set< Teuchos::ArrayRCP<std::string> >("Tracer Names",        dof_names_tracers);
-    p->set< Teuchos::ArrayRCP<std::string> >("Tracer Source Names", dof_names_tracers_src);
 
     //Output
-    p->set<std::string>("Residual Name", dof_names_levels_resid[1]);
+    p->set<std::string>("Temperature Source",             dof_names_levels_src[1]);
+    p->set< Teuchos::ArrayRCP<std::string> >("Tracer Source Names", dof_names_tracers_src);
+    //p->set<std::string>("Residual Name", dof_names_levels_resid[1]);
 
     ev = rcp(new Aeras::Atmosphere_Moisture<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
