@@ -137,7 +137,7 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
           rho[k]   = Albany::ADValue( Density(cell,qp,level) );
           p[k]     = Albany::ADValue( Pressure(cell,qp,level) );
           t[k]     = Albany::ADValue( Temp(cell,qp,level) );
-          exner[k] = pow( (p[k]/1000.0),(0.286) );
+          exner[k] = pow( (p[k]/100000.0),(0.286) );
           rho[k]   = Albany::ADValue( Density(cell,qp,level) );
           Piinv    = 1.0/Albany::ADValue( Pi(cell,qp,level) );
           qv[k]    = Piinv*Albany::ADValue( TracerIn["Vapor"](cell,qp,level) ); 
@@ -154,9 +154,10 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
                 z);
   
         for (int level=0; level < numLevels; ++level) { 
-          int k                                          = numLevels - level - 1;
+          int k = numLevels - level - 1;
 
-          TempSrc                       (cell,qp,level) -= ( t[k]        - Albany::ADValue(Temp             (cell,qp,level)) ) / dt_in;
+          TempSrc(cell,qp,level) = -( t[k] - Albany::ADValue(Temp(cell,qp,level)) ) / dt_in;
+          TempSrc(cell,qp,level) = 0.0;
 
           //src = pi*dqdt + q*dpidt
           Pival  = Albany::ADValue( Pi(cell,qp,level) );
@@ -167,9 +168,9 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
           double qc_old = Piinv*Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
           double qr_old = Piinv*Albany::ADValue( TracerIn["Rain"] (cell,qp,level) );
 
-          TracerSrc[namesToSrc["Vapor"]](cell,qp,level) -= Pival*( qv[k] - qv_old )/dt_in + qv_old * Pi_dot;
-          TracerSrc[namesToSrc["Cloud"]](cell,qp,level) -= Pival*( qc[k] - qc_old )/dt_in + qc_old * Pi_dot;
-          TracerSrc[namesToSrc["Rain"]] (cell,qp,level) -= Pival*( qr[k] - qr_old )/dt_in + qr_old * Pi_dot;
+          TracerSrc[namesToSrc["Vapor"]](cell,qp,level) = -( Pival*( qv[k] - qv_old )/dt_in + qv_old * Pi_dot );
+          TracerSrc[namesToSrc["Cloud"]](cell,qp,level) = -( Pival*( qc[k] - qc_old )/dt_in + qc_old * Pi_dot );
+          TracerSrc[namesToSrc["Rain"]] (cell,qp,level) = -( Pival*( qr[k] - qr_old )/dt_in + qr_old * Pi_dot );
         }
       }
     }
@@ -382,6 +383,7 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_i
     //std::cout << "k,z,rho,p,t,qv,qc,qr: " 
     //          << k << " " << z[k] << " " << rho[k] << " " << p[k] << " " << t[k] << " " 
     //          << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
+    //if (qv[k] != 0.0) std::cout << k << " " << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
   } //enddo
 }
 
