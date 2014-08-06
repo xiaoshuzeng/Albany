@@ -173,7 +173,7 @@ Topology::getLocalRelationId(const Entity source_entity,
   num_relations = getBulkData()->num_connectivity(source_entity, target_entity_entity_rank);
 
   for (size_t i = 0; i < num_relations; ++i) {
-    if (source_entity == target_entity) {
+    if (source_relations[i] == target_entity) {
       local_id = ords[i];
       found = true;
       break;

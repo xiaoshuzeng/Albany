@@ -1176,58 +1176,60 @@ Topology::outputToGraphviz(
       gviz_out << dot_entity(getBulkData()->identifier(source_entity), rank, fracture_state);
 
       for (EntityRank target_rank = stk::topology::NODE_RANK; target_rank < getMetaData()->entity_rank_count(); ++target_rank) {
-        Entity const* relations = getBulkData()->begin(source_entity, target_rank);
-        size_t const num_relations = getBulkData()->num_connectivity(source_entity, target_rank);
-        stk::mesh::ConnectivityOrdinal const* ords = getBulkData()->begin_ordinals(source_entity, target_rank);
+        if (getBulkData()->count_valid_connectivity(source_entity, target_rank) > 0) {
+          Entity const* relations = getBulkData()->begin(source_entity, target_rank);
+          size_t const num_relations = getBulkData()->num_connectivity(source_entity, target_rank);
+          stk::mesh::ConnectivityOrdinal const* ords = getBulkData()->begin_ordinals(source_entity, target_rank);
 
-        for (size_t j = 0; j < num_relations; ++j) {
+          for (size_t j = 0; j < num_relations; ++j) {
 
-          Entity
-          target_entity = relations[j];
+            Entity
+              target_entity = relations[j];
 
-          bool
-          is_valid_target_rank = false;
+            bool
+              is_valid_target_rank = false;
 
-          switch (output_type) {
+            switch (output_type) {
 
-          default:
-            std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
-            std::cerr << '\n';
-            std::cerr << "Invalid output type: ";
-            std::cerr << output_type;
-            std::cerr << '\n';
-            exit(1);
-            break;
+            default:
+              std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
+              std::cerr << '\n';
+              std::cerr << "Invalid output type: ";
+              std::cerr << output_type;
+              std::cerr << '\n';
+              exit(1);
+              break;
 
-          case UNIDIRECTIONAL_UNILEVEL:
-            is_valid_target_rank = target_rank + 1 == rank;
-            break;
+            case UNIDIRECTIONAL_UNILEVEL:
+              is_valid_target_rank = target_rank + 1 == rank;
+              break;
 
-          case UNIDIRECTIONAL_MULTILEVEL:
-            is_valid_target_rank = target_rank < rank;
-            break;
+            case UNIDIRECTIONAL_MULTILEVEL:
+              is_valid_target_rank = target_rank < rank;
+              break;
 
-          case BIDIRECTIONAL_UNILEVEL:
-            is_valid_target_rank =
-              (target_rank == rank + 1) || (target_rank + 1 == rank);
-            break;
+            case BIDIRECTIONAL_UNILEVEL:
+              is_valid_target_rank =
+                                                   (target_rank == rank + 1) || (target_rank + 1 == rank);
+              break;
 
-          case BIDIRECTIONAL_MULTILEVEL:
-            is_valid_target_rank = target_rank != rank;
-            break;
+            case BIDIRECTIONAL_MULTILEVEL:
+              is_valid_target_rank = target_rank != rank;
+              break;
 
+            }
+
+            if (is_valid_target_rank == false) continue;
+
+            EntityPair
+              entity_pair = std::make_pair(source_entity, target_entity);
+
+            EdgeId const
+              edge_id = ords[j];
+
+            relation_list.push_back(entity_pair);
+            relation_local_id.push_back(edge_id);
           }
-
-          if (is_valid_target_rank == false) continue;
-
-          EntityPair
-            entity_pair = std::make_pair(source_entity, target_entity);
-
-          EdgeId const
-          edge_id = ords[j];
-
-          relation_list.push_back(entity_pair);
-          relation_local_id.push_back(edge_id);
         }
       }
     }
