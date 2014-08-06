@@ -10,6 +10,8 @@
 #include <stk_mesh/base/Bucket.hpp>
 #include <stk_mesh/base/Field.hpp>
 #include <stk_mesh/base/FindRestriction.hpp>
+#include <stk_mesh/base/CoordinateSystems.hpp>
+#include <stk_mesh/base/MetaData.hpp>
 
 #include <Shards_Array.hpp>
 
@@ -64,16 +66,23 @@ public:
 
 template<typename Tag>
 inline size_t
-get_size()
+get_size(stk::mesh::Bucket const&)
 {
   return Tag::Size;
 }
 
 template <>
 inline size_t
-get_size<void>()
+get_size<void>(stk::mesh::Bucket const&)
 {
   return 0;
+}
+
+template <>
+inline size_t
+get_size<stk::mesh::Cartesian>(stk::mesh::Bucket const& b)
+{
+  return b.mesh().mesh_meta_data().spatial_dimension();
 }
 
 //----------------------------------------------------------------------
@@ -121,8 +130,8 @@ public:
         int dim0 = stk::mesh::find_restriction(f, b.entity_rank(), b.supersets()).dimension();
         std::cout << "  dim0 stride: " << dim0 << std::endl;
         stride[0] = dim0;
-        std::cout << "  dim1 stride: " << get_size<Tag2>() * dim0 << std::endl;
-        stride[1] = get_size<Tag2>() * dim0;
+        std::cout << "  dim1 stride: " << get_size<Tag2>(b) * dim0 << std::endl;
+        stride[1] = get_size<Tag2>(b) * dim0;
         std::cout << "  dim2 stride: " << stk::mesh::field_scalars_per_entity(f, b) << std::endl;
         stride[2] = stk::mesh::field_scalars_per_entity(f, b);
       }

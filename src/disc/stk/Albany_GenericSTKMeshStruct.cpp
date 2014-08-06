@@ -214,8 +214,6 @@ void Albany::GenericSTKMeshStruct::SetupFieldData(
        std::logic_error,
        "LogicError: metaData->FEM_initialize(numDim) not yet called" << std::endl);
 
-  std::cout << "AGS SetupFieldData " << std::endl;
-
   neq = neq_;
 
   this->nodal_data_block = sis->getNodalDataBlock();
@@ -290,8 +288,6 @@ void Albany::GenericSTKMeshStruct::SetupFieldData(
   writeCoordsToMMFile = params->get("Write Coordinates to MatrixMarket", false);
 
   transferSolutionToCoords = params->get<bool>("Transfer Solution to Coordinates", false);
-
-  std::cout << "AGS SetupFieldData XXX" << std::endl;
 
 #ifdef ALBANY_STK_PERCEPT
   // Build the eMesh if needed
