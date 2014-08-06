@@ -1,9 +1,9 @@
 ##*****************************************************************//
-##    Albany 2.0:  Copyright 2012 Sandia Corporation               //
-##    This Software is released under the BSD license detailed     //
-##    in the file "license.txt" in the top-level Albany directory  //
-##*****************************************************************//
-# Aeras
+##    Albany 2.0: Copyright 2012 Sandia Corporation // This Software
+##    is released under the BSD license detailed // in the file
+##    "license.txt" in the top-level Albany directory //
+##    *****************************************************************//
+##    # Aeras
 
   SET(SOURCES 
        evaluators/Aeras_ComputeBasisFunctions.cpp
@@ -34,15 +34,20 @@
        problems/Aeras_XZHydrostaticProblem.cpp
        problems/Aeras_HydrostaticProblem.cpp
        problems/Aeras_Layouts.cpp
+       problems/Aeras_Dimension.cpp
        evaluators/Aeras_GatherSolution.cpp
        evaluators/Aeras_ScatterResidual.cpp
        evaluators/Aeras_DOFInterpolation.cpp
        evaluators/Aeras_DOFInterpolationLevels.cpp
+       evaluators/Aeras_DOFVecInterpolationLevels.cpp
        evaluators/Aeras_DOFGradInterpolation.cpp
        evaluators/Aeras_DOFGradInterpolationLevels.cpp
+       evaluators/Aeras_DOFDivInterpolationLevels.cpp
+       evaluators/Aeras_DOFDInterpolationLevels.cpp
        evaluators/Aeras_Atmosphere_Moisture.cpp
        evaluators/Aeras_ShallowWaterSource.cpp
        responses/Aeras_TotalVolume.cpp
+       responses/Aeras_LayeredResponseUtilities.cpp
 
    )
    
@@ -97,6 +102,7 @@
        evaluators/Aeras_XZHydrostatic_VirtualT_Def.hpp
        evaluators/Aeras_XZHydrostatic_VirtualT.hpp
        problems/Aeras_Layouts.hpp
+       problems/Aeras_Dimension.hpp
        evaluators/Aeras_GatherSolution.hpp
        evaluators/Aeras_GatherSolution_Def.hpp
        evaluators/Aeras_ScatterResidual.hpp
@@ -105,16 +111,25 @@
        evaluators/Aeras_DOFInterpolation_Def.hpp
        evaluators/Aeras_DOFInterpolationLevels.hpp
        evaluators/Aeras_DOFInterpolationLevels_Def.hpp
+       evaluators/Aeras_DOFVecInterpolationLevels.hpp
+       evaluators/Aeras_DOFVecInterpolationLevels_Def.hpp
        evaluators/Aeras_DOFGradInterpolation.hpp
        evaluators/Aeras_DOFGradInterpolation_Def.hpp
        evaluators/Aeras_DOFGradInterpolationLevels.hpp
        evaluators/Aeras_DOFGradInterpolationLevels_Def.hpp
+       evaluators/Aeras_DOFDivInterpolationLevels.hpp
+       evaluators/Aeras_DOFDivInterpolationLevels_Def.hpp
+       evaluators/Aeras_DOFDInterpolationLevels.hpp
+       evaluators/Aeras_DOFDInterpolationLevels_Def.hpp
        evaluators/Aeras_Atmosphere_Moisture.hpp
        evaluators/Aeras_Atmosphere_Moisture_Def.hpp
        evaluators/Aeras_ShallowWaterSource_Def.hpp
        evaluators/Aeras_ShallowWaterSource.hpp
        responses/Aeras_TotalVolume.hpp
        responses/Aeras_TotalVolume_Def.hpp
+       responses/Aeras_LayeredResponseUtilities.hpp
+       responses/Aeras_LayeredResponseUtilities_Def.hpp
+       
        
   )
   

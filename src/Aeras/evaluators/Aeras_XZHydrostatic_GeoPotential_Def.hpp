@@ -60,17 +60,15 @@ evaluateFields(typename Traits::EvalData workset)
 {
   const Eta<EvalT> &E = Eta<EvalT>::self();
 
+  ScalarT sum;
   for (int cell=0; cell < workset.numCells; ++cell) {
     for (int node=0; node < numNodes; ++node) {
       for (int level=0; level < numLevels; ++level) {
 
-        Phi(cell,node,level) = Phi0 + 0.5*(1/density(cell,node,level))*Pi(cell,node,level)*E.delta(level);
-        ScalarT sum = 0.0;
- 
-        for (int j=level+1; j < numLevels; ++j) {
-          sum += (1/density(cell,node,level))*Pi(cell,node,level)*E.delta(level);
-        }
-        Phi(cell,node,level) += sum;
+        sum =                             Phi0 + 0.5 * Pi(cell,node,level) * E.delta(level) / density(cell,node,level);
+        for (int j=level+1; j < numLevels; ++j) sum += Pi(cell,node,j)     * E.delta(j)     / density(cell,node,j);
+
+        Phi(cell,node,level) = sum;
       }
     }
   }
