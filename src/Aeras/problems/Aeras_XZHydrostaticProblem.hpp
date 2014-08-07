@@ -483,7 +483,8 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<string>("QP Velx"               , dof_names_levels[0]);
     p->set<string>("Gradient QP Pressure"  , "Gradient QP Pressure");
     p->set<string>("Density"               , "Density");
-    p->set<string>("Divergence QP PiVelx"    , "Divergence QP PiVelx");
+    p->set<string>("QP Cpstar"             , "Cpstar");
+    p->set<string>("Divergence QP PiVelx"  , "Divergence QP PiVelx");
 
     //Output
     p->set<std::string>("Omega"            , "Omega");
@@ -534,13 +535,23 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
     //Input
-    p->set<std::string>("Density",            "Density");
+    p->set<std::string>("Pi",                                "Pi");
     p->set<std::string>("Temperature",        dof_names_levels[1]);
-    p->set< Teuchos::ArrayRCP<std::string> >("Tracer Names",        dof_names_tracers);
+    p->set< Teuchos::ArrayRCP<std::string> >("Tracer Names", dof_names_tracers);
     //Output
     p->set<std::string>("Virtual_Temperature", "VirtualT");
+    p->set<std::string>("Cpstar",              "Cpstar");
 
     ev = rcp(new Aeras::XZHydrostatic_VirtualT<EvalT,AlbanyTraits>(*p,dl));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+
+  {//QP Cpstar
+    RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation Cpstar"));
+    p->set<string>("Variable Name", "Cpstar");
+    p->set<string>("BF Name", "BF");
+    
+    ev = rcp(new Aeras::DOFInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 

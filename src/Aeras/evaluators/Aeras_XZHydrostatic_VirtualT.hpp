@@ -40,18 +40,22 @@ public:
   void evaluateFields(typename Traits::EvalData d);
 
 private:
+  // Input:
+  PHX::MDField<ScalarT,Cell,Node,Level> temperature;
+  PHX::MDField<ScalarT,Cell,Node,Level> Pi;
+  PHX::MDField<ScalarT,Cell,Node,Level> qv;
   // Output:
   PHX::MDField<ScalarT,Cell,Node,Level> virt_t;
-  PHX::MDField<ScalarT,Cell,Node,Level> temperature;
-  PHX::MDField<ScalarT,Cell,Node,Level> density;
-  PHX::MDField<ScalarT,Cell,Node,Level> qv;
+  PHX::MDField<ScalarT,Cell,Node,Level> Cpstar;
 
   const Teuchos::ArrayRCP<std::string> tracerNames;
 
   const int numNodes;
   const int numLevels;
   bool vapor;
-
+  const double Cp;
+  double Cpv;
+  double Cvv;
 };
 }
 

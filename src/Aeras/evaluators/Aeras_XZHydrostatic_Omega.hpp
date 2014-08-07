@@ -42,6 +42,7 @@ private:
   // Input:
   PHX::MDField<ScalarT,Cell,QuadPoint,Level,Dim> Velx;
   PHX::MDField<ScalarT,Cell,QuadPoint,Level>     density;
+  PHX::MDField<ScalarT,Cell,QuadPoint,Level>     Cpstar;
   PHX::MDField<ScalarT,Cell,QuadPoint,Level,Dim> gradp;
   PHX::MDField<ScalarT,Cell,QuadPoint,Level>     divpivelx;
 
@@ -51,8 +52,6 @@ private:
   const int numQPs;
   const int numDims;
   const int numLevels;
-  const double Cp ;
-
 };
 }
 
