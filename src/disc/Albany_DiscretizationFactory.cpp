@@ -63,6 +63,160 @@ Albany::DiscretizationFactory::setMeshMover(const Teuchos::RCP<CUTR::CubitMeshMo
 }
 #endif
 
+#ifdef ALBANY_LCM
+
+namespace shards {
+
+namespace {
+
+CellTopology
+interfaceCellTopogyFromBulkCellTopogy(
+    CellTopology const & bulk_cell_topology
+)
+{
+  CellTopology
+  interface_cell_topology;
+
+  std::string const &
+  bulk_cell_topology_name = bulk_cell_topology.getName();
+
+  if (bulk_cell_topology_name == "Triangle_3") {
+    interface_cell_topology = CellTopology(getCellTopologyData<Quadrilateral<4> >());
+  } else if (bulk_cell_topology_name == "Quadrilateral_4") {
+    interface_cell_topology = CellTopology(getCellTopologyData<Quadrilateral<4> >());
+  } else if (bulk_cell_topology_name == "Tetrahedron_4") {
+    interface_cell_topology = CellTopology(getCellTopologyData<Wedge<6> >());
+  } else if (bulk_cell_topology_name == "Hexahedron_8") {
+    interface_cell_topology = CellTopology(getCellTopologyData<Hexahedron<8> >());
+  } else {
+    TEUCHOS_TEST_FOR_EXCEPTION(
+      false,
+      std::logic_error,
+      "LogicError: Interface cell topology not implemented for:" <<
+      bulk_cell_topology_name << std::endl
+    );
+  }
+
+  return interface_cell_topology;
+}
+
+} // anonymous namespace
+
+} // namespace shards
+
+namespace {
+
+void createInterfaceParts(
+    Teuchos::RCP<Teuchos::ParameterList> const & adapt_params,
+    Teuchos::RCP<Albany::AbstractMeshStruct> & mesh_struct
+)
+{
+  bool const
+  do_adaption = adapt_params.is_null() == false;
+
+  if (do_adaption == false) return;
+
+  std::string const &
+  adaption_method_name = adapt_params->get<std::string>("Method");
+
+  bool const
+  is_topology_modification = adaption_method_name == "Topmod";
+
+  if (is_topology_modification == false) return;
+
+  std::string const &
+  bulk_part_name = adapt_params->get<std::string>("Bulk Block Name");
+
+  Albany::AbstractSTKMeshStruct &
+  stk_mesh_struct = dynamic_cast<Albany::AbstractSTKMeshStruct &>(*mesh_struct);
+
+  stk_classic::mesh::fem::FEMMetaData &
+  fem_meta_data = *(stk_mesh_struct.metaData);
+
+  stk_classic::mesh::Part &
+  bulk_part = *(fem_meta_data.get_part(bulk_part_name));
+
+  shards::CellTopology const &
+  bulk_cell_topology = fem_meta_data.get_cell_topology(bulk_part);
+
+  std::string const &
+  interface_part_name(adapt_params->get<std::string>("Interface Block Name"));
+
+  shards::CellTopology const
+  interface_cell_topology =
+      shards::interfaceCellTopogyFromBulkCellTopogy(bulk_cell_topology);
+
+  stk_classic::mesh::EntityRank const
+  interface_dimension = interface_cell_topology.getDimension();
+
+  stk_classic::mesh::Part &
+  interface_part =
+      fem_meta_data.declare_part(interface_part_name, interface_dimension);
+
+  stk_classic::mesh::fem::set_cell_topology(
+      interface_part, interface_cell_topology
+  );
+
+#ifdef ALBANY_SEACAS
+  stk_classic::io::put_io_part_attribute(interface_part);
+#endif // ALBANY_SEACAS
+
+  // Augment the MeshSpecsStruct array with one additional entry for
+  // the interface block. Essentially copy the last entry from the array
+  // and modify some of its fields as needed.
+  Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> > &
+  mesh_specs_struct = stk_mesh_struct.getMeshSpecs();
+
+  Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >::size_type
+  number_blocks = mesh_specs_struct.size();
+
+  Albany::MeshSpecsStruct &
+  last_mss = *(mesh_specs_struct[number_blocks - 1]);
+
+  CellTopologyData const &
+  ictd = *(interface_cell_topology.getCellTopologyData());
+
+  int const
+  dim = interface_cell_topology.getDimension();
+
+  int const
+  cub = last_mss.cubatureDegree;
+
+  std::vector<std::string>
+  ns, ss;
+
+  int const
+  wss = last_mss.worksetSize;
+
+  std::string const &
+  ebn = interface_part_name;
+
+  std::map<std::string, int> &
+  ebn2i = last_mss.ebNameToIndex;
+
+  // Add entry to the map for this block
+  ebn2i.insert(std::make_pair(ebn, number_blocks));
+
+  bool const
+  ilo = last_mss.interleavedOrdering;
+
+  Intrepid::EIntrepidPLPoly const
+  cr = last_mss.cubatureRule;
+
+  mesh_specs_struct.resize(number_blocks + 1);
+
+  mesh_specs_struct[number_blocks] =
+      Teuchos::rcp(new Albany::MeshSpecsStruct(
+          ictd, dim, cub, ns, ss, wss, ebn, ebn2i, ilo, cr));
+
+  return;
+}
+
+} // anonymous namespace
+
+#endif //ALBANY_LCM
+
+
 Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >
 Albany::DiscretizationFactory::createMeshSpecs() {
   std::string& method = discParams->get("Method", "STK1D");
@@ -153,6 +307,12 @@ Albany::DiscretizationFactory::createMeshSpecs() {
                                "!" << std::endl << "Supplied parameter list is " << std::endl << *discParams
                                << "\nValid Methods are: STK1D, STK2D, STK3D, Ioss, Exodus, Cubit, FMDB" << std::endl);
   }
+
+#ifdef ALBANY_LCM
+  // Add an interface block. For now relies on STK, so we force a cast that
+  // will fail if the underlying meshStruct is not based on STK.
+  createInterfaceParts(adaptParams, meshStruct);
+#endif // ALBANY_LCM
 
   return meshStruct->getMeshSpecs();
 

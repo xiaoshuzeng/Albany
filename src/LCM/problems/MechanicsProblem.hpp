@@ -600,7 +600,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   LCM::FieldNameMap field_name_map(surface_element);
   RCP<std::map<std::string, std::string> > fnm = field_name_map.getMap();
   std::string cauchy = (*fnm)["Cauchy_Stress"];
-  std::string firstPK = (*fnm)["PK1"];
+  std::string firstPK = (*fnm)["FirstPK"];
   std::string Fp = (*fnm)["Fp"];
   std::string eqps = (*fnm)["eqps"];
   std::string temperature = (*fnm)["Temperature"];

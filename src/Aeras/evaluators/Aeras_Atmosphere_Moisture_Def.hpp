@@ -38,9 +38,9 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
   tracerNames     (p.get< Teuchos::ArrayRCP<std::string> >("Tracer Names")),
   tracerSrcNames(p.get< Teuchos::ArrayRCP<std::string> >("Tracer Source Names")),
   namesToSrc      (),
-  numQPs          (dl->node_qp_scalar          ->dimension(2)),
-  numDims         (dl->node_qp_gradient        ->dimension(3)),
-  numLevels       (dl->node_scalar_level       ->dimension(2))
+  numQPs          (dl->node_qp_scalar->dimension(2)),
+  numDims         (dl->node_qp_gradient->dimension(3)),
+  numLevels       (dl->node_scalar_level->dimension(2))
 {  
 
   Teuchos::ParameterList* xzhydrostatic_params = p.get<Teuchos::ParameterList*>("XZHydrostatic Problem");
@@ -51,7 +51,7 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
   RequiredTracers[0] = "Vapor";
   RequiredTracers[1] = "Cloud";
   RequiredTracers[2] = "Rain";
-  for (int i=0; i<3; ++i) {
+  for (int i=0; i<3 && compute_cloud_physics; ++i) {
     bool found = false;
     for (int j=0; j<3 && !found; ++j)
       if (RequiredTracers[i] == tracerNames[j]) found = true;

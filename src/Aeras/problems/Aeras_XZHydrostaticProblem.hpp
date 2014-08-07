@@ -116,7 +116,7 @@ namespace Aeras {
 #include "Albany_Utils.hpp"
 #include "Albany_ProblemUtils.hpp"
 #include "Albany_EvaluatorUtils.hpp"
-#include "Albany_ResponseUtilities.hpp"
+#include "Aeras/responses/Aeras_LayeredResponseUtilities.hpp"
 #include "PHAL_Neumann.hpp"
 
 template <typename EvalT>
@@ -371,9 +371,9 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<std::string>("QP Density",                       "Density");
     p->set<std::string>("Gradient QP Pressure",             "Gradient QP Pressure");
     p->set<std::string>("EtaDotdVelx",                      "EtaDotdVelx");
+    p->set<std::string>("Gradient Vel Name",                dof_names_levels_gradient[0]);
     
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
-
     Teuchos::ParameterList& paramList = params->sublist("XZHydrostatic Problem");
     p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
@@ -400,7 +400,6 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<std::string>("EtaDotdT",                       "EtaDotdT");
     
     p->set<RCP<ParamLib> >("Parameter Library", paramLib);
-
     Teuchos::ParameterList& paramList = params->sublist("XZHydrostatic Problem");
     p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
 
@@ -582,7 +581,6 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     ev = rcp(new Aeras::DOFGradInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
-
   { // XZHydrostatic vertical velocity * Pi
     RCP<ParameterList> p = rcp(new ParameterList("XZHydrostatic_EtaDotPi"));
 
@@ -712,13 +710,14 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
   if (fieldManagerChoice == Albany::BUILD_RESID_FM)  {
     PHX::Tag<typename EvalT::ScalarT> res_tag("Scatter XZHydrostatic", dl->dummy);
     fm0.requireField<EvalT>(res_tag);
+
   }
   else if (fieldManagerChoice == Albany::BUILD_RESPONSE_FM) {
-    Albany::ResponseUtilities<EvalT, PHAL::AlbanyTraits> respUtils(dl);
+    Aeras::LayeredResponseUtilities<EvalT, PHAL::AlbanyTraits> respUtils(dl);
     return respUtils.constructResponses(fm0, *responseList, Teuchos::null, stateMgr);
   }
 
 
-  return Teuchos::null;
+  return  Teuchos::null;
 }
 #endif // AERAS_XZHYDROSTATICPROBLEM_HPP
