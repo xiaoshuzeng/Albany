@@ -153,7 +153,7 @@ namespace Albany {
     //! Function to create parameter list for construction of GatherCoordinateVector
     //! evaluator with standard Field names
     Teuchos::RCP< PHX::Evaluator<Traits> > 
-    constructGatherCoordinateVectorEvaluator();
+    constructGatherCoordinateVectorEvaluator(std::string strCurrentDisp="");
 
     //! Function to create parameter list for construction of GatherSHeight
     //! evaluator with standard Field names
