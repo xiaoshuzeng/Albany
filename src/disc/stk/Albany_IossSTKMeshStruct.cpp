@@ -111,7 +111,8 @@ Albany::IossSTKMeshStruct::IossSTKMeshStruct(
     file_name = params->get<std::string>("Pamgen Input File Name");
   }
 
-  mesh_data->add_mesh_database(file_name, mesh_type, stk::io::READ_MESH);
+  size_t idx = mesh_data->add_mesh_database(file_name, mesh_type, stk::io::READ_MESH);
+  mesh_data->set_active_mesh(idx);
   mesh_data->create_input_mesh();
 
   delete metaData;
@@ -251,6 +252,9 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
 
   *out << "IOSS-STK: number of node sets = " << nsPartVec.size() << std::endl;
   *out << "IOSS-STK: number of side sets = " << ssPartVec.size() << std::endl;
+
+  // HACK
+  mesh_data->add_input_field(metaData->get_field(stk::topology::NODE_RANK, "solution"));
 
   metaData->commit();
 
