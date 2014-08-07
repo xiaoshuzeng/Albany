@@ -38,9 +38,9 @@ private:
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> density;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> velocity;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> temperature;
+  PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Cpstar;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> pie;
   const int numLevels;
-  const double Cpstar;
   double Phi0;
 };
 
