@@ -65,6 +65,8 @@ evaluateFields(typename Traits::EvalData workset)
     for (int node=0; node < numNodes; ++node) {
       for (int level=0; level < numLevels; ++level) {
 
+        //minus instead of + ? \Phi = \Phi_s - \int_1^{\eta} ...
+        
         sum =                             Phi0 + 0.5 * Pi(cell,node,level) * E.delta(level) / density(cell,node,level);
         for (int j=level+1; j < numLevels; ++j) sum += Pi(cell,node,j)     * E.delta(j)     / density(cell,node,j);
 

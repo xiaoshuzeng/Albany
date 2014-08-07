@@ -70,8 +70,6 @@ private:
   PHX::MDField<MeshScalarT,Cell,Node,QuadPoint> wBF;
   PHX::MDField<MeshScalarT,Cell,Node,QuadPoint,Dim> GradBF;
   PHX::MDField<MeshScalarT,Cell,Node,QuadPoint,Dim> wGradBF;
-
-           PHX::MDField<MeshScalarT,Cell,QuadPoint,Dim,Dim> jacobian_invt;
          
          
   const double earthRadius;

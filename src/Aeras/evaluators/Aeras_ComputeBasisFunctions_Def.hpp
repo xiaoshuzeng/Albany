@@ -34,7 +34,6 @@ ComputeBasisFunctions(const Teuchos::ParameterList& p,
   GradBF        (p.get<std::string>  ("Gradient BF Name"),  dl->node_qp_gradient),
   wGradBF       (p.get<std::string>  ("Weighted Gradient BF Name"), dl->node_qp_gradient),
   jacobian  (p.get<std::string>  ("Jacobian Name"), dl->qp_tensor ),
-  jacobian_invt  (p.get<std::string>  ("Jacobian InvT Name"), dl->qp_tensor ),
   earthRadius(ShallowWaterConstants::self().earthRadius)
 {
   this->addDependentField(coordVec);
@@ -48,7 +47,6 @@ ComputeBasisFunctions(const Teuchos::ParameterList& p,
   this->addEvaluatedField(GradBF);
   this->addEvaluatedField(wGradBF);
 
-    this->addEvaluatedField(jacobian_invt);
   
   // Get Dimensions
   std::vector<PHX::DataLayout::size_type> dim;
@@ -96,8 +94,6 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(GradBF,fm);
   this->utils.setFieldData(wGradBF,fm);
   
-    this->utils.setFieldData(jacobian_invt,fm);
-  
 }
 
 //**********************************************************************
@@ -137,12 +133,8 @@ evaluateFields(typename Traits::EvalData workset)
     Intrepid::FieldContainer<MeshScalarT>   D1(numQPs,basisDim,spatialDim);
     Intrepid::FieldContainer<MeshScalarT>   D2(numQPs,spatialDim,spatialDim);
     Intrepid::FieldContainer<MeshScalarT>   D3(numQPs,basisDim,spatialDim);
-
- // print out coords of vertices -- looks good
-/*for (int e = 0; e<numelements;      ++e)
-    for (int v = 0; v<numNodes;  ++v)
-  std::cout << "XXX: coord vec: e=" << e << " v: " << v << " =  "  << coordVec(e,v,0) << " " << coordVec(e,v,1) << " " << coordVec(e,v,2) << " and numQPs="<< numQPs <<std::endl; */
-
+    
+    
     for (int e = 0; e<numelements;      ++e) {
       phi.initialize(); 
       dphi.initialize(); 
@@ -159,10 +151,7 @@ evaluateFields(typename Traits::EvalData workset)
         for (int b1= 0; b1<basisDim;     ++b1)
           for (int b2= 0; b2<basisDim;   ++b2)
             for (int d = 0; d<spatialDim;++d){
-              
-              //there is no d index in jacobian(e,q,b1,b2)
               jacobian(e,q,b1,b2) = 0;
-              //jacobian_invt(e,q,b1,b2) = 0;
             }
 
       for (int q = 0; q<numQPs;         ++q) 
@@ -187,7 +176,7 @@ evaluateFields(typename Traits::EvalData workset)
       for (int q = 0; q<numQPs;         ++q) 
         for (int d = 0; d<spatialDim;   ++d) 
           phi(q,d) /= norm(q);
-
+     
       for (int q = 0; q<numQPs;         ++q) {
 
         // ==========================================================
@@ -253,47 +242,185 @@ evaluateFields(typename Traits::EvalData workset)
       for (int q = 0; q<numQPs;          ++q) 
         for (int b1= 0; b1<basisDim;     ++b1) 
           for (int b2= 0; b2<basisDim;   ++b2)
-            
-            //why norm(q)?
             jacobian(e,q,b1,b2) *= earthRadius/norm(q);
-            //jacobian(e,q,b1,b2) *= (-1.)*earthRadius/norm(q);
-      
-      /*if (e == 0) {
-        
-        std::cout << "For cell=0 print sphere_coords:"<<std::endl;
-        
-        for(int q = 0; q<numQPs; q++){
-        std::cout << "sph_coord(q="<<q<<")=" << sphere_coord(e,q,0)<<", "<<sphere_coord(e,q,1)<<std::endl;
-        }
-        
-        std::cout << "Jacobian at q=8:"<<std::endl;
-        std::cout <<" (0,0) = "<<jacobian(e,8,0,0)/earthRadius <<std::endl;
-        std::cout <<" (0,1) = "<<jacobian(e,8,0,1)/earthRadius <<std::endl;
-        std::cout <<" (1,0) = "<<jacobian(e,8,1,0)/earthRadius <<std::endl;
-        std::cout <<" (1,1) = "<<jacobian(e,8,1,1)/earthRadius <<std::endl;
-        
-      }*/
 
     }
     
   }//end else
   
-  Intrepid::CellTools<MeshScalarT>::setJacobianInv(jacobian_inv, jacobian);
   
-  /*for (int e = 0; e<numelements;      ++e) {
-  for (int q = 0; q<numQPs;          ++q)
-    for (int b1= 0; b1<basisDim;     ++b1)
-      for (int b2= 0; b2<basisDim;   ++b2){
-        
-        //q here is a quad pt, why norm(q)?
-        jacobian_invt(e,q,b1,b2) = jacobian_inv(e,q,b2,b1);
   
-    std::cout << "e="<<e<<" q="<<q<<" b1="<<b1<<" b2="<<b2<<std::endl;
+  /////////////implementing the map and Jacobian exactly like homme's,
+  /////////////no generality.
+  if(0){
+  
+  Intrepid::FieldContainer<MeshScalarT>   Q(4);
+  Intrepid::FieldContainer<MeshScalarT>   C(3,4);
+  Intrepid::FieldContainer<MeshScalarT>   xx(3);
+  Intrepid::FieldContainer<MeshScalarT>   CartC(3);
+  
+  Intrepid::FieldContainer<MeshScalarT>   dd(4,2);
+  Intrepid::FieldContainer<MeshScalarT>   D1(2,3);
+  Intrepid::FieldContainer<MeshScalarT>   D2(3,3);
+  Intrepid::FieldContainer<MeshScalarT>   D3(3,2);
+  Intrepid::FieldContainer<MeshScalarT>   D4(3,2);
+  
+  for (int e = 0; e<numelements; ++e) {
     
-    std::cout<<"j(e,q,b1,b2)="<<jacobian_inv(e,q,b2,b1)<<std::endl;
+    for (int q = 0; q<numQPs;          ++q)
+      for (int b1= 0; b1<basisDim;     ++b1)
+        for (int b2= 0; b2<basisDim;   ++b2){
+          jacobian(e,q,b1,b2) = 0.;
+        }
     
-  }}*/
+    for (int q = 0; q<numQPs; ++q){
+      
+      //reference coords are refPoints(q,0) and refPoints(q,1) because BasisDim = 2
+      //in this case
+      
+      MeshScalarT a = refPoints(q,0);
+      MeshScalarT b = refPoints(q,1);
+      
+      
+      //std::cout << "q= "<< q <<" reference points a,b = "<<a <<" "<<b<<std::endl;
+      
+      Q.initialize();
+      C.initialize();
+      xx.initialize();
+      CartC.initialize();
+      
+      Q(0) = (1-a)*(1-b)/4.; Q(1) = (1+a)*(1-b)/4.;
+      Q(2) = (1+a)*(1+b)/4.; Q(3) = (1-a)*(1+b)/4.;
+      
+      
+      //corner 1,2,3,4 = Vertex 0,1,2,3
+      //can be pulled out from q loop
+      for (int v = 0; v<4; v++) {
+        for (int d = 0; d<3; d++)
+          C(d,v) = coordVec(e,v,d);
+      }
+      
+      
+      for (int i = 0; i<3; i++)
+        for(int j = 0; j<4; j++)
+          xx(i) += C(i,j)*Q(j);
+      
+      MeshScalarT rr = std::sqrt( xx(0)*xx(0) + xx(1)*xx(1) + xx(2)*xx(2) );
+      
+      for (int i = 0; i<3; i++)
+        CartC(i) = xx(i)/rr;
+      
+      const MeshScalarT latitude  = std::asin(CartC(2));  //theta
+      MeshScalarT longitude = std::atan2(CartC(1),CartC(0));  //lambda
+      if (std::abs(std::abs(latitude)-pi/2) < DIST_THRESHOLD) longitude = 0;
+      else if (longitude < 0) longitude += 2*pi;
+      
+      
+      //where is this used?
+      sphere_coord(e,q,0) = longitude;
+      sphere_coord(e,q,1) = latitude;
+      
+      MeshScalarT sinT, cosT, sinL, cosL;
+      
+      sinT = std::sin(latitude);
+      cosT = std::cos(latitude);
+      sinL = std::sin(longitude);
+      cosL = std::cos(longitude);
+      
+      dd.initialize();
+      D1.initialize();
+      D2.initialize();
+      D3.initialize();
+      D4.initialize();
+      
+      D1(0,0) = -sinL;
+      D1(0,1) =  cosL;
+      D1(1,2) =  1.;
+      
+      
+      D2(0,0) =  sinL*sinL*cosT*cosT + sinT*sinT;
+      D2(0,1) = -sinL*cosL*cosT*cosT;
+      D2(0,2) = -cosL*sinT*cosT;
+      
+      D2(1,0) = -sinL*cosL*cosT*cosT;
+      D2(1,1) =  cosL*cosL*cosT*cosT + sinT*sinT;
+      D2(1,2) = -sinL*sinT*cosT;
+      
+      D2(2,0) = -cosL*sinT;
+      D2(2,1) = -sinL*sinT;
+      D2(2,2) =  cosT;
+      
+      dd(0,0)=(-1+b)/4.; dd(0,1)=(-1+a)/4.;
+      dd(1,0)=(1-b)/4.;  dd(1,1)=(-1-a)/4.;
+      dd(2,0)=(1+b)/4.;  dd(2,1)=(1+a)/4.;
+      dd(3,0)=(-1-b)/4.; dd(3,1)=(1-a)/4.;
+      
+      
+      for (int i=0; i<3; i++)
+        for (int j=0; j<2; j++)
+          for (int k=0; k<4; k++)
+            D3(i,j) += C(i,k)*dd(k,j);
+      
+      
+      for (int i=0; i<3; i++)
+        for (int j=0; j<2; j++)
+          for (int k=0; k<3; k++)
+            D4(i,j) += D2(i,k)*D3(k,j);
+      
+      for (int i=0; i<2; i++)
+        for (int j=0; j<2; j++)
+          for (int k=0; k<3; k++)
+            jacobian(e,q,i,j) += D1(i,k)*D4(k,j)/rr*earthRadius;
+      
+      
+      /*if ((e == 0)&&(q == 0)){
+       
+       std::cout << "For cell=0 print sphere_coords:"<<std::endl;
+       
+       for(int v = 0; v<numNodes; v++){
+       //coordVec(e,v,d)
+       
+       std::cout << "coordVec(v="<<v<<")=" << coordVec(e,v,0)<<", "<<
+       coordVec(e,v,1)<<", "<<coordVec(e,v,2)<<std::endl;
+       }
+       
+       for(int q = 0; q<numQPs; q++){
+       std::cout << "sph_coord(q="<<q<<")=" << sphere_coord(e,q,0)<<", "<<sphere_coord(e,q,1)<<std::endl;
+       }
+       
+       std::cout << "Jacobian at q=0:"<<std::endl;
+       std::cout <<" (0,0) = "<<jacobian(e,0,0,0)/earthRadius <<std::endl;
+       std::cout <<" (0,1) = "<<jacobian(e,0,0,1)/earthRadius <<std::endl;
+       std::cout <<" (1,0) = "<<jacobian(e,0,1,0)/earthRadius <<std::endl;
+       std::cout <<" (1,1) = "<<jacobian(e,0,1,1)/earthRadius <<std::endl;
+       
+       
+       
+       std::cout << "ref points a ="<<a<<", b="<<b<<std::endl;
+       std::cout << "lon ="<< longitude <<", lat="<< latitude <<std::endl;
+       std::cout << "CartC ="<< CartC(0) <<", "<< CartC(1) << ", "<<CartC(2) <<std::endl;
+       
+       std::cout << "rr = "<<rr<<std::endl;
+       
+       std::cout << "C " << C << std::endl;
+       
+       std::cout << "dd " << dd << std::endl;
+       std::cout << "D1 " << D1 << std::endl;
+       std::cout << "D2 " << D2 << std::endl;
+       std::cout << "D3 " << D3 << std::endl;
+       std::cout << "D4 " << D4 << std::endl;
+       
+       }//end cout statements
+       */
+      
+    }//end q loop for quad points
+    
+  }//end e loop for elements
+  }//end of if-statement which turns on/off homme;s map
+  //////////////////////////////////////////////////////////////////////
 
+  
+  Intrepid::CellTools<MeshScalarT>::setJacobianInv(jacobian_inv, jacobian);
 
   Intrepid::CellTools<MeshScalarT>::setJacobianDet(jacobian_det, jacobian);
 
@@ -313,10 +440,6 @@ evaluateFields(typename Traits::EvalData workset)
     (wBF, weighted_measure, BF);
   Intrepid::FunctionSpaceTools::HGRADtransformGRAD<MeshScalarT>
     (GradBF, jacobian_inv, grad_at_cub_points);
-  
-  //Intrepid::FunctionSpaceTools::HGRADtransformGRAD<MeshScalarT>
-  //(GradBF, jacobian_invt, grad_at_cub_points);
-  
   Intrepid::FunctionSpaceTools::multiplyMeasure<MeshScalarT>
     (wGradBF, weighted_measure, GradBF);
 
