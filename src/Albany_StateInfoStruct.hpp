@@ -44,7 +44,7 @@ typedef std::vector<StateArray> StateArrayVec;
                     int cubatureDegree_, std::vector<std::string> nsNames_,
                     std::vector<std::string> ssNames_,
                     int worsetSize_, const std::string ebName_,
-                    const std::map<std::string, int>& ebNameToIndex_, bool interleavedOrdering_,
+                    std::map<std::string, int>& ebNameToIndex_, bool interleavedOrdering_,
                     const Intrepid::EIntrepidPLPoly cubatureRule_ = Intrepid::PL_GAUSS)
        :  ctd(ctd_), numDim(numDim_), cubatureDegree(cubatureDegree_),
           nsNames(nsNames_), ssNames(ssNames_), worksetSize(worsetSize_), 
@@ -57,8 +57,8 @@ typedef std::vector<StateArray> StateArrayVec;
     std::vector<std::string> nsNames;  //Node Sets Names
     std::vector<std::string> ssNames;  //Side Sets Names
     int worksetSize;
-    const std::string ebName;  //Element block name for the EB that this struct corresponds to
-    const std::map<std::string, int>& ebNameToIndex;
+    std::string ebName;  //Element block name for the EB that this struct corresponds to
+    std::map<std::string, int>& ebNameToIndex;
     bool interleavedOrdering;
     const Intrepid::EIntrepidPLPoly cubatureRule;
   };

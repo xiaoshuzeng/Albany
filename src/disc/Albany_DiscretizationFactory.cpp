@@ -170,7 +170,7 @@ void createInterfaceParts(
   Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >::size_type
   number_blocks = mesh_specs_struct.size();
 
-  Albany::MeshSpecsStruct const &
+  Albany::MeshSpecsStruct &
   last_mss = *(mesh_specs_struct[number_blocks - 1]);
 
   CellTopologyData const &
@@ -191,7 +191,7 @@ void createInterfaceParts(
   std::string const &
   ebn = interface_part_name;
 
-  std::map<std::string, int>
+  std::map<std::string, int> &
   ebn2i = last_mss.ebNameToIndex;
 
   // Add entry to the map for this block
