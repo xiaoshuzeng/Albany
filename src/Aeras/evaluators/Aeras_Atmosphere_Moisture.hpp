@@ -13,6 +13,7 @@
 #include "Phalanx_MDField.hpp"
 
 #include "Aeras_Layouts.hpp"
+#include "Aeras_Dimension.hpp"
 
 #include "Teuchos_ParameterList.hpp"
 #include "Epetra_Vector.h"
@@ -61,9 +62,10 @@ void kessler(const int Km, const double dt_in,
              double &rainnc,  double &rainncv,
              const std::vector<double> &z);
 
-  PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Velx;
+  PHX::MDField<ScalarT,Cell,QuadPoint,Level,VecDim> Velx;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Temp;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Density;
+  PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> GeoPotential;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Pressure;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> Pi;
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> PiDot;

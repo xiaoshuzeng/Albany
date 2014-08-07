@@ -28,9 +28,10 @@ template<typename EvalT, typename Traits>
 Atmosphere_Moisture<EvalT, Traits>::
 Atmosphere_Moisture(Teuchos::ParameterList& p,
            const Teuchos::RCP<Aeras::Layouts>& dl) :
-  Velx            (p.get<std::string> ("QP Velx"),                       dl->qp_scalar_level),
+  Velx            (p.get<std::string> ("QP Velx"),                       dl->qp_vector_level),
   Temp            (p.get<std::string> ("QP Temperature"),                dl->qp_scalar_level),
   Density         (p.get<std::string> ("QP Density"),                    dl->qp_scalar_level),
+  GeoPotential    (p.get<std::string> ("QP GeoPotential"),               dl->qp_scalar_level),
   Pressure        (p.get<std::string> ("QP Pressure"),                   dl->qp_scalar_level),
   Pi              (p.get<std::string> ("QP Pi"),                         dl->qp_scalar_level),
   PiDot           (p.get<std::string> ("PiDot"),                         dl->qp_scalar_level),
@@ -61,6 +62,7 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
 
   this->addDependentField(Velx);
   this->addDependentField(Density);
+  this->addDependentField(GeoPotential);
   this->addDependentField(Pressure);
   this->addDependentField(Pi);
   this->addDependentField(Temp);
@@ -84,13 +86,14 @@ template<typename EvalT, typename Traits>
 void Atmosphere_Moisture<EvalT, Traits>::postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& fm)
 {
-  this->utils.setFieldData(Velx,     fm);
-  this->utils.setFieldData(Temp,     fm);
-  this->utils.setFieldData(Density,  fm);
-  this->utils.setFieldData(Pressure, fm);
-  this->utils.setFieldData(Pi,       fm);
-  this->utils.setFieldData(PiDot,    fm);
-  this->utils.setFieldData(TempSrc,  fm);
+  this->utils.setFieldData(Velx,         fm);
+  this->utils.setFieldData(Temp,         fm);
+  this->utils.setFieldData(Density,      fm);
+  this->utils.setFieldData(GeoPotential, fm);
+  this->utils.setFieldData(Pressure,     fm);
+  this->utils.setFieldData(Pi,           fm);
+  this->utils.setFieldData(PiDot,        fm);
+  this->utils.setFieldData(TempSrc,      fm);
 
   for (int i = 0; i < TracerIn.size();  ++i) this->utils.setFieldData(TracerIn[tracerNames[i]], fm);
   for (int i = 0; i < TracerSrc.size(); ++i) this->utils.setFieldData(TracerSrc[tracerSrcNames[i]],fm);
@@ -107,8 +110,9 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
 
   const double dt_in = workset.current_time - workset.previous_time;
   double rainnc, rainncv;
-  const double zbot = 25.0;
-  const double ztop = 10000.0;
+  //const double zbot = 25.0;
+  //const double ztop = 10000.0;
+  const double gravity = 9.80616;
 
   for (int i=0; i < TempSrc.size(); ++i) TempSrc(i)=0.0;
 
@@ -137,16 +141,16 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
           rho[k]   = Albany::ADValue( Density(cell,qp,level) );
           p[k]     = Albany::ADValue( Pressure(cell,qp,level) );
           t[k]     = Albany::ADValue( Temp(cell,qp,level) );
-          exner[k] = pow( (p[k]/1000.0),(0.286) );
+          exner[k] = pow( (p[k]/100000.0),(0.286) );
           rho[k]   = Albany::ADValue( Density(cell,qp,level) );
           Piinv    = 1.0/Albany::ADValue( Pi(cell,qp,level) );
           qv[k]    = Piinv*Albany::ADValue( TracerIn["Vapor"](cell,qp,level) ); 
           qc[k]    = Piinv*Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
           qr[k]    = Piinv*Albany::ADValue( TracerIn["Rain"] (cell,qp,level) );
-          z[k]     = (1.0-Albany::ADValue( E.eta(level)) ) * ztop + zbot;
+          z[k]     = Albany::ADValue( GeoPotential(cell,qp,level) ) / gravity;
           dz8w[k]  = z[k];
         }
-  
+
         kessler(numLevels, dt_in,
                 rho, p, exner, dz8w,
                 t, qv, qc, qr,
@@ -154,9 +158,10 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
                 z);
   
         for (int level=0; level < numLevels; ++level) { 
-          int k                                          = numLevels - level - 1;
+          int k = numLevels - level - 1;
 
-          TempSrc                       (cell,qp,level) -= ( t[k]        - Albany::ADValue(Temp             (cell,qp,level)) ) / dt_in;
+          TempSrc(cell,qp,level) = -( t[k] - Albany::ADValue(Temp(cell,qp,level)) ) / dt_in;
+          //TempSrc(cell,qp,level) = 0.0; 
 
           //src = pi*dqdt + q*dpidt
           Pival  = Albany::ADValue( Pi(cell,qp,level) );
@@ -167,9 +172,12 @@ void Atmosphere_Moisture<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
           double qc_old = Piinv*Albany::ADValue( TracerIn["Cloud"](cell,qp,level) );
           double qr_old = Piinv*Albany::ADValue( TracerIn["Rain"] (cell,qp,level) );
 
-          TracerSrc[namesToSrc["Vapor"]](cell,qp,level) -= Pival*( qv[k] - qv_old )/dt_in + qv_old * Pi_dot;
-          TracerSrc[namesToSrc["Cloud"]](cell,qp,level) -= Pival*( qc[k] - qc_old )/dt_in + qc_old * Pi_dot;
-          TracerSrc[namesToSrc["Rain"]] (cell,qp,level) -= Pival*( qr[k] - qr_old )/dt_in + qr_old * Pi_dot;
+          TracerSrc[namesToSrc["Vapor"]](cell,qp,level) = -( Pival*( qv[k] - qv_old )/dt_in + qv_old * Pi_dot );
+          TracerSrc[namesToSrc["Cloud"]](cell,qp,level) = -( Pival*( qc[k] - qc_old )/dt_in + qc_old * Pi_dot );
+          TracerSrc[namesToSrc["Rain"]] (cell,qp,level) = -( Pival*( qr[k] - qr_old )/dt_in + qr_old * Pi_dot );
+          //TracerSrc[namesToSrc["Vapor"]](cell,qp,level) = 0.0;
+          //TracerSrc[namesToSrc["Cloud"]](cell,qp,level) = 0.0;
+          //TracerSrc[namesToSrc["Rain"]] (cell,qp,level) = 0.0;
         }
       }
     }
@@ -288,7 +296,7 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_i
 
 
     // Update cumulative large-scale prescipitation at surface
-    ppt     = 0.;
+    ppt     = 0.0;
     ppt     = rhok[0]*qrk[0]*vt[0]*dtfall/rhowater; 
     rainncv = ppt*mm_per_m;                          // convert units to mm
     rainnc  = rainnc + ppt*mm_per_m;                 // keep track of cumulative value
@@ -339,6 +347,8 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_i
   // Production of qc from supersaturation
   // Evaporation of qr
 
+  //static bool first = true;
+
   for (int k=0; k<Km; ++k) {  //do k = kts, kte
     factorn = 1.0 / (1.0+2.2*dt*std::max( 0.0,pow( qr[k],0.875 ) ));
     qrprod  = qc[k] * (1.0 - factorn)           
@@ -378,11 +388,16 @@ void Atmosphere_Moisture<EvalT, Traits>::kessler(const int Km, const double dt_i
     qc[k]     = qc[k] + prodct;
     qr[k]     = qr[k] - qrevap;
  
-    //std::cout << "gam,prodct,qrevap: " << " " << gam << " " << prodct << " " << qrevap << std::endl;
-    //std::cout << "k,z,rho,p,t,qv,qc,qr: " 
-    //          << k << " " << z[k] << " " << rho[k] << " " << p[k] << " " << t[k] << " " 
-    //          << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
+    //if (first) {
+    //  std::cout << "gam,prodct,qrevap: " << " " << gam << " " << prodct << " " << qrevap << std::endl;
+    //  std::cout << "k,z,rho,p,t,qv,qc,qr: " 
+    //            << k << " " << z[k] << " " << rho[k] << " " << p[k] << " " << t[k] << " " 
+    //            << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
+    ////if (qv[k] != 0.0) std::cout << k << " " << qv[k] << " " << qc[k] << " " << qr[k] << std::endl;
+    //}
   } //enddo
+
+  //first = false;
 }
 
 }

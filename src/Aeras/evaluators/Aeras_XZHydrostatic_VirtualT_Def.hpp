@@ -12,6 +12,7 @@
 
 #include "Intrepid_FunctionSpaceTools.hpp"
 #include "Aeras_Layouts.hpp"
+#include "Aeras_Dimension.hpp"
 
 namespace Aeras {
 
@@ -21,8 +22,8 @@ XZHydrostatic_VirtualT<EvalT, Traits>::
 XZHydrostatic_VirtualT(const Teuchos::ParameterList& p,
               const Teuchos::RCP<Aeras::Layouts>& dl) :
   virt_t     (p.get<std::string> ("Virtual_Temperature"),    dl->node_scalar_level),
-  temperature(p.get<std::string> ("Temperature"), dl->node_scalar_level),
-  density    (p.get<std::string> ("Density"),     dl->node_scalar_level),
+  temperature(p.get<std::string> ("Temperature"),            dl->node_scalar_level),
+  density    (p.get<std::string> ("Density"),                dl->node_scalar_level),
   tracerNames(p.get< Teuchos::ArrayRCP<std::string> >("Tracer Names")),
 
   numNodes   (dl->node_scalar             ->dimension(1)),
@@ -36,7 +37,7 @@ XZHydrostatic_VirtualT(const Teuchos::ParameterList& p,
   }
 
   if (vapor) {
-    qv = PHX::MDField<ScalarT,Cell,Node> ("Vapor",   dl->node_scalar_level);
+    qv = PHX::MDField<ScalarT,Cell,Node,Level> ("Vapor",   dl->node_scalar_level);
     this->addDependentField(qv);
   }
 
@@ -64,7 +65,7 @@ template<typename EvalT, typename Traits>
 void XZHydrostatic_VirtualT<EvalT, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
-  const ScalarT R=287.0;
+  const ScalarT R =287.0;
   const ScalarT Rv=461.5;
   const ScalarT factor = Rv/R - 1.0;
 
