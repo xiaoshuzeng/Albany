@@ -24,20 +24,6 @@ template<typename EvalT, typename Traits>
 ShallowWaterSource<EvalT, Traits>::
 ShallowWaterSource(const Teuchos::ParameterList& p,
             const Teuchos::RCP<Albany::Layouts>& dl) :
-  wBF      (p.get<std::string> ("Weighted BF Name"), dl->node_qp_scalar),
-  wGradBF  (p.get<std::string> ("Weighted Gradient BF Name"),dl->node_qp_gradient),
-  U        (p.get<std::string> ("QP Variable Name"), dl->qp_vector),
-  UNodal   (p.get<std::string> ("Nodal Variable Name"), dl->node_vector),
-  Ugrad    (p.get<std::string> ("Gradient QP Variable Name"), dl->qp_vecgradient),
-  UDot     (p.get<std::string> ("QP Time Derivative Variable Name"), dl->qp_vector),
-  mountainHeight  (p.get<std::string> ("Aeras Surface Height QP Variable Name"), dl->qp_scalar),
-  jacobian_inv  (p.get<std::string>  ("Jacobian Inv Name"), dl->qp_tensor ),
-  jacobian_det  (p.get<std::string>  ("Jacobian Det Name"), dl->qp_scalar ),
-  weighted_measure (p.get<std::string>  ("Weights Name"),   dl->qp_scalar ),
-  jacobian  (p.get<std::string>  ("Jacobian Name"), dl->qp_tensor ),
-  intrepidBasis (p.get<Teuchos::RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > > > ("Intrepid Basis") ),
-  cubature      (p.get<Teuchos::RCP <Intrepid::Cubature<RealType> > >("Cubature")),
-  spatialDim(p.get<std::size_t>("spatialDim")),
   sphere_coord  (p.get<std::string>  ("Spherical Coord Name"), dl->qp_gradient ),
   gravity (Aeras::ShallowWaterConstants::self().gravity),
   Omega(2.0*(Aeras::ShallowWaterConstants::self().pi)/(24.*3600.)),
@@ -68,76 +54,29 @@ ShallowWaterSource(const Teuchos::ParameterList& p,
 
   this->addDependentField(sphere_coord);
   this->addEvaluatedField(source);
-  
-  
-  //should i move it under if statement?
-  this->addDependentField(U);
-  this->addDependentField(UNodal);
-  this->addDependentField(Ugrad);
-  this->addDependentField(UDot);
-  this->addDependentField(wBF);
-  this->addDependentField(wGradBF);
-  //this->addDependentField(GradBF);
-  this->addDependentField(mountainHeight);
-  
-  this->addDependentField(weighted_measure);
-  this->addDependentField(jacobian);
-  this->addDependentField(jacobian_inv);
-  this->addDependentField(jacobian_det);
-  
-  
-  
 
   std::vector<PHX::DataLayout::size_type> dims;
   
-  //dl->qp_gradient->dimensions(dims);
-  //numQPs  = dims[1];
-  //numDims = dims[2];
-  //dl->qp_vector->dimensions(dims);
-  //vecDim  = dims[2]; //# of dofs/node
+  dl->qp_gradient->dimensions(dims);
+  numQPs  = dims[1];
+  numDims = dims[2];
+  dl->qp_vector->dimensions(dims);
+  vecDim  = dims[2]; //# of dofs/node
 
   this->setName("ShallowWaterSource"+PHX::TypeString<EvalT>::value);
-  
-  
-  //why dims from grad phi? what is in dims[0]
-  wGradBF.fieldTag().dataLayout().dimensions(dims);
-  numNodes = dims[1];
-  numQPs   = dims[2];
-  numDims  = dims[3];
-  
-  refWeights        .resize               (numQPs);
-  grad_at_cub_points.resize     (numNodes, numQPs, 2);
-  refPoints         .resize               (numQPs, 2);
-  nodal_jacobian.resize(numNodes, 2, 2);
-  nodal_inv_jacobian.resize(numNodes, 2, 2);
-  nodal_det_j.resize(numNodes);
-  
-  cubature->getCubature(refPoints, refWeights);
-  
-  //?
-  intrepidBasis->getValues(grad_at_cub_points, refPoints, Intrepid::OPERATOR_GRAD);
-  
-  U.fieldTag().dataLayout().dimensions(dims);
-  vecDim  = dims[2];
-  
-  std::vector<PHX::DataLayout::size_type> gradDims;
-  wGradBF.fieldTag().dataLayout().dimensions(gradDims);
-  
-  
-  gradDims.clear();
-  Ugrad.fieldTag().dataLayout().dimensions(gradDims);
-
   
   myPi = Aeras::ShallowWaterConstants::self().pi;
   
   earthRadius = Aeras::ShallowWaterConstants::self().earthRadius;
   
+  
+  //////////parameters for SW TC4 source
+  SU0 = 20.;
+  PHI0 = 1.0e5;
+  
   RLON0 = 0.;
   RLAT0 = myPi/4.;
   NPWR = 14.;
-  
-  Omega = 2.0*myPi/(24.*3600.); //this should be sitting in SW class
-  gravity = Aeras::ShallowWaterConstants::self().gravity;
   
   ALFA =  -0.03*(PHI0/(2.*Omega*sin(myPi/4.)));
   SIGMA = (2.*earthRadius/1.0e6)*(2.*earthRadius/1.0e6);
@@ -151,22 +90,6 @@ postRegistrationSetup(typename Traits::SetupData d,
 {
   this->utils.setFieldData(source,fm);
   this->utils.setFieldData(sphere_coord,fm);
-  
-  this->utils.setFieldData(U,fm);
-  this->utils.setFieldData(UNodal,fm);
-  this->utils.setFieldData(Ugrad,fm);
-  this->utils.setFieldData(UDot,fm);
-  this->utils.setFieldData(wBF,fm);
-  this->utils.setFieldData(wGradBF,fm);
-  //this->utils.setFieldData(GradBF,fm);
-  this->utils.setFieldData(mountainHeight,fm);
-  
-  this->utils.setFieldData(weighted_measure, fm);
-  this->utils.setFieldData(jacobian, fm);
-  this->utils.setFieldData(jacobian_inv, fm);
-  this->utils.setFieldData(jacobian_det, fm);
-  
-  
 }
 
 //**********************************************************************
@@ -198,93 +121,17 @@ evaluateFields(typename Traits::EvalData workset)
   }
   else if(sourceType == TC4) {
     
-    
-  /*
-  std::cout << "In evaluateFields for TC4." << std::endl; 
-  const RealType time = workset.current_time; //current time from workset
-    for(std::size_t cell = 0; cell < workset.numCells; ++cell) {
-      for(std::size_t qp = 0; qp < numQPs; ++qp) {
-        for (std::size_t i = 0; i < vecDim; ++i) { //loop over # of dofs/node
-          const MeshScalarT theta = sphere_coord(cell, qp, 0);
-          const MeshScalarT lambda = sphere_coord(cell, qp, 1);
-          source(cell, qp, i) = 0.0; //set this to some function involving time 
-        }
-      }
-    }
-  */
-    
-    /*
-    Intrepid::FieldContainer<ScalarT>  huAtNodes(numNodes,2);
-    Intrepid::FieldContainer<ScalarT>  div_hU(numQPs);
-    Intrepid::FieldContainer<ScalarT>  kineticEnergyAtNodes(numNodes);
-    Intrepid::FieldContainer<ScalarT>  gradKineticEnergy(numQPs,2);
-    Intrepid::FieldContainer<ScalarT>  potentialEnergyAtNodes(numNodes);
-    Intrepid::FieldContainer<ScalarT>  gradPotentialEnergy(numQPs,2);
-    Intrepid::FieldContainer<ScalarT>  uAtNodes(numNodes, 2);
-    Intrepid::FieldContainer<ScalarT>  curlU(numQPs);
-    Intrepid::FieldContainer<ScalarT>  coriolis(numQPs);
-    
-    
-    //containers for U and V components separately, I don't know how to
-    //pass to the gradient uAtNodes(:,0)
-    Intrepid::FieldContainer<ScalarT> ucomp(numNodes);
-    Intrepid::FieldContainer<ScalarT> vcomp(numNodes);
-    //containers for grads of velocity U, V components for viscosity
-    //note that we do not implement it for the most generality (any dimension velocity)
-    //because the rest of the code considers only 2D velocity (look at definition of uAtNodes)
-    Intrepid::FieldContainer<ScalarT> ugradNodes(numNodes,2);
-    Intrepid::FieldContainer<ScalarT> vgradNodes(numNodes,2);
-    
-    
-    for (std::size_t cell=0; cell < workset.numCells; ++cell) {
-      
-      // Depth Equation (Eq# 0)
-      huAtNodes.initialize();
-      div_hU.initialize();
-      
-      
-      for (std::size_t node=0; node < numNodes; ++node) {
-        ScalarT surfaceHeight = UNodal(cell,node,0);
-        ScalarT ulambda = UNodal(cell, node,1);
-        ScalarT utheta  = UNodal(cell, node,2);
-        huAtNodes(node,0) = surfaceHeight*ulambda;
-        huAtNodes(node,1) = surfaceHeight*utheta;
-      }
-      
-      divergence(huAtNodes, cell, div_hU);
-      
-      
-      for (std::size_t qp=0; qp < numQPs; ++qp) {
-        
-        for (std::size_t node=0; node < numNodes; ++node) {
-          
-          source(cell,node,0) += UDot(cell,qp,0)*wBF(cell, node, qp)
-          +  div_hU(qp)*wBF(cell, node, qp);
-        }
-      }
-    }  */
-    
-    
     ScalarT A = earthRadius;
-    
   
     const RealType time = workset.current_time; //current time from workset
-    
-    //        std::cout <<"time = "<< time <<std::endl;
     
     for(std::size_t cell = 0; cell < workset.numCells; ++cell) {
       for(std::size_t qp = 0; qp < numQPs; ++qp) {
         //for (std::size_t i = 0; i < vecDim; ++i) { //loop over # of dofs/node
           const MeshScalarT theta = sphere_coord(cell, qp, 0);
           const MeshScalarT lambda = sphere_coord(cell, qp, 1);
-          
-        
 
-        
           //source(cell, qp, i) = 0.0; //set this to some function involving time
-
-    
-        
           
           ScalarT TMSHFT = SU0*time/A;
           ScalarT DFDM   = 2.0*Omega;
@@ -338,9 +185,9 @@ evaluateFields(typename Traits::EvalData workset)
 
           ScalarT DMD2CL  = +cos(RLAT0)*cos(RLON-TMSHFT-RLON0)*TMPRY;
 
-        //cond, be 0 checked
+        //cond, potential singularity
           ScalarT PSIB    = ALFA*exp(-SIGMA*((1.0-C )/(1.0+C )));
-        //cond, be 0 checked
+        //cond, potential singularity
           ScalarT TMP1    = 2.0*SIGMA*PSIB /((1.0 + C )*(1.0 + C));
         
           ScalarT TMP2    = (SIGMA - (1.0 + C ))/((1.0 + C )*(1.0 + C));
@@ -368,7 +215,7 @@ evaluateFields(typename Traits::EvalData workset)
                          *(D2CDL  + 2.0*(DCDL *DCDL)*TMP2 )
                                   + 4.0*DCDL *DMDCDL *TMP2 );
 
-        ScalarT DLD2KM  = TMP1 *(DLD2CM  + 2.0*(DCDM *DCDM)
+          ScalarT DLD2KM  = TMP1 *(DLD2CM  + 2.0*(DCDM *DCDM)
                          *DCDL *TMP3  + 2.0*DCDL *TMP2 
                          *(D2CDM  + 2.0*(DCDM *DCDM)*TMP2 )
                                 + 4.0*DCDM *DMDCDL *TMP2 );
@@ -400,13 +247,10 @@ evaluateFields(typename Traits::EvalData workset)
           DIVFCG = DIVFCG + COR*(UT -BUB) - ACSJI*SNJ*BUB*BUB; //V
     
           
-        source(cell, qp, 0) = PHIFCG;
-        source(cell, qp, 1) = ETAFCG;
-        source(cell, qp, 2) = DIVFCG;
-           
-           
-    
-        //}
+          source(cell, qp, 0) = PHIFCG;
+          source(cell, qp, 1) = ETAFCG;
+          source(cell, qp, 2) = DIVFCG;
+        
       }
     }
     

@@ -71,14 +71,10 @@ ShallowWaterResid(const Teuchos::ParameterList& p,
   this->addDependentField(jacobian_inv);
   this->addDependentField(jacobian_det);
     
-
-    //this->addDependentField(hgrad);
-    
   this->addEvaluatedField(Residual);
 
   std::vector<PHX::DataLayout::size_type> dims;
-    
-  //og why dims from grad phi? what is in dims[0]
+  
   wGradBF.fieldTag().dataLayout().dimensions(dims);
   numNodes = dims[1];
   numQPs   = dims[2];
@@ -92,11 +88,10 @@ ShallowWaterResid(const Teuchos::ParameterList& p,
   nodal_det_j.resize(numNodes);
 
   cubature->getCubature(refPoints, refWeights);
-    
-    //?
+  
   intrepidBasis->getValues(grad_at_cub_points, refPoints, Intrepid::OPERATOR_GRAD);
 
-   this->setName("Aeras::ShallowWaterResid"+PHX::TypeString<EvalT>::value);
+  this->setName("Aeras::ShallowWaterResid"+PHX::TypeString<EvalT>::value);
 
 
   U.fieldTag().dataLayout().dimensions(dims);
@@ -108,8 +103,6 @@ ShallowWaterResid(const Teuchos::ParameterList& p,
 
   gradDims.clear();
   Ugrad.fieldTag().dataLayout().dimensions(gradDims);
-    
-    //U and Ugrad got dims, what about height?
 
 
 //  std::cout << " vecDim = " << vecDim << std::endl;
@@ -148,9 +141,7 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(jacobian_det, fm);
 
   this->utils.setFieldData(Residual,fm);
-    
-    
-    //this->utils.setFieldData(hgrad,fm);
+  
 }
 
 //**********************************************************************
@@ -192,7 +183,8 @@ evaluateFields(typename Traits::EvalData workset)
     // Depth Equation (Eq# 0)
     huAtNodes.initialize();
     div_hU.initialize();
-      
+    
+    surf.initialize();
     hgradNodes.initialize();
 
     for (std::size_t node=0; node < numNodes; ++node) {
@@ -224,18 +216,6 @@ evaluateFields(typename Traits::EvalData workset)
       }
     }
     
-    /*for (std::size_t qp=0; qp < numQPs; ++qp) {
-      
-      for (std::size_t node=0; node < numNodes; ++node) {
-        
-        std::cout <<" value of basis function wBF(cell, node, qp) " << wBF(cell, node, qp) <<" cell="<<cell
-        <<" node="<<node<<" qp="<<qp<<std::endl;
-        
-
-      }
-    }*/
-    
-    
   }
 
 
@@ -265,6 +245,8 @@ evaluateFields(typename Traits::EvalData workset)
       
       ucomp.initialize();
       vcomp.initialize();
+      ugradNodes.initialize();
+      vgradNodes.initialize();
 
       get_coriolis(cell, coriolis);
 

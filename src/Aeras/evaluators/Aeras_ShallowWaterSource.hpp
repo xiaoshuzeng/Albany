@@ -47,25 +47,8 @@ private:
           
   void get_coriolis(std::size_t cell, Intrepid::FieldContainer<ScalarT>  & coriolis);
 
-  // Input:// og what does this mean, input???
+  // Input:
   PHX::MDField<MeshScalarT,Cell,QuadPoint, Dim> sphere_coord;
-
-  PHX::MDField<MeshScalarT,Cell,Node,QuadPoint> wBF;
-  PHX::MDField<MeshScalarT,Cell,Node,QuadPoint,Dim> wGradBF;
-
-  PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> U;  //vecDim works but its really Dim+1
-  PHX::MDField<ScalarT,Cell,Node,VecDim> UNodal;
-  PHX::MDField<ScalarT,Cell,QuadPoint,VecDim,Dim> Ugrad;
-  PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> UDot;
-          
-  PHX::MDField<ScalarT,Cell,QuadPoint> mountainHeight;
-          
-  PHX::MDField<MeshScalarT,Cell,QuadPoint> weighted_measure;
-          
-  PHX::MDField<MeshScalarT,Cell,QuadPoint,Dim,Dim> jacobian;
-  PHX::MDField<MeshScalarT,Cell,QuadPoint,Dim,Dim> jacobian_inv;
-  PHX::MDField<MeshScalarT,Cell,QuadPoint> jacobian_det;
-  Intrepid::FieldContainer<RealType>    grad_at_cub_points;
 
   enum SOURCETYPE {NONE, TC4};
   SOURCETYPE sourceType;
@@ -73,44 +56,29 @@ private:
   // Output:
   PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> source;
 
-          
-          
   std::size_t numQPs, numDims, numNodes, vecDim, spatialDim;
-          
-  Teuchos::RCP<Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > > intrepidBasis;
-  Teuchos::RCP<Intrepid::Cubature<RealType> > cubature;
-  Intrepid::FieldContainer<RealType>    refPoints;
-  Intrepid::FieldContainer<RealType>    refWeights;
-  Intrepid::FieldContainer<MeshScalarT>  nodal_jacobian;
-  Intrepid::FieldContainer<MeshScalarT>  nodal_inv_jacobian;
-  Intrepid::FieldContainer<MeshScalarT>  nodal_det_j;
-          
-          
-  //PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> source;
           
   ScalarT gravity; // gravity parameter -- Sacado-ized for sensitivities
   ScalarT Omega;   //rotation of earth  -- Sacado-ized for sensitivities
 
           
-          ScalarT earthRadius; //Earth radius
-          //double testDuration; // =12 days, in seconds, should be a param from data_
-          ScalarT myPi; // a local copy of pi
+  ScalarT earthRadius; //Earth radius
+
+  ScalarT myPi; // a local copy of pi
+       
+  ///// SW TC4 parameters and routines
+  ScalarT SU0;
+  ScalarT PHI0;
+  ScalarT RLON0;
+  ScalarT RLAT0;
           
-          const ScalarT SU0 = 20.;
-          const ScalarT PHI0 = 1.0e5;
-          ScalarT RLON0;
-          ScalarT RLAT0;
+  ScalarT ALFA; //spelling is correct
+  ScalarT SIGMA;
+  ScalarT NPWR;
           
-          ScalarT ALFA; //spelling is correct
-          ScalarT SIGMA;
-          ScalarT NPWR;
-          
-          //double Omega;
-          //double gravity;
-          
-          ScalarT dbubf(const ScalarT lat);
-          ScalarT bubfnc(const ScalarT lat);
-          ScalarT d2bubf(const ScalarT lat);
+  ScalarT dbubf(const ScalarT lat);
+  ScalarT bubfnc(const ScalarT lat);
+  ScalarT d2bubf(const ScalarT lat);
           
           
 };

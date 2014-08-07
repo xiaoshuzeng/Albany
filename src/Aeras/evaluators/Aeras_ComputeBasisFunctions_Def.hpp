@@ -67,9 +67,6 @@ ComputeBasisFunctions(const Teuchos::ParameterList& p,
   // Pre-Calculate reference element quantitites
   cubature->getCubature(refPoints, refWeights);
   
-  //std::cout <<" refPoints " << refPoints << "  refWeights "<<refWeights <<std::endl;
-  
-  
   intrepidBasis->getValues(val_at_cub_points,  refPoints, Intrepid::OPERATOR_VALUE);
   intrepidBasis->getValues(grad_at_cub_points, refPoints, Intrepid::OPERATOR_GRAD);
 
@@ -87,7 +84,6 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(sphere_coord,fm);
   this->utils.setFieldData(jacobian_det,fm);
   this->utils.setFieldData(jacobian_inv,fm);
-  
   this->utils.setFieldData(jacobian,fm);
   this->utils.setFieldData(BF,fm);
   this->utils.setFieldData(wBF,fm);
@@ -150,9 +146,9 @@ evaluateFields(typename Traits::EvalData workset)
       for (int q = 0; q<numQPs;          ++q)
         for (int b1= 0; b1<basisDim;     ++b1)
           for (int b2= 0; b2<basisDim;   ++b2)
-            for (int d = 0; d<spatialDim;++d){
+            for (int d = 0; d<spatialDim;++d)
               jacobian(e,q,b1,b2) = 0;
-            }
+      
 
       for (int q = 0; q<numQPs;         ++q) 
         for (int d = 0; d<spatialDim;   ++d) 
@@ -281,9 +277,6 @@ evaluateFields(typename Traits::EvalData workset)
       MeshScalarT a = refPoints(q,0);
       MeshScalarT b = refPoints(q,1);
       
-      
-      //std::cout << "q= "<< q <<" reference points a,b = "<<a <<" "<<b<<std::endl;
-      
       Q.initialize();
       C.initialize();
       xx.initialize();
@@ -371,47 +364,6 @@ evaluateFields(typename Traits::EvalData workset)
         for (int j=0; j<2; j++)
           for (int k=0; k<3; k++)
             jacobian(e,q,i,j) += D1(i,k)*D4(k,j)/rr*earthRadius;
-      
-      
-      /*if ((e == 0)&&(q == 0)){
-       
-       std::cout << "For cell=0 print sphere_coords:"<<std::endl;
-       
-       for(int v = 0; v<numNodes; v++){
-       //coordVec(e,v,d)
-       
-       std::cout << "coordVec(v="<<v<<")=" << coordVec(e,v,0)<<", "<<
-       coordVec(e,v,1)<<", "<<coordVec(e,v,2)<<std::endl;
-       }
-       
-       for(int q = 0; q<numQPs; q++){
-       std::cout << "sph_coord(q="<<q<<")=" << sphere_coord(e,q,0)<<", "<<sphere_coord(e,q,1)<<std::endl;
-       }
-       
-       std::cout << "Jacobian at q=0:"<<std::endl;
-       std::cout <<" (0,0) = "<<jacobian(e,0,0,0)/earthRadius <<std::endl;
-       std::cout <<" (0,1) = "<<jacobian(e,0,0,1)/earthRadius <<std::endl;
-       std::cout <<" (1,0) = "<<jacobian(e,0,1,0)/earthRadius <<std::endl;
-       std::cout <<" (1,1) = "<<jacobian(e,0,1,1)/earthRadius <<std::endl;
-       
-       
-       
-       std::cout << "ref points a ="<<a<<", b="<<b<<std::endl;
-       std::cout << "lon ="<< longitude <<", lat="<< latitude <<std::endl;
-       std::cout << "CartC ="<< CartC(0) <<", "<< CartC(1) << ", "<<CartC(2) <<std::endl;
-       
-       std::cout << "rr = "<<rr<<std::endl;
-       
-       std::cout << "C " << C << std::endl;
-       
-       std::cout << "dd " << dd << std::endl;
-       std::cout << "D1 " << D1 << std::endl;
-       std::cout << "D2 " << D2 << std::endl;
-       std::cout << "D3 " << D3 << std::endl;
-       std::cout << "D4 " << D4 << std::endl;
-       
-       }//end cout statements
-       */
       
     }//end q loop for quad points
     
