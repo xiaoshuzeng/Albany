@@ -59,7 +59,7 @@ ShallowWaterResponseL2Error(Teuchos::ParameterList& p,
     earthRadius = Aeras::ShallowWaterConstants::self().earthRadius;
     gravity = Aeras::ShallowWaterConstants::self().gravity;
     
-    Omega = 2.0*myPi/(24.*3600.); //this should be sitting in SW class
+    Omega = 2.0*myPi/(24.*3600.); //this should be sitting in SW Constants class
     
     rlon0 = 0.;
     rlat0 = myPi/4.;
@@ -217,8 +217,7 @@ evaluateFields(typename Traits::EvalData workset)
     ////og: this is a patch to get rid of conversion error message
     const double myPi_local = Aeras::ShallowWaterConstants::self().pi;
      
-     
-    //og: why this is static?
+    //repeated code
     static const double DIST_THRESHOLD = Aeras::ShallowWaterConstants::self().distanceThreshold;
     
     const RealType time = workset.current_time; //current time from workset
@@ -233,7 +232,7 @@ evaluateFields(typename Traits::EvalData workset)
         else if (lambda < 0) lambda += 2*myPi_local;
         /////////
         
-        ///time!!!
+        ///time shift
         ScalarT TMSHFT = su0*time/a;
         
         ScalarT snj = std::sin(theta);

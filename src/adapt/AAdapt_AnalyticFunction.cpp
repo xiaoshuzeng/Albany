@@ -903,7 +903,6 @@ void AAdapt::AerasTC5Init::compute(double* solution, const double* X) {
 
 //*****************************************************************************
 //TC Galewsky
-//Velocity is init-ed, not const wrt time though
 
 AAdapt::AerasTCGalewskyInit::AerasTCGalewskyInit(int neq_, int spatialDim_, Teuchos::Array<double> data_)
 : spatialDim(spatialDim_), neq(neq_), data(data_) {
@@ -923,8 +922,7 @@ AAdapt::AerasTCGalewskyInit::AerasTCGalewskyInit(int neq_, int spatialDim_, Teuc
   
     umax = 80.;
     h0 = 10158.2951; //note that this const was grabbed from homme
-    //because otherwise global integration
-    //is needed
+    //because otherwise global integration is needed
   
     al = 1./3.;
     beta = 1./15.;
@@ -954,8 +952,6 @@ double AAdapt::AerasTCGalewskyInit::hperturb(const double lon, const double lat)
 void AAdapt::AerasTCGalewskyInit::compute(double* solution, const double* X) {
   
     const double a = earthRadius;
-    
-    //const double h0g = data[0];
     
     const double x = X[0];  //assume that the mesh has unit radius
     const double y = X[1];
