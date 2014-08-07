@@ -28,8 +28,10 @@ Aeras::Layouts::Layouts (const int worksetSize,
   using PHX::MDALayout;
 
   // Solution Fields
-  qp_scalar_level   = rcp(new MDALayout<Cell,QuadPoint,Dim>(worksetSize,numQPts,numLevels));
-  qp_gradient_level = rcp(new MDALayout<Cell,QuadPoint,Dim,Dim>(worksetSize,numQPts,numLevels,numDim));
-  node_scalar_level = rcp(new MDALayout<Cell,Node,Dim>(worksetSize,numNodes,numLevels));
+  qp_scalar_level   = rcp(new MDALayout<Cell,QuadPoint,Dummy>     (worksetSize,numQPts,numLevels));
+  qp_vector_level   = rcp(new MDALayout<Cell,QuadPoint,Dummy,Dim> (worksetSize,numQPts,numLevels,numDim));
+  qp_gradient_level = rcp(new MDALayout<Cell,QuadPoint,Dummy,Dim> (worksetSize,numQPts,numLevels,numDim));
+  node_scalar_level = rcp(new MDALayout<Cell,Node,     Dummy>     (worksetSize,numNodes,numLevels));
+  node_vector_level = rcp(new MDALayout<Cell,Node,     Dummy,Dim> (worksetSize,numNodes,numLevels,numDim));
 }
 

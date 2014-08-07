@@ -43,10 +43,11 @@ Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::
   using namespace Albany;
 
   // QuadPoint fields
-  // dim[0] = nCells, dim[1] = nQP, dim[2] = nVec dim[3] = nVec
+  // dim[0] = nCells, dim[1] = nQP, dim[2] = nVec dim[3] = nVec dim[4] = nVec
   typedef typename AbstractSTKFieldContainer::QPScalarFieldType QPSFT;
   typedef typename AbstractSTKFieldContainer::QPVectorFieldType QPVFT;
   typedef typename AbstractSTKFieldContainer::QPTensorFieldType QPTFT;
+  typedef typename AbstractSTKFieldContainer::QPTensor3FieldType QPT3FT;
 
   // Code to parse the vector of StateStructs and create STK fields
   for(std::size_t i = 0; i < sis->size(); i++) {
@@ -96,7 +97,21 @@ Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::
 
 #endif
         }
-        // Something other than a scalar, vector, or tensor at the QPs is an error
+        else if(dim.size() == 5){ // Tensor3 at QPs
+          qptensor3_states.push_back(& metaData->declare_field< QPT3FT >(st.name));
+          // Multi-dim order is Fortran Ordering, so reversed here
+          stk_classic::mesh::put_field(*qptensor3_states.back() , metaData->element_rank(),
+                           metaData->universal_part(), dim[4], dim[3], dim[2], dim[1]);
+          //Debug
+          //      cout << "Allocating qpt field name " << qptensor_states.back()->name() <<
+          //            " size: (" << dim[0] << ", " << dim[1] << ", " << dim[2] << ", " << dim[3] << ", " << dim[4] << ")" <<endl;
+#ifdef ALBANY_SEACAS
+
+          if(st.output) stk_classic::io::set_field_role(*qptensor3_states.back(), Ioss::Field::TRANSIENT);
+
+#endif
+        }
+        // Something other than a scalar, vector, tensor, or tensor3 at the QPs is an error
         else TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
             "Error: GenericSTKFieldContainer - cannot match QPData");
     } // end QuadPoint

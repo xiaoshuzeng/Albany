@@ -335,13 +335,6 @@ AAdapt::AerasXZHydrostatic::AerasXZHydrostatic(int neq_, int numDim_, Teuchos::A
                              << " " << numDim << std::endl);
 }
 void AAdapt::AerasXZHydrostatic::compute(double* x, const double* X) {
-  //Flattened data layout
-  //x[0]                                = SP
-  //x[1]             ... x[1*numLevels] = u
-  //x[1*numLevels+1] ... x[2*numLevels] = T
-  //x[2*numLevesl+1] ... x[3*numLevels] = q0
-  //x[3*numLevesl+1] ... x[4*numLevels] = q1
-  //x[4*numLevesl+1] ... x[5*numLevels] = q2
   const int numLevels  = (int) data[0];
   const int numTracers = (int) data[1];
   const double SP0     = data[2];
@@ -525,16 +518,6 @@ void AAdapt::AerasXZHydrostaticHotBubble::compute(double* x, const double* X) {
     D[i] = Pressure[i]/(R*Temperature[i]);
   }
 
-  static bool first_time=true;
-  if (first_time) {
-    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__
-    <<" Pressure["<<i<<"]="<<Pressure[i]
-    <<" Temperature["<<i<<"]="<<Temperature[i]
-    <<" Density["<<i<<"]="<<D[i]<<std::endl;
-    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__<<" Pi["<<i<<"]="<<Pi[i]<<std::endl;
-  }
-  first_time = false;
-
   int offset = 0;
   //Surface Pressure
   x[offset++] = SP0;
@@ -569,60 +552,107 @@ void AAdapt::AerasXZHydrostaticCloud::compute(double* x, const double* X) {
   const int numTracers = (int) data[1];
   const double SP0     =       data[2];
   const double U0      =       data[3];
-  const double T0      =       data[4];
+  //const double T0      =       data[4];
   std::vector<double> q0(numTracers);
   for (int nt = 0; nt<numTracers; ++nt) {
-    q0[nt] = data[5+nt];
+    q0[nt] = data[4+nt];
   }
 
   const double Ptop = 101.325;
   const double P0   = 101325;
   const double Ps   = 101325;
+  const double Ttop = 235;
+  const double T0   = 288;
+  const double Ts   = T0;
+  const double DT   = 4.8e5;
   const double R    = 287;
+  const double g    = 9.80616;
+  const double Gamma= 0.005;  
+  const double Dtop = 0.00385;
+  const double Dbot = 1.225;
+  const double EtaT = 0.2;
+  const int    N    = numLevels-1;
 
-  const Aeras::Eta<DoubleType> &E = Aeras::Eta<DoubleType>::self(Ptop,P0,numLevels);
+  const Aeras::Eta<DoubleType> &EP = Aeras::Eta<DoubleType>::self(Ptop,P0,numLevels);
 
   std::vector<double> Pressure(numLevels);
   std::vector<double> Pi(numLevels);
-  std::vector<double> T(numLevels);
-  for (int i=0; i<numLevels; ++i) Pressure[i] = E.A(i)*E.p0() + E.B(i)*Ps;
+  std::vector<double> Temperature(numLevels);
+  std::vector<double> D(numLevels);
+  std::vector<double> qvs(numLevels);
+  std::vector<double> qv(numLevels);
+  std::vector<double> qc(numLevels);
+  std::vector<double> qr(numLevels);
+
+  for (int i=0; i<numLevels; ++i) Pressure[i] = EP.A(i)*EP.p0() + EP.B(i)*Ps;
   
   for (int i=0; i<numLevels; ++i) {
-    const double pp   = i<numLevels-1 ? 0.5*(Pressure[i] + Pressure[i+1]) : Ps;
-    const double pm   = i             ? 0.5*(Pressure[i] + Pressure[i-1]) : E.ptop();
-    Pi[i] = (pp - pm) /E.delta(i);
+    const double Eta =  EP.eta(i);
+    Temperature[i] =  T0 * std::pow(Eta,R*Gamma/g);
+    if (Eta < EtaT)Temperature[i] += DT*std::pow(EtaT-Eta, 5);
   }
 
-  for (int i=0; i<numLevels; ++i) T[i] = Pressure[i]/(R*Pi[i]*E.delta(i));
+  for (int i=0; i<numLevels; ++i) {
+    const double pp   = i<numLevels-1 ? 0.5*(Pressure[i] + Pressure[i+1]) : Ps;
+    const double pm   = i             ? 0.5*(Pressure[i] + Pressure[i-1]) : EP.ptop();
+    Pi[i] = (pp - pm) / EP.delta(i);
+  }
 
+  for (int i=0; i<numLevels; ++i) {
+    D[i] = Pressure[i]/(R*Temperature[i]);
+  }
+
+  //Compute saturation mixture ratio qvs
+  double eps = 0.622;
+  for (int i=0; i<numLevels; ++i) {
+    double TC = Temperature[i] - 273.13;
+    double Pmb = Pressure[i] / 100.0;                          // (1bar/100000Pa)*(1000mbar/1bar)
+    qvs[i] = eps * 6.112 * exp( (17.67*TC)/(TC+243.5) ) / Pmb;
+  }
+
+  //Initialize qv, qc, qr
+  for (int i=0; i<numLevels; ++i) {
+    qv[i] = 0.1*qvs[i];
+    qc[i] = q0[1];
+    qr[i] = q0[2];
+  } 
 
   static bool first_time=true;
   if (first_time) {
-    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__<<" Pressure["<<i<<"]="<<Pressure[i]<<std::endl;
-    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__<<" Pi["<<i<<"]="<<Pi[i]<<std::endl;
-    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__<<" T["<<i<<"]="<<T[i]<<std::endl;
+    for (int i=0; i<numLevels; ++i) std::cout<<__FILE__
+    <<" Pressure["<<i<<"]="<<Pressure[i]
+    <<" Temperature["<<i<<"]="<<Temperature[i]
+    <<" Density["<<i<<"]="<<D[i]
+    <<" qvs["<<i<<"]="<<qvs[i]
+    <<" Pi["<<i<<"]="<<Pi[i]<<std::endl;
   }
+  first_time = false;
 
   int offset = 0;
   //Surface Pressure
   x[offset++] = SP0;
   
-  const double pi = 3.14159265;
   for (int i=0; i<numLevels; ++i) {
     //Velx
     x[offset++] = U0;
     //Temperature
-    x[offset++] = T[i];
-  }
-  first_time = false;
-
-  //Tracers
-  for (int nt=0; nt<numTracers; ++nt) {
-    for (int i=0; i<numLevels; ++i) {
-      x[offset++] = Pi[i]*q0[nt];
-    }
+    x[offset++] = Temperature[i];
   }
 
+  //Vapor
+  for (int i=0; i<numLevels; ++i) {
+    x[offset++] = Pi[i]*qv[i];
+  }
+
+  //cloud water
+  for (int i=0; i<numLevels; ++i) {
+    x[offset++] = Pi[i]*qc[i];
+  }
+
+  //rain
+  for (int i=0; i<numLevels; ++i) {
+    x[offset++] = Pi[i]*qr[i];
+  }
 }
 
 //*****************************************************************************
@@ -634,13 +664,6 @@ AAdapt::AerasHydrostatic::AerasHydrostatic(int neq_, int numDim_, Teuchos::Array
                              << " " << numDim << std::endl);
 }
 void AAdapt::AerasHydrostatic::compute(double* x, const double* X) {
-  //Flattened data layout
-  //x[0]                                = SP
-  //x[1]             ... x[1*numLevels] = u
-  //x[1*numLevels+1] ... x[2*numLevels] = T
-  //x[2*numLevesl+1] ... x[3*numLevels] = q0
-  //x[3*numLevesl+1] ... x[4*numLevels] = q1
-  //x[4*numLevesl+1] ... x[5*numLevels] = q2
   int numLevels  = (int) data[0];
   int numTracers = (int) data[1];
   double SP0     = data[2];
