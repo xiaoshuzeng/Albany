@@ -19,17 +19,20 @@ ScatterResidualBase(const Teuchos::ParameterList& p,
                     const Teuchos::RCP<Aeras::Layouts>& dl) :
   worksetSize(dl->node_scalar             ->dimension(0)),
   numNodes   (dl->node_scalar             ->dimension(1)),
+  numDims    (dl->node_qp_gradient        ->dimension(3)),
   numLevels  (dl->node_scalar_level       ->dimension(2)), 
-  numFields  (0), numNodeVar(0), numLevelVar(0), numTracerVar(0)
+  numFields  (0), numNodeVar(0), numVectorLevelVar(0),  numScalarLevelVar(0), numTracerVar(0)
 {
-  const Teuchos::ArrayRCP<std::string> node_names       = p.get< Teuchos::ArrayRCP<std::string> >("Node Residual Names");
-  const Teuchos::ArrayRCP<std::string> level_names      = p.get< Teuchos::ArrayRCP<std::string> >("Level Residual Names");
-  const Teuchos::ArrayRCP<std::string> tracer_names     = p.get< Teuchos::ArrayRCP<std::string> >("Tracer Residual Names");
+  const Teuchos::ArrayRCP<std::string> node_names         = p.get< Teuchos::ArrayRCP<std::string> >("Node Residual Names");
+  const Teuchos::ArrayRCP<std::string> vector_level_names = p.get< Teuchos::ArrayRCP<std::string> >("Vector Level Residual Names");
+  const Teuchos::ArrayRCP<std::string> scalar_level_names = p.get< Teuchos::ArrayRCP<std::string> >("Scalar Level Residual Names");
+  const Teuchos::ArrayRCP<std::string> tracer_names       = p.get< Teuchos::ArrayRCP<std::string> >("Tracer Residual Names");
 
   numNodeVar   = node_names  .size();
-  numLevelVar  = level_names .size();
+  numVectorLevelVar  = vector_level_names .size();
+  numScalarLevelVar  = scalar_level_names .size();
   numTracerVar = tracer_names.size();
-  numFields = numNodeVar +  numLevelVar + numTracerVar;
+  numFields = numNodeVar +  numVectorLevelVar + numScalarLevelVar +  numTracerVar;
 
   val.resize(numFields);
 
@@ -39,9 +42,12 @@ ScatterResidualBase(const Teuchos::ParameterList& p,
     val[eq] = mdf;
     this->addDependentField(val[eq]);
   }   
-  for (int i = 0; i < numLevelVar; ++i, ++eq) {
-    if (i) {PHX::MDField<ScalarT,Cell,Node> mdf(level_names[i],dl->node_scalar_level); val[eq] = mdf;}
-    else   {PHX::MDField<ScalarT,Cell,Node> mdf(level_names[i],dl->node_vector_level); val[eq] = mdf;}
+  for (int i = 0; i < numVectorLevelVar; ++i, ++eq) {
+    PHX::MDField<ScalarT,Cell,Node> mdf(vector_level_names[i],dl->node_vector_level); val[eq] = mdf;
+    this->addDependentField(val[eq]);
+  }
+  for (int i = 0; i < numScalarLevelVar; ++i, ++eq) {
+    PHX::MDField<ScalarT,Cell,Node> mdf(scalar_level_names[i],dl->node_scalar_level); val[eq] = mdf;
     this->addDependentField(val[eq]);
   }
   for (int i = 0; i < numTracerVar; ++i, ++eq) {
@@ -93,12 +99,17 @@ evaluateFields(typename Traits::EvalData workset)
       }
       eq += this->numNodeVar;
       for (int level = 0; level < this->numLevels; level++) { 
-        for (int j = eq; j < eq+this->numLevelVar; ++j, ++n) {
-          if (j==eq) (*f)[eqID[n]] += (this->val[j])(cell,node,level,0);
-          else       (*f)[eqID[n]] += (this->val[j])(cell,node,level);
+        for (int j = eq; j < eq+this->numVectorLevelVar; ++j) {
+          for (int dim = 0; dim < this->numDims; ++dim, ++n) {
+            (*f)[eqID[n]] += (this->val[j])(cell,node,level,dim);
+          }
+        }
+        for (int j = eq+this->numVectorLevelVar; 
+                 j < eq+this->numVectorLevelVar + this->numScalarLevelVar; ++j, ++n) {
+          (*f)[eqID[n]] += (this->val[j])(cell,node,level);
         }
       }
-      eq += this->numLevelVar;
+      eq += this->numVectorLevelVar + this->numScalarLevelVar;
       for (int level = 0; level < this->numLevels; ++level) { 
         for (int j = eq; j < eq+this->numTracerVar; ++j, ++n) {
           (*f)[eqID[n]] += (this->val[j])(cell,node,level);
@@ -161,9 +172,9 @@ evaluateFields(typename Traits::EvalData workset)
       }
       eq += this->numNodeVar;
       for (int level = 0; level < this->numLevels; level++) { 
-        for (int j = eq; j < eq+this->numLevelVar; ++j, ++n) {
-          if (j==eq) {
-            const ScalarT *valptr = &(this->val[j])(cell,node,level,0);
+        for (int j = eq; j < eq+this->numVectorLevelVar; ++j) {
+          for (int dim = 0; dim < this->numDims; ++dim, ++n) {
+            const ScalarT *valptr = &(this->val[j])(cell,node,level,dim);
             if (loadResid) f->SumIntoMyValue(eqID[n], 0, valptr->val());
             if (valptr->hasFastAccess()) {
               if (workset.is_adjoint) {
@@ -175,23 +186,25 @@ evaluateFields(typename Traits::EvalData workset)
                 Jac->SumIntoMyValues(eqID[n], col.size(), &(valptr->fastAccessDx(0)), &col[0]);
               }
             }
-          } else {
-            const ScalarT *valptr = &(this->val[j])(cell,node,level);
-            if (loadResid) f->SumIntoMyValue(eqID[n], 0, valptr->val());
-            if (valptr->hasFastAccess()) {
-              if (workset.is_adjoint) {
-                // Sum Jacobian transposed
-                for (int i=0; i<col.size(); ++i)
-                  Jac->SumIntoMyValues(col[i], 1, &(valptr->fastAccessDx(i)), &eqID[n]);
-              } else {
-                // Sum Jacobian entries all at once
-                Jac->SumIntoMyValues(eqID[n], col.size(), &(valptr->fastAccessDx(0)), &col[0]);
-              }
-            } // has fast access
-          }
+          } 
+        }
+        for (int j = eq+this->numVectorLevelVar; 
+                 j < eq+this->numVectorLevelVar+this->numScalarLevelVar; ++j, ++n) {
+          const ScalarT *valptr = &(this->val[j])(cell,node,level);
+          if (loadResid) f->SumIntoMyValue(eqID[n], 0, valptr->val());
+          if (valptr->hasFastAccess()) {
+            if (workset.is_adjoint) {
+              // Sum Jacobian transposed
+              for (int i=0; i<col.size(); ++i)
+                Jac->SumIntoMyValues(col[i], 1, &(valptr->fastAccessDx(i)), &eqID[n]);
+            } else {
+              // Sum Jacobian entries all at once
+              Jac->SumIntoMyValues(eqID[n], col.size(), &(valptr->fastAccessDx(0)), &col[0]);
+            }
+          } // has fast access
         }
       }
-      eq += this->numLevelVar;
+      eq += this->numVectorLevelVar+this->numScalarLevelVar;
       for (int level = 0; level < this->numLevels; ++level) { 
         for (int j = eq; j < eq+this->numTracerVar; ++j, ++n) {
           const ScalarT *valptr = &(this->val[j])(cell,node,level);
@@ -260,9 +273,9 @@ evaluateFields(typename Traits::EvalData workset)
       }
       eq += this->numNodeVar;
       for (int level = 0; level < this->numLevels; level++) { 
-        for (int j = eq; j < eq+this->numLevelVar; ++j, ++n) {
-          if (j==eq) {
-            valptr = &(this->val[j])(cell,node,level,0);
+        for (int j = eq; j < eq+this->numVectorLevelVar; ++j) {
+          for (int dim = 0; dim < this->numDims; ++dim, ++n) {
+            valptr = &(this->val[j])(cell,node,level,dim);
             if (f != Teuchos::null) f->SumIntoMyValue(eqID[n], 0, valptr->val());
             if (JV != Teuchos::null)
               for (int col=0; col<workset.num_cols_x; col++)
@@ -270,19 +283,21 @@ evaluateFields(typename Traits::EvalData workset)
             if (fp != Teuchos::null)
               for (int col=0; col<workset.num_cols_p; col++)
                 fp->SumIntoMyValue(eqID[n], col, valptr->dx(col+workset.param_offset));
-          } else {
-            valptr = &(this->val[j])(cell,node,level);
-            if (f != Teuchos::null) f->SumIntoMyValue(eqID[n], 0, valptr->val());
-            if (JV != Teuchos::null)
-              for (int col=0; col<workset.num_cols_x; col++)
-                JV->SumIntoMyValue(eqID[n], col, valptr->dx(col));
-            if (fp != Teuchos::null)
-              for (int col=0; col<workset.num_cols_p; col++)
-                fp->SumIntoMyValue(eqID[n], col, valptr->dx(col+workset.param_offset));
-          }
+          } 
+        }
+        for (int j = eq+this->numVectorLevelVar; 
+                 j < eq+this->numVectorLevelVar+this->numScalarLevelVar; ++j,++n) {
+          valptr = &(this->val[j])(cell,node,level);
+          if (f != Teuchos::null) f->SumIntoMyValue(eqID[n], 0, valptr->val());
+          if (JV != Teuchos::null)
+            for (int col=0; col<workset.num_cols_x; col++)
+              JV->SumIntoMyValue(eqID[n], col, valptr->dx(col));
+          if (fp != Teuchos::null)
+            for (int col=0; col<workset.num_cols_p; col++)
+              fp->SumIntoMyValue(eqID[n], col, valptr->dx(col+workset.param_offset));
         }
       }
-      eq += this->numLevelVar;
+      eq += this->numVectorLevelVar+this->numScalarLevelVar;
       for (int level = 0; level < this->numLevels; ++level) { 
         for (int j = eq; j < eq+this->numTracerVar; ++j, ++n) {
           valptr = &(this->val[j])(cell,node,level);
