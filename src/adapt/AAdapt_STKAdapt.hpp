@@ -20,9 +20,7 @@
 #include "PHAL_Dimension.hpp"
 
 #include "AAdapt_STKUnifSizeField.hpp"
-#ifdef HAZ_PERCEPT
 #include "UniformRefinerPattern.hpp"
-#endif
 
 namespace AAdapt {
 
@@ -70,10 +68,8 @@ class STKAdapt : public AbstractAdapter {
 
     Albany::STKDiscretization* stk_discretization;
 
-#ifdef HAZ_PERCEPT
     Teuchos::RCP<stk::percept::PerceptMesh> eMesh;
     Teuchos::RCP<stk::adapt::UniformRefinerPatternBase> refinerPattern;
-#endif
 
     int num_iterations;
 

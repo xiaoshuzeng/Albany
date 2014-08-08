@@ -298,8 +298,17 @@ Albany::StateManager::setStateArrays(const Teuchos::RCP<Albany::AbstractDiscreti
                      esa[ws][stateName](cell, qp, i, j) = init_val;
               break;
 
+            case 5:
+              for (int cell = 0; cell < dims[0]; ++cell)
+                for (int qp = 0; qp < dims[1]; ++qp)
+                  for (int i = 0; i < dims[2]; ++i)
+                   for (int j = 0; j < dims[3]; ++j)
+                     for (int k = 0; k < dims[4]; ++k)
+                       esa[ws][stateName](cell, qp, i, j, k) = init_val;
+              break;
+
             default:
-              TEUCHOS_TEST_FOR_EXCEPTION(size<2||size>4, std::logic_error,
+              TEUCHOS_TEST_FOR_EXCEPTION(size<2||size>5, std::logic_error,
                        "Something is wrong during scalar state variable initialization: " << size);
           }
 

@@ -113,26 +113,19 @@ public:
   BucketArray( const field_type & f , const stk::mesh::Bucket & b )
   {
     if ( b.field_data_is_allocated(f) ) {
-      std::cout << "FOR FIELD: " << f.name() << ", num scalars is: " << stk::mesh::field_scalars_per_entity(f, b) << ", rank is: " << f.field_array_rank() << std::endl;
-
       int stride[3];
       if (f.field_array_rank() == 1) {
         stride[0] = stk::mesh::field_scalars_per_entity(f, b);
       }
       else if (f.field_array_rank() == 2) {
         int dim0 = stk::mesh::find_restriction(f, b.entity_rank(), b.supersets()).dimension();
-        std::cout << "  dim0 stride: " << dim0 << std::endl;
         stride[0] = dim0;
-        std::cout << "  dim1 stride: " << stk::mesh::field_scalars_per_entity(f, b) << std::endl;
         stride[1] = stk::mesh::field_scalars_per_entity(f, b);
       }
       else if (f.field_array_rank() == 3) {
         int dim0 = stk::mesh::find_restriction(f, b.entity_rank(), b.supersets()).dimension();
-        std::cout << "  dim0 stride: " << dim0 << std::endl;
         stride[0] = dim0;
-        std::cout << "  dim1 stride: " << get_size<Tag2>(b) * dim0 << std::endl;
         stride[1] = get_size<Tag2>(b) * dim0;
-        std::cout << "  dim2 stride: " << stk::mesh::field_scalars_per_entity(f, b) << std::endl;
         stride[2] = stk::mesh::field_scalars_per_entity(f, b);
       }
       else {

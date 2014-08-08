@@ -134,8 +134,8 @@ namespace Albany {
 
 #include "Strain.hpp"
 #include "DefGrad.hpp"
-#include "HMC_Stresses.hpp"
 #include "PHAL_SaveStateField.hpp"
+#include "UpdateField.hpp"
 #include "ElasticityResid.hpp"
 #include "HMC_MicroResidual.hpp"
 
@@ -209,14 +209,24 @@ Albany::HMCProblem::constructEvaluators(
 
    Albany::EvaluatorUtils<EvalT, PHAL::AlbanyTraits> evalUtils(dl);
 
-   const int numMacroScales = 1;
+   // independent variables
+   std::string strDisplacement("Displacement");
+   std::string strMicrostrain("Microstrain");
 
-   // Define Field Names
+   // Define Field Names:  
+   /*\begin{text}
+   The 'Displacement' and 'Microstrain_n' variables defined below are increments, i.e. $\Delta u_{Ii}$, etc.
+   \end{text}*/
+   // displacement increment
+   //   macro
+   const int numMacroScales = 1;
    Teuchos::ArrayRCP<std::string> macro_dof_names(numMacroScales);
-   macro_dof_names[0] = "Displacement";
+   std::stringstream dofname; dofname << "Delta" << strDisplacement;
+   macro_dof_names[0] = dofname.str();
    Teuchos::ArrayRCP<std::string> macro_resid_names(numMacroScales);
    macro_resid_names[0] = macro_dof_names[0] + " Residual";
 
+   //   micro
    Teuchos::ArrayRCP< Teuchos::ArrayRCP<std::string> > micro_dof_names(numMicroScales);
    Teuchos::ArrayRCP< Teuchos::ArrayRCP<std::string> > micro_resid_names(numMicroScales);
    Teuchos::ArrayRCP< Teuchos::ArrayRCP<std::string> > micro_scatter_names(numMicroScales);
@@ -225,12 +235,14 @@ Albany::HMCProblem::constructEvaluators(
       micro_resid_names[i].resize(1);
       micro_scatter_names[i].resize(1);
       std::stringstream dofname;
-      dofname << "Microstrain_" << i;
+      dofname << "Delta" << strMicrostrain << "_" << i;
       micro_dof_names[i][0] = dofname.str();
       micro_resid_names[i][0] = dofname.str() + " Residual";
       micro_scatter_names[i][0] = dofname.str() + " Scatter";
     }
 
+   // acceleration 
+   //   macro
    Teuchos::ArrayRCP<std::string> macro_dof_names_dotdot(numMacroScales);
    Teuchos::ArrayRCP<std::string> macro_resid_names_dotdot(numMacroScales);
    Teuchos::ArrayRCP< Teuchos::ArrayRCP<std::string> > micro_dof_names_dotdot(numMicroScales);
@@ -238,6 +250,7 @@ Albany::HMCProblem::constructEvaluators(
    Teuchos::ArrayRCP< Teuchos::ArrayRCP<std::string> > micro_scatter_names_dotdot(numMicroScales);
    macro_dof_names_dotdot[0] = macro_dof_names[0]+"_dotdot";
    macro_resid_names_dotdot[0] = macro_resid_names[0]+" Residual";
+   //   micro
    for(int i=0;i<numMicroScales;i++){
      micro_dof_names_dotdot[i].resize(1);
      micro_resid_names_dotdot[i].resize(1);
@@ -247,6 +260,111 @@ Albany::HMCProblem::constructEvaluators(
      micro_scatter_names_dotdot[i][0] = micro_scatter_names_dotdot[i][0]+" Scatter";
    }
 
+  // Temporary variable used numerous times below
+  Teuchos::RCP<PHX::Evaluator<AlbanyTraits> > ev;
+
+
+// Create displacement state variable.  
+/*\begin{text} 
+   The total displacement variable is registered as two state (i.e., registerOldState=true),
+   so Displacement is at state N+1 and Displacement_old is at N. \\
+   \textbf{DEPENDENT FIELDS:} \\
+     None. \\
+  \textbf{EVALUATED FIELDS:} \\
+  \begin{tabular}{l l l l}
+     $u_{Ii}^N$     & Displacement at state N   & "Displacement_current"  & dims(cell,I=nNodes,i=vecDim) \\
+     $u_{Ii}^{N+1}$ & Displacement at state N+1 & "Displacement_updated"  & dims(cell,I=nNodes,i=vecDim)
+  \end{tabular}
+\end{text}*/
+  std::string strDisplacement_Updated = strDisplacement+"_updated"; // updated state, i.e., state at N+1
+  std::string strDisplacement_Current = strDisplacement+"_current"; // current state, i.e., state at N
+  {
+    RCP<ParameterList> p = rcp(new ParameterList);
+    p = stateMgr.registerStateVariable(strDisplacement_Current,dl->node_vector, dl->dummy, eb_name, 
+               /* init type = */       "scalar", 
+               /* init value = */       0.0, 
+               /* registerOldState = */ true,
+               /* write as output = */ strDisplacement_Updated);
+    ev = rcp(new PHAL::SaveStateField<EvalT,AlbanyTraits>(*p));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+
+// Compute updated displacement
+/*\begin{text} 
+   $ u_{Ii}^{N+1} = u_{Ii}^N + \Delta u_{Ii} $ \\
+   \textbf{DEPENDENT FIELDS:} \\
+     $u_{Ii}^N$      & Displacement at state N   & "Displacement_old"  & dims(cell,I=nNodes,i=vecDim) \\
+     $\Delta u_{Ii}$ & Displacement Increment          & "DeltaDisplacement"   & dims(cell,I=nNodes,i=vecDim) \\
+  \textbf{EVALUATED FIELDS:} \\
+  \begin{tabular}{l l l l}
+     $u_{Ii}^{N+1}$  & Displacement at state N+1 & "Displacement"      & dims(cell,I=nNodes,i=vecDim) \\
+  \end{tabular}
+\end{text}*/
+  {
+    RCP<ParameterList> p = rcp(new ParameterList("Update Displacement"));
+    p->set< RCP<DataLayout> >("Field Layout", dl->node_vector);
+    // Input 
+    p->set<std::string>("Current State Name", strDisplacement_Current);
+    p->set<std::string>("Increment Name", macro_dof_names[0]);
+    // Output 
+    p->set<std::string>("Updated Field Name", strDisplacement_Updated);
+    ev = rcp(new LCM::UpdateField<EvalT,AlbanyTraits>(*p));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+
+// Create microstrain_n state variables.
+/*\begin{text} 
+   The total microstrain variables are registered as two state (i.e., registerOldState=true),
+   so totalMicrostrain_n is at state N+1 and totalMicrostrain_n_old is at N. \\
+   \textbf{DEPENDENT FIELDS:} \\
+     None. \\
+  \textbf{EVALUATED FIELDS:} \\
+  \begin{tabular}{l l l l}
+     $\epsilon_{Iij}^{n\ N}$   & Total Microstrain n at state N   & "totalMicrostrain_n"     & dims(cell,I=nNodes,i=vecDim) \\
+     $\epsilon_{Iij}^{n\ N+1}$ & Total Microstrain n at state N+1 & "totalMicrostrain_n_old" & dims(cell,I=nNodes,i=vecDim)
+  \end{tabular}
+\end{text}*/
+  vector<std::string> strMicrostrains(numMicroScales);
+  vector<std::string> strMicrostrains_Updated(numMicroScales);
+  vector<std::string> strMicrostrains_Current(numMicroScales);
+  for(int i=0; i<numMicroScales; i++){
+    std::stringstream name;
+    name << strMicrostrain << "_" << i;
+    strMicrostrains[i] = name.str();
+    strMicrostrains_Updated[i] = strMicrostrains[i];          // updated state, i.e., state at N+1
+    strMicrostrains_Current[i] = strMicrostrains[i]+"_old";   // current state, i.e., state at N
+    RCP<ParameterList> p = rcp(new ParameterList);
+    p = stateMgr.registerStateVariable(strMicrostrains[i],dl->qp_tensor, dl->dummy, eb_name, 
+               /* init type = */       "scalar", 
+               /* init value = */       0.0, 
+               /* registerOldState = */ true,
+               /* write as output = */  true);
+    ev = rcp(new PHAL::SaveStateField<EvalT,AlbanyTraits>(*p));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+
+// Compute updated microstrain from delta
+/*\begin{text} 
+   $ \epsilon_{Iij}^{N+1} = \epsilon_{Iij}^N + \Delta \epsilon_{Iij} $ \\
+   \textbf{DEPENDENT FIELDS:} \\
+     $\epsilon_{Iij}^N$      & Microstrain n at state N   & "Microstrain_n_old"   & dims(cell,I=nNodes,i=vecDim,j=vecDim) \\
+     $\Delta \epsilon_{Iij}$ & Microstrain n Increment    & "DeltaMicrostrain_n"  & dims(cell,I=nNodes,i=vecDim,j=vecDim) \\
+  \textbf{EVALUATED FIELDS:} \\
+  \begin{tabular}{l l l l}
+     $\epsilon_{Iij}^{N+1}$  & Microstrain n at state N+1 & "Microstrain_n"       & dims(cell,I=nNodes,i=vecDim,j=vecDim) \\
+  \end{tabular}
+\end{text}*/
+  for(int i=0; i<numMicroScales; i++){
+    RCP<ParameterList> p = rcp(new ParameterList("Updated Microstrain"));
+    p->set< RCP<DataLayout> >("Field Layout", dl->qp_tensor);
+    // Input 
+    p->set<std::string>("Current State Name", strMicrostrains_Current[i]);
+    p->set<std::string>("Increment Name", micro_dof_names[i][0]);
+    // Output 
+    p->set<std::string>("Updated Field Name", strMicrostrains_Updated[i]);
+    ev = rcp(new LCM::UpdateField<EvalT,AlbanyTraits>(*p));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
 
 // Gather Solution (displacement and acceleration)
 /*\begin{text} 
@@ -286,7 +404,9 @@ Albany::HMCProblem::constructEvaluators(
 
 // Gather Coordinates
 /*\begin{text}
-  Gather coordinate data from solver data structures to grid based structures. \\
+  Gather coordinate data from solver data structures to grid based structures.  The single 
+  argument to constructGatherCoordinateVectorEvaluator causes the created evaluator to add 
+  the variable named strDisplacement_Current to be added to the coordinates. \\
    \textbf{DEPENDENT FIELDS:} \\
      None. \\
   \textbf{EVALUATED FIELDS:} \\
@@ -295,7 +415,8 @@ Albany::HMCProblem::constructEvaluators(
    \end{tabular} \\
 \end{text}*/
    fm0.template registerEvaluator<EvalT>
-     (evalUtils.constructGatherCoordinateVectorEvaluator());
+     (evalUtils.constructGatherCoordinateVectorEvaluator(strDisplacement_Current));
+
 
 // Compute gradient matrix and weighted basis function values in current coordinates
 /*\begin{text} 
@@ -452,7 +573,7 @@ Albany::HMCProblem::constructEvaluators(
    fm0.template registerEvaluator<EvalT>
      (evalUtils.constructDOFVecGradInterpolationEvaluator(macro_dof_names[0]));
  
-// Compute microstrain gradient
+// Compute increment of the microstrain gradient
 /*\begin{text} 
    Register new evaluator:
   \begin{align*}
@@ -470,14 +591,39 @@ Albany::HMCProblem::constructEvaluators(
      & Microstrain gradient at scale 'n'  & "Microstrain\_n Gradient"  & dims(cell,p=nQPs,i=vecDim,j=vecDim,k=spcDim)
   \end{tabular} \\
 \end{text}*/
-   for(int i=0;i<numMicroScales;i++)
+   for(int i=0;i<numMicroScales;i++){
      fm0.template registerEvaluator<EvalT>
        (evalUtils.constructDOFTensorGradInterpolationEvaluator(micro_dof_names[i][0],dof_offset+i*dof_stride));
- 
-  // Temporary variable used numerous times below
-  Teuchos::RCP<PHX::Evaluator<AlbanyTraits> > ev;
 
-// Compute strain
+
+     std::string strMSGrad_Inc; strMSGrad_Inc = micro_dof_names[i][0] + " Gradient";
+     std::stringstream msGrad; msGrad << strMicrostrain << "_" << i << " Gradient";
+     {
+       RCP<ParameterList> p = rcp(new ParameterList);
+       p = stateMgr.registerStateVariable(msGrad.str(), dl->qp_tensor3, dl->dummy, eb_name, 
+                  /* init type = */       "scalar", 
+                  /* init value = */       0.0, 
+                  /* registerOldState = */ true,
+                  /* write as output = */  false);
+       ev = rcp(new PHAL::SaveStateField<EvalT,AlbanyTraits>(*p));
+       fm0.template registerEvaluator<EvalT>(ev);
+     }
+     std::string strMSGrad_Updated = msGrad.str();          // updated state, i.e., state at N+1
+     std::string strMSGrad_Current = msGrad.str()+"_old";   // current state, i.e., state at N
+     {
+       RCP<ParameterList> p = rcp(new ParameterList("Microstrain Gradient"));
+       p->set< RCP<DataLayout> >("Field Layout", dl->qp_tensor3);
+       // Input 
+       p->set<std::string>("Current State Name", strMSGrad_Current);
+       p->set<std::string>("Increment Name", strMSGrad_Inc);
+       // Output 
+       p->set<std::string>("Updated Field Name", strMSGrad_Updated);
+       ev = rcp(new LCM::UpdateField<EvalT,AlbanyTraits>(*p));
+       fm0.template registerEvaluator<EvalT>(ev);
+     }
+  }
+ 
+// Compute strain increment and add to current strain to get updated strain
 /*\begin{text} 
    New evaluator:\\
   \begin{align*}
@@ -497,15 +643,39 @@ Albany::HMCProblem::constructEvaluators(
   \end{tabular} \\
 \end{text}*/
   { 
-    RCP<ParameterList> p = rcp(new ParameterList("Strain"));
+    RCP<ParameterList> p = rcp(new ParameterList("Strain Increment"));
 
     //Input
-    p->set<std::string>("Gradient QP Variable Name", "Displacement Gradient");
+    p->set<std::string>("Gradient QP Variable Name", macro_dof_names[0] + " Gradient");
 
     //Output
-    p->set<std::string>("Strain Name", "Strain");
+    p->set<std::string>("Strain Name", "Strain Increment");
 
     ev = rcp(new LCM::Strain<EvalT,AlbanyTraits>(*p,dl));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+  std::string strStrain("Strain");
+  {
+    RCP<ParameterList> p = rcp(new ParameterList);
+    p = stateMgr.registerStateVariable(strStrain, dl->qp_tensor, dl->dummy, eb_name, 
+               /* init type = */       "scalar", 
+               /* init value = */       0.0, 
+               /* registerOldState = */ true,
+               /* write as output = */  true);
+    ev = rcp(new PHAL::SaveStateField<EvalT,AlbanyTraits>(*p));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+  std::string strStrain_Updated = strStrain;          // updated state, i.e., state at N+1
+  std::string strStrain_Current = strStrain+"_old";   // current state, i.e., state at N
+  {
+    RCP<ParameterList> p = rcp(new ParameterList("Strain"));
+    p->set< RCP<DataLayout> >("Field Layout", dl->qp_tensor);
+    // Input 
+    p->set<std::string>("Current State Name", strStrain_Current);
+    p->set<std::string>("Increment Name", "Strain Increment");
+    // Output 
+    p->set<std::string>("Updated Field Name", strStrain_Updated);
+    ev = rcp(new LCM::UpdateField<EvalT,AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 

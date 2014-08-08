@@ -49,6 +49,7 @@ private:
   typedef typename EvalT::MeshScalarT MeshScalarT;
 
   PHX::MDField<MeshScalarT,Cell,Vertex,Dim> coordVec;
+  Teuchos::RCP<std::string> dispVecName;
  
   bool  periodic;
   std::size_t worksetSize;

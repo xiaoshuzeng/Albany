@@ -560,8 +560,6 @@ void Albany::GenericSTKMeshStruct::rebalanceAdaptedMesh(const Teuchos::RCP<Teuch
 
       return;
 
-    cout << "Starting Mesh Rebalance: proc " << comm->MyPID() << endl;
-
     double imbalance;
 
     AbstractSTKFieldContainer::VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();

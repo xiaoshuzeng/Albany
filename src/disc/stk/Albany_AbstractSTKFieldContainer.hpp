@@ -41,6 +41,10 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     typedef stk::mesh::Field<int>                         IntScalarFieldType ;
 
     typedef stk::mesh::Cartesian QPTag; // need to invent shards::ArrayDimTag
+    // Tensor3 per QP   - (Cell, QP, Dim, Dim, Dim)
+    typedef stk::mesh::Field<double, QPTag, stk::mesh::Cartesian,
+                             stk::mesh::Cartesian,
+                             stk::mesh::Cartesian> QPTensor3FieldType ;
     // Tensor per QP   - (Cell, QP, Dim, Dim)
     typedef stk::mesh::Field<double, QPTag, stk::mesh::Cartesian, stk::mesh::Cartesian> QPTensorFieldType ;
     // Vector per QP   - (Cell, QP, Dim)
@@ -52,6 +56,7 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     typedef std::vector<QPScalarFieldType*> QPScalarState;
     typedef std::vector<QPVectorFieldType*> QPVectorState;
     typedef std::vector<QPTensorFieldType*> QPTensorState;
+    typedef std::vector<QPTensor3FieldType*> QPTensor3State;
 
     typedef std::vector<ScalarFieldType*> ScalarState;
     typedef std::vector<VectorFieldType*> VectorState;
@@ -79,6 +84,7 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     QPScalarState getQPScalarStates(){return qpscalar_states;}
     QPVectorState getQPVectorStates(){return qpvector_states;}
     QPTensorState getQPTensorStates(){return qptensor_states;}
+    QPTensor3State getQPTensor3States(){return qptensor3_states;}
 
     virtual bool hasResidualField() = 0;
     virtual bool hasSurfaceHeightField() = 0;
@@ -121,6 +127,7 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     QPScalarState qpscalar_states;
     QPVectorState qpvector_states;
     QPTensorState qptensor_states;
+    QPTensor3State qptensor3_states;
 
     std::map<std::string, double> time;
 

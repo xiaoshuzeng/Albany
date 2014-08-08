@@ -12,6 +12,7 @@
 #include "Phalanx_Evaluator_Derived.hpp"
 #include "Phalanx_MDField.hpp"
 #include "Aeras_Layouts.hpp"
+#include "Aeras_Dimension.hpp"
 
 namespace Aeras {
 /** \brief Virtual Temperature for XZHydrostatic atmospheric model
@@ -40,10 +41,10 @@ public:
 
 private:
   // Output:
-  PHX::MDField<ScalarT,Cell,Node> temperature;
-  PHX::MDField<ScalarT,Cell,Node> density;
-  PHX::MDField<ScalarT,Cell,Node> qv;
-  PHX::MDField<ScalarT,Cell,Node> virt_t;
+  PHX::MDField<ScalarT,Cell,Node,Level> virt_t;
+  PHX::MDField<ScalarT,Cell,Node,Level> temperature;
+  PHX::MDField<ScalarT,Cell,Node,Level> density;
+  PHX::MDField<ScalarT,Cell,Node,Level> qv;
 
   const Teuchos::ArrayRCP<std::string> tracerNames;
 
