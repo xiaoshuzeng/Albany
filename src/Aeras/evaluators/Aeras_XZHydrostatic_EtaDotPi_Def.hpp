@@ -39,7 +39,11 @@ XZHydrostatic_EtaDotPi(const Teuchos::ParameterList& p,
   numLevels  (dl->node_scalar_level       ->dimension(2))
 {
 
-  Teuchos::ParameterList* xzhydrostatic_params = p.get<Teuchos::ParameterList*>("XZHydrostatic Problem");
+  Teuchos::ParameterList* xzhydrostatic_params =
+    p.isSublist("XZHydrostatic Problem") ? 
+      p.get<Teuchos::ParameterList*>("XZHydrostatic Problem"):
+      p.get<Teuchos::ParameterList*>("Hydrostatic Problem");
+
 
   this->addDependentField(divpivelx);
   this->addDependentField(pdotP0);

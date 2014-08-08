@@ -44,7 +44,11 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
   numLevels       (dl->node_scalar_level->dimension(2))
 {  
 
-  Teuchos::ParameterList* xzhydrostatic_params = p.get<Teuchos::ParameterList*>("XZHydrostatic Problem");
+  Teuchos::ParameterList* xzhydrostatic_params =
+    p.isSublist("XZHydrostatic Problem") ? 
+      p.get<Teuchos::ParameterList*>("XZHydrostatic Problem"):
+      p.get<Teuchos::ParameterList*>("Hydrostatic Problem");
+
   compute_cloud_physics = xzhydrostatic_params->get<bool>("Compute Cloud Physics", false); 
   std::cout << "Atmosphere_Moisture: Computing Cloud Physics = " << compute_cloud_physics << std::endl;
 

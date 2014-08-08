@@ -31,8 +31,9 @@ XZHydrostatic_Omega(const Teuchos::ParameterList& p,
   numQPs     (dl->node_qp_scalar    ->dimension(2)),
   numDims    (dl->node_qp_gradient  ->dimension(3)),
   numLevels  (dl->node_scalar_level ->dimension(2)),
-  Cp         (p.get<Teuchos::ParameterList*>("XZHydrostatic Problem")->get<double>("Cp", 1005.7))
-
+  Cp         (p.isSublist("XZHydrostatic Problem") ? 
+                p.get<Teuchos::ParameterList*>("XZHydrostatic Problem")->get<double>("Cp", 1005.7):
+                p.get<Teuchos::ParameterList*>("Hydrostatic Problem")->get<double>("Cp", 1005.7))
 {
   std::cout << "XZHydrostatic_Omega: Cp = " << Cp << std::endl;
 
