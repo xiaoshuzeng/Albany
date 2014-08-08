@@ -9,7 +9,7 @@
     </ParameterList>
     <ParameterList name="Initial Condition"> 
        <Parameter name="Function" type="string" value="Aeras TCGalewskyInit"/>
-       <Parameter name="Function Data" type="Array(double)" value="{4.0}"/>
+       <Parameter name="Function Data" type="Array(double)" value="{}"/>
        <!--Parameter name="Function Data" type="Array(double)" value="{R}"/-->
     </ParameterList>
     
@@ -28,12 +28,12 @@
   <ParameterList name="Discretization">
     <Parameter name="Method" type="string" value="Exodus"/>
     <Parameter name="Exodus Input File Name" type="string" value="../../grids/QUAD9/uniform_16_quad9.g"/>
-    <Parameter name="Exodus Output File Name" type="string" value="TCGalewsky.nc"/>
+    <Parameter name="NetCDF Output File Name" type="string" value="TCGalewsky.nc"/>
     <Parameter name="NetCDF Output Number of Latitudes" type="int"  value="128"/>
     <Parameter name="NetCDF Output Number of Longitudes" type="int" value="256"/>
     <Parameter name="Cubature Degree" type="int" value="3"/>
     <Parameter name="Cubature Rule" type="int" value="3"/>
-    <Parameter name="Exodus Write Interval" type="int" value="5"/>
+    <Parameter name="NetCDF Write Interval" type="int" value="5"/>
   </ParameterList>
   <ParameterList name="Regression Results">
     <Parameter  name="Number of Comparisons" type="int" value="3"/>
@@ -57,7 +57,7 @@
       <ParameterList name="Rythmos">
         
          <ParameterList name="Integrator Settings">
-           <Parameter name="Final Time" type="double" value="11280"/>
+           <Parameter name="Final Time" type="double" value="345600"/>
            <!-- change to 12*24*3600 to get full 12 days -->
            <ParameterList name="Integrator Selection">
 	     <Parameter name="Integrator Type" type="string" value="Default Integrator"/>
