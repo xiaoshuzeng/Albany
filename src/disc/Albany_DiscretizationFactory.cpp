@@ -130,14 +130,14 @@ void createInterfaceParts(
   Albany::AbstractSTKMeshStruct &
   stk_mesh_struct = dynamic_cast<Albany::AbstractSTKMeshStruct &>(*mesh_struct);
 
-  stk_classic::mesh::fem::FEMMetaData &
-  fem_meta_data = *(stk_mesh_struct.metaData);
+  stk::mesh::MetaData &
+  meta_data = *(stk_mesh_struct.metaData);
 
-  stk_classic::mesh::Part &
-  bulk_part = *(fem_meta_data.get_part(bulk_part_name));
+  stk::mesh::Part &
+  bulk_part = *(meta_data.get_part(bulk_part_name));
 
   shards::CellTopology const &
-  bulk_cell_topology = fem_meta_data.get_cell_topology(bulk_part);
+  bulk_cell_topology = meta_data.get_cell_topology(bulk_part);
 
   std::string const &
   interface_part_name(adapt_params->get<std::string>("Interface Block Name"));
@@ -146,19 +146,19 @@ void createInterfaceParts(
   interface_cell_topology =
       shards::interfaceCellTopogyFromBulkCellTopogy(bulk_cell_topology);
 
-  stk_classic::mesh::EntityRank const
-  interface_dimension = interface_cell_topology.getDimension();
+  stk::mesh::EntityRank const
+    interface_dimension = (stk::mesh::EntityRank) interface_cell_topology.getDimension();
 
-  stk_classic::mesh::Part &
+  stk::mesh::Part &
   interface_part =
-      fem_meta_data.declare_part(interface_part_name, interface_dimension);
+      meta_data.declare_part(interface_part_name, interface_dimension);
 
-  stk_classic::mesh::fem::set_cell_topology(
+  stk::mesh::set_cell_topology(
       interface_part, interface_cell_topology
   );
 
 #ifdef ALBANY_SEACAS
-  stk_classic::io::put_io_part_attribute(interface_part);
+  stk::io::put_io_part_attribute(interface_part);
 #endif // ALBANY_SEACAS
 
   // Augment the MeshSpecsStruct array with one additional entry for
