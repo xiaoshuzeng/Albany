@@ -264,7 +264,11 @@ Aeras::XScalarAdvectionProblem::constructEvaluators(
     RCP<ParameterList> p = rcp(new ParameterList("Scatter Residual"));
 
     p->set< Teuchos::ArrayRCP<string> >("Node Residual Names",   dof_names_nodes_resid);
-    p->set< Teuchos::ArrayRCP<string> >("Level Residual Names",  dof_names_levels_resid);
+
+    Teuchos::ArrayRCP<std::string> vector_names_levels(0);
+    p->set< Teuchos::ArrayRCP<std::string> >("Vector Level Residual Names",        vector_names_levels);
+    p->set< Teuchos::ArrayRCP<std::string> >("Scalar Level Residual Names",        dof_names_levels_resid);
+
     p->set< Teuchos::ArrayRCP<string> >("Tracer Residual Names", dof_names_tracers_resid);
 
     p->set<string>("Scatter Field Name", "Scatter XScalarAdvection");
