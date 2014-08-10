@@ -39,18 +39,19 @@ public:
 
 private:
   // Input
-                     
-  ///why there was no eta?
-                     
-  //PHX::MDField<ScalarT,Cell,Node,Level> density;
-  //PHX::MDField<ScalarT,Cell,Node,Level> Pi;
+
   // Output:
   PHX::MDField<ScalarT,Cell,Node> PhiSurf;
 
   const int numNodes;
-  //const int numLevels;
-
-  //ScalarT Phi0;
+                     
+  enum TOPOGRAPHYTYPE {NONE, MOUNTAIN1};
+  TOPOGRAPHYTYPE topoType;
+  
+  int numParam;
+  
+  Teuchos::Array<double> topoData;                   
+                     
 };
 }
 

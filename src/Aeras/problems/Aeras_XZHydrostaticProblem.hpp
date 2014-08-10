@@ -586,9 +586,6 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
     
     //Input
-    //p->set<std::string>("Density",             "Density" );
-    //p->set<std::string>("Eta",                 "Eta"     );
-    //p->set<std::string>("Pi",                  "Pi"      );
     
     //Output
     p->set<std::string>("SurfaceGeopotential", "SurfaceGeopotential");
