@@ -32,7 +32,7 @@ XZHydrostatic_VelResid(const Teuchos::ParameterList& p,
   density     (p.get<std::string> ("QP Density"),                       dl->qp_scalar_level),
   Residual    (p.get<std::string> ("Residual Name"),                    dl->node_vector_level),
 
-  viscosity   (p.isSublist("XZHydrostatic Problem") ? 
+  viscosity   (p.isParameter("XZHydrostatic Problem") ? 
                 p.get<Teuchos::ParameterList*>("XZHydrostatic Problem")->get<double>("Viscosity", 0.0):
                 p.get<Teuchos::ParameterList*>("Hydrostatic Problem")->get<double>("Viscosity", 0.0)),
   numNodes    ( dl->node_scalar             ->dimension(1)),

@@ -36,7 +36,7 @@ XZHydrostatic_TemperatureResid(const Teuchos::ParameterList& p,
   numLevels( dl->node_scalar_level       ->dimension(2))
 {
   Teuchos::ParameterList* xsa_params =
-    p.isSublist("XZHydrostatic Problem") ? 
+    p.isParameter("XZHydrostatic Problem") ? 
       p.get<Teuchos::ParameterList*>("XZHydrostatic Problem"):
       p.get<Teuchos::ParameterList*>("Hydrostatic Problem");
   Re = xsa_params->get<double>("Reynolds Number", 1.0); //Default: Re=1
