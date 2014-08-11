@@ -4,8 +4,8 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-#ifndef AERAS_XZHYDROSTATIC_OMEGA_HPP
-#define AERAS_XZHYDROSTATIC_OMEGA_HPP
+#ifndef AERAS_XZHYDROSTATIC_SURFACEGEOPOTENTIAL_HPP
+#define AERAS_XZHYDROSTATIC_SURFACEGEOPOTENTIAL_HPP
 
 #include "Phalanx_ConfigDefs.hpp"
 #include "Phalanx_Evaluator_WithBaseImpl.hpp"
@@ -15,22 +15,21 @@
 #include "Aeras_Dimension.hpp"
 
 namespace Aeras {
-/** \brief Density for XZHydrostatic atmospheric model
+/** \brief Surface geopotential (phi_s) for XZHydrostatic atmospheric model
 
-    This evaluator computes the density for the XZHydrostatic model
+    This evaluator computes the surface geopotential for the XZHydrostatic model
     of atmospheric dynamics.
 
 */
-
 template<typename EvalT, typename Traits>
-class XZHydrostatic_Omega : public PHX::EvaluatorWithBaseImpl<Traits>,
+class XZHydrostatic_SurfaceGeopotential : public PHX::EvaluatorWithBaseImpl<Traits>,
                    public PHX::EvaluatorDerived<EvalT, Traits> {
 
 public:
   typedef typename EvalT::ScalarT ScalarT;
   typedef typename EvalT::MeshScalarT MeshScalarT;
 
-  XZHydrostatic_Omega(const Teuchos::ParameterList& p,
+  XZHydrostatic_SurfaceGeopotential(const Teuchos::ParameterList& p,
                 const Teuchos::RCP<Aeras::Layouts>& dl);
 
   void postRegistrationSetup(typename Traits::SetupData d,
@@ -39,19 +38,20 @@ public:
   void evaluateFields(typename Traits::EvalData d);
 
 private:
-  // Input:
-  PHX::MDField<ScalarT,Cell,QuadPoint,Level,Dim> Velx;
-  PHX::MDField<ScalarT,Cell,QuadPoint,Level>     density;
-  PHX::MDField<ScalarT,Cell,QuadPoint,Level>     Cpstar;
-  PHX::MDField<ScalarT,Cell,QuadPoint,Level,Dim> gradp;
-  PHX::MDField<ScalarT,Cell,QuadPoint,Level>     divpivelx;
+  // Input
 
   // Output:
-  PHX::MDField<ScalarT,Cell,QuadPoint,Level>      omega;
+  PHX::MDField<ScalarT,Cell,Node> PhiSurf;
 
-  const int numQPs;
-  const int numDims;
-  const int numLevels;
+  const int numNodes;
+                     
+  enum TOPOGRAPHYTYPE {NONE, MOUNTAIN1};
+  TOPOGRAPHYTYPE topoType;
+  
+  int numParam;
+  
+  Teuchos::Array<double> topoData;                   
+                     
 };
 }
 

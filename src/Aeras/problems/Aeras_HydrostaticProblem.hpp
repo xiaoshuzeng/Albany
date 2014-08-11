@@ -168,18 +168,19 @@ Aeras::HydrostaticProblem::constructEvaluators(
   const int numQPts = cubature->getNumPoints();
   const int numVertices = cellType->getNodeCount();
   
+  const int vecDim = 3;
   *out << "Field Dimensions: Workset=" << worksetSize 
        << ", Vertices  = " << numVertices
        << ", Nodes     = " << numNodes
        << ", QuadPts   = " << numQPts
        << ", Dim       = " << numDim 
        << ", Neq       = " << neq 
-       << ", VecDim    = " << numDim
+       << ", VecDim    = " << vecDim       
        << ", numLevels = " << numLevels 
        << ", numTracers= " << numTracers << std::endl;
   
   //Evaluators for DOFs that depend on levels
-  dl = rcp(new Aeras::Layouts(worksetSize,numVertices,numNodes,numQPts,numDim, 1, numLevels));
+  dl = rcp(new Aeras::Layouts(worksetSize,numVertices,numNodes,numQPts,numDim, vecDim, numLevels));
   Albany::EvaluatorUtils<EvalT, PHAL::AlbanyTraits> evalUtils(dl);
 
   // Temporary variable used numerous times below

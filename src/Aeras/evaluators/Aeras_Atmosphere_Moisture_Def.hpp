@@ -45,7 +45,7 @@ Atmosphere_Moisture(Teuchos::ParameterList& p,
 {  
 
   Teuchos::ParameterList* xzhydrostatic_params =
-    p.isSublist("XZHydrostatic Problem") ? 
+    p.isParameter("XZHydrostatic Problem") ? 
       p.get<Teuchos::ParameterList*>("XZHydrostatic Problem"):
       p.get<Teuchos::ParameterList*>("Hydrostatic Problem");
 

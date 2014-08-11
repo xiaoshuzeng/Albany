@@ -24,9 +24,9 @@ TotalVolume(Teuchos::ParameterList& p,
   density ("Density", dl->qp_scalar_level),
   velocity("Velx",  dl->qp_vector_level),
   temperature("Temperature",dl->qp_scalar_level),
+  Cpstar("Cpstar",dl->qp_scalar_level),
   pie("Pi",  dl->qp_scalar_level),
-   numLevels(dl->node_scalar_level->dimension(2)),
-   Cpstar(1005.7)
+   numLevels(dl->node_scalar_level->dimension(2))
 
 
 {
@@ -53,6 +53,7 @@ TotalVolume(Teuchos::ParameterList& p,
   this->addDependentField(density);
   this->addDependentField(velocity);
   this->addDependentField(temperature);
+  this->addDependentField(Cpstar);
   this->addDependentField(pie);
 
   this->setName("Aeras Total Volume");
@@ -93,6 +94,7 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(density,fm);
   this->utils.setFieldData(velocity,fm);
   this->utils.setFieldData(temperature,fm);
+  this->utils.setFieldData(Cpstar,fm);
   this->utils.setFieldData(pie,fm);
 
   PHAL::SeparableScatterScalarResponse<EvalT,Traits>::postRegistrationSetup(d,fm);
@@ -141,7 +143,7 @@ evaluateFields(typename Traits::EvalData workset)
           this->global_response(1) += mass;
 
           energy = pie(cell, qp, ell)*(0.5*velocity(cell, qp, ell)*velocity(cell,qp,ell) +
-              Cpstar*temperature(cell,qp,ell) + Phi0 )*volume;
+              Cpstar(cell,qp,ell)*temperature(cell,qp,ell) + Phi0 )*volume;
 
           this->local_response(cell, 2) += energy;
           this->global_response(2) += energy;

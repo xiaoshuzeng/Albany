@@ -46,10 +46,35 @@ namespace Aeras {
     int responseSize; //length of response vector; 3 for this response
 
     std::string refSolName; //name of reference solution
-    enum REF_SOL_NAME {ZERO, TC2};
+    enum REF_SOL_NAME {ZERO, TC2, TC4};
     REF_SOL_NAME ref_sol_name; 
    
     double inputData; // constant read in from parameter list that may be used in specifying reference solution
+    
+    /////////// constants and functions for TC4 ////////////////////////////
+    /// it would be better to have a child class for TC4
+    /// or at least utilize some const in TC2 as well
+    
+    ScalarT earthRadius; //Earth radius
+    ScalarT myPi; // a local copy of pi
+    ScalarT Omega;
+    ScalarT gravity;
+    
+    ScalarT su0;
+    ScalarT phi0;
+    ScalarT rlon0;
+    ScalarT rlat0;
+    
+    ScalarT alfa; //spelling is correct
+    ScalarT sigma;
+    ScalarT npwr;
+    
+    ScalarT phicon(ScalarT lat);
+    ScalarT bubfnc(ScalarT lat);
+    ScalarT dbubf(ScalarT lat);
+  
+  
+  
   };
 	
 }

@@ -140,6 +140,7 @@ int main(int argc, char *argv[]) {
     xmlfilename = "input.xml";
 
   try {
+
     RCP<Teuchos::Time> totalTime =
       Teuchos::TimeMonitor::getNewTimer("Albany: ***Total Time***");
 

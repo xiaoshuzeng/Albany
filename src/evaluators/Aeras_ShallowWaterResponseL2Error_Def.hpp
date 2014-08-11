@@ -52,6 +52,25 @@ ShallowWaterResponseL2Error(Teuchos::ParameterList& p,
   else if (refSolName == "TC2")
     ref_sol_name  = TC2;
   //Add other test case reference solutions here...
+  else if (refSolName == "TC4"){
+    ref_sol_name = TC4;
+    
+    myPi = Aeras::ShallowWaterConstants::self().pi;
+    earthRadius = Aeras::ShallowWaterConstants::self().earthRadius;
+    gravity = Aeras::ShallowWaterConstants::self().gravity;
+    
+    Omega = 2.0*myPi/(24.*3600.); //this should be sitting in SW Constants class
+    
+    rlon0 = 0.;
+    rlat0 = myPi/4.;
+    npwr = 14.;
+    
+    su0 = 20.;
+    phi0 = 1.0e5;
+    alfa = -0.03*(phi0/(2.*Omega*sin(myPi/4.)));
+    sigma = (2.*earthRadius/1.0e6)*(2.*earthRadius/1.0e6);
+    
+  }
   else { 
     TEUCHOS_TEST_FOR_EXCEPTION(
       true, Teuchos::Exceptions::InvalidParameter,
@@ -186,7 +205,91 @@ evaluateFields(typename Traits::EvalData workset)
         flow_state_field_ref_qp(cell,qp,2) = -u0*(sinLambda*sinAlpha); //v
        }
      }
-   }
+   }else if (ref_sol_name == TC4) { //reference solution for TC4
+    
+    ScalarT a = earthRadius;
+     
+    ScalarT tol = 1.e-10;
+     
+    ScalarT ai = 1./a;
+    ScalarT a2i = ai*ai;
+     
+    ////og: this is a patch to get rid of conversion error message
+    const double myPi_local = Aeras::ShallowWaterConstants::self().pi;
+     
+    //repeated code
+    static const double DIST_THRESHOLD = Aeras::ShallowWaterConstants::self().distanceThreshold;
+    
+    const RealType time = workset.current_time; //current time from workset
+     
+    for (std::size_t cell=0; cell < workset.numCells; ++cell) {
+      for (std::size_t qp=0; qp < numQPs; ++qp) {
+        
+        /////////repeated code
+        MeshScalarT lambda = sphere_coord(cell, qp, 0);//lambda
+        MeshScalarT theta = sphere_coord(cell, qp, 1); //theta
+        if (std::abs(std::abs(theta)-myPi_local/2) < DIST_THRESHOLD) lambda = 0.0;
+        else if (lambda < 0) lambda += 2*myPi_local;
+        /////////
+        
+        ///time shift
+        ScalarT TMSHFT = su0*time/a;
+        
+        ScalarT snj = std::sin(theta);
+        ScalarT csj = std::cos(theta)*std::cos(theta);
+        ScalarT srcsj = std::cos(theta);
+        ScalarT tmpry = std::tan(theta);
+        ScalarT tmpry2 = tmpry*tmpry;
+        ScalarT den = 1./std::cos(theta);
+        ScalarT aacsji = 1./(a*a*csj);
+        ScalarT corr = 2.*Omega*snj;
+     
+        ScalarT ucon = bubfnc(theta);
+        ScalarT bigubr = ucon*srcsj; ///
+        ScalarT dbub = dbubf(theta); ///
+     
+        ScalarT c = std::sin(rlat0)*snj + std::cos(rlat0)*srcsj*
+                    std::cos(lambda - TMSHFT - rlon0);
+     
+        //if-statements about ~fabs(c+1) is due to singularities ~1/(c+1)
+        //in derivatives. However, they are overtaken by the presence of
+        //multipliers ~exp(-1/(c+1)).
+        ScalarT psib = 0.;
+        if(fabs(c+1.)>tol)
+          psib = alfa*std::exp(-sigma*((1.-c)/(1.+c)));
+     
+        ScalarT dcdm = std::sin(rlat0)-std::cos(lambda - TMSHFT -rlon0)*
+                       std::cos(rlat0)*tmpry;
+        ScalarT dcdl = -std::cos(rlat0)*srcsj*std::sin(lambda - TMSHFT -rlon0);
+        ScalarT d2cdm = -std::cos(rlat0)*std::cos(lambda - TMSHFT -rlon0)*(1.+tmpry2)/srcsj;
+        ScalarT d2cdl = -std::cos(rlat0)*srcsj*std::cos(lambda - TMSHFT -rlon0);
+     
+        ScalarT tmp1 = 0.;
+        if(fabs(c+1.)>tol)
+          tmp1 = 2.*sigma*psib/((1.+c)*(1.+c));
+        ScalarT tmp2 = 0.;
+        if(fabs(c+1.)>tol)
+          tmp2 = (sigma - (1.0+c))/((1.+c)*(1.+c));
+        ScalarT dkdm = tmp1*dcdm;
+        ScalarT dkdl = tmp1*dcdl;
+     
+        ScalarT d2kdm  = tmp1*(d2cdm + 2.0*(dcdm*dcdm)*tmp2);
+        ScalarT d2kdl  = tmp1*(d2cdl + 2.0*(dcdl*dcdl)*tmp2);
+     
+        ScalarT u, v, h;
+     
+        u = bigubr*den - srcsj*ai*dkdm;
+        v = (dkdl*ai)*den;
+        h = phicon(theta)+corr*psib/gravity;
+        
+
+        flow_state_field_ref_qp(cell,qp,0) = h; //h
+        flow_state_field_ref_qp(cell,qp,1) = u; //u
+        flow_state_field_ref_qp(cell,qp,2) = v; //v
+      }
+    }
+  }
+
 
   //Calculate L2 error at all the quad points 
    for (std::size_t cell=0; cell < workset.numCells; ++cell) {
@@ -230,6 +333,61 @@ evaluateFields(typename Traits::EvalData workset)
   PHAL::SeparableScatterScalarResponse<EvalT,Traits>::evaluateFields(workset);
 }
 
+//***********************************************************************
+//***********************************************************************
+//
+template<typename EvalT, typename Traits>
+typename Aeras::ShallowWaterResponseL2Error<EvalT,Traits>::ScalarT
+Aeras::ShallowWaterResponseL2Error<EvalT, Traits>::
+dbubf(ScalarT lat){
+  ScalarT rmu = sin(lat);
+  ScalarT coslat = cos(lat);
+  return 2.*su0*std::pow(2.*rmu*coslat,npwr-1.)
+  *(npwr-(2.*npwr+1)*rmu*rmu);
+}
+
+template<typename EvalT, typename Traits>
+typename Aeras::ShallowWaterResponseL2Error<EvalT,Traits>::ScalarT
+Aeras::ShallowWaterResponseL2Error<EvalT, Traits>::
+bubfnc(ScalarT lat){
+  return su0*std::pow((2.*sin(lat)*cos(lat)), npwr);
+}
+
+template<typename EvalT, typename Traits>
+typename Aeras::ShallowWaterResponseL2Error<EvalT,Traits>::ScalarT
+Aeras::ShallowWaterResponseL2Error<EvalT, Traits>::
+phicon(ScalarT lat){
+  
+  ScalarT a = earthRadius;
+  
+  const int integration_steps = 1000;
+  
+  ScalarT h = 0.;
+  
+  ScalarT deltat = (lat+myPi/2.0)/integration_steps;
+  for(int i=0; i<integration_steps; i++){
+    
+    ScalarT midpoint1 = -myPi/2.0 + (i-1)*deltat;
+    ScalarT midpoint2 = -myPi/2.0 + i*deltat;
+    
+    ScalarT loc_u = bubfnc(midpoint1);
+    
+    h -= a*deltat*(2*Omega*sin(midpoint1)+loc_u*tan(midpoint1)/a)*loc_u/2.;
+    
+    loc_u = bubfnc(midpoint2);
+    
+    h -= a*deltat*(2*Omega*sin(midpoint2)+loc_u*tan(midpoint2)/a)*loc_u/2.;
+    
+  }
+  
+  h = (phi0 + h)/gravity;
+  
+  return h;
+  
+}
+
+
+//***********************************************************************
 // **********************************************************************
 template<typename EvalT, typename Traits>
 void Aeras::ShallowWaterResponseL2Error<EvalT, Traits>::

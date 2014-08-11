@@ -148,7 +148,7 @@ Aeras::XZScalarAdvectionProblem::constructEvaluators(
 
   Teuchos::ArrayRCP<std::string> dof_names(1);
   Teuchos::ArrayRCP<std::string> dof_names_dot(1);
-  Teuchos::ArrayRCP<std::string> resid_names(1);
+  Teuchos::ArrayRCP<std::string> resid_names(1); ///!!!!!
   dof_names[0] = "rho";
   dof_names_dot[0] = dof_names[0]+"_dot";
   resid_names[0] = "XZScalarAdvection Residual";
@@ -197,6 +197,8 @@ Aeras::XZScalarAdvectionProblem::constructEvaluators(
     //Output
     p->set<std::string>("Residual Name", "XZScalarAdvection Residual");
 
+      /////////
+      
     ev = rcp(new Aeras::XZScalarAdvectionResid<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
