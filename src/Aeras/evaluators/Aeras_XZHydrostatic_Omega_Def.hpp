@@ -30,7 +30,10 @@ XZHydrostatic_Omega(const Teuchos::ParameterList& p,
   omega     (p.get<std::string> ("Omega")              ,  dl->qp_scalar_level),
   numQPs     (dl->node_qp_scalar    ->dimension(2)),
   numDims    (dl->node_qp_gradient  ->dimension(3)),
-  numLevels  (dl->node_scalar_level ->dimension(2))
+  numLevels  (dl->node_scalar_level ->dimension(2)),
+  Cp         (p.isParameter("XZHydrostatic Problem") ? 
+                p.get<Teuchos::ParameterList*>("XZHydrostatic Problem")->get<double>("Cp", 1005.7):
+                p.get<Teuchos::ParameterList*>("Hydrostatic Problem")->get<double>("Cp", 1005.7))
 {
 
   this->addDependentField(Velx);

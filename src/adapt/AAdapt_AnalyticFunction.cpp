@@ -62,8 +62,8 @@ Teuchos::RCP<AAdapt::AnalyticFunction> AAdapt::createAnalyticFunction(
   else if(name == "Aeras XZ Hydrostatic Gaussian Ball In Shear")
     F = Teuchos::rcp(new AAdapt::AerasXZHydrostaticGaussianBallInShear(neq, numDim, data));
 
-  else if(name == "Aeras XZ Hydrostatic Hot Bubble")
-    F = Teuchos::rcp(new AAdapt::AerasXZHydrostaticHotBubble(neq, numDim, data));
+  else if(name == "Aeras XZ Hydrostatic Gaussian Velocity Bubble")
+    F = Teuchos::rcp(new AAdapt::AerasXZHydrostaticGaussianVelocityBubble(neq, numDim, data));
 
   else if(name == "Aeras XZ Hydrostatic Cloud")
     F = Teuchos::rcp(new AAdapt::AerasXZHydrostaticCloud(neq, numDim, data));
@@ -464,34 +464,32 @@ void AAdapt::AerasXZHydrostaticGaussianBallInShear::compute(double* x, const dou
 struct DoubleType   { typedef double  ScalarT; typedef double MeshScalarT; };
 
 //*****************************************************************************
-AAdapt::AerasXZHydrostaticHotBubble::AerasXZHydrostaticHotBubble(int neq_, int numDim_, Teuchos::Array<double> data_)
+AAdapt::AerasXZHydrostaticGaussianVelocityBubble::AerasXZHydrostaticGaussianVelocityBubble(int neq_, int numDim_, Teuchos::Array<double> data_)
   : numDim(numDim_), neq(neq_), data(data_) {
   TEUCHOS_TEST_FOR_EXCEPTION((numDim > 1),
                              std::logic_error,
                              "Error! Invalid call of Aeras XZ Hydrostatic Gaussian Ball Model " << neq
                              << " " << numDim << std::endl);
 }
-void AAdapt::AerasXZHydrostaticHotBubble::compute(double* x, const double* X) {
+void AAdapt::AerasXZHydrostaticGaussianVelocityBubble::compute(double* x, const double* X) {
   const int numLevels  = (int) data[0];
   const int numTracers = (int) data[1];
-  const double SP0     =       data[2];
+  const double P0      =       data[2];
   const double U0      =       data[3];
-  //const double T0      =       data[4];
-  //const double amp     =       data[5];
-  const double x0      =         20000;
-  const double z0      =            50;
-  const double sig_x   =          4000;
-  const double sig_z   =            10;
+  const double T0      =       data[4];
+  const double amp     =       data[5];
+  const double x0      =       data[6];
+  const double z0      =       data[7];
+  const double sig_x   =       data[8];
+  const double sig_z   =       data[9];
   std::vector<double> q0(numTracers);
   for (int nt = 0; nt<numTracers; ++nt) {
     q0[nt] = data[10+nt];
   }
 
   const double Ptop = 101.325;
-  const double P0   = 101325;
   const double Ps   = P0;
   const double Ttop = 235;
-  const double T0   = 288;
   const double Ts   = T0;
   const double DT   = 4.8e5;
   const double R    = 287;
@@ -529,20 +527,18 @@ void AAdapt::AerasXZHydrostaticHotBubble::compute(double* x, const double* X) {
 
   int offset = 0;
   //Surface Pressure
-  x[offset++] = SP0;
+  x[offset++] = P0;
   
   //Velx
-  const double amp = 0.10;
   for (int i=0; i<numLevels; ++i) {
     x[offset++] = U0 + amp*std::exp( -( ((i-z0)*(i-z0)/(sig_z*sig_z)) + ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
-    //x[offset++] = U0 + amp*std::exp( -( ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
     x[offset++] = Temperature[i];
   }
 
   //Tracers
   for (int nt=0; nt<numTracers; ++nt) {
     for (int i=0; i<numLevels; ++i) {
-      x[offset++] = 0;//q0[nt];
+      x[offset++] = q0[nt];
     }
   }
 

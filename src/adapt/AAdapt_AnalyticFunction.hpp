@@ -200,9 +200,9 @@ class AerasXZHydrostaticGaussianBallInShear : public AnalyticFunction {
     Teuchos::Array<double> data;
 };
 
-class AerasXZHydrostaticHotBubble : public AnalyticFunction {
+class AerasXZHydrostaticGaussianVelocityBubble : public AnalyticFunction {
   public:
-    AerasXZHydrostaticHotBubble(int neq_, int numDim_, Teuchos::Array<double> data_);
+    AerasXZHydrostaticGaussianVelocityBubble(int neq_, int numDim_, Teuchos::Array<double> data_);
     void compute(double* x, const double* X);
   private:
     const int numDim; // size of coordinate vector X

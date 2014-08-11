@@ -754,8 +754,19 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     p->set< Teuchos::ArrayRCP<std::string> >("Node Names",                  dof_names_nodes);
     p->set< Teuchos::ArrayRCP<std::string> >("Time Dependent Node Names",   dof_names_nodes_dot);
 
-    p->set< Teuchos::ArrayRCP<std::string> >("Level Names",                 dof_names_levels);
-    p->set< Teuchos::ArrayRCP<std::string> >("Time Dependent Level Names",  dof_names_levels_dot);
+    Teuchos::ArrayRCP<std::string> vector_level_names(1);
+    Teuchos::ArrayRCP<std::string> scalar_level_names(1);
+    Teuchos::ArrayRCP<std::string> vector_level_names_dot(1);
+    Teuchos::ArrayRCP<std::string> scalar_level_names_dot(1);
+    vector_level_names[0]     = dof_names_levels[0];
+    scalar_level_names[0]     = dof_names_levels[1];
+    vector_level_names_dot[0] = dof_names_levels_dot[0];
+    scalar_level_names_dot[0] = dof_names_levels_dot[1];
+    p->set< Teuchos::ArrayRCP<std::string> >("Vector Level Names",                 vector_level_names);
+    p->set< Teuchos::ArrayRCP<std::string> >("Time Dependent Vector Level Names",  vector_level_names_dot);
+
+    p->set< Teuchos::ArrayRCP<std::string> >("Scalar Level Names",                 scalar_level_names);
+    p->set< Teuchos::ArrayRCP<std::string> >("Time Dependent Scalar Level Names",  scalar_level_names_dot);
 
     p->set< Teuchos::ArrayRCP<std::string> >("Tracer Names",                dof_names_tracers);
     p->set< Teuchos::ArrayRCP<std::string> >("Time Dependent Tracer Names", dof_names_tracers_dot);
@@ -768,7 +779,14 @@ Aeras::XZHydrostaticProblem::constructEvaluators(
     RCP<ParameterList> p = rcp(new ParameterList("Scatter Residual"));
 
     p->set< Teuchos::ArrayRCP<string> >("Node Residual Names",   dof_names_nodes_resid);
-    p->set< Teuchos::ArrayRCP<string> >("Level Residual Names",  dof_names_levels_resid);
+
+    Teuchos::ArrayRCP<std::string> vector_level_names(1);
+    Teuchos::ArrayRCP<std::string> scalar_level_names(1);
+    vector_level_names[0]     = dof_names_levels_resid[0];
+    scalar_level_names[0]     = dof_names_levels_resid[1];
+    p->set< Teuchos::ArrayRCP<std::string> >("Vector Level Residual Names",        vector_level_names);
+    p->set< Teuchos::ArrayRCP<std::string> >("Scalar Level Residual Names",        scalar_level_names);
+
     p->set< Teuchos::ArrayRCP<string> >("Tracer Residual Names", dof_names_tracers_resid);
 
     p->set<string>("Scatter Field Name", "Scatter XZHydrostatic");
