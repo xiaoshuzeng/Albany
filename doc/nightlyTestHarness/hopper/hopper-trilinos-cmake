@@ -27,6 +27,7 @@ cmake -D CMAKE_INSTALL_PREFIX:PATH=$TRILINSTALLDIR \
 \
       -D Trilinos_ENABLE_Fortran:BOOL=ON \
 \
+      -D Trilinos_ASSERT_MISSING_PACKAGES=OFF \
       -D Trilinos_ENABLE_Teuchos:BOOL=ON \
       -D HAVE_TEUCHOS_COMM_TIMERS=ON \
       -D Trilinos_ENABLE_Shards:BOOL=ON \
