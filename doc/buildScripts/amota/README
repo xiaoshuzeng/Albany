@@ -4,33 +4,34 @@ It has been tested only on Fedora 20, where there is no need to install
 libraries separately. The system libraries in the distribution suffice for
 building and running.
 
-For parameters are passed to the build.sh script:
+Four parameters are passed to the build.sh script:
 
 package [trilinos|albany]
 toolchain [gcc|clang]
 build type [debug|release]
 number of processors (default is 1)
 
-The build.sh script, together with the config-* templates, must reside above
-the Trilinos and Albany directories (top level directory).
+The build.sh script, together with the env-single.sh script and *-config.sh
+templates must reside above the Trilinos and Albany directories (top-level
+directory).
 
-Creating symlinks to build.sh named clean.sh and clean-build.sh will change
-its behavior:
+Creating symlinks to build.sh named clean.sh and clean-build.sh will change its
+behavior:
 
-clean.sh will delete all traces of the corresponding build and
-will create a new configuration script based on the corresponding template.
-Then it will attempt to reconfigure the build.
+clean.sh will delete all traces of the corresponding build and will create a new
+configuration script based on the corresponding template.  Then it will attempt
+to reconfigure the build.
 
 clean-build.sh will do as above and then attempt to build.
 
-Build directories are created within the corresponding package directory and
-named according to the parameters given to the script, e.g.:
+Build directories are created within the top-level directory and named according
+to the parameters given to the build.sh script, e.g.:
 
-Albany/build-gcc-release
+albany-build-gcc-release
 
-In addition, for Trilinos an install directory similarly named is created at
-the top level directory.
+In addition, for Trilinos an install directory similarly named is created at the
+top-level directory.
 
-It is recommended that at least the config-* be made read and execute only, as
-erroneous modifications to the build.sh script may result in their being
+It is recommended that at least the *-config.sh be made read and execute only,
+as erroneous modifications to the build.sh script may result in their being
 overwritten.

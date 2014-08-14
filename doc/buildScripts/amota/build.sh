@@ -1,30 +1,8 @@
 #!/bin/bash
 
-SCRIPT_NAME=`basename $0`
-PACKAGE=$1
-TOOL_CHAIN=$2
-BUILD_TYPE=$3
-NUM_PROCS=$4
-LCM_DIR=`pwd`
+source ./env-single.sh
 
-if [ -z "$PACKAGE" ]; then
-    echo "Specifiy package [trilinos|albany]"
-    exit 1
-fi
-
-if [ -z "$TOOL_CHAIN" ]; then
-    echo "Specify tool chain [gcc|clang]"
-    exit 1
-fi
-
-if [ -z "$BUILD_TYPE" ]; then
-    echo "Specify build type [debug|release]"
-    exit 1
-fi
-
-if [ -z "$NUM_PROCS" ]; then
-    NUM_PROCS="1"
-fi
+cd "$LCM_DIR"
 
 case "$SCRIPT_NAME" in
     build.sh)
@@ -39,68 +17,11 @@ case "$SCRIPT_NAME" in
 	;;
 esac
 
-case "$PACKAGE" in
-    trilinos)
-	PACKAGE_STRING="TRILINOS"
-	PACKAGE_NAME="Trilinos"
-	;;
-    albany)
-	PACKAGE_STRING="ALBANY"
-	PACKAGE_NAME="Albany"
-	;;
-    *)
-	echo "Unrecognized package option"
-	exit 1
-	;;
-esac
-
-CONFIG_FILE="config-$PACKAGE.sh"
-
-case "$TOOL_CHAIN" in
-    gcc)
-	export OMPI_CC=`which gcc`
-	export OMPI_CXX=`which g++`
-	export OMPI_FC=`which gfortran`
-	CMAKE_CXX_FLAGS="-ansi -Wall -pedantic -Wno-long-long"
-	;;
-    clang)
-	export OMPI_CC=`which clang`
-	export OMPI_CXX=`which clang++`
-	export OMPI_FC=`which gfortran`
-	CMAKE_CXX_FLAGS="-Weverything -pedantic -Wno-long-long -Wno-documentation"
-	;;
-    *)
-	echo "Unrecognized tool chain option"
-	exit 1
-	;;
-esac
-
-case "$BUILD_TYPE" in
-    debug)
-	BUILD_STRING="DEBUG"
-	;;
-    release)
-	BUILD_STRING="RELEASE"
-	;;
-    *)
-	echo "Unrecognized build type option"
-	exit 1
-	;;
-esac
-
-BUILD=$TOOL_CHAIN-$BUILD_TYPE
-
-PACKAGE_DIR="$LCM_DIR/$PACKAGE_NAME"
-INSTALL_DIR="$LCM_DIR/install-$BUILD"
-BUILD_DIR="$PACKAGE_DIR/build-$BUILD"
-
 echo "------------------------------------------------------------"
 echo -e "$PACKAGE_NAME directory\t: $PACKAGE_DIR"
 echo -e "Install directory \t: $INSTALL_DIR"
 echo -e "Build directory\t\t: $BUILD_DIR"
 echo "------------------------------------------------------------"
-
-cd "$LCM_DIR"
 
 case "$SCRIPT_NAME" in
     build.sh)
@@ -138,6 +59,7 @@ case "$SCRIPT_NAME" in
 	sed -i -e "s|install_dir|$INSTALL_DIR|g;" "$CONFIG_FILE"
 	sed -i -e "s|build_type|$BUILD_STRING|g;" "$CONFIG_FILE"
 	sed -i -e "s|cmake_cxx_flags|$CMAKE_CXX_FLAGS|g;" "$CONFIG_FILE"
+	sed -i -e "s|package_dir|$PACKAGE_DIR|g;" "$CONFIG_FILE"
 	./"$CONFIG_FILE"
 	exit 0
 	;;
@@ -165,6 +87,7 @@ case "$SCRIPT_NAME" in
 	sed -i -e "s|install_dir|$INSTALL_DIR|g;" "$CONFIG_FILE"
 	sed -i -e "s|build_type|$BUILD_STRING|g;" "$CONFIG_FILE"
 	sed -i -e "s|cmake_cxx_flags|$CMAKE_CXX_FLAGS|g;" "$CONFIG_FILE"
+	sed -i -e "s|package_dir|$PACKAGE_DIR|g;" "$CONFIG_FILE"
 	./"$CONFIG_FILE"
 	echo "------------------------------------------------------------"
 	;;
@@ -174,7 +97,7 @@ case "$SCRIPT_NAME" in
 	;;
 esac
 
-ERROR_LOG="$LCM_DIR"/"$PACKAGE"-"$TOOL_CHAIN"-"$BUILD_TYPE"-error.log
+ERROR_LOG="$LCM_DIR/$PREFIX-error.log"
 echo "WARNINGS AND ERRORS REDIRECTED TO $ERROR_LOG"
 echo "------------------------------------------------------------"
 if [ -f "$ERROR_LOG" ]; then
@@ -207,4 +130,5 @@ case "$PACKAGE" in
 	exit 1
 	;;
 esac
+
 cd "$LCM_DIR"
