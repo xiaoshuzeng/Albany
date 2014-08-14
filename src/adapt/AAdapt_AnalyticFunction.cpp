@@ -669,12 +669,13 @@ AAdapt::AerasHydrostatic::AerasHydrostatic(int neq_, int numDim_, Teuchos::Array
                              << " " << numDim << std::endl);
 }
 void AAdapt::AerasHydrostatic::compute(double* solution, const double* X) {
+
   const int numLevels  = (int) data[0];
   int const numTracers = (int) data[1];
-  const double SP0     =  101325.0; //data[2];
-  const double U0      =       0.0;//data[3];
-  const double U1      =       0.0;//data[3];
-  const double T0      =     300.0;//data[4];
+  const double SP0     =       data[2];
+  const double U0      =       data[3];
+  const double U1      =       data[3];
+  const double T0      =       data[4];
   std::vector<double> q0(numTracers);
   for (int nt = 0; nt<numTracers; ++nt) {
     q0[nt] = data[5+nt];
@@ -690,7 +691,7 @@ void AAdapt::AerasHydrostatic::compute(double* solution, const double* X) {
   
   for (int i=0; i<numLevels; ++i) {
     //Velx
-    solution[offset++] = y*(1-z);
+    solution[offset++] = (1-z*z);
     solution[offset++] = 0;
     //Temperature
     solution[offset++] = T0;
@@ -699,7 +700,7 @@ void AAdapt::AerasHydrostatic::compute(double* solution, const double* X) {
   //Tracers
   for (int nt=0; nt<numTracers; ++nt) {
     for (int i=0; i<numLevels; ++i) {
-      solution[offset++] = q0[nt];
+      solution[offset++] = y*q0[nt];
     }
   }
 }
