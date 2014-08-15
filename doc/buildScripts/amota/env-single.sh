@@ -88,5 +88,3 @@ TEST_LOG="$LCM_DIR/$PREFIX-test.log"
 HOST=`hostname`
 FROM="amota@sandia.gov"
 TO="amota@sandia.gov"
-SUCCESS_RATE=`grep "tests failed" "$TEST_LOG"`
-HEADER="LCM TESTS: $HOST, $TOOL_CHAIN $BUILD_TYPE, $SUCCESS_RATE"
