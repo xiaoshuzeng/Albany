@@ -115,7 +115,6 @@ protected:
                           const int cellDims,
                           int local_side_id);
    
-#ifdef ALBANY_FELIX
   //Basal bc
   void calc_dudn_basal(Intrepid::FieldContainer<ScalarT> & qp_data_returned,
    		       const Intrepid::FieldContainer<ScalarT>& basalFriction_side,
@@ -141,7 +140,7 @@ protected:
                          const shards::CellTopology & celltopo,
                          const int cellDims,
                          int local_side_id);
-#endif
+
    // Do the side integration
   void evaluateNeumannContribution(typename Traits::EvalData d);
 
@@ -152,7 +151,7 @@ protected:
   PHX::MDField<ScalarT,Cell,Node,VecDim> dofVec;
   PHX::MDField<ScalarT,Cell,Node> beta_field;
   PHX::MDField<ScalarT,Cell,Node> thickness_field;
-  PHX::MDField<RealType,Cell,Node> elevation_field;
+  PHX::MDField<ScalarT,Cell,Node> elevation_field;
   Teuchos::RCP<shards::CellTopology> cellType;
   Teuchos::RCP<shards::CellTopology> sideType;
   Teuchos::RCP<Intrepid::Cubature<RealType> > cubatureCell;

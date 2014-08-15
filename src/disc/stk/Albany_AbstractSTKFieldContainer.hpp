@@ -71,13 +71,6 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
 #ifdef ALBANY_LCM
     IntScalarFieldType* getFractureState(){ return fracture_state; }
 #endif // ALBANY_LCM
-    ScalarFieldType* getSurfaceHeightField(){ return surfaceHeight_field; }
-    ScalarFieldType* getTemperatureField(){ return temperature_field; }
-    ScalarFieldType* getBasalFrictionField(){ return basalFriction_field; }
-    ScalarFieldType* getThicknessField(){ return thickness_field; }
-    ScalarFieldType* getFlowFactorField(){ return flowFactor_field; }
-    VectorFieldType* getSurfaceVelocityField(){ return surfaceVelocity_field; }
-    VectorFieldType* getVelocityRMSField(){ return velocityRMS_field; }
     ScalarFieldType* getSphereVolumeField(){ return sphereVolume_field; }
 
     ScalarValueState getScalarValueStates(){ return scalarValue_states;}
@@ -88,13 +81,6 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     const StateInfoStruct& getNodalSIS() const {return nodal_sis;}
 
     virtual bool hasResidualField() = 0;
-    virtual bool hasSurfaceHeightField() = 0;
-    virtual bool hasTemperatureField() = 0;
-    virtual bool hasBasalFrictionField() = 0;
-    virtual bool hasThicknessField() = 0;
-    virtual bool hasFlowFactorField() = 0;
-    virtual bool hasSurfaceVelocityField() = 0;
-    virtual bool hasVelocityRMSField() = 0;
     virtual bool hasSphereVolumeField() = 0;
 
     std::map<std::string, double>& getTime() {
@@ -115,14 +101,7 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
 #ifdef ALBANY_LCM
     IntScalarFieldType* fracture_state;
 #endif // ALBANY_LCM
-    ScalarFieldType* surfaceHeight_field; // Required for FELIX
-    ScalarFieldType* temperature_field; // Required for FELIX
-    ScalarFieldType* basalFriction_field; // Required for FELIX
-    ScalarFieldType* thickness_field; // Required for FELIX
-    ScalarFieldType* flowFactor_field; // Required for FELIX
-    VectorFieldType* surfaceVelocity_field; // Required for FELIX
-    VectorFieldType* velocityRMS_field; // Required for FELIX
-    ScalarFieldType* sphereVolume_field; // Required for Peridynamics in LCM
+     ScalarFieldType* sphereVolume_field; // Required for Peridynamics in LCM
 
     ScalarValueState scalarValue_states;
     QPScalarState qpscalar_states;

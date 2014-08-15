@@ -31,13 +31,6 @@ class MultiSTKFieldContainer : public GenericSTKFieldContainer<Interleaved> {
     ~MultiSTKFieldContainer();
 
     bool hasResidualField(){ return haveResidual; }
-    bool hasSurfaceHeightField(){ return false; }
-    bool hasTemperatureField(){ return false; }
-    bool hasBasalFrictionField(){ return false; }
-    bool hasThicknessField(){ return false; }
-    bool hasFlowFactorField(){ return false; }
-    bool hasSurfaceVelocityField(){ return false; }
-    bool hasVelocityRMSField(){ return false; }
     bool hasSphereVolumeField(){ return buildSphereVolume; }
 
     void fillSolnVector(Epetra_Vector& soln, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);

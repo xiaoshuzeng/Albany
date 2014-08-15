@@ -237,8 +237,8 @@ NeumannBase(const Teuchos::ParameterList& p) :
          dofVec = tmp;
 #ifdef ALBANY_FELIX
        thickness_field = PHX::MDField<ScalarT,Cell,Node>(
-                           p.get<std::string>("Thickness Field Name"), dl->node_scalar);
-       elevation_field = PHX::MDField<RealType,Cell,Node>(
+                           p.get<std::string>("thickness Field Name"), dl->node_scalar);
+       elevation_field = PHX::MDField<ScalarT,Cell,Node>(
                            p.get<std::string>("Elevation Field Name"), dl->node_scalar);
 
         this->addDependentField(thickness_field);
@@ -496,7 +496,7 @@ evaluateNeumannContribution(typename Traits::EvalData workset)
 #ifdef ALBANY_FELIX
     else if(bc_type == LATERAL) {
           Intrepid::FieldContainer<ScalarT> thicknessOnCell(1, numNodes);
-          Intrepid::FieldContainer<MeshScalarT> elevationOnCell(1, numNodes);
+          Intrepid::FieldContainer<ScalarT> elevationOnCell(1, numNodes);
           for (std::size_t node=0; node < numNodes; ++node)
           {
                 thicknessOnCell(0,node) = thickness_field(elem_LID,node);
@@ -839,7 +839,6 @@ calc_press(Intrepid::FieldContainer<ScalarT> & qp_data_returned,
 }
 
 
-#ifdef ALBANY_FELIX
 template<typename EvalT, typename Traits>
 void NeumannBase<EvalT, Traits>::
 calc_dudn_basal(Intrepid::FieldContainer<ScalarT> & qp_data_returned,
@@ -982,9 +981,7 @@ calc_dudn_basal(Intrepid::FieldContainer<ScalarT> & qp_data_returned,
 
 
 }
-#endif
 
-#ifdef ALBANY_FELIX
 template<typename EvalT, typename Traits>
 void NeumannBase<EvalT, Traits>::
 calc_dudn_basal_scalar_field(Intrepid::FieldContainer<ScalarT> & qp_data_returned,
@@ -1023,9 +1020,7 @@ calc_dudn_basal_scalar_field(Intrepid::FieldContainer<ScalarT> & qp_data_returne
     }
   }
 }
-#endif
 
-#ifdef ALBANY_FELIX
 template<typename EvalT, typename Traits>
 void NeumannBase<EvalT, Traits>::
 calc_dudn_lateral(Intrepid::FieldContainer<ScalarT> & qp_data_returned,
@@ -1081,8 +1076,6 @@ calc_dudn_lateral(Intrepid::FieldContainer<ScalarT> & qp_data_returned,
       }
     }
   }
-
-#endif
 
 // **********************************************************************
 // Specialization: Residual

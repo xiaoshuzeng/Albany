@@ -248,11 +248,11 @@ void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const 
     discParams = Teuchos::sublist(Teuchos::rcp(&slvrfctry->getParameters(),false), "Discretization", true);
     Teuchos::RCP<Albany::StateInfoStruct> sis=Teuchos::rcp(new Albany::StateInfoStruct);
     Albany::AbstractFieldContainer::FieldContainerRequirements req;
-    req.push_back("Surface Height");
-    req.push_back("Temperature");
-    req.push_back("Basal Friction");
-    req.push_back("Thickness");
-    req.push_back("Flow Factor");
+    req.push_back("surface_height");
+    req.push_back("temperature");
+    req.push_back("basal_friction");
+    req.push_back("thickness");
+    req.push_back("flow_factor");
     int neq = 2; //number of equations - 2 for FO Stokes
     //IK, 11/14/13, debug output: check that pointers that are passed from CISM are not null 
     //std::cout << "DEBUG: xyz_at_nodes_Ptr:" << xyz_at_nodes_Ptr << std::endl; 
