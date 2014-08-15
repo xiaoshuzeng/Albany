@@ -85,3 +85,6 @@ PREFIX="$PACKAGE-$TOOL_CHAIN-$BUILD_TYPE"
 BUILD_LOG="$LCM_DIR/$PREFIX-build.log"
 ERROR_LOG="$LCM_DIR/$PREFIX-error.log"
 TEST_LOG="$LCM_DIR/$PREFIX-test.log"
+HOST=`hostname`
+FROM="amota@sandia.gov"
+TO="amota@sandia.gov"
