@@ -51,9 +51,20 @@ case "$SCRIPT_NAME" in
     *clean*)
 	echo "CLEANING UP $PACKAGE_STRING ..."
 	echo "------------------------------------------------------------"
-	if [ -d "$INSTALL_DIR" ]; then
-	    rm "$INSTALL_DIR" -rf
-	fi
+	# Remove install directory for Trilinos only.
+	case "$PACKAGE" in
+	    trilinos)
+		if [ -d "$INSTALL_DIR" ]; then
+		    rm "$INSTALL_DIR" -rf
+		fi
+		;;
+	    albany)
+		;;
+	    *)
+		echo "Unrecognized package option"
+		exit 1
+		;;
+	esac
 	if [ -d "$BUILD_DIR" ]; then
 	    rm "$BUILD_DIR" -rf
 	fi
@@ -63,6 +74,9 @@ case "$SCRIPT_NAME" in
 	echo "------------------------------------------------------------"
 	if [ ! -d "$BUILD_DIR" ]; then
 	    mkdir "$BUILD_DIR"
+	fi
+	if [ -f "$BUILD_DIR/$CONFIG_FILE" ]; then
+	    rm "$BUILD_DIR/$CONFIG_FILE" -f
 	fi
 	cp -p "$CONFIG_FILE" "$BUILD_DIR"
 	cd "$BUILD_DIR"
