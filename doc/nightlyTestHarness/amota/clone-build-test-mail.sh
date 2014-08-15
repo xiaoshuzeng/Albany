@@ -8,7 +8,7 @@ for PACKAGE in $PACKAGES; do
     case "$PACKAGE" in
 	trilinos)
 	    PACKAGE_NAME="Trilinos"
-	    REPO="git@github.com/nschloe/trilinos.git"
+	    REPO="git@github.com:nschloe/trilinos.git"
 	    ;;
 	albany)
 	    PACKAGE_NAME="Albany"
