@@ -956,6 +956,10 @@ void Albany::STKDiscretization::computeWorksetInfo()
   surfaceVelocity.resize(numBuckets);
   velocityRMS.resize(numBuckets);
 
+  nodesOnElemStateVec.resize(numBuckets);
+  stateArrays.elemStateArrays.resize(numBuckets);
+  const Albany::StateInfoStruct& nodal_states = stkMeshStruct->getFieldContainer()->getNodalSIS();
+
   // Clear map if remeshing
   if(!elemGIDws.empty()) elemGIDws.clear();
 
@@ -981,6 +985,68 @@ void Albany::STKDiscretization::computeWorksetInfo()
     if(stkMeshStruct->getFieldContainer()->hasVelocityRMSField())
       velocityRMS[b].resize(buck.size());
 #endif
+
+
+    {  //nodalDataToElemNode.
+
+      nodesOnElemStateVec[b].resize(nodal_states.size());
+      typedef stk_classic::mesh::Cartesian NodeTag;
+      typedef stk_classic::mesh::Cartesian BuckTag;
+      typedef stk_classic::mesh::Cartesian CompTag;
+
+      for (int is=0; is< nodal_states.size(); ++is) {
+        const std::string& name = nodal_states[is]->name;
+        const Albany::StateStruct::FieldDims& dim = nodal_states[is]->dim;
+        const stk_classic::mesh::Field<double>& field = *metaData.get_field<stk_classic::mesh::Field<double> >(name);
+        MDArray& array = stateArrays.elemStateArrays[b][name];
+        std::vector<double>& stateVec = nodesOnElemStateVec[b][is];
+        int dim0 = buck.size(); //may be different from dim[0];
+        switch (dim.size()) {
+        case 2:     //scalar
+          stateVec.resize(dim0*dim[1]);
+          array.assign<BuckTag, NodeTag>(stateVec.data(),dim0,dim[1]);
+          for (int i=0; i < dim0; i++) {
+            stk_classic::mesh::Entity& element = buck[i];
+            stk_classic::mesh::PairIterRelation rel = element.relations(metaData.NODE_RANK);
+            for (int j=0; j < dim[1]; j++) {
+              stk_classic::mesh::Entity& rowNode = * rel[j].entity();
+              array(i,j) = *stk_classic::mesh::field_data(field, rowNode);
+            }
+          }
+          break;
+        case 3:  //vector
+          stateVec.resize(dim0*dim[1]*dim[2]);
+          array.assign<BuckTag, NodeTag,CompTag>(stateVec.data(),dim0,dim[1],dim[2]);
+          for (int i=0; i < dim0; i++) {
+            stk_classic::mesh::Entity& element = buck[i];
+            stk_classic::mesh::PairIterRelation rel = element.relations(metaData.NODE_RANK);
+            for (int j=0; j < dim[1]; j++) {
+              stk_classic::mesh::Entity& rowNode = * rel[j].entity();
+              double* entry = stk_classic::mesh::field_data(field, rowNode);
+              for(int k=0; k<dim[2]; k++)
+                array(i,j,k) = entry[k];
+            }
+          }
+          break;
+        case 4: //tensor
+          stateVec.resize(dim0*dim[1]*dim[2]*dim[3]);
+          array.assign<BuckTag, NodeTag, CompTag, CompTag>(stateVec.data(),dim0,dim[1],dim[2],dim[3]);
+          for (int i=0; i < dim0; i++) {
+            stk_classic::mesh::Entity& element = buck[i];
+            stk_classic::mesh::PairIterRelation rel = element.relations(metaData.NODE_RANK);
+            for (int j=0; j < dim[1]; j++) {
+              stk_classic::mesh::Entity& rowNode = * rel[j].entity();
+              double* entry = stk_classic::mesh::field_data(field, rowNode);
+              for(int k=0; k<dim[2]; k++)
+                for(int l=0; l<dim[3]; l++)
+                  array(i,j,k,l) = entry[k*dim[3]+l]; //check this, is stride Correct?
+            }
+          }
+          break;
+        }
+      }
+    }
+
 
 #ifdef ALBANY_LCM
     if(stkMeshStruct->getFieldContainer()->hasSphereVolumeField())
@@ -1118,7 +1184,6 @@ void Albany::STKDiscretization::computeWorksetInfo()
   QPTensor3State qptensor3_states = stkMeshStruct->getFieldContainer()->getQPTensor3States();
   std::map<std::string, double>& time = stkMeshStruct->getFieldContainer()->getTime();
 
-  stateArrays.elemStateArrays.resize(numBuckets);
   for (std::size_t b=0; b < buckets.size(); b++) {
     stk_classic::mesh::Bucket& buck = *buckets[b];
     for (QPScalarState::iterator qpss = qpscalar_states.begin();

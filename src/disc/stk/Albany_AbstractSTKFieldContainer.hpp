@@ -85,6 +85,7 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     QPVectorState getQPVectorStates(){return qpvector_states;}
     QPTensorState getQPTensorStates(){return qptensor_states;}
     QPTensor3State getQPTensor3States(){return qptensor3_states;}
+    const StateInfoStruct& getNodalSIS() const {return nodal_sis;}
 
     virtual bool hasResidualField() = 0;
     virtual bool hasSurfaceHeightField() = 0;
@@ -129,6 +130,8 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     QPTensorState qptensor_states;
     QPTensor3State qptensor3_states;
 
+    StateInfoStruct nodal_sis;
+    
     std::map<std::string, double> time;
 
 };

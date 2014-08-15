@@ -50,7 +50,8 @@ public:
 			     const double init_val=0.0,
 			     const bool registerOldState=false,
 			     const bool outputToExodus=true,
-			     const std::string &responseIDtoRequire="");
+			     const std::string &responseIDtoRequire="",
+			     StateStruct::MeshFieldEntity const * fieldEntity=0);
 
   //! Method to call multiple times (before allocate) to register which states will be saved.
   //! Returns param vector with all info to build a SaveStateField or LoadStateField evaluator
@@ -61,6 +62,14 @@ public:
                         const std::string &init_type="scalar",
                         const double init_val=0.0,
                         const bool registerOldState=false);
+
+
+  //Field entity is known. Useful for NodalDataToElemNode field. Input dl is of ElemNode type
+  Teuchos::RCP<Teuchos::ParameterList>
+  registerStateVariable(const std::string &stateName, const Teuchos::RCP<PHX::DataLayout> &dl,
+                                              const std::string& ebName,
+                                              const bool outputToExodus,
+                                              StateStruct::MeshFieldEntity const* fieldEntity);
 
   //! If field name to save/load is different from state name
   Teuchos::RCP<Teuchos::ParameterList>
