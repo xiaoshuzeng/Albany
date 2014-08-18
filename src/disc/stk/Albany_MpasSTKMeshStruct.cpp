@@ -342,7 +342,7 @@ Albany::MpasSTKMeshStruct::constructMesh(
 
   AbstractSTKFieldContainer::IntScalarFieldType* proc_rank_field = fieldContainer->getProcRankField();
   AbstractSTKFieldContainer::VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
-  AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = fieldContainer->getSurfaceHeightField();
+  stk_classic::mesh::Field<double>* surfaceHeight_field = metaData->get_field<stk_classic::mesh::Field<double> >("surface_height");
 
   for(int i=0; i< (numLayers+1)*indexToVertexID.size(); i++)
   {
@@ -501,7 +501,7 @@ Albany::MpasSTKMeshStruct::constructMesh(
 
   AbstractSTKFieldContainer::IntScalarFieldType* proc_rank_field = fieldContainer->getProcRankField();
   AbstractSTKFieldContainer::VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
-  AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = fieldContainer->getSurfaceHeightField();
+  stk_classic::mesh::Field<double>* surfaceHeight_field = metaData->get_field<stk_classic::mesh::Field<double> >("surface_height");
 
 
   for(int i=0; i< (numLayers+1)*indexToVertexID.size(); i++)
@@ -712,7 +712,6 @@ Albany::MpasSTKMeshStruct::constructMesh(
 
   AbstractSTKFieldContainer::IntScalarFieldType* proc_rank_field = fieldContainer->getProcRankField();
   AbstractSTKFieldContainer::VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
-  AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = fieldContainer->getSurfaceHeightField();
 
   for (int i=0; i<indexToVertexID.size(); i++)
   {

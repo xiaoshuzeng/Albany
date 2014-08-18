@@ -83,7 +83,8 @@ evaluateFields(typename Traits::EvalData workset)
 
     switch (size) {
     case 1:
-      sta(0) = field(0);
+      for (int cell = 0; cell < dims[0]; ++cell)
+      sta(cell) = field(cell);
       break;
     case 2:
       for (int cell = 0; cell < dims[0]; ++cell)

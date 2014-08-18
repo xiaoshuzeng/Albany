@@ -779,20 +779,6 @@ void Albany::Application::loadWorksetBucketInfo(PHAL::Workset& workset,
         wsElNodeID = disc->getWsElNodeID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-        sHeight = disc->getSurfaceHeight();
-  const WorksetArray<Teuchos::ArrayRCP<double> >::type&
-        temperature  = disc->getTemperature();
-  const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-        basalFriction  = disc->getBasalFriction();
-  const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-        thickness = disc->getThickness();
-  const WorksetArray<Teuchos::ArrayRCP<double> >::type&
-        flowFactor  = disc->getFlowFactor();
-  const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
-        surfaceVelocity = disc->getSurfaceVelocity();
-  const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
-        velocityRMS = disc->getVelocityRMS();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<Teuchos::ArrayRCP<double> >::type&
         sphereVolume = disc->getSphereVolume();
@@ -801,14 +787,7 @@ void Albany::Application::loadWorksetBucketInfo(PHAL::Workset& workset,
   workset.wsElNodeEqID = wsElNodeEqID[ws];
   workset.wsElNodeID = wsElNodeID[ws];
   workset.wsCoords = coords[ws];
-  workset.wsSHeight = sHeight[ws];
   workset.wsSphereVolume = sphereVolume[ws];
-  workset.wsTemperature = temperature[ws];
-  workset.wsBasalFriction = basalFriction[ws];
-  workset.wsThickness = thickness[ws];
-  workset.wsFlowFactor = flowFactor[ws];
-  workset.wsSurfaceVelocity = surfaceVelocity[ws];
-  workset.wsVelocityRMS = velocityRMS[ws];
   workset.EBName = wsEBNames[ws];
   workset.wsIndex = ws;
 

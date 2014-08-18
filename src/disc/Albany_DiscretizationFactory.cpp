@@ -259,10 +259,6 @@ Albany::DiscretizationFactory::createMeshSpecs() {
       meshStruct2D = Teuchos::rcp(new Albany::AsciiSTKMesh2D(discParams, epetra_comm));
       Teuchos::RCP<Albany::StateInfoStruct> sis=Teuchos::rcp(new Albany::StateInfoStruct);
 	  Albany::AbstractFieldContainer::FieldContainerRequirements req;
-	//  req.push_back("Surface Height");
-	//  req.push_back("Temperature");
-	//  req.push_back("Basal Friction");
-	//  req.push_back("Thickness");
 	  int neq=2;
       meshStruct2D->setFieldAndBulkData(epetra_comm, discParams, neq, req,
                                         sis, meshStruct2D->getMeshSpecs()[0]->worksetSize);

@@ -25,33 +25,10 @@ Albany::OrdinarySTKFieldContainer<Interleaved>::OrdinarySTKFieldContainer(
   const int numDim_,
   const Teuchos::RCP<Albany::StateInfoStruct>& sis)
   : GenericSTKFieldContainer<Interleaved>(params_, metaData_, bulkData_, neq_, numDim_),
-      buildSurfaceHeight(false),
-      buildTemperature(false),
-      buildBasalFriction(false),
-      buildThickness(false),
-      buildFlowFactor(false),
-      buildSurfaceVelocity(false),
-      buildVelocityRMS(false),
       buildSphereVolume(false) {
 
   typedef typename AbstractSTKFieldContainer::VectorFieldType VFT;
   typedef typename AbstractSTKFieldContainer::ScalarFieldType SFT;
-
-#ifdef ALBANY_FELIX
-  buildSurfaceHeight = (std::find(req.begin(), req.end(), "Surface Height") != req.end());
-
-  buildTemperature =  (std::find(req.begin(), req.end(), "Temperature") != req.end());
-
-  buildBasalFriction = (std::find(req.begin(), req.end(), "Basal Friction") != req.end());
-
-  buildThickness = (std::find(req.begin(), req.end(), "Thickness") != req.end());
-  
-  buildFlowFactor =  (std::find(req.begin(), req.end(), "Flow Factor") != req.end());
-
-  buildSurfaceVelocity = (std::find(req.begin(), req.end(), "Surface Velocity") != req.end());
-
-  buildVelocityRMS = (std::find(req.begin(), req.end(), "Velocity RMS") != req.end());
-#endif
 
 #ifdef ALBANY_LCM
   buildSphereVolume = (std::find(req.begin(), req.end(), "Sphere Volume") != req.end());
@@ -67,47 +44,11 @@ Albany::OrdinarySTKFieldContainer<Interleaved>::OrdinarySTKFieldContainer(
                      params_->get<std::string>("Exodus Residual Name", "residual"));
 #endif
 
-#ifdef ALBANY_FELIX
-
-  if(buildSurfaceHeight)
-    this->surfaceHeight_field = & metaData_->declare_field< SFT >("surface_height");
-  if(buildTemperature)
-    this->temperature_field = & metaData_->declare_field< SFT >("temperature");
-  if(buildBasalFriction)
-    this->basalFriction_field = & metaData_->declare_field< SFT >("basal_friction");
-  if(buildThickness)
-    this->thickness_field = & metaData_->declare_field< SFT >("thickness");
-  if(buildFlowFactor)
-    this->flowFactor_field = & metaData_->declare_field< SFT >("flow_factor");
-  if(buildSurfaceVelocity)
-    this->surfaceVelocity_field = & metaData_->declare_field< VFT >("surface_velocity");
-  if(buildVelocityRMS)
-    this->velocityRMS_field = & metaData_->declare_field< VFT >("velocity_RMS");
-#endif
-
   stk_classic::mesh::put_field(*this->coordinates_field , metaData_->node_rank() , metaData_->universal_part(), numDim_);
   stk_classic::mesh::put_field(*solution_field , metaData_->node_rank() , metaData_->universal_part(), neq_);
 
 #ifdef ALBANY_LCM
   stk_classic::mesh::put_field(*residual_field , metaData_->node_rank() , metaData_->universal_part() , neq_);
-#endif
-
-#ifdef ALBANY_FELIX
-
-  if(buildSurfaceHeight)
-    stk_classic::mesh::put_field( *this->surfaceHeight_field , metaData_->node_rank() , metaData_->universal_part());
-  if(buildTemperature)
-    stk_classic::mesh::put_field( *this->temperature_field , metaData_->element_rank() , metaData_->universal_part());
-  if(buildBasalFriction)
-    stk_classic::mesh::put_field( *this->basalFriction_field , metaData_->node_rank() , metaData_->universal_part());//*metaData_->get_part("basalside","Mpas Interface"));
-  if(buildThickness)
-    stk_classic::mesh::put_field( *this->thickness_field , metaData_->node_rank() , metaData_->universal_part());
-  if(buildFlowFactor)
-    stk_classic::mesh::put_field( *this->flowFactor_field , metaData_->element_rank() , metaData_->universal_part());
-  if(buildSurfaceVelocity)
-    stk_classic::mesh::put_field( *this->surfaceVelocity_field , metaData_->node_rank() , metaData_->universal_part(), neq_);
-  if(buildVelocityRMS)
-    stk_classic::mesh::put_field( *this->velocityRMS_field , metaData_->node_rank() , metaData_->universal_part(), neq_);
 #endif
 
 #ifdef ALBANY_SEACAS
@@ -117,25 +58,6 @@ Albany::OrdinarySTKFieldContainer<Interleaved>::OrdinarySTKFieldContainer(
   stk_classic::io::set_field_role(*residual_field, Ioss::Field::TRANSIENT);
 #endif
 
-#ifdef ALBANY_FELIX
-
-  // ATTRIBUTE writes only once per file, but somehow did not work on restart.
-  //stk_classic::io::set_field_role(*surfaceHeight_field, Ioss::Field::ATTRIBUTE);
-  if(buildSurfaceHeight)
-     stk_classic::io::set_field_role(*this->surfaceHeight_field, Ioss::Field::TRANSIENT);
-  if(buildTemperature)
-     stk_classic::io::set_field_role(*this->temperature_field, Ioss::Field::TRANSIENT);
-  if(buildBasalFriction)
-     stk_classic::io::set_field_role(*this->basalFriction_field, Ioss::Field::TRANSIENT);
-  if(buildThickness)
-     stk_classic::io::set_field_role(*this->thickness_field, Ioss::Field::TRANSIENT);
-  if(buildFlowFactor)
-     stk_classic::io::set_field_role(*this->flowFactor_field, Ioss::Field::TRANSIENT);
-  if(buildSurfaceVelocity)
-     stk_classic::io::set_field_role(*this->surfaceVelocity_field, Ioss::Field::TRANSIENT);
-  if(buildVelocityRMS)
-     stk_classic::io::set_field_role(*this->velocityRMS_field, Ioss::Field::TRANSIENT);
-#endif
 #endif
 
 #ifdef ALBANY_LCM

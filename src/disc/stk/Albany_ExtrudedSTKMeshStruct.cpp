@@ -233,7 +233,7 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
   Teuchos::RCP<std::vector<Epetra_Vector> > velocityRMSVec;
 
 
-  bool hasSurfaceHeight =  std::find(req.begin(), req.end(), "Surface Height") != req.end();
+  bool hasSurface_height =  std::find(req.begin(), req.end(), "surface_height") != req.end();
 
   {
     sHeightVec = Teuchos::rcp(new Epetra_Vector(nodes_map));
@@ -243,7 +243,7 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
   }
 
 
-  bool hasThickness =  std::find(req.begin(), req.end(), "Thickness") != req.end();
+  bool hasThickness =  std::find(req.begin(), req.end(), "thickness") != req.end();
 
   {
     std::string fname = params->get<std::string>("Thickness File Name", "thickness.ascii");
@@ -253,15 +253,15 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
   }
 
 
-  bool hasBasalFriction = std::find(req.begin(), req.end(), "Basal Friction") != req.end();
-  if(hasBasalFriction) {
+  bool hasBasal_friction = std::find(req.begin(), req.end(), "basal_friction") != req.end();
+  if(hasBasal_friction) {
     std::string fname = params->get<std::string>("Basal Friction File Name", "basal_friction.ascii");
     read2DFileSerial(fname, temp, comm);
     bFrictionVec = Teuchos::rcp(new Epetra_Vector(nodes_map));
     bFrictionVec->Import(temp, importOperator, Insert);
   }
 
-  bool hasTemperature = std::find(req.begin(), req.end(), "Temperature") != req.end();
+  bool hasTemperature = std::find(req.begin(), req.end(), "temperature") != req.end();
   if(hasTemperature) {
     std::vector<Epetra_Vector> temperatureVec;
     temperatureVecInterp = Teuchos::rcp(new std::vector<Epetra_Vector>(numLayers + 1, Epetra_Vector(nodes_map)));
@@ -301,7 +301,7 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
 
   std::vector<Epetra_Vector> tempSV(neq_, Epetra_Vector(serial_nodes_map));
 
-  bool hasSurfaceVelocity = std::find(req.begin(), req.end(), "Surface Velocity") != req.end();
+  bool hasSurfaceVelocity = std::find(req.begin(), req.end(), "surface_velocity") != req.end();
   if(hasSurfaceVelocity) {
     std::string fname = params->get<std::string>("Surface Velocity File Name", "surface_velocity.ascii");
     readFileSerial(fname, tempSV, comm);
@@ -310,9 +310,9 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
       (*sVelocityVec)[i].Import(tempSV[i], importOperator, Insert);
   }
 
-  bool hasVelocityRMS = std::find(req.begin(), req.end(), "Velocity RMS") != req.end();
-  if(hasVelocityRMS) {
-    std::string fname = params->get<std::string>("Velocity RMS File Name", "velocity_RMS.ascii");
+  bool hasSurfaceVelocityRMS = std::find(req.begin(), req.end(), "surface_velocity_rms") != req.end();
+  if(hasSurfaceVelocityRMS) {
+    std::string fname = params->get<std::string>("Surface Velocity RMS File Name", "velocity_RMS.ascii");
     readFileSerial(fname, tempSV, comm);
     velocityRMSVec = Teuchos::rcp(new std::vector<Epetra_Vector> (neq_, Epetra_Vector(nodes_map)));
     for (int i = 0; i < tempSV.size(); i++)
@@ -348,6 +348,12 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
 
   AbstractSTKFieldContainer::IntScalarFieldType* proc_rank_field = fieldContainer->getProcRankField();
   AbstractSTKFieldContainer::VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
+  stk_classic::mesh::Field<double>* surface_velocity_field = metaData->get_field<stk_classic::mesh::Field<double> >("surface_velocity");
+  stk_classic::mesh::Field<double>* surface_velocity_RMS_field = metaData->get_field<stk_classic::mesh::Field<double> >("surface_velocity_rms");
+  stk_classic::mesh::Field<double>* surface_height_field = metaData->get_field<stk_classic::mesh::Field<double> >("surface_height");
+  stk_classic::mesh::Field<double>* thickness_field = metaData->get_field<stk_classic::mesh::Field<double> >("thickness");
+  stk_classic::mesh::Field<double>* basal_friction_field = metaData->get_field<stk_classic::mesh::Field<double> >("basal_friction");
+  stk_classic::mesh::Field<double>* temperature_field = metaData->get_field<stk_classic::mesh::Field<double> >("temperature");
 
   std::vector<long long int> prismMpasIds(NumBaseElemeNodes), prismGlobalIds(2 * NumBaseElemeNodes);
 
@@ -370,30 +376,30 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
     int lid = nodes_map.LID((long long int)(node2dId));
     coord[2] = (*sHeightVec)[lid] - (*thickVec)[lid] * (1. - levelsNormalizedThickness[il]);
 
-    if(hasSurfaceHeight) {
-      double* sHeight = stk_classic::mesh::field_data(*fieldContainer->getSurfaceHeightField(), *node);
+    if(hasSurface_height && surface_height_field) {
+      double* sHeight = stk_classic::mesh::field_data(*surface_height_field, *node);
       sHeight[0] = (*sHeightVec)[lid];
     }
 
-    if(hasThickness) {
-      double* thick = stk_classic::mesh::field_data(*fieldContainer->getThicknessField(), *node);
+    if(hasThickness && thickness_field) {
+      double* thick = stk_classic::mesh::field_data(*thickness_field, *node);
       thick[0] = (*thickVec)[lid];
     }
 
-    if(hasSurfaceVelocity) {
-      double* sVelocity = stk_classic::mesh::field_data(*fieldContainer->getSurfaceVelocityField(), *node);
+    if(surface_velocity_field) {
+      double* sVelocity = stk_classic::mesh::field_data(*surface_velocity_field, *node);
       sVelocity[0] = (*sVelocityVec)[0][lid];
       sVelocity[1] = (*sVelocityVec)[1][lid];
     }
 
-    if(hasVelocityRMS) {
-      double* velocityRMS = stk_classic::mesh::field_data(*fieldContainer->getVelocityRMSField(), *node);
+    if(surface_velocity_RMS_field) {
+      double* velocityRMS = stk_classic::mesh::field_data(*surface_velocity_RMS_field, *node);
       velocityRMS[0] = (*velocityRMSVec)[0][lid];
       velocityRMS[1] = (*velocityRMSVec)[1][lid];
     }
 
-    if(hasBasalFriction) {
-      double* bFriction = stk_classic::mesh::field_data(*fieldContainer->getBasalFrictionField(), *node);
+    if(hasBasal_friction && basal_friction_field) {
+      double* bFriction = stk_classic::mesh::field_data(*basal_friction_field, *node);
       bFriction[0] = (*bFrictionVec)[lid];
     }
 
@@ -439,8 +445,8 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
         }
         int* p_rank = (int*) stk_classic::mesh::field_data(*proc_rank_field, elem);
         p_rank[0] = comm->MyPID();
-        if(hasTemperature) {
-          double* temperature = stk_classic::mesh::field_data(*fieldContainer->getTemperatureField(), elem);
+        if(hasTemperature && temperature_field) {
+          double* temperature = stk_classic::mesh::field_data(*temperature_field, elem);
           temperature[0] = tempOnPrism;
         }
       }
@@ -456,9 +462,9 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
       }
       int* p_rank = (int*) stk_classic::mesh::field_data(*proc_rank_field, elem);
       p_rank[0] = comm->MyPID();
-      if(hasTemperature) {
-        double* temperature = stk_classic::mesh::field_data(*fieldContainer->getTemperatureField(), elem);
-      temperature[0] = tempOnPrism;
+      if(hasTemperature && temperature_field) {
+        double* temperature = stk_classic::mesh::field_data(*temperature_field, elem);
+        temperature[0] = tempOnPrism;
       }
     }
     }
@@ -615,7 +621,7 @@ Teuchos::RCP<const Teuchos::ParameterList> Albany::ExtrudedSTKMeshStruct::getVal
   validPL->set<std::string>("Surface Height File Name", "surface_height.ascii", "Name of the file containing the surface height data");
   validPL->set<std::string>("Thickness File Name", "thickness.ascii", "Name of the file containing the thickness data");
   validPL->set<std::string>("Surface Velocity File Name", "surface_velocity.ascii", "Name of the file containing the surface velocity data");
-  validPL->set<std::string>("Velocity RMS File Name", "velocity_RMS.ascii", "Name of the file containing the surface velocity RMS data");
+  validPL->set<std::string>("Surface Velocity RMS File Name", "velocity_RMS.ascii", "Name of the file containing the surface velocity RMS data");
   validPL->set<std::string>("Basal Friction File Name", "basal_friction.ascii", "Name of the file containing the basal friction data");
   validPL->set<std::string>("Temperature File Name", "temperature.ascii", "Name of the file containing the temperature data");
   validPL->set<std::string>("Element Shape", "Hexahedron", "Shape of the Element: Tetrahedron, Wedge, Hexahedron");

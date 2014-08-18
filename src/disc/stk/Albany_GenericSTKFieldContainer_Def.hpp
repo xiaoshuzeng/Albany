@@ -54,7 +54,20 @@ Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::
     StateStruct& st = *((*sis)[i]);
     StateStruct::FieldDims& dim = st.dim;
 
-    if(st.entity == StateStruct::QuadPoint || st.entity == StateStruct::ElemNode){
+    if(st.entity == StateStruct::ElemData){
+      qpscalar_states.push_back(& metaData->declare_field< QPSFT >(st.name));
+      stk_classic::mesh::put_field(*qpscalar_states.back() , metaData->element_rank(),
+                           metaData->universal_part(), 1);
+      
+      //Debug
+      //      cout << "Allocating qps field name " << qpscalar_states.back()->name() <<
+      //            " size: (" << dim[0] << ", " << dim[1] << ")" <<endl;
+
+#ifdef ALBANY_SEACAS
+        if(st.output) stk_classic::io::set_field_role(*qpscalar_states.back(), Ioss::Field::TRANSIENT);
+#endif
+
+    } else if(st.entity == StateStruct::QuadPoint || st.entity == StateStruct::ElemNode){
 
         if(dim.size() == 2){ // Scalar at QPs
           qpscalar_states.push_back(& metaData->declare_field< QPSFT >(st.name));
@@ -119,12 +132,16 @@ Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::
     else if(dim.size() == 1 && st.entity == StateStruct::WorksetValue) { // A single value that applies over the entire workset (time)
       scalarValue_states.push_back(st.name);
     } // End scalar at center of element
-    else if(st.entity == StateStruct::NodalData) { // Data at the node points
+    else if((st.entity == StateStruct::NodalData) ||(st.entity == StateStruct::NodalDataToElemNode)) { // Data at the node points
 
         const Teuchos::RCP<Albany::NodeFieldContainer>& nodeContainer 
                = sis->getNodalDataBlock()->getNodeContainer();
 
         (*nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, dim, metaData, bulkData, st.output);
+
+        if(st.entity == StateStruct::NodalDataToElemNode)
+          nodal_sis.push_back((*sis)[i]);
+
  
     } // end Node class - anything else is an error
     else TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
