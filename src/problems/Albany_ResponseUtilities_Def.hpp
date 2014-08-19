@@ -24,6 +24,9 @@
 #ifdef ALBANY_LCM
 #include "IPtoNodalField.hpp"
 #endif
+#ifdef ALBANY_LCM
+#include "ATO_StiffnessObjective.hpp"
+#endif
 
 template<typename EvalT, typename Traits>
 Albany::ResponseUtilities<EvalT,Traits>::ResponseUtilities(
@@ -162,6 +165,24 @@ Albany::ResponseUtilities<EvalT,Traits>::constructResponses(
     fm.template registerEvaluator<EvalT>(res_ev);
     response_tag = res_ev->getResponseFieldTag();
     fm.requireField<EvalT>(*(res_ev->getEvaluatedFieldTag()));
+  }
+
+  else if (responseName == "Stiffness Objective")
+  {
+#ifdef ALBANY_ATO
+    p->set< Albany::StateManager* >("State Manager Ptr", &stateMgr );
+    RCP<ATO::StiffnessObjective<EvalT,Traits> > res_ev =
+      rcp(new ATO::StiffnessObjective<EvalT,Traits>(*p, dl));
+    fm.template registerEvaluator<EvalT>(res_ev);
+    response_tag = res_ev->getResponseFieldTag();
+    fm.requireField<EvalT>(*(res_ev->getEvaluatedFieldTag()));
+#else
+    TEUCHOS_TEST_FOR_EXCEPTION(
+      true, Teuchos::Exceptions::InvalidParameter,
+      std::endl << "Error!  Response function " << responseName <<
+      " not available!" << std::endl << "Albany/ATO not enabled." <<
+      std::endl);
+#endif
   }
 
 #ifdef ALBANY_LCM

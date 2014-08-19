@@ -105,6 +105,7 @@ createResponseFunction(
 	   name == "Element Size Field" ||
 	   name == "IP to Nodal Field" ||
 	   name == "Save Nodal Fields" ||
+	   name == "Stiffness Objective" ||
 	   name == "PHAL Field Integral") {
     responseParams.set("Name", name);
     for (int i=0; i<meshSpecs.size(); i++) {

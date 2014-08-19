@@ -19,6 +19,7 @@
 #include "Albany_ModelEvaluator.hpp"
 #include "Albany_Utils.hpp"
 #include "Piro_Epetra_StokhosNOXObserver.hpp"
+#include "ATO_Aggregator.hpp"
 
 namespace ATO {
   class SolverSubSolver;
@@ -50,9 +51,17 @@ namespace ATO {
 
     // optimization solver data
     int     _optMaxIter; // maximum iterations for optimization solver
+    double  _stabilizationExponent;
+    double  _penalizationExponent;
+    double  _moveLimiter;
+    double  _volumeConstraint;
     double  _optConvTol; // maximum iterations for optimization solver
 
     bool _is_verbose;    // verbose or not for topological optimization solver
+
+    Teuchos::RCP<Aggregator> _aggregator;
+    std::string _topoName;
+    std::string _topoCentering;
 
     std::string _problemNameBase;
     Teuchos::RCP<Teuchos::ParameterList> _subProblemAppParams;
@@ -77,7 +86,7 @@ namespace ATO {
                                const std::string& exoOutputFile ) const;
 
     void
-    computeStrainEnergy(Albany::StateArrays& state_data) const;
+    computeUpdatedTopology(Albany::StateArrays& state_data) const;
 
 
   };

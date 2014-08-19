@@ -86,14 +86,8 @@ namespace Albany {
 
   protected:
 
-    //! Boundary conditions on source term
-    bool haveSource;
     int numDim;
 
-    //! Compute exact error in displacement solution
-    bool computeError;
-
-    std::string matModel; 
     Teuchos::RCP<Albany::Layouts> dl;
 
     Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::RCP<Intrepid::FieldContainer<RealType> > > > oldState;
@@ -109,11 +103,11 @@ namespace Albany {
 #include "Albany_ProblemUtils.hpp"
 #include "Albany_ResponseUtilities.hpp"
 #include "Albany_EvaluatorUtils.hpp"
-#include "ATO_EvaluatorUtils.hpp"
 
 #include "PHAL_Source.hpp"
 #include "Strain.hpp"
-#include "Stress.hpp"
+#include "ATO_Stress.hpp"
+#include "ATO_TopologyWeighting.hpp"
 #include "PHAL_SaveStateField.hpp"
 #include "ElasticityResid.hpp"
 
@@ -168,6 +162,23 @@ Albany::LinearElasticityProblem::constructEvaluators(
    Albany::EvaluatorUtils<EvalT, PHAL::AlbanyTraits> evalUtils(dl);
 
 
+   // register topology variable
+   // JR:  topo variable in hardwired to 0.5.  It should at least initialize to the desired volfrac.
+   Teuchos::ParameterList& topoParams = params->get<Teuchos::ParameterList>("Topology");
+   std::string topoName = topoParams.get<std::string>("Topology Name");
+   std::string centering = topoParams.get<std::string>("Centering");
+   if( centering == "Element" ){
+     stateMgr.registerStateVariable(topoName, dl->cell_scalar, elementBlockName, "scalar", 0.5, true, true);
+   } else
+   if( centering == "Node" ){
+     stateMgr.registerStateVariable(topoName, dl->node_scalar, elementBlockName, "scalar", 0.5, true, true);
+   }
+   
+   std::string stressName("Stress");
+   std::string strainName("Strain");
+
+
+
    Teuchos::ArrayRCP<std::string> dof_names(1);
    dof_names[0] = "Displacement";
    Teuchos::ArrayRCP<std::string> resid_names(1);
@@ -191,19 +202,8 @@ Albany::LinearElasticityProblem::constructEvaluators(
    fm0.template registerEvaluator<EvalT>
      (evalUtils.constructMapToPhysicalFrameEvaluator(cellType, cubature));
 
-   // this is hopefully the only ATO hook.  ATO_Enabled should eventually be determined
-   // from user input.  If this model is created by ATO_Solve, then add to the parameter
-   // list the needed details for basis construction (nodal/element topo rep, etc).
-   // If this decision was pulled into Albany_EvaluatorUtils, then problems could be used
-   // with ATO without modification.
-   bool ATO_Enabled = true;
-   if(ATO_Enabled){
-     ATO::EvaluatorUtils<EvalT, PHAL::AlbanyTraits> ATOevalUtils(dl);
-     fm0.template registerEvaluator<EvalT>
-       (ATOevalUtils.constructComputeBasisFunctionsEvaluator(params, cellType, intrepidBasis, cubature));
-   } else
-     fm0.template registerEvaluator<EvalT>
-       (evalUtils.constructComputeBasisFunctionsEvaluator(cellType, intrepidBasis, cubature));
+   fm0.template registerEvaluator<EvalT>
+     (evalUtils.constructComputeBasisFunctionsEvaluator(cellType, intrepidBasis, cubature));
 
    // Temporary variable used numerous times below
    Teuchos::RCP<PHX::Evaluator<AlbanyTraits> > ev;
@@ -226,68 +226,73 @@ Albany::LinearElasticityProblem::constructEvaluators(
   }
 
   { // Strain
-    RCP<ParameterList> p = rcp(new ParameterList("Strain"));
+    RCP<ParameterList> p = rcp(new ParameterList(strainName));
 
     //Input
     p->set<std::string>("Gradient QP Variable Name", "Displacement Gradient");
 
     //Output
-    p->set<std::string>("Strain Name", "Strain");
+    p->set<std::string>("Strain Name", strainName);
 
     ev = rcp(new LCM::Strain<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
 
-    // state the strain in the state manager so for ATO
-    p = stateMgr.registerStateVariable("Strain", dl->qp_tensor, dl->dummy, elementBlockName, "scalar", 0.0, true);
+    // state the strain in the state manager for ATO
+    p = stateMgr.registerStateVariable(strainName, dl->qp_tensor, dl->dummy, elementBlockName, "scalar", 0.0, false);
     ev = rcp(new PHAL::SaveStateField<EvalT,AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
 
-  // rewrite this.
-  // Don't use LCM stress.  it's got features that are unnecessary for ATO
   { // Linear elasticity stress
-    RCP<ParameterList> p = rcp(new ParameterList("Stress"));
+    RCP<ParameterList> p = rcp(new ParameterList(stressName));
 
     //Input
-    p->set<std::string>("Strain Name", "Strain");
+    p->set<std::string>("Strain Name", strainName);
     p->set< RCP<DataLayout> >("QP Tensor Data Layout", dl->qp_tensor);
 
-    p->set<std::string>("Elastic Modulus Name", "Elastic Modulus");
-    p->set< RCP<DataLayout> >("QP Scalar Data Layout", dl->qp_scalar);
-
-    p->set<std::string>("Poissons Ratio Name", "Poissons Ratio");  // dl->qp_scalar also
+    p->set<double>("Elastic Modulus", params->get<double>("Elastic Modulus"));
+    p->set<double>("Poissons Ratio",  params->get<double>("Poissons Ratio"));
 
     //Output
-    p->set<std::string>("Stress Name", "Stress"); //dl->qp_tensor also
+    p->set<std::string>("Stress Name", stressName);
 
-    ev = rcp(new LCM::Stress<EvalT,AlbanyTraits>(*p));
+    ev = rcp(new ATO::Stress<EvalT,AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
 
     // state the strain in the state manager so for ATO
-    p = stateMgr.registerStateVariable("Stress",dl->qp_tensor, dl->dummy, elementBlockName, "scalar", 0.0);
+    p = stateMgr.registerStateVariable(stressName,dl->qp_tensor, dl->dummy, elementBlockName, "scalar", 0.0);
     ev = rcp(new PHAL::SaveStateField<EvalT,AlbanyTraits>(*p));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+  
+  // ATO penalization
+  if( params->isType<Teuchos::ParameterList>("Topology") )
+  {
+    RCP<ParameterList> p = rcp(new ParameterList("TopologyWeighting"));
+
+    Teuchos::ParameterList& topoParams = params->get<Teuchos::ParameterList>("Topology");
+    p->set<Teuchos::ParameterList>("Topology",topoParams);
+
+    p->set<std::string>("Unweighted Variable Name", stressName);
+    p->set<std::string>("Weighted Variable Name", stressName+"_Weighted");
+    p->set<std::string>("Variable Layout", "QP Tensor");
+    
+    ev = rcp(new ATO::TopologyWeighting<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
   { // Displacement Resid
     RCP<ParameterList> p = rcp(new ParameterList("Displacement Resid"));
 
-    //Input
-    p->set<std::string>("Stress Name", "Stress");
-    p->set< RCP<DataLayout> >("QP Tensor Data Layout", dl->qp_tensor);
+    p->set<bool>("Disable Transient", true);
 
-    // \todo Is the required?
-    p->set<std::string>("DefGrad Name", "Deformation Gradient"); //dl->qp_tensor also
+    //Input
+    p->set<std::string>("Stress Name", stressName+"_Weighted");
+    p->set< RCP<DataLayout> >("QP Tensor Data Layout", dl->qp_tensor);
 
     p->set<std::string>("Weighted Gradient BF Name", "wGrad BF");
     p->set< RCP<DataLayout> >("Node QP Vector Data Layout", dl->node_qp_vector);
-
-    // extra input for time dependent term
-    p->set<std::string>("Weighted BF Name", "wBF");
-    p->set< RCP<DataLayout> >("Node QP Scalar Data Layout", dl->node_qp_scalar);
-    p->set<std::string>("Time Dependent Variable Name", "Displacement_dotdot");
-    p->set< RCP<DataLayout> >("QP Vector Data Layout", dl->qp_vector);
 
     //Output
     p->set<std::string>("Residual Name", "Displacement Residual");
@@ -297,21 +302,15 @@ Albany::LinearElasticityProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
-
   if (fieldManagerChoice == Albany::BUILD_RESID_FM)  {
     PHX::Tag<typename EvalT::ScalarT> res_tag("Scatter", dl->dummy);
     fm0.requireField<EvalT>(res_tag);
-
-    if (computeError) {
-      PHX::Tag<typename EvalT::ScalarT> eres_tag("Scatter Error", dl->dummy);
-      fm0.requireField<EvalT>(eres_tag);
-    }
 
     return res_tag.clone();
   }
   else if (fieldManagerChoice == Albany::BUILD_RESPONSE_FM) {
     Albany::ResponseUtilities<EvalT, PHAL::AlbanyTraits> respUtils(dl);
-    return respUtils.constructResponses(fm0, *responseList, stateMgr);
+    return respUtils.constructResponses(fm0, *responseList, params, stateMgr);
   }
 
   return Teuchos::null;

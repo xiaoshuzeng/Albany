@@ -12,20 +12,10 @@ LinearElasticityProblem(const Teuchos::RCP<Teuchos::ParameterList>& params_,
 		        const Teuchos::RCP<ParamLib>& paramLib_,
 		        const int numDim_) :
   Albany::AbstractProblem(params_, paramLib_, numDim_),
-  haveSource(false),
   numDim(numDim_)
 {
   std::string& method = params->get("Name", "Linear Elasticity ");
   *out << "Problem Name = " << method << std::endl;
-
-  haveSource =  params->isSublist("Source Functions");
-
-  matModel = params->sublist("Material Model").get("Model Name", "LinearElasticity");
-
-  computeError = params->get<bool>("Compute Error", false);
-
-  if (computeError)
-    this->setNumEquations(2*neq);
 
 // the following function returns the problem information required for setting the rigid body modes (RBMs) for elasticity problems
 //written by IK, Feb. 2012
@@ -38,10 +28,7 @@ LinearElasticityProblem(const Teuchos::RCP<Teuchos::ParameterList>& params_,
     if (numDim == 3) {nullSpaceDim = 6; }
   }
 
-  if (computeError)
-    rigidBodyModes->setParameters(2*numDim, numDim, numScalar, nullSpaceDim);
-  else
-    rigidBodyModes->setParameters(numDim, numDim, numScalar, nullSpaceDim);
+  rigidBodyModes->setParameters(numDim, numDim, numScalar, nullSpaceDim);
 
 }
 
@@ -186,6 +173,11 @@ Albany::LinearElasticityProblem::getValidProblemParameters() const
 
   validPL->set<double>("Elastic Modulus", 0.0);
   validPL->set<double>("Poissons Ratio", 0.0);
+//  validPL->set<std::string>("Topology Centering", "Element");
+//  validPL->set<std::string>("Topology Variable Name", "_not_set_");
+//  validPL->set<std::string>("dFdTopology Variable Name", "_not_set_");
+
+  validPL->sublist("Topology", false, "");
 
   return validPL;
 }

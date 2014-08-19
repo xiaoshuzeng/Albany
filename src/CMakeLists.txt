@@ -519,6 +519,7 @@ include_directories (${Trilinos_INCLUDE_DIRS}
                      ./ATO
                      ./ATO/problems
                      ./ATO/evaluators
+                     ./ATO/utils
                     )
 
 link_directories (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS}
