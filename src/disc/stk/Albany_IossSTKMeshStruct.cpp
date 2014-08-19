@@ -253,11 +253,7 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
   *out << "IOSS-STK: number of node sets = " << nsPartVec.size() << std::endl;
   *out << "IOSS-STK: number of side sets = " << ssPartVec.size() << std::endl;
 
-  // HACK
-  stk::mesh::FieldBase* field = metaData->get_field(stk::topology::NODE_RANK, "solution");
-  if (field != NULL) {
-    mesh_data->add_input_field(field);
-  }
+  mesh_data->add_all_mesh_fields_as_input_fields();
 
   metaData->commit();
 
