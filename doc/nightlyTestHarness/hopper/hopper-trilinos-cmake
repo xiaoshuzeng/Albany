@@ -13,8 +13,8 @@
 #/opt/modules/3.2.6.6/bin/modulecmd bash load boost
 
 
-
 rm -f CMakeCache.txt
+
 
 cmake -D CMAKE_INSTALL_PREFIX:PATH=$TRILINSTALLDIR \
       -D Boost_INCLUDE_DIRS:FILEPATH="${BOOST_DIR}/include" \
@@ -27,6 +27,7 @@ cmake -D CMAKE_INSTALL_PREFIX:PATH=$TRILINSTALLDIR \
 \
       -D Trilinos_ENABLE_Fortran:BOOL=ON \
 \
+      -D Trilinos_ASSERT_MISSING_PACKAGES=OFF \
       -D Trilinos_ENABLE_Teuchos:BOOL=ON \
       -D HAVE_TEUCHOS_COMM_TIMERS=ON \
       -D Trilinos_ENABLE_Shards:BOOL=ON \

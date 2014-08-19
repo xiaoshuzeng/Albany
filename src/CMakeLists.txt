@@ -165,6 +165,8 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_DOFGradInterpolation.cpp
   evaluators/PHAL_DOFVecInterpolation.cpp
   evaluators/PHAL_DOFVecGradInterpolation.cpp
+  evaluators/PHAL_DOFTensorInterpolation.cpp
+  evaluators/PHAL_DOFTensorGradInterpolation.cpp
   evaluators/PHAL_MapToPhysicalFrame.cpp
   evaluators/PHAL_SaveStateField.cpp
   evaluators/PHAL_LoadStateField.cpp
@@ -184,15 +186,8 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_ThermalConductivity.cpp
   evaluators/PHAL_NSMaterialProperty.cpp
   evaluators/PHAL_Absorption.cpp
-  evaluators/PHAL_GatherSHeight.cpp
-  evaluators/PHAL_GatherTemperature.cpp
-  evaluators/PHAL_GatherBasalFriction.cpp
-  evaluators/PHAL_GatherThickness.cpp
-  evaluators/PHAL_GatherFlowFactor.cpp
   evaluators/Adapt_ElementSizeField.cpp
   evaluators/PHAL_SaveNodalField.cpp
-  evaluators/PHAL_GatherSurfaceVelocity.cpp
-  evaluators/PHAL_GatherVelocityRMS.cpp
   evaluators/PHAL_GatherScalarNodalParameter.cpp
   )
 SET(PDE_SRCS ${PDE_SRCS}
@@ -253,6 +248,10 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_DOFVecInterpolation_Def.hpp
   evaluators/PHAL_DOFVecGradInterpolation.hpp
   evaluators/PHAL_DOFVecGradInterpolation_Def.hpp
+  evaluators/PHAL_DOFTensorInterpolation.hpp
+  evaluators/PHAL_DOFTensorInterpolation_Def.hpp
+  evaluators/PHAL_DOFTensorGradInterpolation.hpp
+  evaluators/PHAL_DOFTensorGradInterpolation_Def.hpp
   evaluators/PHAL_MapToPhysicalFrame.hpp
   evaluators/PHAL_MapToPhysicalFrame_Def.hpp
   evaluators/PHAL_SaveStateField.hpp
@@ -291,24 +290,10 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_NSMaterialProperty_Def.hpp
   evaluators/PHAL_Absorption.hpp
   evaluators/PHAL_Absorption_Def.hpp
-  evaluators/PHAL_GatherSHeight.hpp
-  evaluators/PHAL_GatherSHeight_Def.hpp
-  evaluators/PHAL_GatherTemperature.hpp
-  evaluators/PHAL_GatherTemperature_Def.hpp
-  evaluators/PHAL_GatherBasalFriction.hpp
-  evaluators/PHAL_GatherBasalFriction_Def.hpp
-  evaluators/PHAL_GatherThickness.hpp
-  evaluators/PHAL_GatherThickness_Def.hpp
-  evaluators/PHAL_GatherFlowFactor.hpp
-  evaluators/PHAL_GatherFlowFactor_Def.hpp
   evaluators/Adapt_ElementSizeField.hpp
   evaluators/Adapt_ElementSizeField_Def.hpp
   evaluators/PHAL_SaveNodalField.hpp
   evaluators/PHAL_SaveNodalField_Def.hpp
-  evaluators/PHAL_GatherSurfaceVelocity.hpp
-  evaluators/PHAL_GatherSurfaceVelocity_Def.hpp
-  evaluators/PHAL_GatherVelocityRMS.hpp
-  evaluators/PHAL_GatherVelocityRMS_Def.hpp
   evaluators/PHAL_GatherScalarNodalParameter.hpp
   evaluators/PHAL_GatherScalarNodalParameter_Def.hpp
   )
@@ -376,6 +361,17 @@ IF (ALBANY_FELIX)
   SET(HEADERS ${HEADERS}
     evaluators/FELIX_ResponseSurfaceVelocityMismatch.hpp
     evaluators/FELIX_ResponseSurfaceVelocityMismatch_Def.hpp
+  )
+ENDIF()
+
+# AERAS
+IF (ALBANY_AERAS)
+  SET(SOURCES ${SOURCES}
+    evaluators/Aeras_ShallowWaterResponseL2Error.cpp
+  )
+  SET(HEADERS ${HEADERS}
+    evaluators/Aeras_ShallowWaterResponseL2Error.hpp
+    evaluators/Aeras_ShallowWaterResponseL2Error_Def.hpp
   )
 ENDIF()
 
@@ -708,8 +704,9 @@ IF (ALBANY_LCM)
   ELSE()
     SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} LCM)
   ENDIF()
-
 ENDIF()
+
+
 
 # Repeat libraries twice to catch circular dependencies
 SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ${ALBANY_LIBRARIES})

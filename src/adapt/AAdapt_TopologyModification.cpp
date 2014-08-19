@@ -59,7 +59,7 @@ AAdapt::TopologyMod::TopologyMod(
   interface_block_name = params->get<std::string>("Interface Block Name");
 
   std::string const
-  stress_name = "nodal_Cauchy_Stress";
+  stress_name = "nodal_FirstPK";
 
   double const
   critical_traction = params->get<double>("Critical Traction");
@@ -140,14 +140,6 @@ AAdapt::TopologyMod::adaptMesh(
   // Start the mesh update process
 
   // Modifies mesh for graph algorithm
-  // Function must be called each time before there are changes to the mesh
-
-  // Check for failure criterion
-  // std::map<EntityKey, bool> local_entity_open;
-  // std::map<EntityKey, bool> global_entity_open;
-  topology_->setEntitiesOpen();
-
-  // getGlobalOpenList(local_entity_open, global_entity_open);
 
   // begin mesh update
 

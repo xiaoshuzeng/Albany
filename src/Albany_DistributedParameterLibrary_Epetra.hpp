@@ -36,12 +36,12 @@ namespace Albany {
       const int num_per_cell_,
       const Teuchos::RCP<Epetra_Vector>& vec_,
       const Teuchos::RCP<const Epetra_Map>& owned_map_,
-      const Teuchos::RCP<const Epetra_Map>& overlapoed_map_) :
+      const Teuchos::RCP<const Epetra_Map>& overlapped_map_) :
       param_name(param_name_),
       num_per_cell(num_per_cell_),
       vec(vec_),
       owned_map(owned_map_),
-      overlapped_map(overlapoed_map_) {
+      overlapped_map(overlapped_map_) {
       importer = Teuchos::rcp(new Epetra_Import(*overlapped_map, *owned_map));
     }
 
@@ -57,7 +57,7 @@ namespace Albany {
     }
 
     //! Get overlap parallel map
-    virtual Teuchos::RCP<const map_type> overlap_map() {
+    virtual Teuchos::RCP<const map_type> overlap_map() const {
       return overlapped_map;
     }
 

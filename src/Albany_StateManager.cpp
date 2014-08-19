@@ -69,6 +69,23 @@ Albany::StateManager::registerStateVariable(const std::string &stateName, const 
   return p;
 }
 
+Teuchos::RCP<Teuchos::ParameterList>
+Albany::StateManager::registerStateVariable(const std::string &stateName, const Teuchos::RCP<PHX::DataLayout> &dl,
+                                            const std::string& ebName,
+                                            const bool outputToExodus,
+                                            StateStruct::MeshFieldEntity const* fieldEntity)
+{
+  registerStateVariable(stateName, dl, ebName, "", 0., false, outputToExodus, "",fieldEntity);
+
+  // Create param list for SaveStateField evaluator
+  Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Save or Load State "
+                + stateName + " to/from field " + stateName));
+  p->set<const std::string>("State Name", stateName);
+  p->set<const std::string>("Field Name", stateName);
+  p->set<const Teuchos::RCP<PHX::DataLayout> >("State Field Layout", dl);
+  return p;
+}
+
 void
 Albany::StateManager::registerStateVariable(const std::string &stateName,
 					    const Teuchos::RCP<PHX::DataLayout> &dl,
@@ -93,7 +110,9 @@ Albany::StateManager::registerStateVariable(const std::string &stateName,
                                             const double init_val,
                                             const bool registerOldState,
 					    const bool outputToExodus,
-					    const std::string &responseIDtoRequire)
+					    const std::string &responseIDtoRequire,
+					    StateStruct::MeshFieldEntity const* fieldEntity
+					    )
 
 {
   TEUCHOS_TEST_FOR_EXCEPT(stateVarsAreAllocated);
@@ -113,8 +132,11 @@ Albany::StateManager::registerStateVariable(const std::string &stateName,
 
   // Load into StateInfo
   StateStruct::MeshFieldEntity mfe_type;
-  if(dl->rank() == 1 && dl->size() == 1)
+  if(fieldEntity) mfe_type=*fieldEntity;
+  else if(dl->rank() == 1 && dl->size() == 1)
      mfe_type = StateStruct::WorksetValue; // One value for the whole workset (i.e., time)
+  else if (dl->rank() == 1 && dl->name(0) == "Cell")
+     mfe_type = StateStruct::ElemData;
   else if(dl->rank() >= 1 && dl->name(0) == "Node") // Nodal data
      mfe_type = StateStruct::NodalData;
   else if(dl->rank() >= 1 && dl->name(0) == "Cell"){ // Element QP or node data
@@ -135,7 +157,7 @@ Albany::StateManager::registerStateVariable(const std::string &stateName,
 
   dl->dimensions(stateRef.dim);
 
-  if(stateRef.entity == StateStruct::NodalData){ // nodal data
+  if((stateRef.entity == StateStruct::NodalData)||(stateRef.entity == StateStruct::NodalDataToElemNode)){ // nodal data
 
     Teuchos::RCP<Adapt::NodalDataBlock> nodalDataBlock = getNodalDataBlock();
 
@@ -239,6 +261,7 @@ Albany::StateManager::setStateArrays(const Teuchos::RCP<Albany::AbstractDiscreti
     switch((*stateInfo)[i]->entity){
 
      case Albany::StateStruct::WorksetValue :
+     case Albany::StateStruct::ElemData :
      case Albany::StateStruct::QuadPoint :
      case Albany::StateStruct::ElemNode :
 
@@ -274,7 +297,8 @@ Albany::StateManager::setStateArrays(const Teuchos::RCP<Albany::AbstractDiscreti
           switch (size) {
 
             case 1:
-              esa[ws][stateName](0) = init_val;
+              for (int cell = 0; cell < dims[0]; ++cell)
+                esa[ws][stateName](cell) = init_val;
               break;
 
             case 2:
@@ -298,8 +322,17 @@ Albany::StateManager::setStateArrays(const Teuchos::RCP<Albany::AbstractDiscreti
                      esa[ws][stateName](cell, qp, i, j) = init_val;
               break;
 
+            case 5:
+              for (int cell = 0; cell < dims[0]; ++cell)
+                for (int qp = 0; qp < dims[1]; ++qp)
+                  for (int i = 0; i < dims[2]; ++i)
+                   for (int j = 0; j < dims[3]; ++j)
+                     for (int k = 0; k < dims[4]; ++k)
+                       esa[ws][stateName](cell, qp, i, j, k) = init_val;
+              break;
+
             default:
-              TEUCHOS_TEST_FOR_EXCEPTION(size<2||size>4, std::logic_error,
+              TEUCHOS_TEST_FOR_EXCEPTION(size<2||size>5, std::logic_error,
                        "Something is wrong during scalar state variable initialization: " << size);
           }
 
@@ -391,6 +424,20 @@ Albany::StateManager::setStateArrays(const Teuchos::RCP<Albany::AbstractDiscreti
         }
       }
      break;
+
+     case Albany::StateStruct::NodalDataToElemNode :
+
+      if(have_restart){
+          *out << " from restart file." << std::endl;
+          // If we are restarting, arrays should already be initialized from exodus file
+          continue;
+      }
+      else if(pParentStruct && pParentStruct->restartDataAvailable) {
+        TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "Error: At the moment it is not possible to restart a NodalDataToElemNode field from parent structure" << std::endl);
+      }
+      else if ((init_type == "scalar")||(init_type == "identity")) {
+        TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "Error: At the moment it is not possible to initialize a NodalDataToElemNode field. It should be initialized when building the mesh" << std::endl);
+      }
     }
   }
   *out << std::endl;
@@ -432,6 +479,7 @@ importStateData(Albany::StateArrays& states_from)
     switch((*stateInfo)[i]->entity){
 
      case Albany::StateStruct::WorksetValue :
+     case Albany::StateStruct::ElemData :
      case Albany::StateStruct::QuadPoint :
      case Albany::StateStruct::ElemNode :
 
@@ -450,7 +498,8 @@ importStateData(Albany::StateArrays& states_from)
 
         switch (size) {
         case 1:
-  	esa[ws][stateName](0) = elemStatesToCopyFrom[ws][stateName](0);
+    for (int cell = 0; cell < dims[0]; ++cell)
+  	  esa[ws][stateName](cell) = elemStatesToCopyFrom[ws][stateName](cell);
   	break;
         case 2:
   	for (int cell = 0; cell < dims[0]; ++cell)
@@ -568,7 +617,13 @@ Albany::StateManager::updateStates()
 
       switch((*stateInfo)[i]->entity){
 
+      case Albany::StateStruct::NodalDataToElemNode :
+        for (int ws = 0; ws < numNodeWorksets; ws++)
+           for (int j = 0; j < nsa[ws][stateName].size(); j++)
+             nsa[ws][stateName_old][j] = nsa[ws][stateName][j];
+
       case Albany::StateStruct::WorksetValue :
+      case Albany::StateStruct::ElemData :
       case Albany::StateStruct::QuadPoint :
       case Albany::StateStruct::ElemNode :
 

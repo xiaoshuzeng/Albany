@@ -41,6 +41,10 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     typedef stk_classic::mesh::Field<int>                         IntScalarFieldType ;
 
     typedef stk_classic::mesh::Cartesian QPTag; // need to invent shards::ArrayDimTag
+    // Tensor3 per QP   - (Cell, QP, Dim, Dim, Dim)
+    typedef stk_classic::mesh::Field<double, QPTag, stk_classic::mesh::Cartesian, 
+                                                    stk_classic::mesh::Cartesian,
+                                                    stk_classic::mesh::Cartesian> QPTensor3FieldType ;
     // Tensor per QP   - (Cell, QP, Dim, Dim)
     typedef stk_classic::mesh::Field<double, QPTag, stk_classic::mesh::Cartesian, stk_classic::mesh::Cartesian> QPTensorFieldType ;
     // Vector per QP   - (Cell, QP, Dim)
@@ -52,6 +56,7 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     typedef std::vector<QPScalarFieldType*> QPScalarState;
     typedef std::vector<QPVectorFieldType*> QPVectorState;
     typedef std::vector<QPTensorFieldType*> QPTensorState;
+    typedef std::vector<QPTensor3FieldType*> QPTensor3State;
 
     typedef std::vector<ScalarFieldType*> ScalarState;
     typedef std::vector<VectorFieldType*> VectorState;
@@ -66,28 +71,16 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
 #ifdef ALBANY_LCM
     IntScalarFieldType* getFractureState(){ return fracture_state; }
 #endif // ALBANY_LCM
-    ScalarFieldType* getSurfaceHeightField(){ return surfaceHeight_field; }
-    ScalarFieldType* getTemperatureField(){ return temperature_field; }
-    ScalarFieldType* getBasalFrictionField(){ return basalFriction_field; }
-    ScalarFieldType* getThicknessField(){ return thickness_field; }
-    ScalarFieldType* getFlowFactorField(){ return flowFactor_field; }
-    VectorFieldType* getSurfaceVelocityField(){ return surfaceVelocity_field; }
-    VectorFieldType* getVelocityRMSField(){ return velocityRMS_field; }
     ScalarFieldType* getSphereVolumeField(){ return sphereVolume_field; }
 
     ScalarValueState getScalarValueStates(){ return scalarValue_states;}
     QPScalarState getQPScalarStates(){return qpscalar_states;}
     QPVectorState getQPVectorStates(){return qpvector_states;}
     QPTensorState getQPTensorStates(){return qptensor_states;}
+    QPTensor3State getQPTensor3States(){return qptensor3_states;}
+    const StateInfoStruct& getNodalSIS() const {return nodal_sis;}
 
     virtual bool hasResidualField() = 0;
-    virtual bool hasSurfaceHeightField() = 0;
-    virtual bool hasTemperatureField() = 0;
-    virtual bool hasBasalFrictionField() = 0;
-    virtual bool hasThicknessField() = 0;
-    virtual bool hasFlowFactorField() = 0;
-    virtual bool hasSurfaceVelocityField() = 0;
-    virtual bool hasVelocityRMSField() = 0;
     virtual bool hasSphereVolumeField() = 0;
 
     std::map<std::string, double>& getTime() {
@@ -108,20 +101,16 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
 #ifdef ALBANY_LCM
     IntScalarFieldType* fracture_state;
 #endif // ALBANY_LCM
-    ScalarFieldType* surfaceHeight_field; // Required for FELIX
-    ScalarFieldType* temperature_field; // Required for FELIX
-    ScalarFieldType* basalFriction_field; // Required for FELIX
-    ScalarFieldType* thickness_field; // Required for FELIX
-    ScalarFieldType* flowFactor_field; // Required for FELIX
-    VectorFieldType* surfaceVelocity_field; // Required for FELIX
-    VectorFieldType* velocityRMS_field; // Required for FELIX
-    ScalarFieldType* sphereVolume_field; // Required for Peridynamics in LCM
+     ScalarFieldType* sphereVolume_field; // Required for Peridynamics in LCM
 
     ScalarValueState scalarValue_states;
     QPScalarState qpscalar_states;
     QPVectorState qpvector_states;
     QPTensorState qptensor_states;
+    QPTensor3State qptensor3_states;
 
+    StateInfoStruct nodal_sis;
+    
     std::map<std::string, double> time;
 
 };

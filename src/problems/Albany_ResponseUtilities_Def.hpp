@@ -24,8 +24,11 @@
 #ifdef ALBANY_LCM
 #include "IPtoNodalField.hpp"
 #endif
-#ifdef ALBANY_LCM
+#ifdef ALBANY_ATO
 #include "ATO_StiffnessObjective.hpp"
+#endif
+#ifdef ALBANY_AERAS
+#include "Aeras_ShallowWaterResponseL2Error.hpp"
 #endif
 
 template<typename EvalT, typename Traits>
@@ -143,6 +146,17 @@ Albany::ResponseUtilities<EvalT,Traits>::constructResponses(
     response_tag = res_ev->getResponseFieldTag();
     fm.requireField<EvalT>(*(res_ev->getEvaluatedFieldTag()));
   }
+  
+#ifdef ALBANY_AERAS
+  else if (responseName == "Aeras Shallow Water L2 Error")
+  {
+    RCP<Aeras::ShallowWaterResponseL2Error<EvalT,Traits> > res_ev =
+      rcp(new Aeras::ShallowWaterResponseL2Error<EvalT,Traits>(*p, dl));
+    fm.template registerEvaluator<EvalT>(res_ev);
+    response_tag = res_ev->getResponseFieldTag();
+    fm.requireField<EvalT>(*(res_ev->getEvaluatedFieldTag()));
+  }
+#endif
 
   else if (responseName == "Element Size Field")
   {

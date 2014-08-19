@@ -124,17 +124,6 @@ void Albany::GenericSTKMeshStruct::SetupFieldData(
      bulkData = new stk_classic::mesh::BulkData(stk_classic::mesh::fem::FEMMetaData::get_meta_data(*metaData),
                           Albany::getMpiCommFromEpetraComm(*comm), worksetSize );
 
-#ifdef ALBANY_LCM
-  // If adaptation in LCM, create a new part for boundary
-  if (adaptParams.is_null() == false) {
-    stk_classic::mesh::Part &
-    boundary_part = metaData->declare_part("boundary");
-#ifdef ALBANY_SEACAS
-    stk_classic::io::put_io_part_attribute(boundary_part);
-#endif
-  }
-#endif // ALBANY_LCM
-
   // Build the container for the STK fields
   Teuchos::Array<std::string> default_solution_vector; // Empty
   Teuchos::Array<std::string> solution_vector =

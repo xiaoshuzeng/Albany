@@ -17,13 +17,11 @@
 #include <stk_mesh/base/FieldData.hpp>
 
 #include "Teuchos_ScalarTraits.hpp"
+#include "Topology.h"
 #include "Topology_Types.h"
 #include "Topology_Utils.h"
 
 namespace LCM{
-
-// Forward declaration
-class Topology;
 
 ///
 /// Base class for fracture criteria
@@ -32,10 +30,22 @@ class AbstractFractureCriterion {
 
 public:
 
-  AbstractFractureCriterion() {}
+  AbstractFractureCriterion(
+      Topology & topology,
+      std::string const & bulk_block_name,
+      std::string const & interface_block_name) :
+  topology_(topology),
+  bulk_block_name_(bulk_block_name),
+  interface_block_name_(interface_block_name),
+  stk_discretization_(*(topology.getSTKDiscretization())),
+  stk_mesh_struct_(*(stk_discretization_.getSTKMeshStruct())),
+  bulk_data_(*(stk_mesh_struct_.bulkData)),
+  meta_data_(*(stk_mesh_struct_.metaData)),
+  dimension_(stk_mesh_struct_.numDim),
+  bulk_part_(*(meta_data_.get_part(bulk_block_name))),
+  interface_part_(*(meta_data_.get_part(interface_block_name)))
+  {}
 
-  AbstractFractureCriterion(std::string const & b, std::string const & s) :
-  bulk_block_name_(b), interface_block_name_(s) {}
 
   virtual
   bool
@@ -44,13 +54,40 @@ public:
   virtual
   ~AbstractFractureCriterion() {}
 
+  Topology &
+  getTopology() {return topology_;}
+
   std::string const &
   getBulkBlockName() {return bulk_block_name_;}
 
   std::string const &
   getInterfaceBlockName() {return interface_block_name_;}
 
+  Albany::STKDiscretization &
+  getSTKDiscretization() {return stk_discretization_;}
+
+  Albany::AbstractSTKMeshStruct const &
+  getAbstractSTKMeshStruct() {return stk_mesh_struct_;}
+
+  stk_classic::mesh::BulkData const &
+  getBulkData() {return bulk_data_;}
+
+  stk_classic::mesh::fem::FEMMetaData const &
+  getMetaData() {return meta_data_;}
+
+  Intrepid::Index
+  getDimension() {return dimension_;}
+
+  stk_classic::mesh::Part &
+  getBulkPart() {return bulk_part_;}
+
+  stk_classic::mesh::Part &
+  getInterfacePart() {return interface_part_;}
+
 protected:
+
+  Topology &
+  topology_;
 
   std::string
   bulk_block_name_;
@@ -58,8 +95,30 @@ protected:
   std::string
   interface_block_name_;
 
+  Albany::STKDiscretization &
+  stk_discretization_;
+
+  Albany::AbstractSTKMeshStruct const &
+  stk_mesh_struct_;
+
+  stk_classic::mesh::BulkData const &
+  bulk_data_;
+
+  stk_classic::mesh::fem::FEMMetaData const &
+  meta_data_;
+
+  Intrepid::Index
+  dimension_;
+
+  stk_classic::mesh::Part &
+  bulk_part_;
+
+  stk_classic::mesh::Part &
+  interface_part_;
+
 private:
 
+  AbstractFractureCriterion();
   AbstractFractureCriterion(const AbstractFractureCriterion &);
   AbstractFractureCriterion &operator=(const AbstractFractureCriterion &);
 
@@ -72,8 +131,12 @@ class FractureCriterionRandom : public AbstractFractureCriterion {
 
 public:
 
-  FractureCriterionRandom(double const probability) :
-  AbstractFractureCriterion(),
+  FractureCriterionRandom(
+      Topology & topology,
+      std::string const & bulk_block_name,
+      std::string const & interface_block_name,
+      double const probability) :
+  AbstractFractureCriterion(topology, bulk_block_name, interface_block_name),
   probability_(probability) {}
 
   bool
@@ -112,8 +175,12 @@ class FractureCriterionOnce : public AbstractFractureCriterion {
 
 public:
 
-  FractureCriterionOnce(double const probability) :
-  AbstractFractureCriterion(),
+  FractureCriterionOnce(
+      Topology & topology,
+      std::string const & bulk_block_name,
+      std::string const & interface_block_name,
+      double const probability) :
+  AbstractFractureCriterion(topology, bulk_block_name, interface_block_name),
   probability_(probability),
   open_(true) {}
 
@@ -183,24 +250,6 @@ private:
 
 private:
 
-  Topology &
-  topology_;
-
-  Albany::STKDiscretization &
-  stk_discretization_;
-
-  Albany::AbstractSTKMeshStruct const &
-  stk_mesh_struct_;
-
-  stk_classic::mesh::BulkData const &
-  bulk_data_;
-
-  stk_classic::mesh::fem::FEMMetaData const &
-  meta_data_;
-
-  Intrepid::Index
-  dimension_;
-
   TensorFieldType const &
   stress_field_;
 
@@ -209,12 +258,6 @@ private:
 
   double
   beta_;
-
-  stk_classic::mesh::Part const &
-  bulk_part_;
-
-  stk_classic::mesh::Part const &
-  interface_part_;
 
   std::vector<Intrepid::Vector<double> >
   normals_;

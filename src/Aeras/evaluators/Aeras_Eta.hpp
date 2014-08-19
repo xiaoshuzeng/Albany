@@ -23,13 +23,11 @@ public:
     return swc;
   }
 
-  ScalarT   eta(const int level) const { 
-    const int L = numLevels - level - 1;
+  ScalarT   eta(const double L) const { 
     const ScalarT e = Etatop + (1-Etatop)*(ScalarT(L)+.5)/numLevels; 
     return e;
   }
-  ScalarT delta(const int level) const { 
-    const int L = numLevels - level - 1;
+  ScalarT delta(const int L) const { 
     const double etap = L + .5;
     const double etam = L - .5;
     const ScalarT DeltaEta = eta(etap) - eta(etam);
@@ -45,26 +43,18 @@ public:
 
   ScalarT     B(const double half_step) const { return  eta(half_step)*(eta(half_step)-Etatop)/(1-Etatop);}
 
+  Eta(const ScalarT ptop, const ScalarT p0, const int L) :
+    P0(p0),
+    Ptop(ptop),
+    Etatop(ptop/p0),
+    numLevels(L) {}
+
+  ~Eta(){}
 private:
   const ScalarT P0;
   const ScalarT Ptop;
   const ScalarT Etatop;
   const int     numLevels;
-
-  Eta(const ScalarT ptop, const ScalarT p0, const int L) :
-    P0(p0),
-    Ptop(ptop),
-    Etatop(ptop/p0),
-    numLevels(L)
-  {}
-  ScalarT   eta(const double half_step) const {
-    const ScalarT L = numLevels - half_step - 1;
-    ScalarT e;
-    if      (L         <  -.25) e = Etatop;
-    else if (numLevels < L+.75) e = 1;
-    else                        e = Etatop + (1-Etatop)*(ScalarT(L)+.5)/numLevels;
-    return e;
-  }
 
 };
 }
