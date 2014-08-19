@@ -28,8 +28,11 @@ XZHydrostatic_VirtualT(const Teuchos::ParameterList& p,
   tracerNames(p.get< Teuchos::ArrayRCP<std::string> >("Tracer Names")),
   numNodes   (dl->node_scalar             ->dimension(1)),
   numLevels  (dl->node_scalar_level       ->dimension(2)),
-  Cp(p.get<Teuchos::ParameterList*>("XZHydrostatic Problem")->get<double>("Cp", 1005.7)),
+  Cp         (p.isParameter("XZHydrostatic Problem") ? 
+                p.get<Teuchos::ParameterList*>("XZHydrostatic Problem")->get<double>("Cp", 1005.7):
+                p.get<Teuchos::ParameterList*>("Hydrostatic Problem")->get<double>("Cp", 1005.7)),
   vapor      (false)
+
 {
 
   Cpv = 1870.0; // (J/kgK)

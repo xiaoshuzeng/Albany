@@ -186,15 +186,8 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_ThermalConductivity.cpp
   evaluators/PHAL_NSMaterialProperty.cpp
   evaluators/PHAL_Absorption.cpp
-  evaluators/PHAL_GatherSHeight.cpp
-  evaluators/PHAL_GatherTemperature.cpp
-  evaluators/PHAL_GatherBasalFriction.cpp
-  evaluators/PHAL_GatherThickness.cpp
-  evaluators/PHAL_GatherFlowFactor.cpp
   evaluators/Adapt_ElementSizeField.cpp
   evaluators/PHAL_SaveNodalField.cpp
-  evaluators/PHAL_GatherSurfaceVelocity.cpp
-  evaluators/PHAL_GatherVelocityRMS.cpp
   evaluators/PHAL_GatherScalarNodalParameter.cpp
   )
 SET(PDE_SRCS ${PDE_SRCS}
@@ -297,24 +290,10 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_NSMaterialProperty_Def.hpp
   evaluators/PHAL_Absorption.hpp
   evaluators/PHAL_Absorption_Def.hpp
-  evaluators/PHAL_GatherSHeight.hpp
-  evaluators/PHAL_GatherSHeight_Def.hpp
-  evaluators/PHAL_GatherTemperature.hpp
-  evaluators/PHAL_GatherTemperature_Def.hpp
-  evaluators/PHAL_GatherBasalFriction.hpp
-  evaluators/PHAL_GatherBasalFriction_Def.hpp
-  evaluators/PHAL_GatherThickness.hpp
-  evaluators/PHAL_GatherThickness_Def.hpp
-  evaluators/PHAL_GatherFlowFactor.hpp
-  evaluators/PHAL_GatherFlowFactor_Def.hpp
   evaluators/Adapt_ElementSizeField.hpp
   evaluators/Adapt_ElementSizeField_Def.hpp
   evaluators/PHAL_SaveNodalField.hpp
   evaluators/PHAL_SaveNodalField_Def.hpp
-  evaluators/PHAL_GatherSurfaceVelocity.hpp
-  evaluators/PHAL_GatherSurfaceVelocity_Def.hpp
-  evaluators/PHAL_GatherVelocityRMS.hpp
-  evaluators/PHAL_GatherVelocityRMS_Def.hpp
   evaluators/PHAL_GatherScalarNodalParameter.hpp
   evaluators/PHAL_GatherScalarNodalParameter_Def.hpp
   )

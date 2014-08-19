@@ -5,7 +5,10 @@
 #ifndef FELIX_DRIVER
 #define FELIX_DRIVER
 
+// TODO - Fix
+#if 0
 #include "DyCoreModelRegistry.H"
+#endif
 
 class DycoreToGlimmer;
 class FelixToGlimmer;

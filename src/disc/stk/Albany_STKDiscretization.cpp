@@ -137,48 +137,6 @@ Albany::STKDiscretization::getCoords() const
   return coords;
 }
 
-const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-Albany::STKDiscretization::getSurfaceHeight() const
-{
-  return sHeight;
-}
-
-const Albany::WorksetArray<Teuchos::ArrayRCP<double> >::type&
-Albany::STKDiscretization::getTemperature() const
-{
-  return temperature;
-}
-
-const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-Albany::STKDiscretization::getBasalFriction() const
-{
-  return basalFriction;
-}
-
-const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-Albany::STKDiscretization::getThickness() const
-{
-  return thickness;
-}
-
-const Albany::WorksetArray<Teuchos::ArrayRCP<double> >::type&
-Albany::STKDiscretization::getFlowFactor() const
-{
-  return flowFactor;
-}
-
-const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
-Albany::STKDiscretization::getSurfaceVelocity() const
-{
-  return surfaceVelocity;
-}
-
-const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
-Albany::STKDiscretization::getVelocityRMS() const
-{
-  return velocityRMS;
-}
-
 const Albany::WorksetArray<Teuchos::ArrayRCP<double> >::type&
 Albany::STKDiscretization::getSphereVolume() const
 {
@@ -240,7 +198,6 @@ Albany::STKDiscretization::transformMesh()
   std::string transformType = stkMeshStruct->transformType;
 
   if (transformType == "None") {}
-#ifdef ALBANY_FELIX
   else if (transformType == "ISMIP-HOM Test A") {
 #ifdef OUTPUT_TO_SCREEN
     *out << "Test A!" << endl;
@@ -257,7 +214,7 @@ Albany::STKDiscretization::transformMesh()
 #endif
     stkMeshStruct->PBCStruct.scale[0]*=L;
     stkMeshStruct->PBCStruct.scale[1]*=L;
-    AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
+    stk::mesh::Field<double>* surfaceHeight_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
     for (int i=0; i < numOverlapNodes; i++)  {
       double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
@@ -284,7 +241,7 @@ Albany::STKDiscretization::transformMesh()
 #endif
     stkMeshStruct->PBCStruct.scale[0]*=L;
     stkMeshStruct->PBCStruct.scale[1]*=L;
-    AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
+    stk::mesh::Field<double>* surfaceHeight_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
     for (int i=0; i < numOverlapNodes; i++)  {
       double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
@@ -311,7 +268,7 @@ Albany::STKDiscretization::transformMesh()
 #endif
     stkMeshStruct->PBCStruct.scale[0]*=L;
     stkMeshStruct->PBCStruct.scale[1]*=L;
-    AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
+    stk::mesh::Field<double>* surfaceHeight_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
     for (int i=0; i < numOverlapNodes; i++)  {
       double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
@@ -329,7 +286,7 @@ Albany::STKDiscretization::transformMesh()
     double L = 0.7071*30;
     stkMeshStruct->PBCStruct.scale[0]*=L;
     stkMeshStruct->PBCStruct.scale[1]*=L;
-    AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
+    stk::mesh::Field<double>* surfaceHeight_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
     for (int i=0; i < numOverlapNodes; i++)  {
       double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
@@ -347,7 +304,7 @@ Albany::STKDiscretization::transformMesh()
     cout << "L: " << L << endl;
     stkMeshStruct->PBCStruct.scale[0]*=L;
     stkMeshStruct->PBCStruct.scale[1]*=L;
-    AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
+    stk::mesh::Field<double>* surfaceHeight_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
     for (int i=0; i < numOverlapNodes; i++)  {
       double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
@@ -370,7 +327,7 @@ Albany::STKDiscretization::transformMesh()
     double rhoOcean = 1028.0; //ocean density, in kg/m^3
     stkMeshStruct->PBCStruct.scale[0]*=L;
     stkMeshStruct->PBCStruct.scale[1]*=L;
-    AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
+    stk::mesh::Field<double>* surfaceHeight_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
     for (int i=0; i < numOverlapNodes; i++)  {
       double* x = stk::mesh::field_data(*coordinates_field, overlapnodes[i]);
       x[0] = L*x[0];
@@ -381,7 +338,6 @@ Albany::STKDiscretization::transformMesh()
       *stk::mesh::field_data(*surfaceHeight_field, overlapnodes[i]) = s;
     }
   }
-#endif
 #ifdef ALBANY_AERAS
   else if (transformType == "Aeras Schar Mountain") {
     *out << "Aeras Schar Mountain transformation!" << endl;
@@ -882,35 +838,7 @@ void Albany::STKDiscretization::computeWorksetInfo()
   const int numBuckets =  buckets.size();
 
   AbstractSTKFieldContainer::VectorFieldType* coordinates_field = stkMeshStruct->getCoordinatesField();
-  AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field;
-  AbstractSTKFieldContainer::ScalarFieldType* temperature_field;
-  AbstractSTKFieldContainer::ScalarFieldType* basalFriction_field;
-  AbstractSTKFieldContainer::ScalarFieldType* thickness_field;
-  AbstractSTKFieldContainer::ScalarFieldType* flowFactor_field;
-  AbstractSTKFieldContainer::VectorFieldType* surfaceVelocity_field;
-  AbstractSTKFieldContainer::VectorFieldType* velocityRMS_field;
   AbstractSTKFieldContainer::ScalarFieldType* sphereVolume_field;
-
-  if(stkMeshStruct->getFieldContainer()->hasSurfaceHeightField())
-    surfaceHeight_field = stkMeshStruct->getFieldContainer()->getSurfaceHeightField();
-
-  if(stkMeshStruct->getFieldContainer()->hasTemperatureField())
-    temperature_field = stkMeshStruct->getFieldContainer()->getTemperatureField();
-
-  if(stkMeshStruct->getFieldContainer()->hasBasalFrictionField())
-	  basalFriction_field = stkMeshStruct->getFieldContainer()->getBasalFrictionField();
-
-  if(stkMeshStruct->getFieldContainer()->hasThicknessField())
-  	thickness_field = stkMeshStruct->getFieldContainer()->getThicknessField();
-
-  if(stkMeshStruct->getFieldContainer()->hasFlowFactorField())
-    flowFactor_field = stkMeshStruct->getFieldContainer()->getFlowFactorField();
-
-  if(stkMeshStruct->getFieldContainer()->hasSurfaceVelocityField())
-    surfaceVelocity_field = stkMeshStruct->getFieldContainer()->getSurfaceVelocityField();
-
-  if(stkMeshStruct->getFieldContainer()->hasVelocityRMSField())
-    velocityRMS_field = stkMeshStruct->getFieldContainer()->getVelocityRMSField();
 
   if(stkMeshStruct->getFieldContainer()->hasSphereVolumeField())
     sphereVolume_field = stkMeshStruct->getFieldContainer()->getSphereVolumeField();
@@ -940,14 +868,11 @@ void Albany::STKDiscretization::computeWorksetInfo()
   wsElNodeEqID.resize(numBuckets);
   wsElNodeID.resize(numBuckets);
   coords.resize(numBuckets);
-  sHeight.resize(numBuckets);
   sphereVolume.resize(numBuckets);
-  temperature.resize(numBuckets);
-  basalFriction.resize(numBuckets);
-  thickness.resize(numBuckets);
-  flowFactor.resize(numBuckets);
-  surfaceVelocity.resize(numBuckets);
-  velocityRMS.resize(numBuckets);
+
+  nodesOnElemStateVec.resize(numBuckets);
+  stateArrays.elemStateArrays.resize(numBuckets);
+  const Albany::StateInfoStruct& nodal_states = stkMeshStruct->getFieldContainer()->getNodalSIS();
 
   // Clear map if remeshing
   if(!elemGIDws.empty()) elemGIDws.clear();
@@ -958,22 +883,68 @@ void Albany::STKDiscretization::computeWorksetInfo()
     wsElNodeEqID[b].resize(buck.size());
     wsElNodeID[b].resize(buck.size());
     coords[b].resize(buck.size());
-#ifdef ALBANY_FELIX
-    if(stkMeshStruct->getFieldContainer()->hasSurfaceHeightField())
-      sHeight[b].resize(buck.size());
-    if(stkMeshStruct->getFieldContainer()->hasTemperatureField())
-      temperature[b].resize(buck.size());
-    if(stkMeshStruct->getFieldContainer()->hasBasalFrictionField())
-      basalFriction[b].resize(buck.size());
-    if(stkMeshStruct->getFieldContainer()->hasThicknessField())
-      thickness[b].resize(buck.size());
-    if(stkMeshStruct->getFieldContainer()->hasFlowFactorField())
-      flowFactor[b].resize(buck.size());
-    if(stkMeshStruct->getFieldContainer()->hasSurfaceVelocityField())
-      surfaceVelocity[b].resize(buck.size());
-    if(stkMeshStruct->getFieldContainer()->hasVelocityRMSField())
-      velocityRMS[b].resize(buck.size());
-#endif
+
+
+    {  //nodalDataToElemNode.
+
+      nodesOnElemStateVec[b].resize(nodal_states.size());
+      typedef stk::mesh::Cartesian NodeTag;
+      typedef stk::mesh::Cartesian BuckTag;
+      typedef stk::mesh::Cartesian CompTag;
+
+      for (int is=0; is< nodal_states.size(); ++is) {
+        const std::string& name = nodal_states[is]->name;
+        const Albany::StateStruct::FieldDims& dim = nodal_states[is]->dim;
+        const stk::mesh::Field<double>& field = *metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, name);
+        MDArray& array = stateArrays.elemStateArrays[b][name];
+        std::vector<double>& stateVec = nodesOnElemStateVec[b][is];
+        int dim0 = buck.size(); //may be different from dim[0];
+        switch (dim.size()) {
+        case 2:     //scalar
+          stateVec.resize(dim0*dim[1]);
+          array.assign<BuckTag, NodeTag>(stateVec.data(),dim0,dim[1]);
+          for (int i=0; i < dim0; i++) {
+            stk::mesh::Entity element = buck[i];
+            stk::mesh::Entity const* rel = bulkData.begin_nodes(element);
+            for (int j=0; j < dim[1]; j++) {
+              stk::mesh::Entity rowNode = rel[j];
+              array(i,j) = *stk::mesh::field_data(field, rowNode);
+            }
+          }
+          break;
+        case 3:  //vector
+          stateVec.resize(dim0*dim[1]*dim[2]);
+          array.assign<BuckTag, NodeTag,CompTag>(stateVec.data(),dim0,dim[1],dim[2]);
+          for (int i=0; i < dim0; i++) {
+            stk::mesh::Entity element = buck[i];
+            stk::mesh::Entity const* rel = bulkData.begin_nodes(element);
+            for (int j=0; j < dim[1]; j++) {
+              stk::mesh::Entity rowNode = rel[j];
+              double* entry = stk::mesh::field_data(field, rowNode);
+              for(int k=0; k<dim[2]; k++)
+                array(i,j,k) = entry[k];
+            }
+          }
+          break;
+        case 4: //tensor
+          stateVec.resize(dim0*dim[1]*dim[2]*dim[3]);
+          array.assign<BuckTag, NodeTag, CompTag, CompTag>(stateVec.data(),dim0,dim[1],dim[2],dim[3]);
+          for (int i=0; i < dim0; i++) {
+            stk::mesh::Entity element = buck[i];
+            stk::mesh::Entity const* rel = bulkData.begin_nodes(element);
+            for (int j=0; j < dim[1]; j++) {
+              stk::mesh::Entity rowNode = rel[j];
+              double* entry = stk::mesh::field_data(field, rowNode);
+              for(int k=0; k<dim[2]; k++)
+                for(int l=0; l<dim[3]; l++)
+                  array(i,j,k,l) = entry[k*dim[3]+l]; //check this, is stride Correct?
+            }
+          }
+          break;
+        }
+      }
+    }
+
 
 #ifdef ALBANY_LCM
     if(stkMeshStruct->getFieldContainer()->hasSphereVolumeField())
@@ -999,22 +970,6 @@ void Albany::STKDiscretization::computeWorksetInfo()
       wsElNodeEqID[b][i].resize(nodes_per_element);
       wsElNodeID[b][i].resize(nodes_per_element);
       coords[b][i].resize(nodes_per_element);
-#ifdef ALBANY_FELIX
-      if(stkMeshStruct->getFieldContainer()->hasSurfaceHeightField())
-        sHeight[b][i].resize(nodes_per_element);
-      if(stkMeshStruct->getFieldContainer()->hasTemperatureField())
-        temperature[b][i] = *stk::mesh::field_data(*temperature_field, element);
-      if(stkMeshStruct->getFieldContainer()->hasBasalFrictionField())
-    	  basalFriction[b][i].resize(nodes_per_element);
-      if(stkMeshStruct->getFieldContainer()->hasThicknessField())
-    	  thickness[b][i].resize(nodes_per_element);
-      if(stkMeshStruct->getFieldContainer()->hasFlowFactorField())
-         flowFactor[b][i] = *stk::mesh::field_data(*flowFactor_field, element);
-      if(stkMeshStruct->getFieldContainer()->hasSurfaceVelocityField())
-    	  surfaceVelocity[b][i].resize(nodes_per_element);
-      if(stkMeshStruct->getFieldContainer()->hasVelocityRMSField())
-        velocityRMS[b][i].resize(nodes_per_element);
-#endif
 
 #ifdef ALBANY_LCM
       if(stkMeshStruct->getFieldContainer()->hasSphereVolumeField() && nodes_per_element == 1)
@@ -1030,18 +985,7 @@ void Albany::STKDiscretization::computeWorksetInfo()
         TEUCHOS_TEST_FOR_EXCEPTION(node_lid<0, std::logic_error,
 			   "STK1D_Disc: node_lid out of range " << node_lid << std::endl);
         coords[b][i][j] = stk::mesh::field_data(*coordinates_field, rowNode);
-#ifdef ALBANY_FELIX
-        if(stkMeshStruct->getFieldContainer()->hasSurfaceHeightField())
-          sHeight[b][i][j] = *stk::mesh::field_data(*surfaceHeight_field, rowNode);
-        if(stkMeshStruct->getFieldContainer()->hasBasalFrictionField())
-          basalFriction[b][i][j] = *stk::mesh::field_data(*basalFriction_field, rowNode);
-        if(stkMeshStruct->getFieldContainer()->hasThicknessField())
-          thickness[b][i][j] = *stk::mesh::field_data(*thickness_field, rowNode);
-        if(stkMeshStruct->getFieldContainer()->hasSurfaceVelocityField())
-          surfaceVelocity[b][i][j] = stk::mesh::field_data(*surfaceVelocity_field, rowNode);
-        if(stkMeshStruct->getFieldContainer()->hasVelocityRMSField())
-          velocityRMS[b][i][j] = stk::mesh::field_data(*velocityRMS_field, rowNode);
-#endif
+
         wsElNodeEqID[b][i][j].resize(neq);
         wsElNodeID[b][i][j] = node_gid;
 
@@ -1075,10 +1019,9 @@ void Albany::STKDiscretization::computeWorksetInfo()
                 if ((transformType=="ISMIP-HOM Test A" || transformType == "ISMIP-HOM Test B" ||
                      transformType=="ISMIP-HOM Test C" || transformType == "ISMIP-HOM Test D") && d==0) {
                     xleak[2] -= stkMeshStruct->PBCStruct.scale[d]*tan(alpha);
-#ifdef ALBANY_FELIX
-                    if(stkMeshStruct->getFieldContainer()->hasSurfaceHeightField())
-                	    sHeight[b][i][j] -= stkMeshStruct->PBCStruct.scale[d]*tan(alpha);
-#endif
+                    StateArray::iterator sHeight = stateArrays.elemStateArrays[b].find("surface_height");
+                    if(sHeight != stateArrays.elemStateArrays[b].end())
+               	      sHeight->second(int(i),j) -= stkMeshStruct->PBCStruct.scale[d]*tan(alpha);
                 }
                 coords[b][i][j] = xleak; // replace ptr to coords
                 toDelete.push_back(xleak);
@@ -1111,9 +1054,6 @@ void Albany::STKDiscretization::computeWorksetInfo()
   QPTensor3State qptensor3_states = stkMeshStruct->getFieldContainer()->getQPTensor3States();
   std::map<std::string, double>& time = stkMeshStruct->getFieldContainer()->getTime();
 
-  const int spatial_dim = 3;
-
-  stateArrays.elemStateArrays.resize(numBuckets);
   for (std::size_t b=0; b < buckets.size(); b++) {
     stk::mesh::Bucket& buck = *buckets[b];
     for (QPScalarState::iterator qpss = qpscalar_states.begin();

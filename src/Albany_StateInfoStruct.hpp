@@ -68,7 +68,7 @@ typedef std::vector<StateArray> StateArrayVec;
 
 struct StateStruct {
 
-  enum MeshFieldEntity {WorksetValue, NodalData, ElemNode, QuadPoint};
+  enum MeshFieldEntity {WorksetValue, NodalData, ElemNode, ElemData, NodalDataToElemNode, QuadPoint};
   typedef std::vector<int> FieldDims;
 
   StateStruct (const std::string& name_, MeshFieldEntity ent): 

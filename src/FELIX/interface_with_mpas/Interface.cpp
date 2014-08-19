@@ -399,16 +399,16 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 			   stk::mesh::Entity node = meshStruct->bulkData->get_entity(stk::topology::NODE_RANK, gId+1);
 			   double* coord = stk::mesh::field_data(*meshStruct->getCoordinatesField(), node);
 			   coord[2] = elevationData[ib] - levelsNormalizedThickness[nLayers-il]*regulThk[ib];
-			   double* sHeight = stk::mesh::field_data(*meshStruct->getFieldContainer()->getSurfaceHeightField(), node);
+			   double* sHeight = stk::mesh::field_data(*meshStruct->metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height"), node);
 			   sHeight[0] = elevationData[ib];
-			   double* thickness = stk::mesh::field_data(*meshStruct->getFieldContainer()->getThicknessField(),node);
+			   double* thickness = stk::mesh::field_data(*meshStruct->metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "thickness"),node);
 			   thickness[0] = thicknessData[ib];
 			   double* sol = stk::mesh::field_data(*solutionField, node);
 			   sol[0] = velocityOnVertices[j];
 			   sol[1] = velocityOnVertices[j + numVertices3D];
 			   if(il ==0)
 			   {
-				   double* beta = stk::mesh::field_data(*meshStruct->getFieldContainer()->getBasalFrictionField(),node);
+                                   double* beta = stk::mesh::field_data(*meshStruct->metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "basal_friction"), node);
 				   beta[0] = std::max(betaData[ib], minBeta);
 			   }
 		    }
@@ -423,7 +423,7 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 			   for(int iTetra=0; iTetra<3; iTetra++)
 			   {
                                    stk::mesh::Entity elem = meshStruct->bulkData->get_entity(stk::topology::ELEMENT_RANK, ++gId);
-				   double* temperature = stk::mesh::field_data(*meshStruct->getFieldContainer()->getTemperatureField(), elem);
+				   double* temperature = stk::mesh::field_data(*meshStruct->metaData->get_field<stk::mesh::Field<double> >(stk::topology::ELEMENT_RANK, "temperature"), elem);
 				   temperature[0] = temperatureOnTetra[lId++] ;
 			   }
 			}
@@ -995,10 +995,10 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 							   verticesOnEdge, indexToEdgeID, nGlobalEdges, indexToTriangleID, meshStruct->getMeshSpecs()[0]->worksetSize,nLayers,Ordering);
 	*/
 			Albany::AbstractFieldContainer::FieldContainerRequirements req;
-			req.push_back("Surface Height");
-			req.push_back("Temperature");
-			req.push_back("Basal Friction");
-			req.push_back("Thickness");
+			req.push_back("surface_height");
+			req.push_back("temperature");
+			req.push_back("basal_friction");
+			req.push_back("thickness");
 			int neq=2;
 			meshStruct = Teuchos::rcp(new Albany::MpasSTKMeshStruct(discParams, mpiComm, indexToTriangleID, nGlobalTriangles,nLayers,Ordering));
 			meshStruct->constructMesh(mpiComm, discParams, neq, req, sis, indexToVertexID, mpasIndexToVertexID, verticesCoords, isVertexBoundary, nGlobalVertices,

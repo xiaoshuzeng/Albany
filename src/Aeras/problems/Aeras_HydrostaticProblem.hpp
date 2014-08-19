@@ -36,6 +36,7 @@
 #include "Aeras_XZHydrostatic_TemperatureResid.hpp"
 #include "Aeras_XZHydrostatic_PiVel.hpp"
 #include "Aeras_XZHydrostatic_SPressureResid.hpp"
+#include "Aeras_XZHydrostatic_SurfaceGeopotential.hpp"
 #include "Aeras_XZHydrostatic_KineticEnergy.hpp"
 #include "Aeras_XZHydrostatic_UTracer.hpp"
 #include "Aeras_XZHydrostatic_VirtualT.hpp"
@@ -527,6 +528,7 @@ Aeras::HydrostaticProblem::constructEvaluators(
     //Input
     p->set<string>("QP Velx"               , dof_names_levels[0]);
     p->set<string>("Gradient QP Pressure"  , "Gradient QP Pressure");
+    p->set<string>("QP Cpstar"             , "Cpstar");
     p->set<string>("Density"               , "Density");
     p->set<string>("Divergence QP PiVelx"    , "Divergence QP PiVelx");
 
@@ -579,13 +581,24 @@ Aeras::HydrostaticProblem::constructEvaluators(
     p->set<Teuchos::ParameterList*>("Hydrostatic Problem", &paramList);
 
     //Input
+    p->set<std::string>("Pi",                                "Pi");
     p->set<std::string>("Density",            "Density");
     p->set<std::string>("Temperature",        dof_names_levels[1]);
     p->set< Teuchos::ArrayRCP<std::string> >("Tracer Names",        dof_names_tracers);
     //Output
     p->set<std::string>("Virtual_Temperature", "VirtualT");
+    p->set<std::string>("Cpstar",              "Cpstar");
 
     ev = rcp(new Aeras::XZHydrostatic_VirtualT<EvalT,AlbanyTraits>(*p,dl));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+
+  {//QP Cpstar
+    RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation Cpstar"));
+    p->set<string>("Variable Name", "Cpstar");
+    p->set<string>("BF Name", "BF");
+
+    ev = rcp(new Aeras::DOFInterpolationLevels<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -601,10 +614,28 @@ Aeras::HydrostaticProblem::constructEvaluators(
     p->set<std::string>("Eta",                 "Eta"     );
     p->set<std::string>("Pi",                  "Pi"      );
 
+    p->set<std::string>("SurfaceGeopotential", "SurfaceGeopotential");
+
     //Output
     p->set<std::string>("GeoPotential",           "GeoPotential");
 
     ev = rcp(new Aeras::XZHydrostatic_GeoPotential<EvalT,AlbanyTraits>(*p,dl));
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
+
+  {// XZHydrostatic Surface GeoPotential
+    RCP<ParameterList> p = rcp(new ParameterList("XZHydrostatic_SurfaceGeopotential"));
+    
+    p->set<RCP<ParamLib> >("Parameter Library", paramLib);
+    Teuchos::ParameterList& paramList = params->sublist("XZHydrostatic Problem");
+    p->set<Teuchos::ParameterList*>("XZHydrostatic Problem", &paramList);
+    
+    //Input
+    
+    //Output
+    p->set<std::string>("SurfaceGeopotential", "SurfaceGeopotential");
+    
+    ev = rcp(new Aeras::XZHydrostatic_SurfaceGeopotential<EvalT,AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 

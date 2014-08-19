@@ -668,32 +668,41 @@ AAdapt::AerasHydrostatic::AerasHydrostatic(int neq_, int numDim_, Teuchos::Array
                              "Error! Invalid call of Aeras XZ Hydrostatic Model " << neq
                              << " " << numDim << std::endl);
 }
-void AAdapt::AerasHydrostatic::compute(double* x, const double* X) {
-  int numLevels  = (int) data[0];
-  int numTracers = (int) data[1];
-  double SP0     = data[2];
-  double U0      = data[3];
-  double T0      = data[4];
+void AAdapt::AerasHydrostatic::compute(double* solution, const double* X) {
+
+  const int numLevels  = (int) data[0];
+  int const numTracers = (int) data[1];
+  const double SP0     =       data[2];
+  const double U0      =       data[3];
+  const double U1      =       data[3];
+  const double T0      =       data[4];
   std::vector<double> q0(numTracers);
   for (int nt = 0; nt<numTracers; ++nt) {
     q0[nt] = data[5+nt];
   }
 
+  const double x = X[0];
+  const double y = X[1];
+  const double z = X[2];
+
   int offset = 0;
   //Surface Pressure
-  x[offset++] = SP0;
+  solution[offset++] = SP0;
   
-  //Velx
-  for (int i=0; i<numLevels; ++i) x[offset++] = U0;// + i;
-  for (int i=0; i<numLevels; ++i) x[offset++] = T0;
+  for (int i=0; i<numLevels; ++i) {
+    //Velx
+    solution[offset++] = (1-z*z);
+    solution[offset++] = 0;
+    //Temperature
+    solution[offset++] = T0;
+  }
 
   //Tracers
   for (int nt=0; nt<numTracers; ++nt) {
     for (int i=0; i<numLevels; ++i) {
-      x[offset++] = q0[nt];
+      solution[offset++] = y*q0[nt];
     }
   }
-
 }
 //*****************************************************************************
 AAdapt::AerasHeaviside::AerasHeaviside(int neq_, int numDim_, Teuchos::Array<double> data_)

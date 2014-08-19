@@ -241,10 +241,10 @@ Albany::CismSTKMeshStruct::constructMesh(
   int sideID = 0;
 
   AbstractSTKFieldContainer::VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
-  AbstractSTKFieldContainer::ScalarFieldType* surfaceHeight_field = fieldContainer->getSurfaceHeightField();
-  AbstractSTKFieldContainer::ScalarFieldType* flowFactor_field = fieldContainer->getFlowFactorField();
-  AbstractSTKFieldContainer::ScalarFieldType* temperature_field = fieldContainer->getTemperatureField();
-  AbstractSTKFieldContainer::ScalarFieldType* basal_friction_field = fieldContainer->getBasalFrictionField();
+  stk::mesh::Field<double>* surfaceHeight_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
+  stk::mesh::Field<double>* flowFactor_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::ELEMENT_RANK, "flow_factor");
+  stk::mesh::Field<double>* temperature_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::ELEMENT_RANK, "temperature");
+  stk::mesh::Field<double>* basal_friction_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "basal_friction");
 
   if(!surfaceHeight_field) 
      have_sh = false;
@@ -323,7 +323,6 @@ Albany::CismSTKMeshStruct::constructMesh(
      node_LID = node_map->LID(node_GID);
      coord[0] = xyz[node_LID][0];   coord[1] = xyz[node_LID][1];   coord[2] = xyz[node_LID][2];
 
-#ifdef ALBANY_FELIX
      if (have_sh) {
        double* sHeight;
        sHeight = stk::mesh::field_data(*surfaceHeight_field, llnode);
@@ -419,8 +418,7 @@ Albany::CismSTKMeshStruct::constructMesh(
        node_GID = eles[i][7]-1;
        node_LID = node_map->LID(node_GID);
        bFriction[0] = beta[node_LID]; 
-       }
-#endif
+     }
 
      // If first node has z=0 and there is no basal face file provided, identify it as a Basal SS
      if (have_bf == false) {

@@ -458,8 +458,6 @@ computeGlobalResidual(const double current_time,
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -606,8 +604,6 @@ computeGlobalJacobian(const double alpha,
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -794,8 +790,6 @@ computeGlobalTangent(const double alpha,
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //       sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -1102,8 +1096,6 @@ applyGlobalDistParamDeriv(const double current_time,
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -1326,8 +1318,6 @@ computeGlobalSGResidual(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -1476,8 +1466,6 @@ computeGlobalSGJacobian(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -1668,8 +1656,6 @@ computeGlobalSGTangent(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -2007,8 +1993,6 @@ computeGlobalMPResidual(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -2156,8 +2140,6 @@ computeGlobalMPJacobian(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -2341,8 +2323,6 @@ computeGlobalMPTangent(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -2673,8 +2653,6 @@ evaluateStateFieldManager(const double current_time,
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //     sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
