@@ -33,5 +33,7 @@ Aeras::Layouts::Layouts (const int worksetSize,
   qp_gradient_level = rcp(new MDALayout<Cell,QuadPoint,Dummy,Dim> (worksetSize,numQPts,numLevels,numDim));
   node_scalar_level = rcp(new MDALayout<Cell,Node,     Dummy>     (worksetSize,numNodes,numLevels));
   node_vector_level = rcp(new MDALayout<Cell,Node,     Dummy,Dim> (worksetSize,numNodes,numLevels,numDim));
+  node_qp_tensor    = rcp(new MDALayout<Cell,Node,QuadPoint,Dim,Dim>(worksetSize,numNodes,numQPts,numDim,numDim));
+
 }
 

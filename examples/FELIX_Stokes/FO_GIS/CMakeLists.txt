@@ -17,6 +17,10 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/input_fo_gis2km_ascii.xml
                ${CMAKE_CURRENT_BINARY_DIR}/input_fo_gis2km_ascii.xml COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/input_fo_gis2km.xml
                ${CMAKE_CURRENT_BINARY_DIR}/input_fo_gis2km.xml COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/input_fo_gis_unstruct.xml
+               ${CMAKE_CURRENT_BINARY_DIR}/input_fo_gis_unstruct.xml COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/input_fo_gis_unstruct_restart.xml
+               ${CMAKE_CURRENT_BINARY_DIR}/input_fo_gis_unstruct_restart.xml COPYONLY)
 
 get_filename_component(testName ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 
@@ -25,6 +29,8 @@ get_filename_component(testName ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/input_fo_gis20km_test.xml
                ${CMAKE_CURRENT_BINARY_DIR}/input_fo_gis20km_test.xml COPYONLY)
 add_test(${testName}_Gis20km ${Albany.exe} input_fo_gis20km_test.xml)
+add_test(${testName}_GisUnstructured ${Albany.exe} input_fo_gis_unstruct.xml)
+add_test(${testName}_GisRestartUnstructured ${Albany.exe} input_fo_gis_unstruct_restart.xml)
 IF(ALBANY_STK_PERCEPT)
 add_test(${testName}_Gis20km_refine ${Albany8.exe} input_fo_gis20km_refine.xml)
 ENDIF()

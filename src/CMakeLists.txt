@@ -512,6 +512,10 @@ include_directories (${Trilinos_INCLUDE_DIRS}
                      ./QCAD/problems
                      ./QCAD/evaluators
                      ./QCAD/responses
+                     ./ATO
+                     ./ATO/problems
+                     ./ATO/evaluators
+                     ./ATO/utils
                     )
 
 link_directories (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS}
@@ -684,6 +688,12 @@ ENDIF()
 IF(ALBANY_CATALYST)
   SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} albanyCatalyst)
 endif()
+
+IF (ALBANY_ATO)
+  SET(ALBANY_LCM ON)
+  add_subdirectory(ATO)
+  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ATO)
+ENDIF()
 
 IF (ALBANY_LCM)
   add_subdirectory(LCM)

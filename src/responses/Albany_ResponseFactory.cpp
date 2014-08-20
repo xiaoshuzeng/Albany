@@ -98,18 +98,19 @@ createResponseFunction(
   }
 
   else if (name == "Field Integral" ||
-      name == "Field Value" ||
-      name == "Field Average" ||
-      name == "Surface Velocity Mismatch" ||
-      name == "Aeras Shallow Water L2 Error" ||
-      name == "Aeras Total Volume" ||
-      name == "Center Of Mass" ||
-      name == "Save Field" ||
-      name == "Region Boundary" ||
-      name == "Element Size Field" ||
-      name == "IP to Nodal Field" ||
-      name == "Save Nodal Fields" ||
-      name == "PHAL Field Integral") {
+	   name == "Field Value" ||
+	   name == "Field Average" ||
+	   name == "Surface Velocity Mismatch" ||
+           name == "Aeras Shallow Water L2 Error" ||
+           name == "Aeras Total Volume" ||
+	   name == "Center Of Mass" ||
+	   name == "Save Field" ||
+	   name == "Region Boundary" ||
+	   name == "Element Size Field" ||
+	   name == "IP to Nodal Field" ||
+	   name == "Save Nodal Fields" ||
+	   name == "Stiffness Objective" ||
+	   name == "PHAL Field Integral") {
     responseParams.set("Name", name);
     for (int i=0; i<meshSpecs.size(); i++) {
 #ifdef ALBANY_LCM

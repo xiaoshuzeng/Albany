@@ -136,10 +136,17 @@ Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::
         const Teuchos::RCP<Albany::NodeFieldContainer>& nodeContainer 
                = sis->getNodalDataBlock()->getNodeContainer();
 
-        (*nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, dim, metaData, st.output);
-
-        if(st.entity == StateStruct::NodalDataToElemNode)
+        if(st.entity == StateStruct::NodalDataToElemNode) {
           nodal_sis.push_back((*sis)[i]);
+          StateStruct::FieldDims nodalFieldDim;
+          //convert ElemNode dims to NodalData dims.
+          nodalFieldDim.insert(nodalFieldDim.begin(), dim.begin()+1,dim.end());
+          (*nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, nodalFieldDim, metaData, st.output);
+        }
+        else
+          (*nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, dim, metaData, st.output);
+
+
 
     } // end Node class - anything else is an error
     else TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,

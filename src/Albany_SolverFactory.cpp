@@ -26,6 +26,10 @@
   #include "QCAD_GenEigensolver.hpp"
 #endif
 
+#ifdef ALBANY_ATO
+  #include "ATO_Solver.hpp"
+#endif
+
 //#include "Thyra_EpetraModelEvaluator.hpp"
 //#include "AAdapt_AdaptiveModelFactory.hpp"
 
@@ -141,8 +145,11 @@ Albany::SolverFactory::SolverFactory(
   appParams = Teuchos::createParameterList("Albany Parameters");
   Teuchos::updateParametersFromXmlFileAndBroadcast(inputFile, appParams.ptr(), *tcomm);
 
-  //do not set default solver parameters for QCAD::Solver problems, as it handles this itself
-  if (appParams->sublist("Problem").get("Solution Method", "Steady") != "QCAD Multi-Problem") {  
+  // do not set default solver parameters for QCAD::Solver or ATO::Solver problems, 
+  // ... as they handle this themselves
+  std::string solution_method = appParams->sublist("Problem").get("Solution Method", "Steady");
+  if (solution_method != "QCAD Multi-Problem" &&
+      solution_method != "ATO Problem" ) {  
     RCP<ParameterList> defaultSolverParams = rcp(new ParameterList());
     setSolverParamDefaults(defaultSolverParams.get(), tcomm->getRank());
     appParams->setParametersNotAlreadySet(*defaultSolverParams);
@@ -159,8 +166,11 @@ Albany::SolverFactory::SolverFactory(
 {
   RCP<Teuchos::Comm<int> > tcomm = Albany::createTeuchosCommFromMpiComm(mcomm);
 
-  //do not set default solver parameters for QCAD::Solver problems, as it handles this itself
-  if (appParams->sublist("Problem").get("Solution Method", "Steady") != "QCAD Multi-Problem") {  
+  // do not set default solver parameters for QCAD::Solver or ATO::Solver problems, 
+  // ... as they handle this themselves
+  std::string solution_method = appParams->sublist("Problem").get("Solution Method", "Steady");
+  if (solution_method != "QCAD Multi-Problem" &&
+      solution_method != "ATO Problem" ) {  
     RCP<ParameterList> defaultSolverParams = rcp(new ParameterList());
     setSolverParamDefaults(defaultSolverParams.get(), tcomm->getRank());
     appParams->setParametersNotAlreadySet(*defaultSolverParams);
@@ -253,6 +263,15 @@ Albany::SolverFactory::createAndGetAlbanyApp(
 #endif /* ALBANY_QCAD */
     }
 
+
+    if (solutionMethod == "ATO Problem") {
+#ifdef ALBANY_ATO
+      return rcp(new ATO::Solver(appParams, solverComm, initial_guess));
+#else /* ALBANY_ATO */
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "Must activate ATO (topological optimization)\n");
+#endif /* ALBANY_ATO */
+    }
+
     // Solver uses a single app, create it here along with observer
     RCP<Albany::Application> app;
     const RCP<EpetraExt::ModelEvaluator> model = createAlbanyAppAndModel(app, appComm, initial_guess);
@@ -330,8 +349,10 @@ Albany::SolverFactory::createThyraSolverAndGetAlbanyApp(
     const RCP<Thyra::LinearOpWithSolveFactoryBase<double> > lowsFactory =
       createLinearSolveStrategy(linearSolverBuilder);
 
-    if (solutionMethod == "QCAD Multi-Problem" || solutionMethod == "QCAD Poisson-Schrodinger") {
-       // These QCAD solvers do not contain a primary Albany::Application instance and so albanyApp is null.
+    if ( solutionMethod == "QCAD Multi-Problem" || 
+         solutionMethod == "QCAD Poisson-Schrodinger" ||
+         solutionMethod == "ATO Problem" ) {
+       // These QCAD and ATO solvers do not contain a primary Albany::Application instance and so albanyApp is null.
        // For now, do not resize the response vectors. FIXME sort out this issue.
        const RCP<Thyra::ModelEvaluator<double> > thyraModel = Thyra::epetraModelEvaluator(model, lowsFactory);
        const RCP<Piro::ObserverBase<double> > observer = rcp(new PiroObserver(app));
@@ -349,7 +370,9 @@ Albany::SolverFactory::createThyraSolverAndGetAlbanyApp(
   const Teuchos::RCP<EpetraExt::ModelEvaluator> epetraSolver =
     this->createAndGetAlbanyApp(albanyApp, appComm, solverComm, initial_guess);
 
-  if (solutionMethod == "QCAD Multi-Problem" || solutionMethod == "QCAD Poisson-Schrodinger") {
+  if ( solutionMethod == "QCAD Multi-Problem" ||
+       solutionMethod == "QCAD Poisson-Schrodinger" ||
+       solutionMethod == "ATO Problem" ) {
     return Thyra::epetraModelEvaluator(epetraSolver, Teuchos::null);
   }
   else {
