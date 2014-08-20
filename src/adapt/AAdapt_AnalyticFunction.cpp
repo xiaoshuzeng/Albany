@@ -365,8 +365,8 @@ void AAdapt::AerasXZHydrostatic::compute(double* x, const double* X) {
   }
 
   //Tracers
-  for (int nt=0; nt<numTracers; ++nt) {
-    for (int i=0; i<numLevels; ++i) {
+  for (int i=0; i<numLevels; ++i) {
+    for (int nt=0; nt<numTracers; ++nt) {
       x[offset++] = q0[nt];
     }
   }
@@ -408,8 +408,8 @@ void AAdapt::AerasXZHydrostaticGaussianBall::compute(double* x, const double* X)
   }
 
   //Tracers
-  for (int nt=0; nt<numTracers; ++nt) {
-    for (int i=0; i<numLevels; ++i) {
+  for (int i=0; i<numLevels; ++i) {
+    for (int nt=0; nt<numTracers; ++nt) {
       x[offset++] = q0[nt] + amp*std::exp( -( ((i-z0)*(i-z0)/(sig_z*sig_z)) + ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
     }
   }
@@ -452,8 +452,8 @@ void AAdapt::AerasXZHydrostaticGaussianBallInShear::compute(double* x, const dou
   }
 
   //Tracers
-  for (int nt=0; nt<numTracers; ++nt) {
-    for (int i=0; i<numLevels; ++i) {
+  for (int i=0; i<numLevels; ++i) {
+    for (int nt=0; nt<numTracers; ++nt) {
       x[offset++] = q0[nt] + amp*std::exp( -( ((i-z0)*(i-z0)/(sig_z*sig_z)) + ((X[0]-x0)*(X[0]-x0)/(sig_x*sig_x)) ) )  ;
     }
   }
@@ -536,8 +536,8 @@ void AAdapt::AerasXZHydrostaticGaussianVelocityBubble::compute(double* x, const 
   }
 
   //Tracers
-  for (int nt=0; nt<numTracers; ++nt) {
-    for (int i=0; i<numLevels; ++i) {
+  for (int i=0; i<numLevels; ++i) {
+    for (int nt=0; nt<numTracers; ++nt) {
       x[offset++] = q0[nt];
     }
   }
@@ -671,19 +671,43 @@ AAdapt::AerasHydrostatic::AerasHydrostatic(int neq_, int numDim_, Teuchos::Array
 void AAdapt::AerasHydrostatic::compute(double* solution, const double* X) {
 
   const int numLevels  = (int) data[0];
-  int const numTracers = (int) data[1];
+  const int numTracers = (int) data[1];
   const double SP0     =       data[2];
   const double U0      =       data[3];
-  const double U1      =       data[3];
-  const double T0      =       data[4];
+  const double U1      =       data[4];
+  const double T0      =       data[5];
+
   std::vector<double> q0(numTracers);
   for (int nt = 0; nt<numTracers; ++nt) {
-    q0[nt] = data[5+nt];
+    q0[nt] = data[6 + nt];
   }
 
   const double x = X[0];
   const double y = X[1];
   const double z = X[2];
+
+
+  const double myPi  = pi;
+  const double alpha = myPi/4;
+  const double cosAlpha = std::cos(alpha);
+  const double sinAlpha = std::sin(alpha);
+
+  const double theta  = std::asin(z);
+  double lambda = std::atan2(y,x);
+
+  static const double DIST_THRESHOLD = Aeras::ShallowWaterConstants::self().distanceThreshold;
+  if (std::abs(std::abs(theta)-myPi/2) < DIST_THRESHOLD) lambda = 0;
+  else if (lambda < 0) lambda += 2*myPi;
+
+  const double sinTheta = std::sin(theta);
+  const double cosTheta = std::cos(theta);
+
+  const double sinLambda = std::sin(lambda);
+  const double cosLambda = std::cos(lambda);
+
+  const double u =  U1*(cosTheta*cosAlpha + sinTheta*cosLambda*sinAlpha);
+  const double v = -U1*(sinLambda*sinAlpha);
+
 
   int offset = 0;
   //Surface Pressure
@@ -691,16 +715,18 @@ void AAdapt::AerasHydrostatic::compute(double* solution, const double* X) {
   
   for (int i=0; i<numLevels; ++i) {
     //Velx
-    solution[offset++] = (1-z*z);
-    solution[offset++] = 0;
+    solution[offset++] = u; // U0*(1-z*z);
+    solution[offset++] = v; // U1*(1-x*x);
     //Temperature
     solution[offset++] = T0;
   }
 
+
   //Tracers
-  for (int nt=0; nt<numTracers; ++nt) {
-    for (int i=0; i<numLevels; ++i) {
-      solution[offset++] = y*q0[nt];
+  for (int i=0; i<numLevels; ++i) {
+    for (int nt=0; nt<numTracers; ++nt) {
+      const double w = nt%3 ? ((nt%3 == 1) ? y : z) : x;
+      solution[offset++] = w*q0[nt];
     }
   }
 }
