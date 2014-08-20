@@ -117,7 +117,7 @@ computeBCs(
 
   point.fill(coord);
 
-  // Determine the element that cointains this point.
+  // Determine the element that contains this point.
   bool
   found = false;
 
@@ -270,15 +270,15 @@ computeBCs(
   Intrepid::Vector<double>
   value(dimension, Intrepid::ZEROS);
 
-  // std::cout << "Coupling to block: " << coupled_block << '\n';
+  std::cout << "Coupling to block: " << coupled_block << '\n';
 
   for (size_t i = 0; i < vertex_count; ++i) {
     value += basis_values(i, 0) * element_solution[i];
-    // std::cout << std::scientific << std::setprecision(16);
-    // std::cout << basis_values(i, 0) << "    " << element_solution[i] << '\n';
+    std::cout << std::scientific << std::setprecision(16);
+    std::cout << basis_values(i, 0) << "    " << element_solution[i] << '\n';
   }
 
-  // std::cout << " ==> " << value << '\n';
+  std::cout << " ==> " << value << '\n';
 
   x_val = value(0);
   y_val = value(1);
@@ -315,11 +315,11 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
   Teuchos::RCP<Epetra_Vector>
   f = dirichlet_workset.f;
 
-  // std::cout << "\n*** RESIDUAL ***\n";
-  // std::cout << "\n*** X BEFORE ***\n";
-  // x->Print(std::cout);
-  // std::cout << "\n*** F BEFORE ***\n";
-  // f->Print(std::cout);
+  std::cout << "\n*** RESIDUAL ***\n";
+  std::cout << "\n*** X BEFORE COMPUTE BC ***\n";
+  x->Print(std::cout);
+  std::cout << "\n*** F BEFORE COMPUTE BC ***\n";
+  f->Print(std::cout);
 
   Teuchos::RCP<Albany::AbstractDiscretization>
   disc = dirichlet_workset.disc;
@@ -335,13 +335,13 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
   std::vector<std::vector<int> > const &
   ns_dof =  dirichlet_workset.nodeSets->find(this->nodeSetID)->second;
 
-  //std::cout << '\n';
-  //for (size_t i = 0; i < ns_dof.size(); ++i) {
-  //  for (size_t j = 0; j < ns_dof[i].size(); ++j) {
-  //    std::cout << ' ' << ns_dof[i][j];
-  //  }
-  //  std::cout << '\n';
-  //}
+  std::cout << "CONSTRAINED DOFS:\n";
+  for (size_t i = 0; i < ns_dof.size(); ++i) {
+    for (size_t j = 0; j < ns_dof[i].size(); ++j) {
+      std::cout << ' ' << ns_dof[i][j];
+    }
+    std::cout << '\n';
+  }
 
   size_t const
   ns_number_nodes = ns_dof.size();
@@ -368,10 +368,10 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
 
   } // node in node set loop
 
-  //std::cout << "\n*** X AFTER ***\n";
-  //x->Print(std::cout);
-  //std::cout << "\n*** F AFTER ***\n";
-  //f->Print(std::cout);
+  std::cout << "\n*** X AFTER COMPUTE BC ***\n";
+  x->Print(std::cout);
+  std::cout << "\n*** F AFTER COMPUTE BC ***\n";
+  f->Print(std::cout);
 
   return;
 }
@@ -393,7 +393,7 @@ template<typename Traits>
 void SchwarzBC<PHAL::AlbanyTraits::Jacobian, Traits>::
 evaluateFields(typename Traits::EvalData dirichlet_workset)
 {
-  //std::cout << "\n*** JACOBIAN ***\n";
+  std::cout << "\n*** JACOBIAN ***\n";
 
   Teuchos::RCP<Epetra_Vector>
   f = dirichlet_workset.f;
@@ -486,7 +486,7 @@ template<typename Traits>
 void SchwarzBC<PHAL::AlbanyTraits::Tangent, Traits>::
 evaluateFields(typename Traits::EvalData dirichlet_workset)
 {
-  //std::cout << "\n*** TANGENT ***\n";
+  std::cout << "\n*** TANGENT ***\n";
 
   Teuchos::RCP<Epetra_Vector>
   f = dirichlet_workset.f;
