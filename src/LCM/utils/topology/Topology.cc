@@ -860,7 +860,7 @@ Topology::splitOpenFaces()
       file_name = "graph-pre-segment-" + entity_string(point) + ".dot";
       outputToGraphviz(file_name);
     }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
 
     // Iterate over open segments and fracture them.
     for (EntityVector::iterator j = open_segments.begin();
@@ -901,7 +901,7 @@ Topology::splitOpenFaces()
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
 
       // Collect open faces
       PairIterRelation
@@ -965,7 +965,7 @@ Topology::splitOpenFaces()
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
 
       subgraph.splitArticulationPoint(segment_vertex);
 
@@ -979,7 +979,7 @@ Topology::splitOpenFaces()
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
     }
 
     // All open faces and segments have been dealt with.
@@ -1019,7 +1019,7 @@ Topology::splitOpenFaces()
       outputToGraphviz(file_name);
       subgraph.outputToGraphviz("sub" + file_name);
     }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
 
     ElementNodeMap
     new_connectivity = subgraph.splitArticulationPoint(node);
@@ -1034,7 +1034,7 @@ Topology::splitOpenFaces()
       outputToGraphviz(file_name);
       subgraph.outputToGraphviz("sub" + file_name);
     }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
 
     // Update the connectivity
     for (ElementNodeMap::iterator j = new_connectivity.begin();

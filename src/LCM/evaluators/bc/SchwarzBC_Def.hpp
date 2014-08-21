@@ -272,7 +272,7 @@ computeBCs(
   Intrepid::Vector<double>
   value(dimension, Intrepid::ZEROS);
 
-#ifdef DEBUG_LCM_SCHWARZ
+#if defined(DEBUG_LCM_SCHWARZ)
 
   std::cout << "Coupling to block: " << coupled_block << '\n';
 
@@ -321,7 +321,7 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
   Teuchos::RCP<Epetra_Vector>
   f = dirichlet_workset.f;
 
-#ifdef DEBUG_LCM_SCHWARZ
+#if defined(DEBUG_LCM_SCHWARZ)
 
   std::cout << "\n*** RESIDUAL ***\n";
   std::cout << "\n*** X BEFORE COMPUTE BC ***\n";
@@ -345,7 +345,7 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
   std::vector<std::vector<int> > const &
   ns_dof =  dirichlet_workset.nodeSets->find(this->nodeSetID)->second;
 
-#ifdef DEBUG_LCM_SCHWARZ
+#if defined(DEBUG_LCM_SCHWARZ)
 
   std::cout << "CONSTRAINED DOFS:\n";
   for (size_t i = 0; i < ns_dof.size(); ++i) {
@@ -382,7 +382,7 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
 
   } // node in node set loop
 
-#ifdef DEBUG_LCM_SCHWARZ
+#if defined(DEBUG_LCM_SCHWARZ)
 
   std::cout << "\n*** X AFTER COMPUTE BC ***\n";
   x->Print(std::cout);
@@ -411,7 +411,7 @@ template<typename Traits>
 void SchwarzBC<PHAL::AlbanyTraits::Jacobian, Traits>::
 evaluateFields(typename Traits::EvalData dirichlet_workset)
 {
-#ifdef DEBUG_LCM_SCHWARZ
+#if defined(DEBUG_LCM_SCHWARZ)
 
   std::cout << "\n*** JACOBIAN ***\n";
 
@@ -508,7 +508,7 @@ template<typename Traits>
 void SchwarzBC<PHAL::AlbanyTraits::Tangent, Traits>::
 evaluateFields(typename Traits::EvalData dirichlet_workset)
 {
-#ifdef DEBUG_LCM_SCHWARZ
+#if defined(DEBUG_LCM_SCHWARZ)
 
   std::cout << "\n*** TANGENT ***\n";
 
