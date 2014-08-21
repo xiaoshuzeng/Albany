@@ -854,7 +854,7 @@ Topology::splitOpenFaces()
 
     }
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
       file_name = "graph-pre-segment-" + entity_string(point) + ".dot";
@@ -894,7 +894,7 @@ Topology::splitOpenFaces()
       Subgraph
       subgraph(*this, first_entity, last_entity, first_edge, last_edge);
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
         file_name = "graph-pre-clone-" + entity_string(segment) + ".dot";
@@ -958,7 +958,7 @@ Topology::splitOpenFaces()
       Vertex
       segment_vertex = subgraph.globalToLocal(segment.key());
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
         file_name = "graph-pre-split-" + entity_string(segment) + ".dot";
@@ -972,7 +972,7 @@ Topology::splitOpenFaces()
       // Reset segment fracture state
       setFractureState(segment, CLOSED);
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
         file_name = "graph-post-split-" + entity_string(segment) + ".dot";
@@ -1012,7 +1012,7 @@ Topology::splitOpenFaces()
     Vertex
     node = subgraph.globalToLocal(point.key());
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
       file_name = "graph-pre-split-" + entity_string(point) + ".dot";
@@ -1027,7 +1027,7 @@ Topology::splitOpenFaces()
     // Reset fracture state of point
     setFractureState(point, CLOSED);
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
       file_name = "graph-post-split-" + entity_string(point) + ".dot";
