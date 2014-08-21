@@ -273,17 +273,21 @@ computeBCs(
   value(dimension, Intrepid::ZEROS);
 
 #if defined(DEBUG_LCM_SCHWARZ)
-
   std::cout << "Coupling to block: " << coupled_block << '\n';
+#endif // DEBUG_LCM_SCHWARZ
 
   for (size_t i = 0; i < vertex_count; ++i) {
     value += basis_values(i, 0) * element_solution[i];
+
+#if defined(DEBUG_LCM_SCHWARZ)
     std::cout << std::scientific << std::setprecision(16);
     std::cout << basis_values(i, 0) << "    " << element_solution[i] << '\n';
+#endif // DEBUG_LCM_SCHWARZ
+
   }
 
+#if defined(DEBUG_LCM_SCHWARZ)
   std::cout << " ==> " << value << '\n';
-
 #endif // DEBUG_LCM_SCHWARZ
 
   x_val = value(0);
@@ -322,13 +326,11 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
   f = dirichlet_workset.f;
 
 #if defined(DEBUG_LCM_SCHWARZ)
-
   std::cout << "\n*** RESIDUAL ***\n";
   std::cout << "\n*** X BEFORE COMPUTE BC ***\n";
   x->Print(std::cout);
   std::cout << "\n*** F BEFORE COMPUTE BC ***\n";
   f->Print(std::cout);
-
 #endif // DEBUG_LCM_SCHWARZ
 
   Teuchos::RCP<Albany::AbstractDiscretization>
@@ -346,7 +348,6 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
   ns_dof =  dirichlet_workset.nodeSets->find(this->nodeSetID)->second;
 
 #if defined(DEBUG_LCM_SCHWARZ)
-
   std::cout << "CONSTRAINED DOFS:\n";
   for (size_t i = 0; i < ns_dof.size(); ++i) {
     for (size_t j = 0; j < ns_dof[i].size(); ++j) {
@@ -354,7 +355,6 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
     }
     std::cout << '\n';
   }
-
 #endif // DEBUG_LCM_SCHWARZ
 
   size_t const
@@ -383,12 +383,10 @@ evaluateFields(typename Traits::EvalData dirichlet_workset)
   } // node in node set loop
 
 #if defined(DEBUG_LCM_SCHWARZ)
-
   std::cout << "\n*** X AFTER COMPUTE BC ***\n";
   x->Print(std::cout);
   std::cout << "\n*** F AFTER COMPUTE BC ***\n";
   f->Print(std::cout);
-
 #endif // DEBUG_LCM_SCHWARZ
 
   return;
@@ -412,9 +410,7 @@ void SchwarzBC<PHAL::AlbanyTraits::Jacobian, Traits>::
 evaluateFields(typename Traits::EvalData dirichlet_workset)
 {
 #if defined(DEBUG_LCM_SCHWARZ)
-
   std::cout << "\n*** JACOBIAN ***\n";
-
 #endif // DEBUG_LCM_SCHWARZ
 
   Teuchos::RCP<Epetra_Vector>
@@ -509,9 +505,7 @@ void SchwarzBC<PHAL::AlbanyTraits::Tangent, Traits>::
 evaluateFields(typename Traits::EvalData dirichlet_workset)
 {
 #if defined(DEBUG_LCM_SCHWARZ)
-
   std::cout << "\n*** TANGENT ***\n";
-
 #endif // DEBUG_LCM_SCHWARZ
 
   Teuchos::RCP<Epetra_Vector>
