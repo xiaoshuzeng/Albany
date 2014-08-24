@@ -27,6 +27,7 @@
 #include "Albany_AbstractResponseFunction.hpp"
 #include "Albany_StateManager.hpp"
 #include "AAdapt_AdaptiveSolutionManager.hpp"
+#include "Albany_DiscretizationFactory.hpp"
 
 #ifdef ALBANY_CUTR
   #include "CUTR_CubitMeshMover.hpp"
@@ -70,8 +71,18 @@ namespace Albany {
                 const Teuchos::RCP<const Epetra_Vector>& initial_guess =
                 Teuchos::null);
 
+    //! Constructor
+    Application(const Teuchos::RCP<const Epetra_Comm>& comm);
+
     //! Destructor
     ~Application();
+
+    void initialSetUp(const Teuchos::RCP<Teuchos::ParameterList>& params);
+    void createMeshSpecs();
+    void createMeshSpecs(Teuchos::RCP<Albany::AbstractMeshStruct> mesh);
+    void buildProblem();
+    void createDiscretization();
+    void finalSetUp(const Teuchos::RCP<Teuchos::ParameterList>& params, const Teuchos::RCP<const Epetra_Vector>& initial_guess = Teuchos::null);
 
     //! Get underlying abstract discretization
     Teuchos::RCP<Albany::AbstractDiscretization> getDiscretization() const;
@@ -644,8 +655,17 @@ namespace Albany {
     //! Element discretization
     Teuchos::RCP<Albany::AbstractDiscretization> disc;
 
+    //! discretization factory
+    Teuchos::RCP<Albany::DiscretizationFactory> discFactory;
+
+    //! mesh specs
+    Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> > meshSpecs;
+
     //! Problem class
     Teuchos::RCP<Albany::AbstractProblem> problem;
+
+    //! Problem Parameters
+    Teuchos::RCP<Teuchos::ParameterList> problemParams;
 
     //! Parameter library
     Teuchos::RCP<ParamLib> paramLib;
