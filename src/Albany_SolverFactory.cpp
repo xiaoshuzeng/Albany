@@ -253,7 +253,7 @@ Albany::SolverFactory::createAndGetAlbanyApp(
       }
       else app = albanyApp;
 
-      const RCP<EpetraExt::ModelEvaluator> model = createModel(app, appComm, initial_guess);
+      const RCP<EpetraExt::ModelEvaluator> model = createModel(app, appComm);
 
       
       //QCAD::GenEigensolver uses a state manager as an observer (for now)
