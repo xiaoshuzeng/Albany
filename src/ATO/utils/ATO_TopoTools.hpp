@@ -39,10 +39,7 @@ private:
 
 class TopoToolsFactory {
 public:
-//  TopoToolsFactory(const Teuchos::RCP<Teuchos::ParameterList>& topoParams);
   Teuchos::RCP<TopoTools> create(const Teuchos::ParameterList& topoParams);
-//protected:
-//  Teuchos::RCP<Teuchos::ParameterList> _topoParams;
 };
 
 

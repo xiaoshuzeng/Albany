@@ -11,6 +11,7 @@
 #include "Teuchos_ParameterList.hpp"
 
 #include "Albany_AbstractProblem.hpp"
+#include "ATO_OptimizationProblem.hpp"
 
 #include "Phalanx.hpp"
 #include "PHAL_Workset.hpp"
@@ -24,7 +25,9 @@ namespace Albany {
    * \brief Abstract interface for representing a 2-D finite element
    * problem.
    */
-  class LinearElasticityProblem : public Albany::AbstractProblem {
+  class LinearElasticityProblem : 
+    public ATO::OptimizationProblem ,
+    public virtual Albany::AbstractProblem {
   public:
   
     //! Default constructor
@@ -56,9 +59,9 @@ namespace Albany {
     //! Each problem must generate it's list of valid parameters
     Teuchos::RCP<const Teuchos::ParameterList> getValidProblemParameters() const;
 
-    void getAllocatedStates(Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::RCP<Intrepid::FieldContainer<RealType> > > > oldState_,
-			    Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::RCP<Intrepid::FieldContainer<RealType> > > > newState_
-			    ) const;
+    void getAllocatedStates(
+      Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::RCP<Intrepid::FieldContainer<RealType> > > > oldState_,
+      Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::RCP<Intrepid::FieldContainer<RealType> > > > newState_) const;
 
   private:
 
