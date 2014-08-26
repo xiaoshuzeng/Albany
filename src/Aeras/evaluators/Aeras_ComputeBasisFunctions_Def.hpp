@@ -18,7 +18,7 @@ namespace Aeras {
 template<typename EvalT, typename Traits>
 ComputeBasisFunctions<EvalT, Traits>::
 ComputeBasisFunctions(const Teuchos::ParameterList& p,
-                              const Teuchos::RCP<Albany::Layouts>& dl) :
+                              const Teuchos::RCP<Aeras::Layouts>& dl) :
                               spatialDimension( p.get<std::size_t>("spatialDim") ),
   coordVec      (p.get<std::string>  ("Coordinate Vector Name"),
       spatialDimension == 3 ? dl->node_3vector : dl->node_vector ),
@@ -33,6 +33,8 @@ ComputeBasisFunctions(const Teuchos::ParameterList& p,
   wBF           (p.get<std::string>  ("Weighted BF Name"),  dl->node_qp_scalar),
   GradBF        (p.get<std::string>  ("Gradient BF Name"),  dl->node_qp_gradient),
   wGradBF       (p.get<std::string>  ("Weighted Gradient BF Name"), dl->node_qp_gradient),
+  GradGradBF    (p.get<std::string>  ("Gradient Gradient BF Name"), dl->node_qp_tensor),
+  wGradGradBF   (p.get<std::string>  ("Weighted Gradient Gradient BF Name"), dl->node_qp_tensor),
   jacobian  (p.get<std::string>  ("Jacobian Name"), dl->qp_tensor ),
   earthRadius(ShallowWaterConstants::self().earthRadius)
 {
@@ -46,6 +48,8 @@ ComputeBasisFunctions(const Teuchos::ParameterList& p,
   this->addEvaluatedField(wBF);
   this->addEvaluatedField(GradBF);
   this->addEvaluatedField(wGradBF);
+  this->addEvaluatedField(GradGradBF);
+  this->addEvaluatedField(wGradGradBF);
 
   
   // Get Dimensions
@@ -61,6 +65,7 @@ ComputeBasisFunctions(const Teuchos::ParameterList& p,
   // Allocate Temporary FieldContainers
   val_at_cub_points .resize     (numNodes, numQPs);
   grad_at_cub_points.resize     (numNodes, numQPs, basisDims);
+  D2_at_cub_points  .resize     (numNodes, numQPs, basisDims*basisDims/2);
   refPoints         .resize               (numQPs, basisDims);
   refWeights        .resize               (numQPs);
 
@@ -69,6 +74,7 @@ ComputeBasisFunctions(const Teuchos::ParameterList& p,
   
   intrepidBasis->getValues(val_at_cub_points,  refPoints, Intrepid::OPERATOR_VALUE);
   intrepidBasis->getValues(grad_at_cub_points, refPoints, Intrepid::OPERATOR_GRAD);
+  intrepidBasis->getValues(D2_at_cub_points,   refPoints, Intrepid::OPERATOR_D2);
 
   this->setName("Aeras::ComputeBasisFunctions"+PHX::TypeString<EvalT>::value);
 }
@@ -89,6 +95,8 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(wBF,fm);
   this->utils.setFieldData(GradBF,fm);
   this->utils.setFieldData(wGradBF,fm);
+  this->utils.setFieldData(GradGradBF,fm);
+  this->utils.setFieldData(wGradGradBF,fm);
   
 }
 
@@ -394,6 +402,24 @@ evaluateFields(typename Traits::EvalData workset)
     (GradBF, jacobian_inv, grad_at_cub_points);
   Intrepid::FunctionSpaceTools::multiplyMeasure<MeshScalarT>
     (wGradBF, weighted_measure, GradBF);
+
+  for (std::size_t i=0; i < GradGradBF.size(); ++i) GradGradBF(i)=0.0;
+  if (spatialDim!=basisDim) 
+    for (int e=0; e<numelements; ++e) 
+      for (int v=0; v<numNodes; ++v) 
+        for (int q=0; q<numQPs; ++q) 
+          for (int i=0; i<basisDim; i++)
+            for (int j=0; j<basisDim; j++)
+              for (int k=0; k<basisDim; k++)
+                GradGradBF(e,v,q,i,j) += jacobian_inv(e,q,i,k)*D2_at_cub_points(v,q,i+j);
+
+  if (spatialDim!=basisDim) 
+    for (int e=0; e<numelements; ++e) 
+      for (int v=0; v<numNodes; ++v) 
+        for (int q=0; q<numQPs; ++q) 
+          for (int i=0; i<basisDim; i++)
+            for (int j=0; j<basisDim; j++)
+              wGradGradBF(e,v,q,i,j) = weighted_measure(e,q) * GradGradBF(e,v,q,i,j);
 
   //div_check(spatialDim, numelements);
 }

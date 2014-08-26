@@ -501,8 +501,6 @@ Albany::MpasSTKMeshStruct::constructMesh(
 
   AbstractSTKFieldContainer::IntScalarFieldType* proc_rank_field = fieldContainer->getProcRankField();
   AbstractSTKFieldContainer::VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
-  stk_classic::mesh::Field<double>* surfaceHeight_field = metaData->get_field<stk_classic::mesh::Field<double> >("surface_height");
-
 
   for(int i=0; i< (numLayers+1)*indexToVertexID.size(); i++)
   {
@@ -517,10 +515,6 @@ Albany::MpasSTKMeshStruct::constructMesh(
 
       double* coord = stk_classic::mesh::field_data(*coordinates_field, *node);
 	  coord[0] = verticesCoords[3*ib];   coord[1] = verticesCoords[3*ib+1]; coord[2] = double(il)/numLayers;
-
-	  double* sHeight;
-	   sHeight = stk_classic::mesh::field_data(*surfaceHeight_field, *node);
-	   sHeight[0] = 1.;
   }
 
   int tetrasLocalIdsOnPrism[3][4];

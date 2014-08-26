@@ -854,13 +854,13 @@ Topology::splitOpenFaces()
 
     }
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
       file_name = "graph-pre-segment-" + entity_string(point) + ".dot";
       outputToGraphviz(file_name);
     }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
 
     // Iterate over open segments and fracture them.
     for (EntityVector::iterator j = open_segments.begin();
@@ -894,14 +894,14 @@ Topology::splitOpenFaces()
       Subgraph
       subgraph(*this, first_entity, last_entity, first_edge, last_edge);
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
         file_name = "graph-pre-clone-" + entity_string(segment) + ".dot";
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
 
       // Collect open faces
       PairIterRelation
@@ -958,28 +958,28 @@ Topology::splitOpenFaces()
       Vertex
       segment_vertex = subgraph.globalToLocal(segment.key());
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
         file_name = "graph-pre-split-" + entity_string(segment) + ".dot";
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
 
       subgraph.splitArticulationPoint(segment_vertex);
 
       // Reset segment fracture state
       setFractureState(segment, CLOSED);
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
         file_name = "graph-post-split-" + entity_string(segment) + ".dot";
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
     }
 
     // All open faces and segments have been dealt with.
@@ -1012,14 +1012,14 @@ Topology::splitOpenFaces()
     Vertex
     node = subgraph.globalToLocal(point.key());
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
       file_name = "graph-pre-split-" + entity_string(point) + ".dot";
       outputToGraphviz(file_name);
       subgraph.outputToGraphviz("sub" + file_name);
     }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
 
     ElementNodeMap
     new_connectivity = subgraph.splitArticulationPoint(node);
@@ -1027,14 +1027,14 @@ Topology::splitOpenFaces()
     // Reset fracture state of point
     setFractureState(point, CLOSED);
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
       file_name = "graph-post-split-" + entity_string(point) + ".dot";
       outputToGraphviz(file_name);
       subgraph.outputToGraphviz("sub" + file_name);
     }
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
 
     // Update the connectivity
     for (ElementNodeMap::iterator j = new_connectivity.begin();

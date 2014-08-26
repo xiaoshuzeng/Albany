@@ -34,8 +34,9 @@
 //ICEProblem *iceProblemPtr = 0;
 Teuchos::RCP<Albany::MpasSTKMeshStruct> meshStruct2D;
 Teuchos::RCP<Albany::MpasSTKMeshStruct> meshStruct;
+Teuchos::RCP<Albany::Application> albanyApp;
+Teuchos::RCP<Teuchos::ParameterList> paramList;
 Teuchos::RCP<const Epetra_Comm> mpiComm;
-Teuchos::RCP<Teuchos::ParameterList> appParams;
 Teuchos::RCP<Teuchos::ParameterList> discParams;
 Teuchos::RCP<Albany::SolverFactory> slvrfctry;
 Teuchos::RCP<Thyra::ModelEvaluator<double> > solver;
@@ -429,9 +430,6 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 
 			meshStruct->setHasRestartSolution(!first_time_step);
 
-			Teuchos::RCP<Albany::AbstractSTKMeshStruct> stkMeshStruct = meshStruct;
-			discParams->set("STKMeshStruct",stkMeshStruct);
-			Teuchos::RCP<Teuchos::ParameterList> paramList = Teuchos::rcp(&slvrfctry->getParameters(),false);
 			if(!first_time_step)
 			{
 				meshStruct->setRestartDataTime(paramList->sublist("Problem").get("Homotopy Restart Step", 1.));
@@ -439,9 +437,11 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 				if(meshStruct->restartDataTime()== homotopy)
 					paramList->sublist("Problem").set("Solution Method", "Steady");
 			}
-			Teuchos::RCP<Albany::Application> app = Teuchos::rcp(new Albany::Application(mpiComm, paramList));
-			solver = slvrfctry->createThyraSolverAndGetAlbanyApp(app, mpiComm, mpiComm);
 
+			albanyApp->createDiscretization();
+			albanyApp->finalSetUp(paramList);
+			
+			solver = slvrfctry->createThyraSolverAndGetAlbanyApp(albanyApp, mpiComm, mpiComm, Teuchos::null, false);
 
 		   Teuchos::ParameterList solveParams;
 		   solveParams.set("Compute Sensitivities", false);
@@ -457,10 +457,10 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 		   // get solution vector out
 		   //const Teuchos::RCP<const Epetra_Vector> solution = responses.back();
 
-		   const Epetra_Map& overlapMap(*app->getDiscretization()->getOverlapMap());
-		   Epetra_Import import(overlapMap, *app->getDiscretization()->getMap());
+		   const Epetra_Map& overlapMap(*albanyApp->getDiscretization()->getOverlapMap());
+		   Epetra_Import import(overlapMap, *albanyApp->getDiscretization()->getMap());
 		   Epetra_Vector solution(overlapMap);
-		   solution.Import(*app->getDiscretization()->getSolutionField(), import, Insert);
+		   solution.Import(*albanyApp->getDiscretization()->getSolutionField(), import, Insert);
 
 		   //UInt componentGlobalLength = (nLayers+1)*nGlobalVertices; //mesh3DPtr->numGlobalVertices();
 
@@ -985,8 +985,8 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 
 
 			slvrfctry = Teuchos::rcp(new Albany::SolverFactory("albany_input.xml", reducedComm));
-			discParams = Teuchos::sublist(Teuchos::rcp(&slvrfctry->getParameters(),false), "Discretization", true);
-			Teuchos::RCP<Albany::StateInfoStruct> sis=Teuchos::rcp(new Albany::StateInfoStruct);
+      paramList = Teuchos::rcp(&slvrfctry->getParameters(),false);
+			discParams = Teuchos::sublist(paramList, "Discretization", true);
 /*
 			meshStruct = Teuchos::rcp(new Albany::MpasSTKMeshStruct(discParams, mpiComm, indexToTriangleID, verticesOnTria, nGlobalTriangles,nLayers,Ordering));
 			meshStruct->constructMesh(mpiComm, discParams, sis, indexToVertexID, verticesCoords, isVertexBoundary, nGlobalVertices,
@@ -994,13 +994,17 @@ void velocity_solver_solve_l1l2(double const * lowerSurface_F, double const * th
 							   verticesOnEdge, indexToEdgeID, nGlobalEdges, indexToTriangleID, meshStruct->getMeshSpecs()[0]->worksetSize,nLayers,Ordering);
 	*/
 			Albany::AbstractFieldContainer::FieldContainerRequirements req;
-			req.push_back("surface_height");
-			req.push_back("temperature");
-			req.push_back("basal_friction");
-			req.push_back("thickness");
+      albanyApp = Teuchos::rcp(new Albany::Application(mpiComm));
+      albanyApp->initialSetUp(paramList);
+
+
 			int neq=2;
 			meshStruct = Teuchos::rcp(new Albany::MpasSTKMeshStruct(discParams, mpiComm, indexToTriangleID, nGlobalTriangles,nLayers,Ordering));
-			meshStruct->constructMesh(mpiComm, discParams, neq, req, sis, indexToVertexID, mpasIndexToVertexID, verticesCoords, isVertexBoundary, nGlobalVertices,
+			albanyApp->createMeshSpecs(meshStruct);
+
+      albanyApp->buildProblem();
+
+			meshStruct->constructMesh(mpiComm, discParams, neq, req, albanyApp->getStateMgr().getStateInfoStruct(), indexToVertexID, mpasIndexToVertexID, verticesCoords, isVertexBoundary, nGlobalVertices,
 								verticesOnTria, isBoundaryEdge, trianglesOnEdge, trianglesPositionsOnEdge,
 								verticesOnEdge, indexToEdgeID, nGlobalEdges, indexToTriangleID, meshStruct->getMeshSpecs()[0]->worksetSize,nLayers,Ordering);
     }

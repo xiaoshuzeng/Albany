@@ -206,7 +206,8 @@ Albany::SolverFactory::createAndGetAlbanyApp(
   Teuchos::RCP<Albany::Application>& albanyApp,
   const Teuchos::RCP<const Epetra_Comm>& appComm,
   const Teuchos::RCP<const Epetra_Comm>& solverComm,
-  const Teuchos::RCP<const Epetra_Vector>& initial_guess)
+  const Teuchos::RCP<const Epetra_Vector>& initial_guess,
+  bool createAlbanyApp)
 {
     const RCP<ParameterList> problemParams = Teuchos::sublist(appParams, "Problem");
     const std::string solutionMethod = problemParams->get("Solution Method", "Steady");
@@ -246,8 +247,14 @@ Albany::SolverFactory::createAndGetAlbanyApp(
 #ifdef ALBANY_QCAD
 
       RCP<Albany::Application> app;
-      const RCP<EpetraExt::ModelEvaluator> model = createAlbanyAppAndModel(app, appComm, initial_guess);
-      albanyApp = app;
+      if(createAlbanyApp) {
+        app = rcp(new Albany::Application(appComm, appParams, initial_guess));
+        albanyApp = app;
+      }
+      else app = albanyApp;
+
+      const RCP<EpetraExt::ModelEvaluator> model = createModel(app, appComm);
+
       
       //QCAD::GenEigensolver uses a state manager as an observer (for now)
       RCP<Albany::StateManager> observer = rcp( &(app->getStateMgr()), false);
@@ -274,12 +281,18 @@ Albany::SolverFactory::createAndGetAlbanyApp(
 
     // Solver uses a single app, create it here along with observer
     RCP<Albany::Application> app;
-    const RCP<EpetraExt::ModelEvaluator> model = createAlbanyAppAndModel(app, appComm, initial_guess);
 
-    //Pass back albany app so that interface beyond ModelEvaluator can be used.
-    // This is essentially a hack to allow additional in/out arguments beyond
-    //  what ModelEvaluator specifies.
-    albanyApp = app;
+    if(createAlbanyApp) {
+      app = rcp(new Albany::Application(appComm, appParams, initial_guess));
+
+      //Pass back albany app so that interface beyond ModelEvaluator can be used.
+      // This is essentially a hack to allow additional in/out arguments beyond
+      //  what ModelEvaluator specifies.
+      albanyApp = app;
+    }
+    else app = albanyApp;
+
+    const RCP<EpetraExt::ModelEvaluator> model = createModel(app, appComm);
 
     const RCP<ParameterList> piroParams = Teuchos::sublist(appParams, "Piro");
 
@@ -322,7 +335,8 @@ Albany::SolverFactory::createThyraSolverAndGetAlbanyApp(
     Teuchos::RCP<Application>& albanyApp,
     const Teuchos::RCP<const Epetra_Comm>& appComm,
     const Teuchos::RCP<const Epetra_Comm>& solverComm,
-    const Teuchos::RCP<const Epetra_Vector>& initial_guess)
+    const Teuchos::RCP<const Epetra_Vector>& initial_guess,
+    bool createAlbanyApp)
 {
   const RCP<ParameterList> piroParams = Teuchos::sublist(appParams, "Piro");
   const Teuchos::Ptr<const std::string> solverToken(piroParams->getPtr<std::string>("Solver Type"));
@@ -330,18 +344,29 @@ Albany::SolverFactory::createThyraSolverAndGetAlbanyApp(
   const RCP<ParameterList> problemParams = Teuchos::sublist(appParams, "Problem");
   const std::string solutionMethod = problemParams->get("Solution Method", "Steady");
 
+
   if (Teuchos::nonnull(solverToken) && *solverToken == "ThyraNOX") {
     piroParams->set("Solver Type", "NOX");
 
     RCP<Albany::Application> app;
 
-    // Creates the Albany::ModelEvaluator
-    const RCP<EpetraExt::ModelEvaluator> model = createAlbanyAppAndModel(app, appComm, initial_guess);
 
-    // Pass back albany app so that interface beyond ModelEvaluator can be used.
-    // This is essentially a hack to allow additional in/out arguments beyond
-    // what ModelEvaluator specifies.
-    albanyApp = app;
+    //WARINING: if createAlbanyApp==true, then albanyApp will be constructed twice, here and below, when calling
+    //    createAndGetAlbanyApp. Why? (Mauro)
+    if(createAlbanyApp) {
+      app = rcp(new Albany::Application(appComm, appParams, initial_guess));
+
+      // Pass back albany app so that interface beyond ModelEvaluator can be used.
+      // This is essentially a hack to allow additional in/out arguments beyond
+      // what ModelEvaluator specifies.
+      albanyApp = app;
+    }
+    else app = albanyApp;
+
+    // Creates the Albany::ModelEvaluator
+    const RCP<EpetraExt::ModelEvaluator> model = createModel(app, appComm);
+
+
 
     Stratimikos::DefaultLinearSolverBuilder linearSolverBuilder;
     linearSolverBuilder.setParameterList(Piro::extractStratimikosParams(piroParams));
@@ -368,7 +393,7 @@ Albany::SolverFactory::createThyraSolverAndGetAlbanyApp(
   }
 
   const Teuchos::RCP<EpetraExt::ModelEvaluator> epetraSolver =
-    this->createAndGetAlbanyApp(albanyApp, appComm, solverComm, initial_guess);
+    this->createAndGetAlbanyApp(albanyApp, appComm, solverComm, initial_guess, createAlbanyApp);
 
   if ( solutionMethod == "QCAD Multi-Problem" ||
        solutionMethod == "QCAD Poisson-Schrodinger" ||
@@ -391,6 +416,15 @@ Albany::SolverFactory::createAlbanyAppAndModel(
   // Create application
   albanyApp = rcp(new Albany::Application(appComm, appParams, initial_guess));
 
+  return createModel(albanyApp,appComm);
+}
+
+
+Teuchos::RCP<EpetraExt::ModelEvaluator>
+Albany::SolverFactory::createModel(
+  const Teuchos::RCP<Albany::Application>& albanyApp,
+  const Teuchos::RCP<const Epetra_Comm>& appComm)
+{
   // Validate Response list: may move inside individual Problem class
   const RCP<ParameterList> problemParams = Teuchos::sublist(appParams, "Problem");
   problemParams->sublist("Response Functions").

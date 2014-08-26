@@ -16,6 +16,7 @@
 #include "PHAL_Workset.hpp"
 #include "PHAL_Dimension.hpp"
 
+#include "Aeras_Layouts.hpp"
 namespace Aeras {
 
   /*!
@@ -80,7 +81,7 @@ namespace Aeras {
   protected:
     int numDim;
     int numLevels;
-    Teuchos::RCP<Albany::Layouts> dl;
+    Teuchos::RCP<Aeras::Layouts> dl;
 
   };
 
@@ -138,7 +139,7 @@ Aeras::XZScalarAdvectionProblem::constructEvaluators(
        << ", Dim= " << numDim 
        << ", vecDim= " << vecDim << std::endl;
   
-   dl = rcp(new Albany::Layouts(worksetSize,numVertices,numNodes,numQPts,numDim, vecDim));
+   dl = rcp(new Aeras::Layouts(worksetSize,numVertices,numNodes,numQPts,numDim, vecDim, 0));
    Albany::EvaluatorUtils<EvalT, PHAL::AlbanyTraits> evalUtils(dl);
 
    // Temporary variable used numerous times below
