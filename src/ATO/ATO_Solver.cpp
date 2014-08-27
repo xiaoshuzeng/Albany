@@ -5,6 +5,7 @@
 //*****************************************************************//
 
 #include "ATO_Solver.hpp"
+#include "ATO_OptimizationProblem.hpp"
 
 /* GAH FIXME - Silence warning:
 TRILINOS_DIR/../../../include/pecos_global_defs.hpp:17:0: warning: 
@@ -17,98 +18,98 @@ Please remove when issue is resolved
 #include "Teuchos_XMLParameterListHelpers.hpp"
 
 #include "Albany_SolverFactory.hpp"
+#include "Albany_StateInfoStruct.hpp"
 
+/******************************************************************************/
 ATO::Solver::
 Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
        const Teuchos::RCP<const Epetra_Comm>& comm,
        const Teuchos::RCP<const Epetra_Vector>& initial_guess)
 : _solverComm(comm), _mainAppParams(appParams)
+/******************************************************************************/
 {
+  zeroSet();
 
-  using std::string;
 
-  // Get sub-problem input xml files from problem parameters
+  ///*** PROCESS TOP LEVEL PROBLEM ***///
+
+  // Validate Problem parameters
   Teuchos::ParameterList& problemParams = appParams->sublist("Problem");
-
-  // Validate Problem parameters against list for this specific problem
+  _numPhysics = problemParams.get<int>("Number of Subproblems", 1);
   problemParams.validateParameters(*getValidProblemParameters(),0);
 
-  string problemName = problemParams.get<string>("Name");
-  string problemDimStr = problemName.substr( problemName.length()-2 ); // "xD" where x = 1, 2, or 3
-  _problemNameBase = problemName.substr( 0, problemName.length()-3 ); //remove " xD" where x = 1, 2, or 3
-  
-  if(problemDimStr == "1D") numDims = 1;
-  else if(problemDimStr == "2D") numDims = 2;
-  else if(problemDimStr == "3D") numDims = 3;
-  else TEUCHOS_TEST_FOR_EXCEPTION (true, Teuchos::Exceptions::InvalidParameter, std::endl 
-				   << "Error!  Cannot extract dimension from problem name: "
-				   << problemName << std::endl);
-
-  // set problem (pde constraint)
-  // ... currently only supports src/ATO/problems/LinearElasticityProblem
-  if( !(_problemNameBase == "LinearElasticity") )
-    TEUCHOS_TEST_FOR_EXCEPTION (true, Teuchos::Exceptions::InvalidParameter, std::endl 
-				<< "Error!  Invalid problem base name: "
-				<< _problemNameBase << std::endl);
-  
-  // set verbosity
-  _is_verbose = (comm->MyPID() == 0) && problemParams.get<bool>("Verbose Output", false);
-
-  // set optimization parameters
-  _optMaxIter            = problemParams.get<int>("Optimization Maximum Iterations");
-  _optConvTol            = problemParams.get<double>("Optimization Convergence Tolerance");
-  _stabilizationExponent = problemParams.get<double>("Stabilization Exponent",0.5);
-  _moveLimiter           = problemParams.get<double>("Move Limiter",0.2);
-  _volumeConstraint      = problemParams.get<double>("Volume Constraint",0.5);
-  
-  // set parameters and responses
-  _num_parameters = 0; //TEV: assume no parameters or responses for now...
-  _num_responses  = 0; //TEV: assume no parameters or responses for now...
-
-  Teuchos::ParameterList& topoParams = problemParams.get<Teuchos::ParameterList>("Topology");
-
-  _topoCentering = topoParams.get<std::string>("Centering");
-  _topoName = topoParams.get<std::string>("Topology Name");
-
-  Teuchos::ParameterList& aggregatorParams = problemParams.get<Teuchos::ParameterList>("Objective Aggregator");
+  // Parse and create aggregator
+  Teuchos::ParameterList& aggregatorParams = 
+    problemParams.get<Teuchos::ParameterList>("Objective Aggregator");
   ATO::AggregatorFactory aggregatorFactory;
   _aggregator = aggregatorFactory.create(aggregatorParams);
 
-  // Get name of output exodus file specified in Discretization section
-  std::string outputExo = appParams->sublist("Discretization").get<std::string>("Exodus Output File Name");
+  // Parse and create optimizer
+  Teuchos::ParameterList& optimizerParams = 
+    problemParams.get<Teuchos::ParameterList>("Topological Optimization");
+  ATO::OptimizerFactory optimizerFactory;
+  _optimizer = optimizerFactory.create(optimizerParams);
+  _optimizer->SetInterface(this);
 
-  // Create Solver parameter lists based on problem name
-  if( _problemNameBase == "LinearElasticity" ) {
-    _subProblemAppParams = createElasticityInputFile(appParams, 
-                                                    numDims, 
-                                                    outputExo );
-  }
-  else TEUCHOS_TEST_FOR_EXCEPTION(true, 
-                                  Teuchos::Exceptions::InvalidParameter,
-				  std::endl << "Error in ATO::Solver constructor:  " <<
-				  "\n\tInvalid problem name: " << _problemNameBase << 
-                                  "\n\tValid names are:" <<
-                                  "\n\t\tElasticity" <<
-                                  std::endl);
+
+  // Parse topology info
+  Teuchos::ParameterList& topoParams = problemParams.get<Teuchos::ParameterList>("Topology");
+  _topoCentering = topoParams.get<std::string>("Centering");
+  _topoName = topoParams.get<std::string>("Topology Name");
 
   // Get and set the default Piro parameters from a file, if given
   std::string piroFilename  = problemParams.get<std::string>("Piro Defaults Filename", "");
   if(piroFilename.length() > 0) {
     const Albany_MPI_Comm mpiComm = Albany::getMpiCommFromEpetraComm(*comm);
     Teuchos::RCP<Teuchos::Comm<int> > tcomm = Albany::createTeuchosCommFromMpiComm(mpiComm);
-    Teuchos::RCP<Teuchos::ParameterList> defaultPiroParams = Teuchos::createParameterList("Default Piro Parameters");
+    Teuchos::RCP<Teuchos::ParameterList> defaultPiroParams = 
+      Teuchos::createParameterList("Default Piro Parameters");
     Teuchos::updateParametersFromXmlFileAndBroadcast(piroFilename, defaultPiroParams.ptr(), *tcomm);
     Teuchos::ParameterList& piroList = appParams->sublist("Piro", false);
     piroList.setParametersNotAlreadySet(*defaultPiroParams);
   }
+  
+  // set verbosity
+  _is_verbose = (comm->MyPID() == 0) && problemParams.get<bool>("Verbose Output", false);
 
-  //Save the initial guess passed to the solver
-  //TEV  saved_initial_guess = initial_guess;
+  // set optimization parameters
+  _stabilizationExponent = problemParams.get<double>("Stabilization Exponent",0.5);
+  _moveLimiter           = problemParams.get<double>("Move Limiter",0.2);
+  _volumeConstraint      = problemParams.get<double>("Volume Constraint",0.5);
+  
 
-  SolverSubSolverData subSolversData;
-  const SolverSubSolver& sub = CreateSubSolver( _subProblemAppParams, *comm);
-  subSolversData = CreateSubSolverData( sub );
 
+
+  ///*** PROCESS SUBPROBLEM(S) ***///
+   
+  _subProblemAppParams.resize(_numPhysics);
+  _subProblem.resize(_numPhysics);
+  for(int i=0; i<_numPhysics; i++){
+
+    _subProblemAppParams[i] = createInputFile(appParams, i);
+    _subProblem[i] = CreateSubSolver( _subProblemAppParams[i], *_solverComm);
+
+    // ensure that all subproblems are topology based (i.e., optimizable)
+    Teuchos::RCP<Albany::AbstractProblem> problem = _subProblem[i].app->getProblem();
+    ATO::OptimizationProblem* atoProblem = 
+      dynamic_cast<ATO::OptimizationProblem*>(problem.get());
+    TEUCHOS_TEST_FOR_EXCEPTION( 
+      atoProblem == NULL, Teuchos::Exceptions::InvalidParameter, std::endl 
+      << "Error!  Requested subproblem does not support topologies." << std::endl);
+  }
+
+
+  // store a pointer to the first problem as an ATO::OptimizationProblem for callbacks
+  Teuchos::RCP<Albany::AbstractProblem> problem = _subProblem[0].app->getProblem();
+  _atoProblem = dynamic_cast<ATO::OptimizationProblem*>(problem.get());
+  _atoProblem->setDiscretization(_subProblem[0].app->getDiscretization());
+
+  _atoProblem->InitTopOpt();
+  
+
+
+  // get solution map from first subproblem
+  const SolverSubSolver& sub = _subProblem[0];
   Teuchos::RCP<const Epetra_Map> sub_x_map = sub.app->getMap();
   TEUCHOS_TEST_FOR_EXCEPT( sub_x_map == Teuchos::null );
   _epetra_x_map = Teuchos::rcp(new Epetra_Map( *sub_x_map ));
@@ -120,95 +121,185 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
 #endif
 }
 
-ATO::Solver::~Solver()
+
+/******************************************************************************/
+void
+ATO::Solver::zeroSet()
+/******************************************************************************/
+{
+  // set parameters and responses
+  _num_parameters = 0; //TEV: assume no parameters or responses for now...
+  _num_responses  = 0; //TEV: assume no parameters or responses for now...
+}
+
+  
+/******************************************************************************/
+void
+ATO::Solver::evalModel(const InArgs& inArgs,
+                       const OutArgs& outArgs ) const
+/******************************************************************************/
+{
+
+
+  if(_is_verbose){
+    Teuchos::RCP<Teuchos::FancyOStream> out(Teuchos::VerboseObjectBase::getDefaultOStream());
+    *out << "*** Performing Topology Optimization Loop ***" << std::endl;
+  }
+
+  _optimizer->Initialize();
+
+  _optimizer->Optimize();
+ 
+}
+
+
+
+/******************************************************************************/
+///*************** SOLVER - OPTIMIZER INTERFACE FUNCTIONS *******************///
+/******************************************************************************/
+
+
+/******************************************************************************/
+void
+ATO::Solver::ComputeObjective(double* p, double& f, double* dfdp)
+/******************************************************************************/
+{
+  for(int i=0; i<_numPhysics; i++){
+    // copy data from p into each stateManager
+    Albany::StateManager& stateMgr = _subProblem[i].app->getStateMgr();
+    copyTopologyIntoStateMgr( p, stateMgr );
+
+    // enforce PDE constraints
+    _subProblem[i].model->evalModel((*_subProblem[i].params_in),
+                                    (*_subProblem[i].responses_out));
+  }
+
+
+  // aggregate responses into a single objective
+  // JR: This design clearly doesn't work for multiple subproblems.  Each 
+  // subproblem has it's own state manager (I think) in which case we can't
+  // send the state manager of the first subproblem as an argument.  Perhaps
+  // during setup the subproblem data can be sent to the aggregator so 
+  // the call below doesn't need arguments.  Where does the result go?  In
+  // the statemanager of the first physics?  Can we get all subproblems to 
+  // use the same statemanager?
+  _aggregator->Evaluate(_subProblem[0].app->getStateMgr());
+
+  
+  
+  // copy objective (f) and first derivative wrt the topology (dfdp) out 
+  // of stateManager
+  copyObjectiveFromStateMgr( f, dfdp );
+  
+}
+
+/******************************************************************************/
+void
+ATO::Solver::copyTopologyIntoStateMgr( double* p, Albany::StateManager& stateMgr )
+/******************************************************************************/
+{
+  // JR: This only works for element topology.  Generalize.
+  Albany::StateArrays& stateArrays = stateMgr.getStateArrays();
+  Albany::StateArrayVec& dest = stateArrays.elemStateArrays;
+
+  int numWorksets = dest.size();
+
+  int wsOffset = 0;
+  for(int ws=0; ws<numWorksets; ws++){
+    Albany::MDArray& wsTopo = dest[ws][_topoName];
+    int wsSize = wsTopo.size();
+    for(int i=0; i<wsSize; i++)
+      wsTopo[i] = p[wsOffset+i];
+    wsOffset += wsSize;
+  }
+}
+
+/******************************************************************************/
+void
+ATO::Solver::copyObjectiveFromStateMgr( double& f, double* dfdp )
+/******************************************************************************/
+{
+  // JR: This only works for element topology.  Generalize.
+  
+  // f and dfdp are stored in subProblem[0]
+  Albany::StateManager& stateMgr = _subProblem[0].app->getStateMgr();
+  Albany::StateArrays& stateArrays = stateMgr.getStateArrays();
+  Albany::StateArrayVec& src = stateArrays.elemStateArrays;
+
+  int numWorksets = src.size();
+
+  std::string objName = _aggregator->getOutputVariableName();
+
+  int wsOffset = 0;
+  for(int ws=0; ws<numWorksets; ws++){
+    Albany::MDArray& dfdpSrc = src[ws][objName];
+    int wsSize = dfdpSrc.size();
+    for(int i=0; i<wsSize; i++)
+      dfdp[wsOffset+i] = dfdpSrc[i];
+    wsOffset += wsSize;
+  }
+}
+/******************************************************************************/
+void
+ATO::Solver::ComputeVolume(double& v)
+/******************************************************************************/
+{
+  return _atoProblem->ComputeVolume(v);
+}
+
+
+/******************************************************************************/
+void
+ATO::Solver::ComputeVolume(double* p, double& v, double* dvdp)
+/******************************************************************************/
+{
+  return _atoProblem->ComputeVolume(p, v, dvdp);
+}
+
+/******************************************************************************/
+void
+ATO::Solver::ComputeConstraint(double* p, double& c, double* dcdp)
+/******************************************************************************/
 {
 }
 
-Teuchos::RCP<const Epetra_Map> ATO::Solver::get_x_map() const
+/******************************************************************************/
+int
+ATO::Solver::GetNumOptDofs()
+/******************************************************************************/
 {
-  Teuchos::RCP<const Epetra_Map> dummy;
-  return dummy;
+  if( _topoCentering == "Element" ){
+    Albany::StateManager& stateMgr = _subProblem[0].app->getStateMgr();
+    Albany::StateArrays& stateArrays = stateMgr.getStateArrays();
+    Albany::StateArrayVec& dest = stateArrays.elemStateArrays;
+
+    int numWorksets = dest.size();
+
+    int numTotalElems = 0;
+    for(int ws=0; ws<numWorksets; ws++){
+      Albany::MDArray& wsTopo = dest[ws][_topoName];
+      int wsSize = wsTopo.size();
+      numTotalElems += wsSize;
+    }
+    return numTotalElems;
+    
+  } else
+  if( _topoCentering == "Node" ){
+    return _subProblem[0].app->getDiscretization()->getNodeMap()->NumMyElements();
+  }
 }
 
-Teuchos::RCP<const Epetra_Map> ATO::Solver::get_f_map() const
-{
-  Teuchos::RCP<const Epetra_Map> dummy;
-  return dummy;
-}
+/******************************************************************************/
+///*********************** SETUP AND UTILITY FUNCTIONS **********************///
+/******************************************************************************/
 
-EpetraExt::ModelEvaluator::InArgs 
-ATO::Solver::createInArgs() const
-{
-  EpetraExt::ModelEvaluator::InArgsSetup inArgs;
-  inArgs.setModelEvalDescription("ATO Solver Model Evaluator Description");
-  inArgs.set_Np(_num_parameters);
-  return inArgs;
-}
 
-EpetraExt::ModelEvaluator::OutArgs 
-ATO::Solver::createOutArgs() const
-{
-  EpetraExt::ModelEvaluator::OutArgsSetup outArgs;
-  outArgs.setModelEvalDescription("ATO Solver Multipurpose Model Evaluator");
-  outArgs.set_Np_Ng(_num_parameters, _num_responses+1);  //TODO: is the +1 necessary still??
-  return outArgs;
-}
-
-Teuchos::RCP<const Teuchos::ParameterList>
-ATO::Solver::getValidProblemParameters() const
-{
-
-  Teuchos::RCP<Teuchos::ParameterList> validPL = Teuchos::createParameterList("ValidTopologicalOptimizationProblemParams");
-
-  // Basic set-up
-  validPL->set<std::string>("Name", "", "String to designate Problem");
-  validPL->set<bool>("Verbose Output", false, "Enable detailed output mode");
-  validPL->set<std::string>("Name", "", "String to designate Problem");
-
-  // Specify physics problem
-  validPL->sublist("Physics Problem", false, "");
-
-  // Specify responses
-  validPL->sublist("Objective Aggregator", false, "");
-
-  // Specify responses
-  validPL->sublist("Topology", false, "");
-
-  // Physics solver options
-  validPL->set<std::string>("Piro Defaults Filename", "", "An xml file containing a default Piro parameterlist and its sublists");
-
-  // Optimization options
-  validPL->set<int>("Optimization Maximum Iterations",1,"Maximum optimization iterations");
-  validPL->set<double>("Optimization Convergence Tolerance",1.e-7,"Tolerance for topological optimization step");
-  validPL->set<double>("Stabilization Exponent",0.5,"Exponent for topology update");
-  validPL->set<double>("Move Limiter",0.2,"Factor by which topology is allowed to change in a single iteration");
-  validPL->set<double>("Volume Constraint",0.5,"Fraction of optimization volume to be filled with material");
-  validPL->set<std::string>("Topology Centering","Element","Data centering for topology (i.e., 'Element' or 'Node')");
-
-  // Candidate for deprecation.
-  validPL->set<std::string>("Solution Method", "Steady", "Flag for Steady, Transient, or Continuation");
-
-  return validPL;
-}
-
-Teuchos::RCP<const Epetra_Map> ATO::Solver::get_g_map(int j) const
-{
-  TEUCHOS_TEST_FOR_EXCEPTION(j > _num_responses || j < 0, Teuchos::Exceptions::InvalidParameter,
-                     std::endl <<
-                     "Error in ATO::Solver::get_g_map():  " <<
-                     "Invalid response index j = " <<
-                     j << std::endl);
-  //TEV: Hardwired for now
-  int _num_responses = 0;
-  if      (j <  _num_responses) return _epetra_response_map;  //no index because num_g == 1 so j must be zero
-  else if (j == _num_responses) return _epetra_x_map;
-  return Teuchos::null;
-}
-
+/******************************************************************************/
 ATO::SolverSubSolver
 ATO::Solver::CreateSubSolver( const Teuchos::RCP<Teuchos::ParameterList> appParams, 
                               const Epetra_Comm& comm,
                               const Teuchos::RCP<const Epetra_Vector>& initial_guess) const
+/******************************************************************************/
 {
   using Teuchos::RCP;
   using Teuchos::rcp;
@@ -227,6 +318,7 @@ ATO::Solver::CreateSubSolver( const Teuchos::RCP<Teuchos::ParameterList> appPara
   //! Create solver and application objects via solver factory
   RCP<Epetra_Comm> appComm = Albany::createEpetraCommFromMpiComm(mpiComm);
   ret.model = slvrfctry.createAndGetAlbanyApp(ret.app, appComm, appComm, initial_guess);
+
 
   ret.params_in = rcp(new EpetraExt::ModelEvaluator::InArgs);
   ret.responses_out = rcp(new EpetraExt::ModelEvaluator::OutArgs);
@@ -270,8 +362,199 @@ ATO::Solver::CreateSubSolver( const Teuchos::RCP<Teuchos::ParameterList> appPara
   return ret;
 }
 
+/******************************************************************************/
+Teuchos::RCP<Teuchos::ParameterList> 
+ATO::Solver::createInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appParams, int physIndex) const
+/******************************************************************************/
+{   
+
+
+  ///*** CREATE INPUT FILE FOR SUBPROBLEM: ***///
+  
+
+  // Get physics (pde) problem sublist, i.e., Physics Problem N, where N = physIndex.
+  std::stringstream physStream;
+  physStream << "Physics Problem " << physIndex;
+  Teuchos::ParameterList& physics_subList = appParams->sublist("Problem").sublist(physStream.str(), false);
+
+  // Create input parameter list for physics app which mimics a separate input file
+  std::stringstream appStream;
+  appStream << "Parameters for Subapplication " << physIndex;
+  Teuchos::RCP<Teuchos::ParameterList> physics_appParams = Teuchos::createParameterList(appStream.str());
+
+  // get reference to Problem ParameterList in new input file and initialize it 
+  // from Parameters in Physics Problem N.
+  Teuchos::ParameterList& physics_probParams = physics_appParams->sublist("Problem",false);
+  physics_probParams.setParameters(physics_subList);
+
+  // Add topology information
+  Teuchos::ParameterList& topoParams = 
+    appParams->sublist("Problem").get<Teuchos::ParameterList>("Topology");
+  physics_probParams.set<Teuchos::ParameterList>("Topology",topoParams);
+
+  // Discretization sublist processing
+  Teuchos::ParameterList& discList = appParams->sublist("Discretization");
+  Teuchos::ParameterList& physics_discList = physics_appParams->sublist("Discretization", false);
+  physics_discList.setParameters(discList);
+
+  // Piro sublist processing
+  physics_appParams->set("Piro",appParams->sublist("Piro"));
+
+
+
+  ///*** VERIFY SUBPROBLEM: ***///
+
+
+  // extract physics and dimension of the subproblem
+  Teuchos::ParameterList& subProblemParams = appParams->sublist("Problem").sublist(physStream.str());
+  std::string problemName = subProblemParams.get<std::string>("Name");
+  // "xD" where x = 1, 2, or 3
+  std::string problemDimStr = problemName.substr( problemName.length()-2 );
+  //remove " xD" where x = 1, 2, or 3
+  std::string problemNameBase = problemName.substr( 0, problemName.length()-3 );
+  
+  //// check dimensions
+  int numDimensions = 0;
+  if(problemDimStr == "1D") numDimensions = 1;
+  else if(problemDimStr == "2D") numDimensions = 2;
+  else if(problemDimStr == "3D") numDimensions = 3;
+  else TEUCHOS_TEST_FOR_EXCEPTION (
+         true, Teuchos::Exceptions::InvalidParameter, std::endl 
+         << "Error!  Cannot extract dimension from problem name: " << problemName << std::endl);
+  TEUCHOS_TEST_FOR_EXCEPTION (
+    numDimensions == 1, Teuchos::Exceptions::InvalidParameter, std::endl 
+    << "Error!  Topology optimization is not avaliable in 1D." << std::endl);
+
+  //// See if requested physics work with ATO (add your physics here)
+  std::vector<std::string> ATOablePhysics;
+  ATOablePhysics.push_back( "LinearElasticity" );
+  
+  std::vector<std::string>::iterator it;
+  it = std::find(ATOablePhysics.begin(), ATOablePhysics.end(), problemNameBase);
+  TEUCHOS_TEST_FOR_EXCEPTION (
+    it == ATOablePhysics.end(), Teuchos::Exceptions::InvalidParameter, std::endl 
+    << "Error!  Invalid problem base name: " << problemNameBase << std::endl);
+  
+  
+  return physics_appParams;
+
+}
+
+/******************************************************************************/
+Teuchos::RCP<const Teuchos::ParameterList>
+ATO::Solver::getValidProblemParameters() const
+/******************************************************************************/
+{
+
+  Teuchos::RCP<Teuchos::ParameterList> validPL = 
+    Teuchos::createParameterList("ValidTopologicalOptimizationProblemParams");
+
+  // Basic set-up
+  validPL->set<int>("Number of Subproblems", 1, "Number of PDE constraint problems");
+  validPL->set<bool>("Verbose Output", false, "Enable detailed output mode");
+  validPL->set<std::string>("Name", "", "String to designate Problem");
+
+  // Specify physics problem(s)
+  for(int i=0; i<_numPhysics; i++){
+    std::stringstream physStream; physStream << "Physics Problem " << i;
+    validPL->sublist(physStream.str(), false, "");
+  }
+
+  // Specify aggregator
+  validPL->sublist("Objective Aggregator", false, "");
+
+  // Specify optimizer
+  validPL->sublist("Topological Optimization", false, "");
+
+  // Specify responses
+  validPL->sublist("Topology", false, "");
+
+  // Physics solver options
+  validPL->set<std::string>(
+       "Piro Defaults Filename", "", 
+       "An xml file containing a default Piro parameterlist and its sublists");
+
+  // Candidate for deprecation.
+  validPL->set<std::string>(
+       "Solution Method", "Steady", 
+       "Flag for Steady, Transient, or Continuation");
+
+  return validPL;
+}
+
+
+
+
+
+/******************************************************************************/
+///*************                   BOILERPLATE                  *************///
+/******************************************************************************/
+
+
+
+/******************************************************************************/
+ATO::Solver::~Solver() { }
+/******************************************************************************/
+
+
+/******************************************************************************/
+Teuchos::RCP<const Epetra_Map> ATO::Solver::get_x_map() const
+/******************************************************************************/
+{
+  Teuchos::RCP<const Epetra_Map> dummy;
+  return dummy;
+}
+
+/******************************************************************************/
+Teuchos::RCP<const Epetra_Map> ATO::Solver::get_f_map() const
+/******************************************************************************/
+{
+  Teuchos::RCP<const Epetra_Map> dummy;
+  return dummy;
+}
+
+/******************************************************************************/
+EpetraExt::ModelEvaluator::InArgs 
+ATO::Solver::createInArgs() const
+/******************************************************************************/
+{
+  EpetraExt::ModelEvaluator::InArgsSetup inArgs;
+  inArgs.setModelEvalDescription("ATO Solver Model Evaluator Description");
+  inArgs.set_Np(_num_parameters);
+  return inArgs;
+}
+
+/******************************************************************************/
+EpetraExt::ModelEvaluator::OutArgs 
+ATO::Solver::createOutArgs() const
+/******************************************************************************/
+{
+  EpetraExt::ModelEvaluator::OutArgsSetup outArgs;
+  outArgs.setModelEvalDescription("ATO Solver Multipurpose Model Evaluator");
+  outArgs.set_Np_Ng(_num_parameters, _num_responses+1);  //TODO: is the +1 necessary still??
+  return outArgs;
+}
+
+/******************************************************************************/
+Teuchos::RCP<const Epetra_Map> ATO::Solver::get_g_map(int j) const
+/******************************************************************************/
+{
+  TEUCHOS_TEST_FOR_EXCEPTION(j > _num_responses || j < 0, Teuchos::Exceptions::InvalidParameter,
+                     std::endl <<
+                     "Error in ATO::Solver::get_g_map():  " <<
+                     "Invalid response index j = " <<
+                     j << std::endl);
+  //TEV: Hardwired for now
+  int _num_responses = 0;
+  if      (j <  _num_responses) return _epetra_response_map;  //no index because num_g == 1 so j must be zero
+  else if (j == _num_responses) return _epetra_x_map;
+  return Teuchos::null;
+}
+
+/******************************************************************************/
 ATO::SolverSubSolverData
 ATO::Solver::CreateSubSolverData(const ATO::SolverSubSolver& sub) const
+/******************************************************************************/
 {
   ATO::SolverSubSolverData ret;
   if( sub.params_in->Np() > 0 && sub.responses_out->Ng() > 0 ) {
@@ -305,184 +588,4 @@ ATO::Solver::CreateSubSolverData(const ATO::SolverSubSolver& sub) const
 
   return ret;
 }
-
-  
-Teuchos::RCP<Teuchos::ParameterList> 
-ATO::Solver::createElasticityInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appParams,
-                                        int numDims, 
-                                        const std::string& exoOutputFile ) const
-{   
-
-  // Get physics (pde) problem sublists
-  Teuchos::ParameterList& physics_subList = appParams->sublist("Problem").sublist("Physics Problem", false);
-
-  // Create input parameter list for physics app which mimics a separate input file
-  Teuchos::RCP<Teuchos::ParameterList> physics_appParams =
-    Teuchos::createParameterList("Elasticity Subapplication Parameters");
-  Teuchos::ParameterList& physics_probParams = physics_appParams->sublist("Problem",false);
-  
-  std::ostringstream name;
-  name << _problemNameBase << " " << numDims << "D";
-  physics_probParams.set("Name", name.str());
-  
-
-  physics_probParams.setParameters(physics_subList);
-  
-  // Add topology information
-  Teuchos::ParameterList& topoParams = appParams->sublist("Problem").get<Teuchos::ParameterList>("Topology");
-  physics_probParams.set<Teuchos::ParameterList>("Topology",topoParams);
-
-  // Discretization sublist processing
-  Teuchos::ParameterList& discList = appParams->sublist("Discretization");
-  Teuchos::ParameterList& physics_discList = physics_appParams->sublist("Discretization", false);
-  physics_discList.setParameters(discList);
-  if(exoOutputFile.length() > 0)
-    physics_discList.set("Exodus Output File Name",exoOutputFile);
-  else physics_discList.remove("Exodus Output File Name",false);
-
-  // Piro sublist processing
-  physics_appParams->set("Piro",appParams->sublist("Piro"));
-
-  return physics_appParams;
-
-}
-
-void
-ATO::Solver::evalModel(const InArgs& inArgs,
-                       const OutArgs& outArgs ) const
-{
-
-  Teuchos::RCP<Teuchos::FancyOStream> out(Teuchos::VerboseObjectBase::getDefaultOStream());
-
-  if(_is_verbose)
-    *out << "*** Performing Topology Optimization Loop ***" << std::endl;
- 
-  // state variables
-  Albany::StateArrays* ptr_to_statearray = NULL;
-
-  // loop on solution
-  bool optimization_converged = false;
-  std::size_t iter = 0;
-  Teuchos::RCP<Epetra_Vector> initial_guess = Teuchos::null;
-
-  
-
-  const SolverSubSolver& physics_solver = CreateSubSolver( _subProblemAppParams, 
-                                                          *_solverComm,
-                                                           initial_guess );
-
-  ptr_to_statearray = &(physics_solver.app->getStateMgr().getStateArrays());
-
-
-  while(!optimization_converged && iter < _optMaxIter) {
-
-    // actual solve
-    physics_solver.model->evalModel((*physics_solver.params_in),(*physics_solver.responses_out));
-
-
-    // evaluate F and dF/dr
-    //
-    _aggregator->Evaluate(physics_solver.app->getStateMgr());
-
-    // filter sensitivity, dF/dr
-    //
-    
-    // update density field, r
-    //
-    computeUpdatedTopology(*ptr_to_statearray);
-   
-
-    // Prepare for next pass ...
-    // First response vector is the solution... 
-    // ... grab it as guess for next pass
-    initial_guess = physics_solver.responses_out->get_g(0);
-
-    iter++;
-  }
-
-  return;
-}
-
-void
-ATO::Solver::computeUpdatedTopology(Albany::StateArrays &state_data) const
-{
-
-  // ToDo:
-  // 0.  get rid of all the literals below.
-  // 1.  Generalize this!  currently hardwired for element based topo and optimality criteria method.
-  //     Should be generalized to use MMA from F and dF.
-
-  // specific to element based topology!
-  Albany::StateArrayVec &src = state_data.elemStateArrays;
-  int number_of_worksets = src.size();
-
-  std::string dFName = _aggregator->getOutputVariableName();
-
-  std::vector<int> dims;
-  src[0][dFName].dimensions(dims);
-  int num_cells = dims[0];
-  TEUCHOS_TEST_FOR_EXCEPTION (dims[1]!=1, Teuchos::Exceptions::InvalidParameter, 
-                              std::endl << "Expected element centered topology (i.e., num_qp=1), but num_qp=" 
-                              << dims[1] << std::endl);
-
-  int num_total_cells = 0;
-  for (int ws=0; ws<number_of_worksets; ws++) {
-    Albany::MDArray& dF = src[ws][dFName];
-    dF.dimensions(dims);
-    num_total_cells += dims[0];
-  }
-
-
-  double eta = _stabilizationExponent;
-  double mov = _moveLimiter;
-
-
-  // find multiplier that enforces volume constraint
-  double xmax = 1.0;
-  double xmin = 0.05;
-  double vmid, v2=1000.0, v1=0.0;
-  int maxIters=200, niters=0;
-
-//  while( v2-v1 > 1e-4 ){
-  double vol = 0.0;
-  do {
-    TEUCHOS_TEST_FOR_EXCEPTION (niters > maxIters, Teuchos::Exceptions::InvalidParameter, 
-                              std::endl << "Enforcement of volume constraint failed:  Exceeded max iterations" 
-                              << std::endl);
-
-    vol = 0.0;
-    vmid = (v2+v1)/2.0;
-
-    for (int ws=0; ws<number_of_worksets; ws++) {
-  
-      Albany::MDArray& dF       = src[ws][dFName];
-      Albany::MDArray& new_topo = src[ws][_topoName];
-      Albany::MDArray& old_topo = src[ws][_topoName+"_old"];
-
-      dF.dimensions(dims);
-      int num_cells = dims[0];
-  
-      for(int cell=0; cell<num_cells; cell++) {
-        double be = dF(cell,0)/vmid;
-        double xold = old_topo(cell,0);
-        double xnew = xold*pow(be,eta);
-        // limit change
-        double dval = xnew - xold;
-        if( fabs(dval) > mov) xnew = xold+fabs(dval)/dval*mov;
-        // enforce limits
-        if( xnew < xmin ) xnew = xmin;
-        if( xnew > xmax ) xnew = xmax;
-        // add to volume
-        //vol += xnew*element_volume;
-        vol += xnew;  // this assumes (incorrectly) that all elements have the same volume
-        new_topo(cell,0) = xnew;
-      }
-    }
-    if( (vol - _volumeConstraint*num_total_cells) > 0.0 ) v1 = vmid;
-    else v2 = vmid;
-    niters++;
-  } while ( fabs(vol - _volumeConstraint*num_total_cells) > 1e-3 );
-}
-
-
 

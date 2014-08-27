@@ -10,8 +10,10 @@ SET(SOURCES
   ${CMAKE_SOURCE_DIR}/src/ATO/evaluators/ATO_Stress.cpp
   ${CMAKE_SOURCE_DIR}/src/ATO/evaluators/ATO_TopologyWeighting.cpp
   ${CMAKE_SOURCE_DIR}/src/ATO/problems/LinearElasticityProblem.cpp
+  ${CMAKE_SOURCE_DIR}/src/ATO/problems/ATO_OptimizationProblem.cpp
   ${CMAKE_SOURCE_DIR}/src/ATO/utils/ATO_TopoTools.cpp
   ${CMAKE_SOURCE_DIR}/src/ATO/utils/ATO_Aggregator.cpp
+  ${CMAKE_SOURCE_DIR}/src/ATO/utils/ATO_Optimizer.cpp
 )
 
 SET(HEADERS
@@ -23,8 +25,10 @@ SET(HEADERS
   ${CMAKE_SOURCE_DIR}/src/ATO/evaluators/ATO_TopologyWeighting_Def.hpp
   ${CMAKE_SOURCE_DIR}/src/ATO/evaluators/ATO_TopologyWeighting.hpp
   ${CMAKE_SOURCE_DIR}/src/ATO/problems/LinearElasticityProblem.hpp
+  ${CMAKE_SOURCE_DIR}/src/ATO/problems/ATO_OptimizationProblem.hpp
   ${CMAKE_SOURCE_DIR}/src/ATO/utils/ATO_TopoTools.hpp
   ${CMAKE_SOURCE_DIR}/src/ATO/utils/ATO_Aggregator.hpp
+  ${CMAKE_SOURCE_DIR}/src/ATO/utils/ATO_Optimizer.hpp
 )
 
 include_directories (${Trilinos_INCLUDE_DIRS}  ${Trilinos_TPL_INCLUDE_DIRS}
