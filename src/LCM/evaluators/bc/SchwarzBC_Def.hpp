@@ -107,7 +107,7 @@ computeBCs(
   }
 
   double const
-  tolerance = 1.0e-4;
+  tolerance = 5.0e-2;
 
   double * const
   coord = ns_coord[ns_node];
