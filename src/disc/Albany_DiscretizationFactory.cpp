@@ -14,10 +14,8 @@
 #include "Albany_IossSTKMeshStruct.hpp"
 #endif
 #include "Albany_AsciiSTKMeshStruct.hpp"
-#include "Albany_CismSTKMeshStruct.hpp"
 #include "Albany_AsciiSTKMesh2D.hpp"
 #include "Albany_ExtrudedSTKMeshStruct.hpp"
-#include "Albany_MpasSTKMeshStruct.hpp"
 #ifdef ALBANY_CUTR
 #include "Albany_FromCubitSTKMeshStruct.hpp"
 #endif
