@@ -42,10 +42,13 @@ private:
 
   // Input:
   PHX::MDField<ScalarT> unWeightedVar;
+  PHX::MDField<RealType,Cell,Node,QuadPoint> BF;
+
 
   unsigned int numQPs;
   unsigned int numDims;
   std::string topoName;
+  std::string topoCentering;;
 
   // Output:
   PHX::MDField<ScalarT> weightedVar;

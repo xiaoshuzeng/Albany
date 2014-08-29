@@ -34,9 +34,12 @@ class Optimizer
   virtual void Optimize()=0;
   virtual void Initialize()=0;
   virtual void SetInterface(Solver*);
+  virtual void SetCommunicator(const Teuchos::RCP<const Epetra_Comm>& _comm) {comm = _comm;}
  protected:
 
+  double computeDiffNorm(double* v1, double* v2, int n, bool printResult=false);
   OptInterface* solverInterface;
+  Teuchos::RCP<const Epetra_Comm> comm;
 
   double _optConvTol;
   double _optMaxIter;
@@ -52,7 +55,6 @@ class Optimizer_OC : public Optimizer {
   void Initialize();
  private:
   void computeUpdatedTopology();
-  double computeNorm();
 
   double* p;
   double* p_last;

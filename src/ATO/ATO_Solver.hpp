@@ -99,6 +99,16 @@ namespace ATO {
     Teuchos::RCP<const Epetra_Comm> _solverComm;
     Teuchos::RCP<Teuchos::ParameterList> _mainAppParams;
 
+    Teuchos::RCP<Epetra_Vector> overlapTopoVec;
+    Teuchos::RCP<Epetra_Vector> topoVec;
+
+    Teuchos::RCP<Epetra_Vector> overlapdfdpVec;
+    Teuchos::RCP<Epetra_Vector> dfdpVec;
+
+    Teuchos::RCP<Epetra_Import> importer;
+    Teuchos::RCP<Epetra_Export> exporter;
+
+
     // methods
     void copyTopologyIntoStateMgr( double* p, Albany::StateManager& stateMgr );
     void copyObjectiveFromStateMgr( double& f, double* dfdp );

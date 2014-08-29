@@ -50,6 +50,7 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   ATO::OptimizerFactory optimizerFactory;
   _optimizer = optimizerFactory.create(optimizerParams);
   _optimizer->SetInterface(this);
+  _optimizer->SetCommunicator(comm);
 
 
   // Parse topology info
@@ -103,7 +104,7 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   Teuchos::RCP<Albany::AbstractProblem> problem = _subProblem[0].app->getProblem();
   _atoProblem = dynamic_cast<ATO::OptimizationProblem*>(problem.get());
   _atoProblem->setDiscretization(_subProblem[0].app->getDiscretization());
-
+  _atoProblem->setCommunicator(comm);
   _atoProblem->InitTopOpt();
   
 
@@ -113,6 +114,28 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   Teuchos::RCP<const Epetra_Map> sub_x_map = sub.app->getMap();
   TEUCHOS_TEST_FOR_EXCEPT( sub_x_map == Teuchos::null );
   _epetra_x_map = Teuchos::rcp(new Epetra_Map( *sub_x_map ));
+
+  if( _topoCentering == "Node" ){
+    // create overlap topo vector for output purposes
+    Albany::StateManager& stateMgr = _subProblem[0].app->getStateMgr();
+    Teuchos::RCP<const Epetra_BlockMap> 
+      overlapNodeMap = stateMgr.getNodalDataBlock()->getOverlapMap();
+    Teuchos::RCP<const Epetra_BlockMap> 
+      localNodeMap = stateMgr.getNodalDataBlock()->getLocalMap();
+    overlapTopoVec = Teuchos::rcp(new Epetra_Vector(*overlapNodeMap));
+    overlapdfdpVec = Teuchos::rcp(new Epetra_Vector(*overlapNodeMap));
+    dfdpVec  = Teuchos::rcp(new Epetra_Vector(*localNodeMap));
+    topoVec  = Teuchos::rcp(new Epetra_Vector(*localNodeMap));
+                                              
+                                              //* target *//   //* source *//
+    importer = Teuchos::rcp(new Epetra_Import(*overlapNodeMap, *localNodeMap));
+
+
+    // create exporter (for integration type operations):
+                                              //* source *//   //* target *//
+    exporter = Teuchos::rcp(new Epetra_Export(*overlapNodeMap, *localNodeMap));
+}
+
 
 #ifndef EPETRA_NO_32BIT_GLOBAL_INDICES
   typedef int GlobalIndex;
@@ -198,19 +221,55 @@ void
 ATO::Solver::copyTopologyIntoStateMgr( double* p, Albany::StateManager& stateMgr )
 /******************************************************************************/
 {
-  // JR: This only works for element topology.  Generalize.
+
   Albany::StateArrays& stateArrays = stateMgr.getStateArrays();
   Albany::StateArrayVec& dest = stateArrays.elemStateArrays;
-
   int numWorksets = dest.size();
 
-  int wsOffset = 0;
-  for(int ws=0; ws<numWorksets; ws++){
-    Albany::MDArray& wsTopo = dest[ws][_topoName];
-    int wsSize = wsTopo.size();
-    for(int i=0; i<wsSize; i++)
-      wsTopo[i] = p[wsOffset+i];
-    wsOffset += wsSize;
+  if( _topoCentering == "Element" ){
+    int wsOffset = 0;
+    for(int ws=0; ws<numWorksets; ws++){
+      Albany::MDArray& wsTopo = dest[ws][_topoName];
+      int wsSize = wsTopo.size();
+      for(int i=0; i<wsSize; i++)
+        wsTopo(i) = p[wsOffset+i];
+      wsOffset += wsSize;
+    }
+  } else 
+  if( _topoCentering == "Node" ){
+
+    // communicate boundary info
+    int numLocalNodes = topoVec->MyLength();
+    double* ltopo; topoVec->ExtractView(&ltopo);
+    std::memcpy((void*)ltopo, (void*)p, numLocalNodes*sizeof(double));
+    overlapTopoVec->Import(*topoVec, *importer, Insert);
+    double* otopo; overlapTopoVec->ExtractView(&otopo);
+
+    const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type&
+      wsElNodeID = stateMgr.getDiscretization()->getWsElNodeID();
+    Teuchos::RCP<const Epetra_BlockMap> 
+      overlapNodeMap = stateMgr.getNodalDataBlock()->getOverlapMap();
+
+
+    for(int ws=0; ws<numWorksets; ws++){
+      Albany::MDArray& wsTopo = dest[ws][_topoName];
+      int numCells = wsTopo.dimension(0);
+      int numNodes = wsTopo.dimension(1);
+      for(int cell=0; cell<numCells; cell++)
+        for(int node=0; node<numNodes; node++){
+          int gid = wsElNodeID[ws][cell][node];
+          int lid = overlapNodeMap->LID(gid);
+          wsTopo(cell,node) = otopo[lid];
+        }
+    }
+
+    // save topology to nodal data for output sake
+    Teuchos::RCP<Albany::NodeFieldContainer> 
+      nodeContainer = stateMgr.getNodalDataBlock()->getNodeContainer();
+
+    std::string nodal_topoName = _topoName+"_node";
+    (*nodeContainer)[nodal_topoName]->saveField(overlapTopoVec,/*offset=*/0);
+
   }
 }
 
@@ -219,24 +278,58 @@ void
 ATO::Solver::copyObjectiveFromStateMgr( double& f, double* dfdp )
 /******************************************************************************/
 {
-  // JR: This only works for element topology.  Generalize.
-  
   // f and dfdp are stored in subProblem[0]
   Albany::StateManager& stateMgr = _subProblem[0].app->getStateMgr();
   Albany::StateArrays& stateArrays = stateMgr.getStateArrays();
   Albany::StateArrayVec& src = stateArrays.elemStateArrays;
-
   int numWorksets = src.size();
 
   std::string objName = _aggregator->getOutputVariableName();
 
-  int wsOffset = 0;
-  for(int ws=0; ws<numWorksets; ws++){
-    Albany::MDArray& dfdpSrc = src[ws][objName];
-    int wsSize = dfdpSrc.size();
-    for(int i=0; i<wsSize; i++)
-      dfdp[wsOffset+i] = dfdpSrc[i];
-    wsOffset += wsSize;
+  if( _topoCentering == "Element" ){
+    int wsOffset = 0;
+    for(int ws=0; ws<numWorksets; ws++){
+      Albany::MDArray& dfdpSrc = src[ws][objName];
+      int wsSize = dfdpSrc.size();
+      for(int i=0; i<wsSize; i++)
+        dfdp[wsOffset+i] = dfdpSrc(i);
+      wsOffset += wsSize;
+    }
+  } else
+  if( _topoCentering == "Node" ){
+
+    Teuchos::RCP<Albany::AbstractDiscretization> disc = stateMgr.getDiscretization();
+    const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type&
+      wsElNodeID = disc->getWsElNodeID();
+
+    Teuchos::RCP<const Epetra_BlockMap> 
+      overlapNodeMap = stateMgr.getNodalDataBlock()->getOverlapMap();
+
+    overlapdfdpVec->PutScalar(0.0);
+    double* odfdp; overlapdfdpVec->ExtractView(&odfdp);
+
+    for(int ws=0; ws<numWorksets; ws++){
+      Albany::MDArray& dfdpSrc = src[ws][objName];
+      int numCells = dfdpSrc.dimension(0);
+      int numNodes = dfdpSrc.dimension(1);
+      for(int cell=0; cell<numCells; cell++)
+        for(int node=0; node<numNodes; node++){
+          int gid = wsElNodeID[ws][cell][node];
+          int lid = overlapNodeMap->LID(gid);
+          odfdp[lid] += dfdpSrc(cell,node);
+        }
+    }
+    // if no smoother is being used, values will not yet be consistent
+    // accross processors, so communicate boundary info:
+    bool smoother = false;
+    if( !smoother ){
+      dfdpVec->Export(*overlapdfdpVec, *exporter, Add);
+
+      int numLocalNodes = dfdpVec->MyLength();
+      double* lvec; dfdpVec->ExtractView(&lvec);
+      std::memcpy((void*)dfdp, (void*)lvec, numLocalNodes*sizeof(double));
+
+    }
   }
 }
 /******************************************************************************/

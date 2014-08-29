@@ -49,12 +49,15 @@ namespace ATO {
   protected:
 
     std::string topoName;
+    std::string topoCentering;
     std::string dFdpName;
     static const std::string className;
 
     PHX::MDField<ScalarT> gradX;
     PHX::MDField<ScalarT> workConj;
     PHX::MDField<MeshScalarT,Cell,QuadPoint> qp_weights;
+    PHX::MDField<RealType,Cell,Node,QuadPoint> BF;
+
 
     Teuchos::RCP< PHX::Tag<ScalarT> > stiffness_objective_tag;
     Albany::StateManager* pStateMgr;
@@ -68,11 +71,13 @@ class StiffnessObjective
    : public StiffnessObjectiveBase<EvalT, Traits> {
 
    using StiffnessObjectiveBase<EvalT,Traits>::topoName;
+   using StiffnessObjectiveBase<EvalT,Traits>::topoCentering;
    using StiffnessObjectiveBase<EvalT,Traits>::dFdpName;
    using StiffnessObjectiveBase<EvalT,Traits>::className;
    using StiffnessObjectiveBase<EvalT,Traits>::gradX;
    using StiffnessObjectiveBase<EvalT,Traits>::workConj;
    using StiffnessObjectiveBase<EvalT,Traits>::qp_weights;
+   using StiffnessObjectiveBase<EvalT,Traits>::BF;
    using StiffnessObjectiveBase<EvalT,Traits>::stiffness_objective_tag;
    using StiffnessObjectiveBase<EvalT,Traits>::pStateMgr;
    using StiffnessObjectiveBase<EvalT,Traits>::topoTools;
@@ -100,11 +105,13 @@ class StiffnessObjective<PHAL::AlbanyTraits::Residual,Traits>
    : public StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits> {
 
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::topoName;
+   using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::topoCentering;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::dFdpName;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::className;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::gradX;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::workConj;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::qp_weights;
+   using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::BF;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::stiffness_objective_tag;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::pStateMgr;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::topoTools;

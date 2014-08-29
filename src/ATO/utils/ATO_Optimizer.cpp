@@ -41,6 +41,10 @@ Optimizer_OC::Optimizer_OC(const Teuchos::ParameterList& optimizerParams) :
 Optimizer(optimizerParams)
 /**********************************************************************/
 { 
+  p = NULL;
+  p_last = NULL;
+  dfdp = NULL;
+
   _volConvTol    = optimizerParams.get<double>("Volume Enforcement Convergence Tolerance");
   _volMaxIter    = optimizerParams.get<int>("Volume Enforcement Maximum Iterations");
   _minDensity    = optimizerParams.get<double>("Minimum Density");
@@ -72,14 +76,22 @@ Optimizer_OC::~Optimizer_OC()
 
 /******************************************************************************/
 double
-Optimizer_OC::computeNorm()
+Optimizer::computeDiffNorm(double* p, double* p_last, int n, bool printResult)
 /******************************************************************************/
 {
   double norm = 0.0;
-  for(int i=0; i<numOptDofs; i++){
+  for(int i=0; i<n; i++){
     norm += pow(p[i]-p_last[i],2);
   }
-  return (norm > 0.0) ? sqrt(norm) : 0.0;
+  double gnorm = 0.0;
+  comm->SumAll(&norm, &gnorm, 1);
+  gnorm = (gnorm > 0.0) ? sqrt(gnorm) : 0.0;
+  if(printResult && comm->MyPID()==0){
+    std::cout << "************************************************************************" << std::endl;
+    std::cout << "  Optimizer:  computed diffnorm is: " << gnorm << std::endl;
+    std::cout << "************************************************************************" << std::endl;
+  }
+  return gnorm;
 }
 
 /******************************************************************************/
@@ -120,7 +132,7 @@ Optimizer_OC::Optimize()
     computeUpdatedTopology();
 
     // check for convergence
-    double delta_p = computeNorm();
+    double delta_p = computeDiffNorm(p, p_last, numOptDofs, /*result to cout*/ true);
     if( delta_p < _optConvTol ) optimization_converged = true;
 
     iter++;
