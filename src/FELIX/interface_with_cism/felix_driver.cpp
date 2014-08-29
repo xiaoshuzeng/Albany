@@ -140,7 +140,6 @@ extern "C" void felix_driver_();
 //What is exec_mode??
 void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const char * input_fname)
 { 
-#if 0
     // ---------------------------------------------
     //get communicator / communicator info from CISM
     //TO DO: ifdef to check if CISM and Albany have MPI?  
@@ -281,14 +280,12 @@ void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const 
  
     // clean up
     //if (mpiComm->MyPID() == 0) std::cout << "exec mode = " << exec_mode << std::endl;
-#endif
 }
 
 // The solve is done in the felix_driver_run function, and the solution is passed back to Glimmer-CISM 
 // IK, 12/3/13: time_inc_yr and cur_time_yr are not used here... 
 void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time_inc_yr)
 {
-#if 0
     //IK, 12/9/13: how come FancyOStream prints an all processors??    
     Teuchos::RCP<Teuchos::FancyOStream> out(Teuchos::VerboseObjectBase::getDefaultOStream());
 
@@ -564,7 +561,6 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
 
 
     first_time_step = false;
-#endif
 }
   
 
