@@ -134,6 +134,8 @@ public:
   Teuchos::RCP<Epetra_MultiVector> getAuxData();
   void setAuxData(const Teuchos::RCP<Epetra_MultiVector>& aux_data);
 
+  bool areStateVarsAllocated() const {return stateVarsAreAllocated;}
+
 private:
   //! Private to prohibit copying
   StateManager(const StateManager&);

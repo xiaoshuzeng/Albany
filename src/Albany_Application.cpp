@@ -264,8 +264,10 @@ void Albany::Application::finalSetUp(const Teuchos::RCP<Teuchos::ParameterList>&
 
   solMgr = rcp(new AAdapt::AdaptiveSolutionManager(params, disc, initial_guess));
 
-  // Now that space is allocated in STK for state fields, initialize states
-  stateMgr.setStateArrays(disc);
+  // Now that space is allocated in STK for state fields, initialize states.
+  // If the states have been already allocated, skip this.
+  if(!stateMgr.areStateVarsAllocated())
+    stateMgr.setStateArrays(disc);
 
   // Now setup response functions (see note above)
   for (int i=0; i<responses.size(); i++)

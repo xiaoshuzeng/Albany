@@ -70,8 +70,21 @@ computeBCs(
   Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >
   mesh_specs = gms.getMeshSpecs();
 
+  // Get cell topology of the block to which this node set
+  // is coupled.
+  std::map<std::string, int> const &
+  block_name_2_index = gms.ebNameToIndex;
+
+  std::map<std::string, int>::const_iterator
+  it = block_name_2_index.find(coupled_block);
+
+  assert(it != block_name_2_index.end());
+
+  int const
+  index_block = it->second;
+
   CellTopologyData const
-  cell_topology_data = mesh_specs[0]->ctd;
+  cell_topology_data = mesh_specs[index_block]->ctd;
 
   shards::CellTopology
   cell_topology(&cell_topology_data);
