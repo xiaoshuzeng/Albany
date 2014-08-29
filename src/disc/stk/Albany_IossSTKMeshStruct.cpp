@@ -111,8 +111,7 @@ Albany::IossSTKMeshStruct::IossSTKMeshStruct(
     file_name = params->get<std::string>("Pamgen Input File Name");
   }
 
-  size_t idx = mesh_data->add_mesh_database(file_name, mesh_type, stk::io::READ_MESH);
-  mesh_data->set_active_mesh(idx);
+  mesh_data->add_mesh_database(file_name, mesh_type, stk::io::READ_MESH);
   mesh_data->create_input_mesh();
 
   delete metaData;
@@ -254,6 +253,7 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
   *out << "IOSS-STK: number of side sets = " << ssPartVec.size() << std::endl;
 
   mesh_data->add_all_mesh_fields_as_input_fields();
+  std::vector<stk::io::MeshField> missing;
 
   metaData->commit();
 
@@ -286,13 +286,13 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
       // Read solution from exodus file.
       if (index >= 0) { // User has specified a time step to restart at
         *out << "Restart Index set, reading solution index : " << index << std::endl;
-        mesh_data->read_defined_input_fields(index);
+        mesh_data->read_defined_input_fields(index, &missing);
         m_restartDataTime = region.get_state_time(index);
         m_hasRestartSolution = true;
       }
       else if (res_time >= 0) { // User has specified a time to restart at
         *out << "Restart solution time set, reading solution time : " << res_time << std::endl;
-        mesh_data->read_defined_input_fields(res_time);
+        mesh_data->read_defined_input_fields(res_time, &missing);
         m_restartDataTime = res_time;
         m_hasRestartSolution = true;
       }
@@ -327,13 +327,13 @@ Albany::IossSTKMeshStruct::setFieldAndBulkData(
       // Read solution from exodus file.
       if (index >= 0) { // User has specified a time step to restart at
         *out << "Restart Index set, reading solution index : " << index << std::endl;
-        mesh_data->read_defined_input_fields(index);
+        mesh_data->read_defined_input_fields(index, &missing);
         m_restartDataTime = region.get_state_time(index);
         m_hasRestartSolution = true;
       }
       else if (res_time >= 0) { // User has specified a time to restart at
         *out << "Restart solution time set, reading solution time : " << res_time << std::endl;
-        mesh_data->read_defined_input_fields(res_time);
+        mesh_data->read_defined_input_fields(res_time, &missing);
         m_restartDataTime = res_time;
         m_hasRestartSolution = true;
       }
