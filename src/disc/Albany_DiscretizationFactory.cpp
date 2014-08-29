@@ -14,10 +14,8 @@
 #include "Albany_IossSTKMeshStruct.hpp"
 #endif
 #include "Albany_AsciiSTKMeshStruct.hpp"
-#include "Albany_CismSTKMeshStruct.hpp"
 #include "Albany_AsciiSTKMesh2D.hpp"
 #include "Albany_ExtrudedSTKMeshStruct.hpp"
-#include "Albany_MpasSTKMeshStruct.hpp"
 #ifdef ALBANY_CUTR
 #include "Albany_FromCubitSTKMeshStruct.hpp"
 #endif
@@ -251,9 +249,6 @@ Albany::DiscretizationFactory::createMeshSpecs() {
   else if(method == "Ascii") {
     meshStruct = Teuchos::rcp(new Albany::AsciiSTKMeshStruct(discParams, epetra_comm));
   }
-  else if(method == "Cism") {
-    meshStruct =  discParams->get<Teuchos::RCP<Albany::AbstractSTKMeshStruct> >("STKMeshStruct");
-  }
   else if(method == "Ascii2D") {
 	  Teuchos::RCP<Albany::GenericSTKMeshStruct> meshStruct2D;
       meshStruct2D = Teuchos::rcp(new Albany::AsciiSTKMesh2D(discParams, epetra_comm));
@@ -270,9 +265,6 @@ Albany::DiscretizationFactory::createMeshSpecs() {
   }
   else if(method == "Extruded") {
   	  meshStruct = Teuchos::rcp(new Albany::ExtrudedSTKMeshStruct(discParams, epetra_comm));
-  }
-  else if (method == "Mpas") {
-    meshStruct =  discParams->get<Teuchos::RCP<Albany::AbstractSTKMeshStruct> >("STKMeshStruct");
   }
   else if(method == "Cubit") {
 #ifdef ALBANY_CUTR
@@ -337,6 +329,12 @@ Albany::DiscretizationFactory::createDiscretization(unsigned int neq,
 #endif
 
   return result;
+}
+
+Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >
+Albany::DiscretizationFactory::createMeshSpecs(Teuchos::RCP<Albany::AbstractMeshStruct> mesh) {
+  meshStruct = mesh;
+  return meshStruct->getMeshSpecs();
 }
 
 void

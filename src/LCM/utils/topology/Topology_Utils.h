@@ -9,7 +9,7 @@
 
 #include "Topology_Types.h"
 
-//#define LCM_GRAPHVIZ
+//#define DEBUG_LCM_TOPOLOGY
 
 namespace LCM {
 

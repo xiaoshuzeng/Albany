@@ -499,9 +499,9 @@ Subgraph::testArticulationPoint(
     }
   }
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
   writeGraphviz("undirected.dot", graph);
-#endif
+#endif // DEBUG_LCM_TOPOLOGY
 
   std::vector<size_t>
   components(boost::num_vertices(graph));

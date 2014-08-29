@@ -20,9 +20,9 @@
     <ParameterList name="Topological Optimization">
       <Parameter name="Method" type="string" value="OC" />
       <Parameter name="Stabilization Parameter" type="double" value="0.5" />
-      <Parameter name="Move Limiter" type="double" value="0.2" />
+      <Parameter name="Move Limiter" type="double" value="0.25" />
       <Parameter name="Optimization Maximum Iterations" type="int" value="10" />
-      <Parameter name="Optimization Convergence Tolerance" type="double" value="1e-3" />
+      <Parameter name="Optimization Convergence Tolerance" type="double" value="1e-1" />
       <Parameter name="Volume Enforcement Maximum Iterations" type="int" value="120" />
       <Parameter name="Volume Enforcement Convergence Tolerance" type="double" value="1e-6" />
       <Parameter name="Minimum Density" type="double" value="0.05" />
@@ -39,7 +39,7 @@
           are computed from.  There is only one topology.  This block is available
           to the responses and is added to each physics parameter list by the ATO_Solver.
       -->
-      <Parameter name="Centering" type="string" value="Element" />
+      <Parameter name="Centering" type="string" value="Node" />
       <Parameter name="Topology Name" type="string" value="Rho" />
       <Parameter name="Penalization" type="string" value="SIMP" />
       <Parameter name="Update Algorithm" type="string" value="OC" />
