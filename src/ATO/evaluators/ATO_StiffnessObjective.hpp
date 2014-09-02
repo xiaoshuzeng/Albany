@@ -51,6 +51,7 @@ namespace ATO {
     std::string topoName;
     std::string topoCentering;
     std::string dFdpName;
+    std::string FName;
     static const std::string className;
 
     PHX::MDField<ScalarT> gradX;
@@ -73,6 +74,7 @@ class StiffnessObjective
    using StiffnessObjectiveBase<EvalT,Traits>::topoName;
    using StiffnessObjectiveBase<EvalT,Traits>::topoCentering;
    using StiffnessObjectiveBase<EvalT,Traits>::dFdpName;
+   using StiffnessObjectiveBase<EvalT,Traits>::FName;
    using StiffnessObjectiveBase<EvalT,Traits>::className;
    using StiffnessObjectiveBase<EvalT,Traits>::gradX;
    using StiffnessObjectiveBase<EvalT,Traits>::workConj;
@@ -107,6 +109,7 @@ class StiffnessObjective<PHAL::AlbanyTraits::Residual,Traits>
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::topoName;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::topoCentering;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::dFdpName;
+   using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::FName;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::className;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::gradX;
    using StiffnessObjectiveBase<PHAL::AlbanyTraits::Residual, Traits>::workConj;

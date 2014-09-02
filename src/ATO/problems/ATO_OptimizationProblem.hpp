@@ -8,6 +8,7 @@
 #define ATO_OPTIMIZATION_PROBLEM_HPP
 
 #include "Albany_AbstractProblem.hpp"
+#include "Epetra_Vector.h"
 
 namespace ATO {
 
@@ -20,7 +21,7 @@ public virtual Albany::AbstractProblem {
                         const int _numDim);
 
 
-   void ComputeVolume(double* p, double& v, double* dvdp=NULL);
+   void ComputeVolume(const double* p, double& v, double* dvdp=NULL);
    void ComputeVolume(double& v);
    void setDiscretization(Teuchos::RCP<Albany::AbstractDiscretization> _disc)
           {disc = _disc;}
@@ -49,6 +50,10 @@ public virtual Albany::AbstractProblem {
    std::vector<Intrepid::FieldContainer<double> > refWeights;
    std::vector<Intrepid::FieldContainer<double> > basisAtQPs;
    std::vector<Intrepid::FieldContainer<double> > weighted_measure;
+
+   Teuchos::RCP<Epetra_Vector> overlapVec;
+   Teuchos::RCP<Epetra_Vector> localVec;
+   Teuchos::RCP<Epetra_Export> exporter;
 
    std::string topoName;
    std::string topoCentering;

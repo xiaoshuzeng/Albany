@@ -22,7 +22,7 @@
       <Parameter name="Package" type="string" value="OC" />
       <Parameter name="Stabilization Parameter" type="double" value="0.5" />
       <Parameter name="Move Limiter" type="double" value="0.2" />
-      <Parameter name="Optimization Maximum Iterations" type="int" value="10" />
+      <Parameter name="Optimization Maximum Iterations" type="int" value="40" />
       <Parameter name="Optimization Convergence Tolerance" type="double" value="1e-3" />
       <Parameter name="Volume Enforcement Maximum Iterations" type="int" value="120" />
       <Parameter name="Volume Enforcement Convergence Tolerance" type="double" value="1e-6" />
@@ -51,7 +51,7 @@
     </ParameterList>
 
     <ParameterList name="Physics Problem 0">    
-      <Parameter name="Name" type="string" value="LinearElasticity 2D" />
+      <Parameter name="Name" type="string" value="LinearElasticity 3D" />
       <!--
       <Parameter name="Phalanx Graph Visualization Detail" type="int" value="2"/>
       -->
@@ -59,6 +59,7 @@
       <ParameterList name="Dirichlet BCs">
         <Parameter name="DBC on NS nodelist_1 for DOF X" type="double" value="0.0"/>
         <Parameter name="DBC on NS nodelist_1 for DOF Y" type="double" value="0.0"/>
+        <Parameter name="DBC on NS nodelist_1 for DOF Z" type="double" value="0.0"/>
       </ParameterList> <!-- end Dirichlet BCs -->
       <ParameterList name="Neumann BCs">
         <Parameter name="NBC on SS surface_1 for DOF sig_y set dudn" type="Array(double)" value="{4.5}"/>
@@ -92,8 +93,8 @@
 
   <ParameterList name="Discretization">
     <Parameter name="Method" type="string" value="Ioss"/>
-    <Parameter name="Exodus Input File Name" type="string" value="mitchell.gen"/>
-    <Parameter name="Exodus Output File Name" type="string" value="mitchell.exo"/>
+    <Parameter name="Exodus Input File Name" type="string" value="mitchell3D.gen"/>
+    <Parameter name="Exodus Output File Name" type="string" value="mitchell3D.exo"/>
   </ParameterList>
 
   <ParameterList name="Piro">

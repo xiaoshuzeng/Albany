@@ -12,13 +12,14 @@
     <ParameterList name="Objective Aggregator">
       <Parameter name="Objective Name" type="string" value="F" />
       <Parameter name="dFdTopology Name" type="string" value="dFdRho" />
-      <Parameter name="Objectives" type="Array(string)" value="{dR0dRho}"/>
+      <Parameter name="Objectives" type="Array(string)" value="{R0}"/>
+      <Parameter name="Objective Derivatives" type="Array(string)" value="{dR0dRho}"/>
       <Parameter name="Weighting" type="string" value="Uniform"/>
     </ParameterList>
 
 
     <ParameterList name="Topological Optimization">
-      <Parameter name="Method" type="string" value="OC" />
+      <Parameter name="Package" type="string" value="OC" />
       <Parameter name="Stabilization Parameter" type="double" value="0.5" />
       <Parameter name="Move Limiter" type="double" value="0.2" />
       <Parameter name="Optimization Maximum Iterations" type="int" value="10" />
@@ -81,6 +82,7 @@
           <Parameter name="Gradient Field Layout" type="string" value="QP Tensor" />
           <Parameter name="Work Conjugate Name" type="string" value="Stress" />
           <Parameter name="Work Conjugate Layout" type="string" value="QP Tensor" />
+          <Parameter name="Response Name" type="string" value="R0" />
           <Parameter name="Response Derivative Name" type="string" value="dR0dRho" />
         </ParameterList>
       </ParameterList>

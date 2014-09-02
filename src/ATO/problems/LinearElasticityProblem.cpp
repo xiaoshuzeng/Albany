@@ -178,6 +178,7 @@ Albany::LinearElasticityProblem::getValidProblemParameters() const
   validPL->set<double>("Poissons Ratio", 0.0);
 
   validPL->sublist("Topology", false, "");
+  validPL->sublist("Objective Aggregator", false, "");
 
   return validPL;
 }

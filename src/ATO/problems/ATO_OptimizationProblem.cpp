@@ -6,6 +6,7 @@
 
 #include "ATO_OptimizationProblem.hpp"
 #include "Albany_AbstractDiscretization.hpp"
+#include "Epetra_Export.h"
 
 /******************************************************************************/
 ATO::OptimizationProblem::
@@ -48,7 +49,7 @@ ComputeVolume(double& v)
 /******************************************************************************/
 void
 ATO::OptimizationProblem::
-ComputeVolume(double* p, double& v, double* dvdp)
+ComputeVolume(const double* p, double& v, double* dvdp)
 /******************************************************************************/
 {
   double localv = 0.0;
@@ -61,6 +62,7 @@ ComputeVolume(double* p, double& v, double* dvdp)
 
 
   if( topoCentering == "Element" ){
+    int wsOffset = 0;
     for(int ws=0; ws<numWorksets; ws++){
   
       int physIndex = wsPhysIndex[ws];
@@ -68,7 +70,6 @@ ComputeVolume(double* p, double& v, double* dvdp)
       int numCells = weighted_measure[ws].dimension(0);
       int numQPs   = weighted_measure[ws].dimension(1);
       
-      int wsOffset = 0;
       for(int cell=0; cell<numCells; cell++){
         double elVol = 0.0;
         for(int qp=0; qp<numQPs; qp++)
@@ -80,6 +81,7 @@ ComputeVolume(double* p, double& v, double* dvdp)
     comm->SumAll(&localv, &v, 1);
 
     if( dvdp != NULL ){
+      int wsOffset = 0;
       for(int ws=0; ws<numWorksets; ws++){
     
         int physIndex = wsPhysIndex[ws];
@@ -87,7 +89,6 @@ ComputeVolume(double* p, double& v, double* dvdp)
         int numCells = weighted_measure[ws].dimension(0);
         int numQPs   = weighted_measure[ws].dimension(1);
         
-        int wsOffset = 0;
         for(int cell=0; cell<numCells; cell++){
           double elVol = 0.0;
           for(int qp=0; qp<numQPs; qp++)
@@ -120,7 +121,38 @@ ComputeVolume(double* p, double& v, double* dvdp)
     }
     comm->SumAll(&localv, &v, 1);
 
-    //JR: Implement dvdp
+    if( dvdp != NULL ){
+      Teuchos::RCP<const Epetra_BlockMap>
+        overlapNodeMap = stateMgr->getNodalDataBlock()->getOverlapMap();
+
+      localVec->PutScalar(0.0);
+      overlapVec->PutScalar(0.0);
+      double* odvdp; overlapVec->ExtractView(&odvdp);
+
+      for(int ws=0; ws<numWorksets; ws++){
+  
+        int physIndex = wsPhysIndex[ws];
+        int numNodes  = basisAtQPs[physIndex].dimension(0);
+        int numCells  = weighted_measure[ws].dimension(0);
+        int numQPs    = weighted_measure[ws].dimension(1);
+      
+        for(int cell=0; cell<numCells; cell++){
+          for(int node=0; node<numNodes; node++){
+            double elVol = 0.0;
+            int gid = wsElNodeID[ws][cell][node];
+            int lid = overlapNodeMap->LID(gid);
+            for(int qp=0; qp<numQPs; qp++){
+              elVol += basisAtQPs[physIndex](node,qp)*weighted_measure[ws](cell,qp);
+            }
+            odvdp[lid] += elVol;
+          }
+        }
+      }
+      localVec->Export(*overlapVec, *exporter, Add);
+      int numLocalNodes = localVec->MyLength();
+      double* lvec; localVec->ExtractView(&lvec);
+      std::memcpy((void*)dvdp, (void*)lvec, numLocalNodes*sizeof(double));
+    }
   }
 
 }
@@ -138,6 +170,12 @@ setupTopOpt( Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >  _meshSpe
   topoName = topoParams.get<std::string>("Topology Name");
   topoCentering = topoParams.get<std::string>("Centering");
   double initValue = topoParams.get<double>("Initial Value");
+
+  Teuchos::ParameterList& aggParams = params->get<Teuchos::ParameterList>("Objective Aggregator");
+  std::string derName = aggParams.get<std::string>("dFdTopology Name");
+  std::string objName = aggParams.get<std::string>("Objective Name");
+
+
 
   int numPhysSets = meshSpecs.size();
 
@@ -170,11 +208,18 @@ setupTopOpt( Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >  _meshSpe
     Teuchos::RCP<Albany::Layouts> dl = 
       Teuchos::rcp( new Albany::Layouts(wsSize, numVerts, numNodes, numQPs, numDims));
 
+    stateMgr->registerStateVariable(objName, dl->workset_scalar, meshSpecs[i]->ebName, 
+                                   "scalar", 0.0, /*registerOldState=*/ false, true);
+
     if( topoCentering == "Element" ){
       stateMgr->registerStateVariable(topoName, dl->cell_scalar, meshSpecs[i]->ebName, 
                                      "scalar", initValue, /*registerOldState=*/ false, true);
+      stateMgr->registerStateVariable(derName, dl->cell_scalar, meshSpecs[i]->ebName, 
+                                     "scalar", initValue, /*registerOldState=*/ false, true);
     } else
     if( topoCentering == "Node" ){
+      stateMgr->registerStateVariable(derName, dl->node_scalar, meshSpecs[i]->ebName, 
+                                     "scalar", initValue, /*registerOldState=*/ false, false);
       stateMgr->registerStateVariable(topoName, dl->node_scalar, meshSpecs[i]->ebName, 
                                      "scalar", initValue, /*registerOldState=*/ false, false);
       stateMgr->registerStateVariable(topoName+"_node", dl->node_node_scalar, "all",
@@ -231,6 +276,18 @@ ATO::OptimizationProblem::InitTopOpt()
 
 
   }
+  if( topoCentering == "Node" ){
+    Teuchos::RCP<const Epetra_BlockMap>
+      overlapNodeMap = stateMgr->getNodalDataBlock()->getOverlapMap();
+    Teuchos::RCP<const Epetra_BlockMap>
+      localNodeMap = stateMgr->getNodalDataBlock()->getLocalMap();
+
+    overlapVec = Teuchos::rcp(new Epetra_Vector(*overlapNodeMap));
+    localVec   = Teuchos::rcp(new Epetra_Vector(*localNodeMap));
+    exporter   = Teuchos::rcp(new Epetra_Export(*overlapNodeMap, *localNodeMap));
+  }
+
+ 
 }
 
 

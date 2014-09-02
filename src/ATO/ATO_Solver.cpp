@@ -38,12 +38,6 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   _numPhysics = problemParams.get<int>("Number of Subproblems", 1);
   problemParams.validateParameters(*getValidProblemParameters(),0);
 
-  // Parse and create aggregator
-  Teuchos::ParameterList& aggregatorParams = 
-    problemParams.get<Teuchos::ParameterList>("Objective Aggregator");
-  ATO::AggregatorFactory aggregatorFactory;
-  _aggregator = aggregatorFactory.create(aggregatorParams);
-
   // Parse and create optimizer
   Teuchos::ParameterList& optimizerParams = 
     problemParams.get<Teuchos::ParameterList>("Topological Optimization");
@@ -52,6 +46,11 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   _optimizer->SetInterface(this);
   _optimizer->SetCommunicator(comm);
 
+  // Parse and create aggregator
+  Teuchos::ParameterList& aggregatorParams = 
+    problemParams.get<Teuchos::ParameterList>("Objective Aggregator");
+  ATO::AggregatorFactory aggregatorFactory;
+  _aggregator = aggregatorFactory.create(aggregatorParams);
 
   // Parse topology info
   Teuchos::ParameterList& topoParams = problemParams.get<Teuchos::ParameterList>("Topology");
@@ -73,25 +72,20 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   // set verbosity
   _is_verbose = (comm->MyPID() == 0) && problemParams.get<bool>("Verbose Output", false);
 
-  // set optimization parameters
-  _stabilizationExponent = problemParams.get<double>("Stabilization Exponent",0.5);
-  _moveLimiter           = problemParams.get<double>("Move Limiter",0.2);
-  _volumeConstraint      = problemParams.get<double>("Volume Constraint",0.5);
-  
 
 
 
   ///*** PROCESS SUBPROBLEM(S) ***///
    
   _subProblemAppParams.resize(_numPhysics);
-  _subProblem.resize(_numPhysics);
+  _subProblems.resize(_numPhysics);
   for(int i=0; i<_numPhysics; i++){
 
     _subProblemAppParams[i] = createInputFile(appParams, i);
-    _subProblem[i] = CreateSubSolver( _subProblemAppParams[i], *_solverComm);
+    _subProblems[i] = CreateSubSolver( _subProblemAppParams[i], *_solverComm);
 
     // ensure that all subproblems are topology based (i.e., optimizable)
-    Teuchos::RCP<Albany::AbstractProblem> problem = _subProblem[i].app->getProblem();
+    Teuchos::RCP<Albany::AbstractProblem> problem = _subProblems[i].app->getProblem();
     ATO::OptimizationProblem* atoProblem = 
       dynamic_cast<ATO::OptimizationProblem*>(problem.get());
     TEUCHOS_TEST_FOR_EXCEPTION( 
@@ -99,25 +93,30 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
       << "Error!  Requested subproblem does not support topologies." << std::endl);
   }
 
+ 
+  // pass subProblems to the aggregator
+  _aggregator->SetInputVariables(_subProblems);
+  
+
 
   // store a pointer to the first problem as an ATO::OptimizationProblem for callbacks
-  Teuchos::RCP<Albany::AbstractProblem> problem = _subProblem[0].app->getProblem();
+  Teuchos::RCP<Albany::AbstractProblem> problem = _subProblems[0].app->getProblem();
   _atoProblem = dynamic_cast<ATO::OptimizationProblem*>(problem.get());
-  _atoProblem->setDiscretization(_subProblem[0].app->getDiscretization());
+  _atoProblem->setDiscretization(_subProblems[0].app->getDiscretization());
   _atoProblem->setCommunicator(comm);
   _atoProblem->InitTopOpt();
   
 
 
   // get solution map from first subproblem
-  const SolverSubSolver& sub = _subProblem[0];
+  const SolverSubSolver& sub = _subProblems[0];
   Teuchos::RCP<const Epetra_Map> sub_x_map = sub.app->getMap();
   TEUCHOS_TEST_FOR_EXCEPT( sub_x_map == Teuchos::null );
   _epetra_x_map = Teuchos::rcp(new Epetra_Map( *sub_x_map ));
 
   if( _topoCentering == "Node" ){
     // create overlap topo vector for output purposes
-    Albany::StateManager& stateMgr = _subProblem[0].app->getStateMgr();
+    Albany::StateManager& stateMgr = _subProblems[0].app->getStateMgr();
     Teuchos::RCP<const Epetra_BlockMap> 
       overlapNodeMap = stateMgr.getNodalDataBlock()->getOverlapMap();
     Teuchos::RCP<const Epetra_BlockMap> 
@@ -134,7 +133,7 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
     // create exporter (for integration type operations):
                                               //* source *//   //* target *//
     exporter = Teuchos::rcp(new Epetra_Export(*overlapNodeMap, *localNodeMap));
-}
+  }
 
 
 #ifndef EPETRA_NO_32BIT_GLOBAL_INDICES
@@ -184,31 +183,20 @@ ATO::Solver::evalModel(const InArgs& inArgs,
 
 /******************************************************************************/
 void
-ATO::Solver::ComputeObjective(double* p, double& f, double* dfdp)
+ATO::Solver::ComputeObjective(const double* p, double& f, double* dfdp)
 /******************************************************************************/
 {
   for(int i=0; i<_numPhysics; i++){
     // copy data from p into each stateManager
-    Albany::StateManager& stateMgr = _subProblem[i].app->getStateMgr();
+    Albany::StateManager& stateMgr = _subProblems[i].app->getStateMgr();
     copyTopologyIntoStateMgr( p, stateMgr );
 
     // enforce PDE constraints
-    _subProblem[i].model->evalModel((*_subProblem[i].params_in),
-                                    (*_subProblem[i].responses_out));
+    _subProblems[i].model->evalModel((*_subProblems[i].params_in),
+                                    (*_subProblems[i].responses_out));
   }
 
-
-  // aggregate responses into a single objective
-  // JR: This design clearly doesn't work for multiple subproblems.  Each 
-  // subproblem has it's own state manager (I think) in which case we can't
-  // send the state manager of the first subproblem as an argument.  Perhaps
-  // during setup the subproblem data can be sent to the aggregator so 
-  // the call below doesn't need arguments.  Where does the result go?  In
-  // the statemanager of the first physics?  Can we get all subproblems to 
-  // use the same statemanager?
-  _aggregator->Evaluate(_subProblem[0].app->getStateMgr());
-
-  
+  _aggregator->Evaluate();
   
   // copy objective (f) and first derivative wrt the topology (dfdp) out 
   // of stateManager
@@ -218,7 +206,7 @@ ATO::Solver::ComputeObjective(double* p, double& f, double* dfdp)
 
 /******************************************************************************/
 void
-ATO::Solver::copyTopologyIntoStateMgr( double* p, Albany::StateManager& stateMgr )
+ATO::Solver::copyTopologyIntoStateMgr( const double* p, Albany::StateManager& stateMgr )
 /******************************************************************************/
 {
 
@@ -279,17 +267,22 @@ ATO::Solver::copyObjectiveFromStateMgr( double& f, double* dfdp )
 /******************************************************************************/
 {
   // f and dfdp are stored in subProblem[0]
-  Albany::StateManager& stateMgr = _subProblem[0].app->getStateMgr();
+  Albany::StateManager& stateMgr = _subProblems[0].app->getStateMgr();
   Albany::StateArrays& stateArrays = stateMgr.getStateArrays();
   Albany::StateArrayVec& src = stateArrays.elemStateArrays;
   int numWorksets = src.size();
 
-  std::string objName = _aggregator->getOutputVariableName();
+  std::string objName = _aggregator->getOutputObjectiveName();
+  std::string derName = _aggregator->getOutputDerivativeName();
+
+  Albany::MDArray& fSrc = src[0][objName];
+  f = fSrc(0);
+  fSrc(0) = 0.0;
 
   if( _topoCentering == "Element" ){
     int wsOffset = 0;
     for(int ws=0; ws<numWorksets; ws++){
-      Albany::MDArray& dfdpSrc = src[ws][objName];
+      Albany::MDArray& dfdpSrc = src[ws][derName];
       int wsSize = dfdpSrc.size();
       for(int i=0; i<wsSize; i++)
         dfdp[wsOffset+i] = dfdpSrc(i);
@@ -305,11 +298,12 @@ ATO::Solver::copyObjectiveFromStateMgr( double& f, double* dfdp )
     Teuchos::RCP<const Epetra_BlockMap> 
       overlapNodeMap = stateMgr.getNodalDataBlock()->getOverlapMap();
 
+    dfdpVec->PutScalar(0.0);
     overlapdfdpVec->PutScalar(0.0);
     double* odfdp; overlapdfdpVec->ExtractView(&odfdp);
 
     for(int ws=0; ws<numWorksets; ws++){
-      Albany::MDArray& dfdpSrc = src[ws][objName];
+      Albany::MDArray& dfdpSrc = src[ws][derName];
       int numCells = dfdpSrc.dimension(0);
       int numNodes = dfdpSrc.dimension(1);
       for(int cell=0; cell<numCells; cell++)
@@ -343,7 +337,7 @@ ATO::Solver::ComputeVolume(double& v)
 
 /******************************************************************************/
 void
-ATO::Solver::ComputeVolume(double* p, double& v, double* dvdp)
+ATO::Solver::ComputeVolume(const double* p, double& v, double* dvdp)
 /******************************************************************************/
 {
   return _atoProblem->ComputeVolume(p, v, dvdp);
@@ -362,7 +356,7 @@ ATO::Solver::GetNumOptDofs()
 /******************************************************************************/
 {
   if( _topoCentering == "Element" ){
-    Albany::StateManager& stateMgr = _subProblem[0].app->getStateMgr();
+    Albany::StateManager& stateMgr = _subProblems[0].app->getStateMgr();
     Albany::StateArrays& stateArrays = stateMgr.getStateArrays();
     Albany::StateArrayVec& dest = stateArrays.elemStateArrays;
 
@@ -378,7 +372,7 @@ ATO::Solver::GetNumOptDofs()
     
   } else
   if( _topoCentering == "Node" ){
-    return _subProblem[0].app->getDiscretization()->getNodeMap()->NumMyElements();
+    return _subProblems[0].app->getDiscretization()->getNodeMap()->NumMyElements();
   }
 }
 
@@ -484,6 +478,11 @@ ATO::Solver::createInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appPar
   Teuchos::ParameterList& topoParams = 
     appParams->sublist("Problem").get<Teuchos::ParameterList>("Topology");
   physics_probParams.set<Teuchos::ParameterList>("Topology",topoParams);
+
+  // Add aggregator information
+  Teuchos::ParameterList& aggParams = 
+    appParams->sublist("Problem").get<Teuchos::ParameterList>("Objective Aggregator");
+  physics_probParams.set<Teuchos::ParameterList>("Objective Aggregator",aggParams);
 
   // Discretization sublist processing
   Teuchos::ParameterList& discList = appParams->sublist("Discretization");

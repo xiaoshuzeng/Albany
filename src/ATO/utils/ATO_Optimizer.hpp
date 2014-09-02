@@ -14,6 +14,7 @@
 
 #include "Teuchos_ParameterList.hpp"
 
+#include "nlopt.h"
 
 namespace ATO {
 
@@ -37,7 +38,7 @@ class Optimizer
   virtual void SetCommunicator(const Teuchos::RCP<const Epetra_Comm>& _comm) {comm = _comm;}
  protected:
 
-  double computeDiffNorm(double* v1, double* v2, int n, bool printResult=false);
+  double computeDiffNorm(const double* v1, const double* v2, int n, bool printResult=false);
   OptInterface* solverInterface;
   Teuchos::RCP<const Epetra_Comm> comm;
 
@@ -71,6 +72,36 @@ class Optimizer_OC : public Optimizer {
   double _volConstraint;
   double _optVolume;
 
+};
+
+class Optimizer_NLopt : public Optimizer {
+ public:
+  Optimizer_NLopt(const Teuchos::ParameterList& optimizerParams);
+  ~Optimizer_NLopt();
+  void Optimize();
+  void Initialize();
+ private:
+
+  double* p;
+  double* p_last;
+  double f;
+  double* dfdp;
+  int numOptDofs;
+
+  double _minDensity;
+  double _volConstraint;
+  double _volConvTol;
+  double _optVolume;
+
+  std::string _optMethod;
+
+  nlopt_opt opt;
+
+  double evaluate_backend( unsigned int n, const double* x, double* grad );
+  static double evaluate( unsigned int n, const double* x, double* grad, void* data);
+
+  double constraint_backend( unsigned int n, const double* x, double* grad );
+  static double constraint( unsigned int n, const double* x, double* grad, void* data);
 };
 
 

@@ -57,12 +57,15 @@ StiffnessObjectiveBase(Teuchos::ParameterList& p,
   ATO::TopoToolsFactory topoFactory;
   topoTools = topoFactory.create(topoParams);
 
+  FName = responseParams->get<std::string>("Response Name");
   dFdpName = responseParams->get<std::string>("Response Derivative Name");
   topoName = topoParams.get<std::string>("Topology Name");
   topoCentering = topoParams.get<std::string>("Centering");
 
   //! Register with state manager
   this->pStateMgr = p.get< Albany::StateManager* >("State Manager Ptr");
+  this->pStateMgr->registerStateVariable(FName, dl->workset_scalar, dl->dummy, 
+                                         "all", "scalar", 0.0, false, true);
   if( topoCentering == "Element" ){
     this->pStateMgr->registerStateVariable(dFdpName, dl->cell_scalar, dl->dummy, 
                                            "all", "scalar", 0.0, false, true);
@@ -125,6 +128,7 @@ void ATO::StiffnessObjective<PHAL::AlbanyTraits::Residual, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
 
+  Albany::MDArray F = (*workset.stateArrayPtr)[FName];
   Albany::MDArray dEdp = (*workset.stateArrayPtr)[dFdpName];
   Albany::MDArray topo = (*workset.stateArrayPtr)[topoName];
   std::vector<int> dims;
@@ -144,7 +148,7 @@ evaluateFields(typename Traits::EvalData workset)
           for(int i=0; i<dims[2]; i++)
             dE += gradX(cell,qp,i)*workConj(cell,qp,i)*qp_weights(cell,qp);
         internalEnergy += P*dE;
-        dEdp(cell) = dP*dE;
+        dEdp(cell) = -dP*dE;
       }
     } else
     if( size == 4 ){
@@ -157,7 +161,7 @@ evaluateFields(typename Traits::EvalData workset)
             for(int j=0; j<dims[3]; j++)
               dE += gradX(cell,qp,i,j)*workConj(cell,qp,i,j)*qp_weights(cell,qp);
         internalEnergy += P*dE;
-        dEdp(cell) = dP*dE;
+        dEdp(cell) = -dP*dE;
       }
     } else {
       TEUCHOS_TEST_FOR_EXCEPTION(size<3||size>4, Teuchos::Exceptions::InvalidParameter,
@@ -185,7 +189,7 @@ evaluateFields(typename Traits::EvalData workset)
           dE *= qp_weights(cell,qp);
           internalEnergy += P*dE;
           for(int node=0; node<numNodes; node++)
-            dEdp(cell,node) += dP*dE*BF(cell,node,qp);
+            dEdp(cell,node) -= dP*dE*BF(cell,node,qp);
         }
       }
     } else
@@ -205,7 +209,7 @@ evaluateFields(typename Traits::EvalData workset)
           dE *= qp_weights(cell,qp);
           internalEnergy += P*dE;
           for(int node=0; node<numNodes; node++)
-            dEdp(cell,node) += dP*dE*BF(cell,node,qp);
+            dEdp(cell,node) -= dP*dE*BF(cell,node,qp);
         }
       }
     } else {
@@ -213,6 +217,8 @@ evaluateFields(typename Traits::EvalData workset)
         "Unexpected array dimensions in StiffnessObjective:" << size << std::endl);
     }
   }
+
+  F(0) += internalEnergy;
 }
 
 template<typename Traits>

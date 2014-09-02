@@ -19,16 +19,13 @@
 
 
     <ParameterList name="Topological Optimization">
-      <Parameter name="Package" type="string" value="OC" />
-      <Parameter name="Stabilization Parameter" type="double" value="0.5" />
-      <Parameter name="Move Limiter" type="double" value="0.2" />
-      <Parameter name="Optimization Maximum Iterations" type="int" value="10" />
-      <Parameter name="Optimization Convergence Tolerance" type="double" value="1e-3" />
-      <Parameter name="Volume Enforcement Maximum Iterations" type="int" value="120" />
-      <Parameter name="Volume Enforcement Convergence Tolerance" type="double" value="1e-6" />
+      <Parameter name="Package" type="string" value="NLopt" />
+      <Parameter name="Method" type="string" value="MMA" />
+      <Parameter name="Optimization Maximum Iterations" type="int" value="50" />
+      <Parameter name="Optimization Convergence Tolerance" type="double" value="1e-8" />
+      <Parameter name="Volume Enforcement Convergence Tolerance" type="double" value="1e-8" />
       <Parameter name="Minimum Density" type="double" value="0.05" />
       <Parameter name="Objective Name" type="string" value="F" />
-      <Parameter name="Volume Multiplier Initial Guess" type="double" value="1e5" />
       <Parameter name="Volume Fraction Constraint" type="double" value="0.5" />
       <Parameter name="dFdTopology Name" type="string" value="dFdRho" />
     </ParameterList>
@@ -51,7 +48,7 @@
     </ParameterList>
 
     <ParameterList name="Physics Problem 0">    
-      <Parameter name="Name" type="string" value="LinearElasticity 2D" />
+      <Parameter name="Name" type="string" value="LinearElasticity 3D" />
       <!--
       <Parameter name="Phalanx Graph Visualization Detail" type="int" value="2"/>
       -->
@@ -59,14 +56,15 @@
       <ParameterList name="Dirichlet BCs">
         <Parameter name="DBC on NS nodelist_1 for DOF X" type="double" value="0.0"/>
         <Parameter name="DBC on NS nodelist_1 for DOF Y" type="double" value="0.0"/>
+        <Parameter name="DBC on NS nodelist_1 for DOF Z" type="double" value="0.0"/>
       </ParameterList> <!-- end Dirichlet BCs -->
       <ParameterList name="Neumann BCs">
-        <Parameter name="NBC on SS surface_1 for DOF sig_y set dudn" type="Array(double)" value="{4.5}"/>
+        <Parameter name="NBC on SS surface_1 for DOF sig_y set dudn" type="Array(double)" value="{1e-1}"/>
       </ParameterList>
 
 
-      <Parameter name="Elastic Modulus" type="double" value="1e9"/>
-      <Parameter name="Poissons Ratio" type="double" value="0.33"/>
+      <Parameter name="Elastic Modulus" type="double" value="1"/>
+      <Parameter name="Poissons Ratio" type="double" value="0.3333"/>
 
       <!--
           This response provides an objective function and the derivative of the 
@@ -92,8 +90,8 @@
 
   <ParameterList name="Discretization">
     <Parameter name="Method" type="string" value="Ioss"/>
-    <Parameter name="Exodus Input File Name" type="string" value="mitchell.gen"/>
-    <Parameter name="Exodus Output File Name" type="string" value="mitchell.exo"/>
+    <Parameter name="Exodus Input File Name" type="string" value="mitchell3D.gen"/>
+    <Parameter name="Exodus Output File Name" type="string" value="mitchell3D.exo"/>
   </ParameterList>
 
   <ParameterList name="Piro">

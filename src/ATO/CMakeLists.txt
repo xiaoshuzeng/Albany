@@ -46,6 +46,16 @@ include_directories (${Trilinos_INCLUDE_DIRS}  ${Trilinos_TPL_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/src/ATO/utils
 )
 
+#message("checking for NLOPT")
+#IF ( NLOPT )
+#  message("adding NLOPT")
+#  message("added ${NLOPT_INCLUDE_DIR} to include directories")
+#  include_directories (${NLOPT_INCLUDE_DIR})
+#  link_directories (${NLOPT_LIBRARY_DIR})
+#  set(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} nlopt)
+#ENDIF()
+
+
 add_library(ATO ${Albany_LIBRARY_TYPE} ${SOURCES} ${HEADERS})
 
 IF ( INSTALL_ALBANY )

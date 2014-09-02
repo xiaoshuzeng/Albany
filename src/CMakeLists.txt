@@ -521,6 +521,15 @@ include_directories (${Trilinos_INCLUDE_DIRS}
 link_directories (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS}
   ${FMDB_LIBRARY_DIR})
 
+IF ( NLOPT )
+  include_directories (${NLOPT_INCLUDE_DIR})
+  link_directories (${NLOPT_LIBRARY_DIR})
+  set(NLOPT_LIB nlopt)
+ELSE()
+  set(NLOPT_LIB )
+ENDIF()
+
+
 # LAME
 IF(ALBANY_LAME)
   include_directories (${LAME_INCLUDE_DIR})
@@ -634,6 +643,7 @@ set(ALL_LIBRARIES
   ${ALB_TRILINOS_LIBS}
   ${ALB_CUBIT_LIBS}
   ${LAME_LIB}
+  ${NLOPT_LIB}
   ${LAMENT_LIB}
   ${Peridigm_LIBRARIES}
   ${SCOREC_LIB}
