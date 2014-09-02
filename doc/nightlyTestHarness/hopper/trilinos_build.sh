@@ -10,6 +10,12 @@ cd $TRIBUILDDIR
 
 #Configure Trilinos
 
+#IK, 8/28/14: this is needed to prevent Albany from being a statically linked 
+#executable on Hopper.  It is a bit of a hack...  it undos a Trilinos
+#build rule change for Zoltan that involves how the math library gets linked.
+
+git revert --no-edit 5e2a26089dc436ffcc15aced3734cfff913f8352
+
 echo "    Starting Trilinos cmake" ; date
 if [ $MPI_BUILD ] ; then
   cp $ALBDIR/doc/nightlyTestHarness/hopper/hopper-trilinos-cmake .

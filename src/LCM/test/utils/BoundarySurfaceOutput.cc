@@ -11,7 +11,7 @@
 #include <string>
 #include <sstream>
 
-typedef stk_classic::mesh::Entity Entity;
+typedef stk::mesh::Entity Entity;
 
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/io.hpp>
@@ -29,7 +29,7 @@ int main (int ac, char* av[]){
 
 	std::string input_file;
 	std::string normals_file;
-	typedef stk_classic::mesh::Entity Entity;
+	typedef stk::mesh::Entity Entity;
 	std::string output_file;// = "output.e";
 
 	using namespace std;
@@ -123,7 +123,7 @@ int main (int ac, char* av[]){
 
 
 			//Finds the Node (Entity of rank 0) that is closest to each of the points on the plane
-			std::vector<Entity*> closestNodes = topology.getClosestNodesOnSurface(pointsOnPlane);
+			std::vector<Entity> closestNodes = topology.getClosestNodesOnSurface(pointsOnPlane);
 
 			//Finds the identifiers of the nodes (entity rank 0) along the shortest
 			//path connecting the three points

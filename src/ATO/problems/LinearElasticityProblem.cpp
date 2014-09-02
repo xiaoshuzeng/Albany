@@ -11,6 +11,7 @@ Albany::LinearElasticityProblem::
 LinearElasticityProblem(const Teuchos::RCP<Teuchos::ParameterList>& params_,
 		        const Teuchos::RCP<ParamLib>& paramLib_,
 		        const int numDim_) :
+  ATO::OptimizationProblem(params_, paramLib_, numDim_),
   Albany::AbstractProblem(params_, paramLib_, numDim_),
   numDim(numDim_)
 {
@@ -59,6 +60,8 @@ buildProblem(
   if(meshSpecs[0]->ssNames.size() > 0) // Build a sideset evaluator if sidesets are present
 
     constructNeumannEvaluators(meshSpecs[0]);
+
+   setupTopOpt(meshSpecs,stateMgr);
 
 }
 
@@ -173,9 +176,6 @@ Albany::LinearElasticityProblem::getValidProblemParameters() const
 
   validPL->set<double>("Elastic Modulus", 0.0);
   validPL->set<double>("Poissons Ratio", 0.0);
-//  validPL->set<std::string>("Topology Centering", "Element");
-//  validPL->set<std::string>("Topology Variable Name", "_not_set_");
-//  validPL->set<std::string>("dFdTopology Variable Name", "_not_set_");
 
   validPL->sublist("Topology", false, "");
 

@@ -31,6 +31,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/input_fo_gis20km_test.xml
 add_test(${testName}_Gis20km ${Albany.exe} input_fo_gis20km_test.xml)
 add_test(${testName}_GisUnstructured ${Albany.exe} input_fo_gis_unstruct.xml)
 add_test(${testName}_GisRestartUnstructured ${Albany.exe} input_fo_gis_unstruct_restart.xml)
+set_tests_properties(${testName}_GisRestartUnstructured  PROPERTIES DEPENDS ${testName}_GisUnstructured) 
 IF(ALBANY_STK_PERCEPT)
 add_test(${testName}_Gis20km_refine ${Albany8.exe} input_fo_gis20km_refine.xml)
 ENDIF()

@@ -11,6 +11,7 @@
 #include "Teuchos_ParameterList.hpp"
 
 #include "Albany_AbstractProblem.hpp"
+#include "ATO_OptimizationProblem.hpp"
 
 #include "Phalanx.hpp"
 #include "PHAL_Workset.hpp"
@@ -24,7 +25,9 @@ namespace Albany {
    * \brief Abstract interface for representing a 2-D finite element
    * problem.
    */
-  class LinearElasticityProblem : public Albany::AbstractProblem {
+  class LinearElasticityProblem : 
+    public ATO::OptimizationProblem ,
+    public virtual Albany::AbstractProblem {
   public:
   
     //! Default constructor
@@ -56,9 +59,9 @@ namespace Albany {
     //! Each problem must generate it's list of valid parameters
     Teuchos::RCP<const Teuchos::ParameterList> getValidProblemParameters() const;
 
-    void getAllocatedStates(Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::RCP<Intrepid::FieldContainer<RealType> > > > oldState_,
-			    Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::RCP<Intrepid::FieldContainer<RealType> > > > newState_
-			    ) const;
+    void getAllocatedStates(
+      Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::RCP<Intrepid::FieldContainer<RealType> > > > oldState_,
+      Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::RCP<Intrepid::FieldContainer<RealType> > > > newState_) const;
 
   private:
 
@@ -162,21 +165,9 @@ Albany::LinearElasticityProblem::constructEvaluators(
    Albany::EvaluatorUtils<EvalT, PHAL::AlbanyTraits> evalUtils(dl);
 
 
-   // register topology variable
-   // JR:  topo variable in hardwired to 0.5.  It should at least initialize to the desired volfrac.
-   Teuchos::ParameterList& topoParams = params->get<Teuchos::ParameterList>("Topology");
-   std::string topoName = topoParams.get<std::string>("Topology Name");
-   std::string centering = topoParams.get<std::string>("Centering");
-   if( centering == "Element" ){
-     stateMgr.registerStateVariable(topoName, dl->cell_scalar, elementBlockName, "scalar", 0.5, true, true);
-   } else
-   if( centering == "Node" ){
-     stateMgr.registerStateVariable(topoName, dl->node_scalar, elementBlockName, "scalar", 0.5, true, true);
-   }
-   
+
    std::string stressName("Stress");
    std::string strainName("Strain");
-
 
 
    Teuchos::ArrayRCP<std::string> dof_names(1);
@@ -220,7 +211,8 @@ Albany::LinearElasticityProblem::constructEvaluators(
 
     ev = rcp(new LCM::Time<EvalT,AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
-    p = stateMgr.registerStateVariable("Time",dl->workset_scalar, dl->dummy, elementBlockName, "scalar", 0.0, true);
+    p = stateMgr.registerStateVariable("Time",dl->workset_scalar, dl->dummy, 
+                                       elementBlockName, "scalar", 0.0, true);
     ev = rcp(new PHAL::SaveStateField<EvalT,AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
@@ -238,7 +230,8 @@ Albany::LinearElasticityProblem::constructEvaluators(
     fm0.template registerEvaluator<EvalT>(ev);
 
     // state the strain in the state manager for ATO
-    p = stateMgr.registerStateVariable(strainName, dl->qp_tensor, dl->dummy, elementBlockName, "scalar", 0.0, false);
+    p = stateMgr.registerStateVariable(strainName, dl->qp_tensor, dl->dummy, 
+                                       elementBlockName, "scalar", 0.0, false);
     ev = rcp(new PHAL::SaveStateField<EvalT,AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
@@ -274,6 +267,7 @@ Albany::LinearElasticityProblem::constructEvaluators(
     Teuchos::ParameterList& topoParams = params->get<Teuchos::ParameterList>("Topology");
     p->set<Teuchos::ParameterList>("Topology",topoParams);
 
+    p->set<std::string>("BF Name", "BF");
     p->set<std::string>("Unweighted Variable Name", stressName);
     p->set<std::string>("Weighted Variable Name", stressName+"_Weighted");
     p->set<std::string>("Variable Layout", "QP Tensor");

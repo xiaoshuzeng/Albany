@@ -17,15 +17,27 @@
 #include <NOX_Epetra_MultiVector.H>
 
 #include "Albany_ModelEvaluator.hpp"
+#include "Albany_StateManager.hpp"
 #include "Albany_Utils.hpp"
 #include "Piro_Epetra_StokhosNOXObserver.hpp"
 #include "ATO_Aggregator.hpp"
+#include "ATO_Optimizer.hpp"
 
 namespace ATO {
   class SolverSubSolver;
   class SolverSubSolverData;
+  class OptimizationProblem;
 
-  class Solver : public EpetraExt::ModelEvaluator {
+  class OptInterface {
+  public:
+    virtual void ComputeObjective(double* p, double& f, double* dfdp=NULL)=0;
+    virtual void ComputeConstraint(double* p, double& c, double* dcdp=NULL)=0;
+    virtual void ComputeVolume(double* p, double& v, double* dvdp=NULL)=0;
+    virtual void ComputeVolume(double& v)=0;
+    virtual int GetNumOptDofs()=0;
+  };
+
+  class Solver : public EpetraExt::ModelEvaluator , public OptInterface {
   public:
 
      Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
@@ -34,13 +46,25 @@ namespace ATO {
 
     ~Solver();
 
-    virtual Teuchos::RCP<const Epetra_Map> get_x_map() const;         //pure virtual from EpetraExt::ModelEvaluator
-    virtual Teuchos::RCP<const Epetra_Map> get_f_map() const;         //pure virtual from EpetraExt::ModelEvaluator
-    virtual EpetraExt::ModelEvaluator::InArgs createInArgs() const;   //pure virtual from EpetraExt::ModelEvaluator
-    virtual EpetraExt::ModelEvaluator::OutArgs createOutArgs() const; //pure virtual from EpetraExt::ModelEvaluator
-    void evalModel( const InArgs& inArgs, const OutArgs& outArgs ) const; //pure virtual from EpetraExt::ModelEvaluator
+    //pure virtual from EpetraExt::ModelEvaluator
+    virtual Teuchos::RCP<const Epetra_Map> get_x_map() const;
+    //pure virtual from EpetraExt::ModelEvaluator
+    virtual Teuchos::RCP<const Epetra_Map> get_f_map() const;
+    //pure virtual from EpetraExt::ModelEvaluator
+    virtual EpetraExt::ModelEvaluator::InArgs createInArgs() const;
+    //pure virtual from EpetraExt::ModelEvaluator
+    virtual EpetraExt::ModelEvaluator::OutArgs createOutArgs() const;
+    //pure virtual from EpetraExt::ModelEvaluator
+    void evalModel( const InArgs& inArgs, const OutArgs& outArgs ) const;
+
+    void ComputeObjective(double* p, double& f, double* dfdp=NULL);
+    void ComputeConstraint(double* p, double& c, double* dcdp=NULL);
+    void ComputeVolume(double* p, double& v, double* dvdp=NULL);
+    void ComputeVolume(double& v);
+    int GetNumOptDofs();
 
   private:
+
     // data
     int  numDims;
     int _num_parameters; // for sensitiviy analysis(?)
@@ -48,6 +72,10 @@ namespace ATO {
     Teuchos::RCP<Epetra_LocalMap> _epetra_param_map;
     Teuchos::RCP<Epetra_LocalMap> _epetra_response_map;
     Teuchos::RCP<Epetra_Map>      _epetra_x_map;
+
+    int _numPhysics; // number of sub problems
+
+    std::vector<int> _wsOffset;  //index offsets to map to/from workset to/from 1D array.
 
     // optimization solver data
     int     _optMaxIter; // maximum iterations for optimization solver
@@ -60,17 +88,34 @@ namespace ATO {
     bool _is_verbose;    // verbose or not for topological optimization solver
 
     Teuchos::RCP<Aggregator> _aggregator;
+    Teuchos::RCP<Optimizer> _optimizer;
     std::string _topoName;
     std::string _topoCentering;
 
-    std::string _problemNameBase;
-    Teuchos::RCP<Teuchos::ParameterList> _subProblemAppParams;
+    std::vector<Teuchos::RCP<Teuchos::ParameterList> > _subProblemAppParams;
+    std::vector<SolverSubSolver> _subProblem;
+    OptimizationProblem* _atoProblem;
 
     Teuchos::RCP<const Epetra_Comm> _solverComm;
     Teuchos::RCP<Teuchos::ParameterList> _mainAppParams;
 
+    Teuchos::RCP<Epetra_Vector> overlapTopoVec;
+    Teuchos::RCP<Epetra_Vector> topoVec;
+
+    Teuchos::RCP<Epetra_Vector> overlapdfdpVec;
+    Teuchos::RCP<Epetra_Vector> dfdpVec;
+
+    Teuchos::RCP<Epetra_Import> importer;
+    Teuchos::RCP<Epetra_Export> exporter;
+
+
     // methods
+    void copyTopologyIntoStateMgr( double* p, Albany::StateManager& stateMgr );
+    void copyObjectiveFromStateMgr( double& f, double* dfdp );
+    void zeroSet();
     Teuchos::RCP<const Teuchos::ParameterList> getValidProblemParameters() const;
+    Teuchos::RCP<Teuchos::ParameterList> 
+      createInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appParams, int physIndex) const;
 
     Teuchos::RCP<const Epetra_Map> get_g_map(int j) const;
 
@@ -84,11 +129,6 @@ namespace ATO {
     createElasticityInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appParams,
                                int numDims,
                                const std::string& exoOutputFile ) const;
-
-    void
-    computeUpdatedTopology(Albany::StateArrays& state_data) const;
-
-
   };
 
   class SolverSubSolver {

@@ -14,7 +14,7 @@
 
 #include <cassert>
 
-#include <stk_mesh/base/FieldData.hpp>
+#include <stk_mesh/base/FieldBase.hpp>
 
 #include "Teuchos_ScalarTraits.hpp"
 #include "Topology.h"
@@ -49,7 +49,7 @@ public:
 
   virtual
   bool
-  check(Entity const & interface) = 0;
+  check(stk::mesh::BulkData& mesh, Entity interface) = 0;
 
   virtual
   ~AbstractFractureCriterion() {}
@@ -69,19 +69,19 @@ public:
   Albany::AbstractSTKMeshStruct const &
   getAbstractSTKMeshStruct() {return stk_mesh_struct_;}
 
-  stk_classic::mesh::BulkData const &
+  stk::mesh::BulkData const &
   getBulkData() {return bulk_data_;}
 
-  stk_classic::mesh::fem::FEMMetaData const &
+  stk::mesh::MetaData const &
   getMetaData() {return meta_data_;}
 
   Intrepid::Index
   getDimension() {return dimension_;}
 
-  stk_classic::mesh::Part &
+  stk::mesh::Part &
   getBulkPart() {return bulk_part_;}
 
-  stk_classic::mesh::Part &
+  stk::mesh::Part &
   getInterfacePart() {return interface_part_;}
 
 protected:
@@ -101,19 +101,19 @@ protected:
   Albany::AbstractSTKMeshStruct const &
   stk_mesh_struct_;
 
-  stk_classic::mesh::BulkData const &
+  stk::mesh::BulkData const &
   bulk_data_;
 
-  stk_classic::mesh::fem::FEMMetaData const &
+  stk::mesh::MetaData const &
   meta_data_;
 
   Intrepid::Index
   dimension_;
 
-  stk_classic::mesh::Part &
+  stk::mesh::Part &
   bulk_part_;
 
-  stk_classic::mesh::Part &
+  stk::mesh::Part &
   interface_part_;
 
 private:
@@ -140,15 +140,11 @@ public:
   probability_(probability) {}
 
   bool
-  check(Entity const & interface)
+  check(stk::mesh::BulkData& mesh, Entity interface)
   {
-    EntityRank const
-    rank = interface.entity_rank();
+    EntityRank const rank = mesh.entity_rank(interface);
 
-    stk_classic::mesh::PairIterRelation const
-    relations = interface.relations(rank + 1);
-
-    assert(relations.size() == 2);
+    assert(mesh.num_connectivity(interface, (EntityRank)(rank+1)) == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
@@ -185,15 +181,11 @@ public:
   open_(true) {}
 
   bool
-  check(Entity const & interface)
+  check(stk::mesh::BulkData& mesh, Entity interface)
   {
-    EntityRank const
-    rank = interface.entity_rank();
+    EntityRank const rank = mesh.entity_rank(interface);
 
-    stk_classic::mesh::PairIterRelation const
-    relations = interface.relations(rank + 1);
-
-    assert(relations.size() == 2);
+    assert(mesh.num_connectivity(interface, (EntityRank)(rank+1)) == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
@@ -237,7 +229,7 @@ public:
       double const beta);
 
   bool
-  check(Entity const & interface);
+  check(stk::mesh::BulkData& mesh, Entity interface);
 
 private:
 

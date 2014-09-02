@@ -8,12 +8,9 @@
 #include "Albany_Utils.hpp"
 #include "Albany_SolverFactory.hpp"
 #include "Teuchos_XMLParameterListHelpers.hpp"
-#include <stk_mesh/base/FieldData.hpp>
+#include <stk_mesh/base/FieldBase.hpp>
 #include "Piro_PerformSolve.hpp"
-#include <stk_io/IossBridge.hpp>
-#include <stk_io/MeshReadWriteUtils.hpp>
 #include <stk_mesh/base/GetEntities.hpp>
-#include <stk_mesh/base/FieldData.hpp>
 #include <Ionit_Initializer.h>
 #include "Albany_OrdinarySTKFieldContainer.hpp"
 #include "Thyra_EpetraThyraWrappers.hpp"
@@ -27,8 +24,9 @@
 #endif 
 
 Teuchos::RCP<Albany::CismSTKMeshStruct> meshStruct;
+Teuchos::RCP<Albany::Application> albanyApp;
 Teuchos::RCP<const Epetra_Comm> mpiComm;
-Teuchos::RCP<Teuchos::ParameterList> appParams;
+Teuchos::RCP<Teuchos::ParameterList> paramList;
 Teuchos::RCP<Teuchos::ParameterList> discParams;
 Teuchos::RCP<Albany::SolverFactory> slvrfctry;
 Teuchos::RCP<Thyra::ModelEvaluator<double> > solver;
@@ -142,7 +140,6 @@ extern "C" void felix_driver_();
 //What is exec_mode??
 void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const char * input_fname)
 { 
-
     // ---------------------------------------------
     //get communicator / communicator info from CISM
     //TO DO: ifdef to check if CISM and Albany have MPI?  
@@ -245,14 +242,9 @@ void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const 
     // Read input file, the name of which is provided in the Glimmer/CISM .config file.
     if (debug_output_verbosity != 0 & mpiComm->MyPID() == 0) std::cout << "In felix_driver: creating Albany mesh struct..." << std::endl;
     slvrfctry = Teuchos::rcp(new Albany::SolverFactory(input_fname, comm));
-    discParams = Teuchos::sublist(Teuchos::rcp(&slvrfctry->getParameters(),false), "Discretization", true);
-    Teuchos::RCP<Albany::StateInfoStruct> sis=Teuchos::rcp(new Albany::StateInfoStruct);
+    paramList = Teuchos::rcp(&slvrfctry->getParameters(),false);
+    discParams = Teuchos::sublist(paramList, "Discretization", true);
     Albany::AbstractFieldContainer::FieldContainerRequirements req;
-    req.push_back("surface_height");
-    req.push_back("temperature");
-    req.push_back("basal_friction");
-    req.push_back("thickness");
-    req.push_back("flow_factor");
     int neq = 2; //number of equations - 2 for FO Stokes
     //IK, 11/14/13, debug output: check that pointers that are passed from CISM are not null 
     //std::cout << "DEBUG: xyz_at_nodes_Ptr:" << xyz_at_nodes_Ptr << std::endl; 
@@ -267,11 +259,17 @@ void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const 
     nNodes = (ewn-2*nhalo+1)*(nsn-2*nhalo+1)*upn; //number of nodes in mesh (on each processor) 
     nElementsActive = nCellsActive*(upn-1); //number of 3D active elements in mesh  
     
+
+    albanyApp = Teuchos::rcp(new Albany::Application(mpiComm));
+    albanyApp->initialSetUp(paramList);
     meshStruct = Teuchos::rcp(new Albany::CismSTKMeshStruct(discParams, mpiComm, xyz_at_nodes_Ptr, global_node_id_owned_map_Ptr, global_element_id_active_owned_map_Ptr, 
                                                            global_element_conn_active_Ptr, global_basal_face_id_active_owned_map_Ptr, global_basal_face_conn_active_Ptr, 
                                                            beta_at_nodes_Ptr, surf_height_at_nodes_Ptr, flwa_at_active_elements_Ptr, nNodes, nElementsActive, nCellsActive, 
                                                            debug_output_verbosity));
-    meshStruct->constructMesh(mpiComm, discParams, neq, req, sis, meshStruct->getMeshSpecs()[0]->worksetSize);
+
+    albanyApp->createMeshSpecs(meshStruct);
+    albanyApp->buildProblem();
+    meshStruct->constructMesh(mpiComm, discParams, neq, req, albanyApp->getStateMgr().getStateInfoStruct(), meshStruct->getMeshSpecs()[0]->worksetSize);
  
     //Create node_map
     //global_node_id_owned_map_Ptr is 1-based, so node_map is 1-based
@@ -282,14 +280,12 @@ void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const 
  
     // clean up
     //if (mpiComm->MyPID() == 0) std::cout << "exec mode = " << exec_mode << std::endl;
-
 }
 
 // The solve is done in the felix_driver_run function, and the solution is passed back to Glimmer-CISM 
 // IK, 12/3/13: time_inc_yr and cur_time_yr are not used here... 
 void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time_inc_yr)
 {
-
     //IK, 12/9/13: how come FancyOStream prints an all processors??    
     Teuchos::RCP<Teuchos::FancyOStream> out(Teuchos::VerboseObjectBase::getDefaultOStream());
 
@@ -364,8 +360,8 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
        for (int j=0; j<8; j++) {
         int node_GID =  global_element_conn_active_Ptr[i + nElementsActive*j]; //node_GID is 1-based
         int node_LID =  node_map->LID(node_GID); //node_LID is 0-based
-        stk_classic::mesh::Entity& node = *meshStruct->bulkData->get_entity(meshStruct->metaData->node_rank(), node_GID);
-        double* sol = stk_classic::mesh::field_data(*solutionField, node);
+        stk::mesh::Entity node = meshStruct->bulkData->get_entity(stk::topology::NODE_RANK, node_GID);
+        double* sol = stk::mesh::field_data(*solutionField, node);
         //IK, 3/18/14: added division by velScale to convert uvel and vvel from dimensionless to having units of m/year (the Albany units)  
         sol[0] = uvel_vec[node_LID]/velScale;
         sol[1] = vvel_vec[node_LID]/velScale;
@@ -380,9 +376,6 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
     //Need to set HasRestart solution such that uvel_Ptr and vvel_Ptr (u and v from Glimmer/CISM) are always set as initial condition?  
     meshStruct->setHasRestartSolution(!first_time_step);
  
-    Teuchos::RCP<Albany::AbstractSTKMeshStruct> stkMeshStruct = meshStruct;
-    discParams->set("STKMeshStruct",stkMeshStruct);
-    Teuchos::RCP<Teuchos::ParameterList> paramList = Teuchos::rcp(&slvrfctry->getParameters(),false);
     //Turn off homotopy if we're not in the first time-step. 
     //NOTE - IMPORTANT: Glen's Law Homotopy parameter should be set to 1.0 in the parameter list for this logic to work!!! 
     if (!first_time_step)
@@ -392,9 +385,11 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
        if(meshStruct->restartDataTime()== homotopy)
          paramList->sublist("Problem").set("Solution Method", "Steady");
     }
-    Teuchos::RCP<Albany::Application> app = Teuchos::rcp(new Albany::Application(mpiComm, paramList));
-    solver = slvrfctry->createThyraSolverAndGetAlbanyApp(app, mpiComm, mpiComm);
 
+    albanyApp->createDiscretization();
+    albanyApp->finalSetUp(paramList);
+
+    solver = slvrfctry->createThyraSolverAndGetAlbanyApp(albanyApp, mpiComm, mpiComm, Teuchos::null, false);
 
     Teuchos::ParameterList solveParams;
     solveParams.set("Compute Sensitivities", true);
@@ -402,18 +397,18 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
     Teuchos::Array<Teuchos::Array<Teuchos::RCP<const Thyra::MultiVectorBase<double> > > > thyraSensitivities;
     Piro::PerformSolveBase(*solver, solveParams, thyraResponses, thyraSensitivities);
 
-     const Epetra_Map& ownedMap(*app->getDiscretization()->getMap()); //owned map
-     const Epetra_Map& overlapMap(*app->getDiscretization()->getOverlapMap()); //overlap map
-     Epetra_Import import(overlapMap, ownedMap); //importer from ownedMap to overlapMap 
-     Epetra_Vector solutionOverlap(overlapMap); //overlapped solution 
-     solutionOverlap.Import(*app->getDiscretization()->getSolutionField(), import, Insert);
+    const Epetra_Map& ownedMap(*albanyApp->getDiscretization()->getMap()); //owned map
+    const Epetra_Map& overlapMap(*albanyApp->getDiscretization()->getOverlapMap()); //overlap map
+    Epetra_Import import(overlapMap, ownedMap); //importer from ownedMap to overlapMap
+    Epetra_Vector solutionOverlap(overlapMap); //overlapped solution
+    solutionOverlap.Import(*albanyApp->getDiscretization()->getSolutionField(), import, Insert);
 
 #ifdef WRITE_TO_MATRIX_MARKET
-    //For debug: write solution and maps to matrix market file 
-     EpetraExt::BlockMapToMatrixMarketFile("node_map.mm", *node_map); 
-     EpetraExt::BlockMapToMatrixMarketFile("map.mm", ownedMap); 
-     EpetraExt::BlockMapToMatrixMarketFile("overlap_map.mm", overlapMap); 
-     EpetraExt::MultiVectorToMatrixMarketFile("solution.mm", *app->getDiscretization()->getSolutionField());
+    //For debug: write solution and maps to matrix market file
+    EpetraExt::BlockMapToMatrixMarketFile("node_map.mm", *node_map);
+    EpetraExt::BlockMapToMatrixMarketFile("map.mm", ownedMap);
+    EpetraExt::BlockMapToMatrixMarketFile("overlap_map.mm", overlapMap);
+    EpetraExt::MultiVectorToMatrixMarketFile("solution.mm", *albanyApp->getDiscretization()->getSolutionField());
 #endif
     
     // ---------------------------------------------------------------------------------------------------
@@ -447,8 +442,8 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
       const Teuchos::RCP<const Epetra_Vector> g = responses[i];
       bool is_scalar = true;
 
-      if (app != Teuchos::null)
-        is_scalar = app->getResponse(i)->isScalarResponse();
+      if (albanyApp != Teuchos::null)
+        is_scalar = albanyApp->getResponse(i)->isScalarResponse();
 
       if (is_scalar) {
         if (debug_output_verbosity != 0) g->Print(*out << "\nResponse vector " << i << ":\n");
@@ -566,7 +561,6 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
 
 
     first_time_step = false;
- 
 }
   
 

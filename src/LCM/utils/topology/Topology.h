@@ -8,7 +8,7 @@
 
 #include <iterator>
 
-#include <stk_mesh/base/FieldData.hpp>
+#include <stk_mesh/base/FieldBase.hpp>
 
 #include "Topology_Types.h"
 #include "Topology_Utils.h"
@@ -108,13 +108,6 @@ public:
   removeMultiLevelRelations();
 
   ///
-  /// \brief Returns array of pointers to Entities for the element to
-  ///        node relations
-  ///
-  std::vector<EntityVector>
-  getElementToNodeConnectivity();
-
-  ///
   /// \brief After mesh manipulations are complete, need to recreate
   ///        a stk mesh understood by Albany_STKDiscretization.
   ///
@@ -139,7 +132,7 @@ public:
   /// \attention Assumes all mesh elements are same type.
   ///
   EntityVector
-  getBoundaryEntityNodes(Entity const & boundary_entity);
+  getBoundaryEntityNodes(Entity boundary_entity);
 
   std::vector<Intrepid::Vector<double> >
   getNodalCoordinates();
@@ -170,7 +163,7 @@ public:
   ////
   EntityVector
   createSurfaceElementConnectivity(
-      Entity const & face_top, Entity const & face_bottom);
+      Entity face_top, Entity face_bottom);
 
   ///
   /// \brief Create vectors describing the vertices and edges of the
@@ -188,7 +181,7 @@ public:
   ///
   void
   createStar(
-      Entity & entity,
+      Entity entity,
       std::set<EntityKey> & subgraph_entities,
       std::set<stkEdge, EdgeLessThan> & subgraph_edges);
 
@@ -225,20 +218,20 @@ public:
   /// \brief Removes an entity and all its connections
   ///
   void
-  removeEntity(Entity & entity);
+  removeEntity(Entity entity);
 
   ///
   /// \brief Adds a relation between two entities
   ///
   void
-  addRelation(Entity & source_entity, Entity & target_entity,
+  addRelation(Entity source_entity, Entity target_entity,
       EdgeId local_relation_id);
 
   ///
   /// \brief Removes the relation between two entities
   ///
   void
-  removeRelation(Entity & source_entity, Entity & target_entity,
+  removeRelation(Entity source_entity, Entity target_entity,
       EdgeId local_relation_id);
 
   ///
@@ -258,15 +251,15 @@ public:
   /// \brief Gets the local relation id (0,1,2,...) between two entities
   ///
   EdgeId
-  getLocalRelationId(Entity const & source_entity,
-      Entity const & target_entity);
+  getLocalRelationId(Entity source_entity,
+      Entity target_entity);
 
   ///
   /// \brief Returns the total number of lower rank entities
   ///        connected to a specific entity
   ///
   int
-  getNumberLowerRankEntities(Entity const & entity);
+  getNumberLowerRankEntities(Entity entity);
 
   ///
   /// \brief Returns a group of entities connected directly to a
@@ -275,14 +268,14 @@ public:
   ///
   EntityVector
   getDirectlyConnectedEntities(
-      Entity const & entity,
+      Entity entity,
       EntityRank entity_rank);
 
   ///
   /// \brief Checks if an entity exists inside a specific vector
   ///
   bool
-  findEntityInVector(EntityVector & entities, Entity * entity);
+  findEntityInVector(EntityVector & entities, Entity entity);
 
   ///
   /// \brief Returns a group of entities connected indirectly to a
@@ -295,14 +288,14 @@ public:
   ///
   ///
   EntityVector
-  getBoundaryEntities(Entity const & entity, EntityRank entity_rank);
+  getBoundaryEntities(Entity entity, EntityRank entity_rank);
 
   ///
   /// \brief Checks if a segment is connected to an input node.
   /// Returns "true" if the segment connects to the node.
   ///
   bool
-  segmentIsConnected(Entity const & segment, Entity * node);
+  segmentIsConnected(Entity segment, Entity node);
 
   ///
   /// \brief Finds the adjacent segments to a given segment. The
@@ -310,14 +303,14 @@ public:
   ///        point. it returns adjacent segments
   ///
   EntityVector
-  findAdjacentSegments(Entity const & segment, Entity * node);
+  findAdjacentSegments(Entity segment, Entity node);
 
   ///
   /// \brief Returns all the highest dimensional topology entities
   ///        to which a given face belongs
   ///
   EntityVector
-  findCellRelations(Entity const & face);
+  findCellRelations(Entity face);
 
   ///
   /// \brief Returns all the segments at the boundary of a given
@@ -325,13 +318,13 @@ public:
   ///        barycenters and the faces boundary nodes
   ///
   EntityVector
-  findSegmentsFromElement(Entity const & element);
+  findSegmentsFromElement(Entity element);
 
   ///
   /// \brief Returns true if the faces share a segment (two points)
   ///
   bool
-  facesShareTwoPoints(Entity const & face1, Entity const & face2);
+  facesShareTwoPoints(Entity face1, Entity face2);
 
   ///
   /// \brief returns the adjacent segments from a given face
@@ -339,21 +332,21 @@ public:
   EntityVector
   findAdjacentSegmentsFromFace(
       std::vector<EntityVector> const & faces_inside_element,
-      Entity const & face,
+      Entity face,
       int element_number);
 
   ///
   /// \brief Returns a pointer with the coordinates of a given entity
   ///
   double*
-  getPointerOfCoordinates(Entity * entity);
+  getPointerOfCoordinates(Entity entity);
 
   ///
   /// \brief Returns a vector with the corresponding former boundary
   ///        nodes of an input entity
   ///
   EntityVector
-  getFormerElementNodes(Entity const & element,
+  getFormerElementNodes(Entity element,
       std::vector<EntityVector> const & entities);
 
   ///
@@ -364,7 +357,7 @@ public:
   void
   computeBarycentricCoordinates(
       EntityVector const & entities,
-      Entity * barycenter);
+      Entity barycenter);
 
   ///
   /// \brief Barycentric subdivision
@@ -375,7 +368,7 @@ public:
   ///
   /// \brief Finds the closest nodes(Entities of rank 0) to each of the three points in the input vector.
   /// EntityVector
-  std::vector<Entity*>
+  std::vector<Entity>
   getClosestNodes(std::vector<std::vector<double> > points);
 
   ///
@@ -383,14 +376,14 @@ public:
   ///        of the three points in the input vectorThese nodes
   ///        lie over the surface of the mesh
   ///
-  std::vector<Entity*>
+  std::vector<Entity>
   getClosestNodesOnSurface(std::vector<std::vector<double> > points);
 
   ///
   /// \brief calculates the distance between a node and a point
   ///
   double
-  getDistanceNodeAndPoint(Entity* node, std::vector<double> point);
+  getDistanceNodeAndPoint(Entity node, std::vector<double> point);
 
   ///
   /// \brief Returns the coordinates of the points that form a equilateral triangle.
@@ -409,7 +402,7 @@ public:
   /// \brief Returns the distance between two entities of rank 0 (nodes)
   ///
   double
-  getDistanceBetweenNodes(Entity * node1, Entity * node2);
+  getDistanceBetweenNodes(Entity node1, Entity node2);
 
   ///
   /// \brief Returns the coordinates of the max and min of x y and z
@@ -422,7 +415,7 @@ public:
   /// \brief Returns the edges necessary to compute the shortest path on the outer surface
   ///        of the mesh
   ///
-  std::vector<Entity*>
+  std::vector<Entity>
   MeshEdgesShortestPath();
 
   ///
@@ -431,14 +424,14 @@ public:
   ///
   std::vector<std::vector<int> >
   shortestpathOnBoundaryFaces(
-      std::vector<Entity*> const & nodes,
-		  std::vector<Entity*> const & MeshEdgesShortestPath);
+      std::vector<Entity> const & nodes,
+		  std::vector<Entity> const & MeshEdgesShortestPath);
 
   ///
   /// \brief Returns the shortest path between three input nodes
   ///
   std::vector<std::vector<int> >
-  shortestpath(std::vector<Entity*> const & nodes);
+  shortestpath(std::vector<Entity> const & nodes);
 
   ///
   /// \brief Returns the directions of all the edges of the input mesh
@@ -500,14 +493,14 @@ public:
   ///        It takes as an input the resulting vector taken from the solution of the
   ///        linear programming solver
   ///
-  std::vector<Entity*>
+  std::vector<Entity>
   MinimumSurfaceFaces(std::vector<int> VectorFromLPSolver);
 
   ///
   /// \brief Returns the number of times an entity is repeated in a vector
   ///
   int
-  NumberOfRepetitions(std::vector<Entity*> & entities, Entity * entity);
+  NumberOfRepetitions(std::vector<Entity> & entities, Entity entity);
 
   ///
   /// \brief Returns the coordinates of an input node.
@@ -568,7 +561,7 @@ public:
   getBulkData()
   {return stk_mesh_struct_->bulkData;}
 
-  stk_classic::mesh::fem::FEMMetaData *
+  stk::mesh::MetaData *
   getMetaData()
   {return stk_mesh_struct_->metaData;}
 
@@ -584,18 +577,14 @@ public:
   getSpaceDimension() {return static_cast<size_t>(getSTKMeshStruct()->numDim);}
 
   EntityRank const
-  getCellRank() {return getMetaData()->element_rank();}
-
-  EntityRank const
   getBoundaryRank()
   {
-    assert(getCellRank() > 0);
-    return getCellRank() - 1;
+    return getMetaData()->side_rank();
   }
 
   IntScalarFieldType &
-  getFractureState()
-  {return *(stk_mesh_struct_->getFieldContainer()->getFractureState());}
+  getFractureState(EntityRank rank)
+  {return *(stk_mesh_struct_->getFieldContainer()->getFractureState(rank));}
 
   void
   setFractureCriterion(RCP<AbstractFractureCriterion> const & fc)
@@ -624,33 +613,34 @@ public:
   {return Selector(getLocalPart() & getFractureInterfacePart());}
 
   bool
-  isLocalEntity(Entity const & e)
-  {return getBulkData()->parallel_rank() == e.owner_rank();}
+  isLocalEntity(Entity e)
+  {return getBulkData()->parallel_rank() == getBulkData()->parallel_owner_rank(e);}
 
   bool
-  isInBulk(Entity const & e)
-  {return e.bucket().member(getFractureBulkPart());}
+  isInBulk(Entity e)
+  {return getBulkData()->bucket(e).member(getFractureBulkPart());}
 
   bool
-  isBulkCell(Entity const & e)
-  {return (e.entity_rank() == getCellRank()) && isInBulk(e);}
+  isBulkCell(Entity e)
+  {return (getBulkData()->entity_rank(e) == stk::topology::ELEMENT_RANK) && isInBulk(e);}
 
   bool
-  isInInterface(Entity const & e)
-  {return e.bucket().member(getFractureInterfacePart());}
+  isInInterface(Entity e)
+  {return getBulkData()->bucket(e).member(getFractureInterfacePart());}
 
   bool
-  isInterfaceCell(Entity const & e)
-  {return (e.entity_rank() == getCellRank()) && isInInterface(e);}
+  isInterfaceCell(Entity e)
+  {return (getBulkData()->entity_rank(e) == stk::topology::ELEMENT_RANK) && isInInterface(e);}
 
   //
   // Set fracture state. Do nothing for cells (elements).
   //
   void
-  setFractureState(Entity const & e, FractureState const fs)
+  setFractureState(Entity e, FractureState const fs)
   {
-    if (e.entity_rank() < getCellRank()) {
-      *(stk_classic::mesh::field_data(getFractureState(), e)) = static_cast<int>(fs);
+    EntityRank const rank = getBulkData()->entity_rank(e);
+    if (rank < stk::topology::ELEMENT_RANK) {
+      *(stk::mesh::field_data(getFractureState(rank), e)) = static_cast<int>(fs);
     }
   }
 
@@ -658,23 +648,21 @@ public:
   // Get fracture state. Return CLOSED for cells (elements).
   //
   FractureState
-  getFractureState(Entity const & e)
+  getFractureState(Entity e)
   {
-    return e.entity_rank() >= getCellRank() ?
+    EntityRank const rank = getBulkData()->entity_rank(e);
+    return rank >= stk::topology::ELEMENT_RANK ?
     CLOSED :
-    static_cast<FractureState>(*(stk_classic::mesh::field_data(getFractureState(), e)));
+    static_cast<FractureState>(*(stk::mesh::field_data(getFractureState(rank), e)));
   }
 
   bool
-  isInternal(Entity const & e) {
+  isInternal(Entity e) {
 
-    assert(e.entity_rank() == getBoundaryRank());
-
-    PairIterRelation
-    relations = relations_one_up(e);
+    assert(getBulkData()->entity_rank(e) == getBoundaryRank());
 
     size_t const
-    number_in_edges = std::distance(relations.begin(), relations.end());
+    number_in_edges = getBulkData()->num_elements(e);
 
     assert(number_in_edges == 1 || number_in_edges == 2);
 
@@ -682,12 +670,12 @@ public:
   }
 
   bool
-  isOpen(Entity const & e) {
+  isOpen(Entity e) {
     return getFractureState(e) == OPEN;
   }
 
   bool
-  isInternalAndOpen(Entity const & e) {
+  isInternalAndOpen(Entity e) {
     return isInternal(e) == true && isOpen(e) == true;
   }
 
@@ -695,7 +683,7 @@ public:
   /// Check fracture criterion
   ///
   bool
-  checkOpen(Entity const & e);
+  checkOpen(Entity e);
 
   ///
   /// Initialization of the open field for fracture

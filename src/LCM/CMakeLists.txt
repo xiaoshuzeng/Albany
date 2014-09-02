@@ -223,6 +223,9 @@ ELSE(BUILD_SHARED_LIBS)
   ENDIF()
 ENDIF(BUILD_SHARED_LIBS)
 
+IF(ALBANY_STK_REBALANCE)
+  SET(LCM_UT_LIBS ${LCM_UT_LIBS} albanySTKRebalance)
+endif()
    
 #Linking tests
 target_link_libraries(MaterialPointSimulator ${LCM_UT_LIBS} ${ALL_LIBRARIES})

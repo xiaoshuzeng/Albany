@@ -666,7 +666,11 @@ ENDIF()
 IF (ALBANY_FELIX)
   add_subdirectory(FELIX)
   SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} FELIX)
-  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} mpasInterface)
+  
+  IF (ENABLE_MPAS_INTERFACE)
+    SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} mpasInterface)
+  ENDIF()
+  
   IF (ENABLE_CISM_INTERFACE)
     SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} cismInterface)
   ENDIF()
@@ -706,7 +710,10 @@ IF (ALBANY_LCM)
   ENDIF()
 ENDIF()
 
-
+# Can remove this once rebalance is in Trilnos again
+IF(ALBANY_STK_REBALANCE)
+  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} albanySTKRebalance)
+endif()
 
 # Repeat libraries twice to catch circular dependencies
 SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ${ALBANY_LIBRARIES})

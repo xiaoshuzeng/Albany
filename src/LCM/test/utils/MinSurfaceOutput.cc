@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <string>
 #include <sstream>
-typedef stk_classic::mesh::Entity Entity;
+typedef stk::mesh::Entity Entity;
 
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/io.hpp>
@@ -26,7 +26,7 @@ int main(int ac, char* av[]){
 
 	std::string input_file;
 	std::string results_file;
-	typedef stk_classic::mesh::Entity Entity;
+	typedef stk::mesh::Entity Entity;
 	std::string output_file;// = "output.e";
 
 	using namespace std;
@@ -105,12 +105,12 @@ int main(int ac, char* av[]){
 
 
 	//Call the function "MinimumSurfaceFaces" that returns the entities associated with the solution given by the solver
-	std::vector<Entity*> EntitiesMinSurface = topology.MinimumSurfaceFaces(resultsVector);
+	std::vector<Entity> EntitiesMinSurface = topology.MinimumSurfaceFaces(resultsVector);
 
 
     //Debug: return the number of repeated entities if there are any
-	std::vector<Entity*> NumberRepeatedEntities;
-	std::vector<Entity*>::const_iterator I_Entities;
+	std::vector<Entity> NumberRepeatedEntities;
+	std::vector<Entity>::const_iterator I_Entities;
 	for (I_Entities = EntitiesMinSurface.begin();I_Entities != EntitiesMinSurface.end(); I_Entities++)
 	{
        	if (topology.NumberOfRepetitions(EntitiesMinSurface,*I_Entities) != 1)
@@ -125,17 +125,17 @@ int main(int ac, char* av[]){
 	//Create a matrix that contains the boundary nodes of each Entity
 	//This is also the connectivity matrix
 	std::vector<std::vector<int> > boundaryNodes_;
-	std::vector<Entity*>::const_iterator I_entities;
+	std::vector<Entity>::const_iterator I_entities;
 	for (I_entities = EntitiesMinSurface.begin(); I_entities != EntitiesMinSurface.end(); I_entities++)
 	{
-		std::vector<Entity*> temp;
+		std::vector<Entity> temp;
 		//Obtain all the entities of rank 0
-		temp = topology.getBoundaryEntities(*(*I_entities),0);
-		std::vector<int> temp2; std::vector<Entity*>::const_iterator I_nodes;
+		temp = topology.getBoundaryEntities(*I_entities, stk::topology::NODE_RANK);
+		std::vector<int> temp2; std::vector<Entity>::const_iterator I_nodes;
 		//Get the identifiers of the entities above
 		for (I_nodes = temp.begin(); I_nodes != temp.end(); I_nodes++)
 		{
-			temp2.push_back((*I_nodes)->identifier());
+                    temp2.push_back(topology.getBulkData()->identifier(*I_nodes));
 		}
 		boundaryNodes_.push_back(temp2); //Connectivity matrix
 	}
@@ -152,7 +152,7 @@ int main(int ac, char* av[]){
 	for (unsigned int i = 0;i<(EntitiesMinSurface.size());i++)
 	{
 		//Compute the area
-		std::vector<Entity*> Nodes =  topology.getBoundaryEntities(*EntitiesMinSurface[i],0);
+                std::vector<Entity> Nodes =  topology.getBoundaryEntities(EntitiesMinSurface[i], stk::topology::NODE_RANK);
 		double a =  topology.getDistanceBetweenNodes(Nodes[0], Nodes[1]);
 		double b =  topology.getDistanceBetweenNodes(Nodes[1], Nodes[2]);
 		double c =  topology.getDistanceBetweenNodes(Nodes[2], Nodes[0]);

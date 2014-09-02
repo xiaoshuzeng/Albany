@@ -11,6 +11,7 @@
 
 #include "Albany_Utils.hpp"
 #include "Albany_StateInfoStruct.hpp"
+#include "Albany_BucketArray.hpp"
 #include <stk_mesh/base/GetBuckets.hpp>
 
 #ifdef ALBANY_SEACAS
@@ -20,12 +21,10 @@
 template<bool Interleaved>
 Albany::GenericSTKFieldContainer<Interleaved>::GenericSTKFieldContainer(
   const Teuchos::RCP<Teuchos::ParameterList>& params_,
-  stk_classic::mesh::fem::FEMMetaData* metaData_,
-  stk_classic::mesh::BulkData* bulkData_,
+  stk::mesh::MetaData* metaData_,
   const int neq_,
   const int numDim_)
   : metaData(metaData_),
-    bulkData(bulkData_),
     params(params_),
     neq(neq_),
     numDim(numDim_) {
@@ -55,8 +54,8 @@ Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::
     StateStruct::FieldDims& dim = st.dim;
 
     if(st.entity == StateStruct::ElemData){
-      qpscalar_states.push_back(& metaData->declare_field< QPSFT >(st.name));
-      stk_classic::mesh::put_field(*qpscalar_states.back() , metaData->element_rank(),
+      qpscalar_states.push_back(& metaData->declare_field< QPSFT >(stk::topology::ELEMENT_RANK, st.name));
+      stk::mesh::put_field(*qpscalar_states.back() ,
                            metaData->universal_part(), 1);
       
       //Debug
@@ -64,63 +63,63 @@ Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::
       //            " size: (" << dim[0] << ", " << dim[1] << ")" <<endl;
 
 #ifdef ALBANY_SEACAS
-        if(st.output) stk_classic::io::set_field_role(*qpscalar_states.back(), Ioss::Field::TRANSIENT);
+        if(st.output) stk::io::set_field_role(*qpscalar_states.back(), Ioss::Field::TRANSIENT);
 #endif
 
     } else if(st.entity == StateStruct::QuadPoint || st.entity == StateStruct::ElemNode){
 
         if(dim.size() == 2){ // Scalar at QPs
-          qpscalar_states.push_back(& metaData->declare_field< QPSFT >(st.name));
-          stk_classic::mesh::put_field(*qpscalar_states.back() , metaData->element_rank(),
-                           metaData->universal_part(), dim[1]);
+          qpscalar_states.push_back(& metaData->declare_field< QPSFT >(stk::topology::ELEMENT_RANK, st.name));
+          stk::mesh::put_field(*qpscalar_states.back() ,
+                               metaData->universal_part(), dim[1]);
         //Debug
         //      cout << "Allocating qps field name " << qpscalar_states.back()->name() <<
         //            " size: (" << dim[0] << ", " << dim[1] << ")" <<endl;
 #ifdef ALBANY_SEACAS
 
-          if(st.output) stk_classic::io::set_field_role(*qpscalar_states.back(), Ioss::Field::TRANSIENT);
+          if(st.output) stk::io::set_field_role(*qpscalar_states.back(), Ioss::Field::TRANSIENT);
 
 #endif
         }
         else if(dim.size() == 3){ // Vector at QPs
-          qpvector_states.push_back(& metaData->declare_field< QPVFT >(st.name));
+          qpvector_states.push_back(& metaData->declare_field< QPVFT >(stk::topology::ELEMENT_RANK, st.name));
           // Multi-dim order is Fortran Ordering, so reversed here
-          stk_classic::mesh::put_field(*qpvector_states.back() , metaData->element_rank(),
+          stk::mesh::put_field(*qpvector_states.back() ,
                            metaData->universal_part(), dim[2], dim[1]);
           //Debug
           //      cout << "Allocating qpv field name " << qpvector_states.back()->name() <<
           //            " size: (" << dim[0] << ", " << dim[1] << ", " << dim[2] << ")" <<endl;
 #ifdef ALBANY_SEACAS
 
-          if(st.output) stk_classic::io::set_field_role(*qpvector_states.back(), Ioss::Field::TRANSIENT);
+          if(st.output) stk::io::set_field_role(*qpvector_states.back(), Ioss::Field::TRANSIENT);
 
 #endif
         }
         else if(dim.size() == 4){ // Tensor at QPs
-          qptensor_states.push_back(& metaData->declare_field< QPTFT >(st.name));
+          qptensor_states.push_back(& metaData->declare_field< QPTFT >(stk::topology::ELEMENT_RANK, st.name));
           // Multi-dim order is Fortran Ordering, so reversed here
-          stk_classic::mesh::put_field(*qptensor_states.back() , metaData->element_rank(),
+          stk::mesh::put_field(*qptensor_states.back() ,
                            metaData->universal_part(), dim[3], dim[2], dim[1]);
           //Debug
           //      cout << "Allocating qpt field name " << qptensor_states.back()->name() <<
           //            " size: (" << dim[0] << ", " << dim[1] << ", " << dim[2] << ", " << dim[3] << ")" <<endl;
 #ifdef ALBANY_SEACAS
 
-          if(st.output) stk_classic::io::set_field_role(*qptensor_states.back(), Ioss::Field::TRANSIENT);
+          if(st.output) stk::io::set_field_role(*qptensor_states.back(), Ioss::Field::TRANSIENT);
 
 #endif
         }
         else if(dim.size() == 5){ // Tensor3 at QPs
-          qptensor3_states.push_back(& metaData->declare_field< QPT3FT >(st.name));
+          qptensor3_states.push_back(& metaData->declare_field< QPT3FT >(stk::topology::ELEMENT_RANK, st.name));
           // Multi-dim order is Fortran Ordering, so reversed here
-          stk_classic::mesh::put_field(*qptensor3_states.back() , metaData->element_rank(),
-                           metaData->universal_part(), dim[4], dim[3], dim[2], dim[1]);
+          stk::mesh::put_field(*qptensor3_states.back() ,
+                               metaData->universal_part(), dim[4], dim[3], dim[2], dim[1]);
           //Debug
           //      cout << "Allocating qpt field name " << qptensor_states.back()->name() <<
           //            " size: (" << dim[0] << ", " << dim[1] << ", " << dim[2] << ", " << dim[3] << ", " << dim[4] << ")" <<endl;
 #ifdef ALBANY_SEACAS
 
-          if(st.output) stk_classic::io::set_field_role(*qptensor3_states.back(), Ioss::Field::TRANSIENT);
+          if(st.output) stk::io::set_field_role(*qptensor3_states.back(), Ioss::Field::TRANSIENT);
 
 #endif
         }
@@ -142,14 +141,13 @@ Albany::GenericSTKFieldContainer<Interleaved>::buildStateStructs(const Teuchos::
           StateStruct::FieldDims nodalFieldDim;
           //convert ElemNode dims to NodalData dims.
           nodalFieldDim.insert(nodalFieldDim.begin(), dim.begin()+1,dim.end());
-          (*nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, nodalFieldDim, metaData, bulkData, st.output);
+          (*nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, nodalFieldDim, metaData, st.output);
         }
         else
-          (*nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, dim, metaData, bulkData, st.output);
+          (*nodeContainer)[st.name] = Albany::buildSTKNodeField(st.name, dim, metaData, st.output);
 
 
 
- 
     } // end Node class - anything else is an error
     else TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
             "Error: GenericSTKFieldContainer - cannot match unknown entity : " << st.entity << std::endl);
@@ -164,7 +162,7 @@ typename boost::disable_if< boost::is_same<T, Albany::AbstractSTKFieldContainer:
 Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vector& soln,
     T* solution_field,
     const Teuchos::RCP<Epetra_Map>& node_map,
-    const stk_classic::mesh::Bucket& bucket, int offset) {
+    const stk::mesh::Bucket& bucket, int offset) {
 
   // Fill the result vector
   // Create a multidimensional array view of the
@@ -172,16 +170,17 @@ Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vector& s
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
-  stk_classic::mesh::BucketArray<T>
-  solution_array(*solution_field, bucket);
+  BucketArray<T> solution_array(*solution_field, bucket);
 
   const int num_vec_components = solution_array.dimension(0);
   const int num_nodes_in_bucket = solution_array.dimension(1);
 
+  stk::mesh::BulkData& mesh = solution_field->get_mesh();
+
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
     //      const unsigned node_gid = bucket[i].identifier();
-    const int node_gid = bucket[i].identifier() - 1;
+    const int node_gid = mesh.identifier(bucket[i]) - 1;
     int node_lid = node_map->LID(node_gid);
 
     for(std::size_t j = 0; j < num_vec_components; j++)
@@ -197,7 +196,7 @@ template<bool Interleaved>
 void Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vector& soln,
     ScalarFieldType* solution_field,
     const Teuchos::RCP<Epetra_Map>& node_map,
-    const stk_classic::mesh::Bucket& bucket, int offset) {
+    const stk::mesh::Bucket& bucket, int offset) {
 
   // Fill the result vector
   // Create a multidimensional array view of the
@@ -205,15 +204,16 @@ void Albany::GenericSTKFieldContainer<Interleaved>::fillVectorHelper(Epetra_Vect
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
-  stk_classic::mesh::BucketArray<ScalarFieldType>
-  solution_array(*solution_field, bucket);
+  BucketArray<ScalarFieldType> solution_array(*solution_field, bucket);
 
   const int num_nodes_in_bucket = solution_array.dimension(0);
+
+  stk::mesh::BulkData& mesh = solution_field->get_mesh();
 
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
     //      const unsigned node_gid = bucket[i].identifier();
-    const int node_gid = bucket[i].identifier() - 1;
+    const int node_gid = mesh.identifier(bucket[i]) - 1;
     int node_lid = node_map->LID(node_gid);
 
     soln[getDOF(node_lid, offset)] = solution_array(i);
@@ -227,7 +227,7 @@ typename boost::disable_if< boost::is_same<T, Albany::AbstractSTKFieldContainer:
 Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetra_Vector& soln,
     T* solution_field,
     const Teuchos::RCP<Epetra_Map>& node_map,
-    const stk_classic::mesh::Bucket& bucket, int offset) {
+    const stk::mesh::Bucket& bucket, int offset) {
 
   // Fill the result vector
   // Create a multidimensional array view of the
@@ -235,15 +235,16 @@ Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetra_Vec
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
-  stk_classic::mesh::BucketArray<T>
-  solution_array(*solution_field, bucket);
+  BucketArray<T> solution_array(*solution_field, bucket);
 
   const int num_vec_components = solution_array.dimension(0);
   const int num_nodes_in_bucket = solution_array.dimension(1);
 
+  stk::mesh::BulkData& mesh = solution_field->get_mesh();
+
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
-    const int node_gid = bucket[i].identifier() - 1;
+    const int node_gid = mesh.identifier(bucket[i]) - 1;
     int node_lid = node_map->LID(node_gid);
 
     for(std::size_t j = 0; j < num_vec_components; j++)
@@ -258,7 +259,7 @@ template<bool Interleaved>
 void Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetra_Vector& soln,
     ScalarFieldType* solution_field,
     const Teuchos::RCP<Epetra_Map>& node_map,
-    const stk_classic::mesh::Bucket& bucket, int offset) {
+    const stk::mesh::Bucket& bucket, int offset) {
 
   // Fill the result vector
   // Create a multidimensional array view of the
@@ -266,15 +267,16 @@ void Albany::GenericSTKFieldContainer<Interleaved>::saveVectorHelper(const Epetr
   // The array is two dimensional ( Cartesian X NumberNodes )
   // and indexed by ( 0..2 , 0..NumberNodes-1 )
 
-  stk_classic::mesh::BucketArray<ScalarFieldType>
-  solution_array(*solution_field, bucket);
+  BucketArray<ScalarFieldType> solution_array(*solution_field, bucket);
 
   const int num_nodes_in_bucket = solution_array.dimension(0);
+
+  stk::mesh::BulkData& mesh = solution_field->get_mesh();
 
   for(std::size_t i = 0; i < num_nodes_in_bucket; i++)  {
 
     //      const unsigned node_gid = bucket[i].identifier();
-    const int node_gid = bucket[i].identifier() - 1;
+    const int node_gid = mesh.identifier(bucket[i]) - 1;
     int node_lid = node_map->LID(node_gid);
 
     solution_array(i) = soln[getDOF(node_lid, offset)];
@@ -287,16 +289,15 @@ template<class T>
 typename boost::disable_if< boost::is_same<T, Albany::AbstractSTKFieldContainer::ScalarFieldType>, void >::type
 Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const T* source, T* target) {
 
-  const stk_classic::mesh::BucketVector& bv = this->bulkData->buckets(this->metaData->node_rank());
+  stk::mesh::BulkData& mesh = source->get_mesh();
+  const stk::mesh::BucketVector& bv = mesh.buckets(stk::topology::NODE_RANK);
 
-  for(stk_classic::mesh::BucketVector::const_iterator it = bv.begin() ; it != bv.end() ; ++it) {
+  for(stk::mesh::BucketVector::const_iterator it = bv.begin() ; it != bv.end() ; ++it) {
 
-    const stk_classic::mesh::Bucket& bucket = **it;
+    const stk::mesh::Bucket& bucket = **it;
 
-    stk_classic::mesh::BucketArray<T>
-    source_array(*source, bucket);
-    stk_classic::mesh::BucketArray<T>
-    target_array(*target, bucket);
+    BucketArray<T> source_array(*source, bucket);
+    BucketArray<T> target_array(*target, bucket);
 
     const int num_source_components = source_array.dimension(0);
     const int num_target_components = target_array.dimension(0);
@@ -320,7 +321,6 @@ Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const T* source, T* 
       for(std::size_t j = 0; j < num_target_components; j++) {
 
         target_array(j, i) = source_array(j, i);
-
       }
    }
 
@@ -332,16 +332,15 @@ Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const T* source, T* 
 template<bool Interleaved>
 void Albany::GenericSTKFieldContainer<Interleaved>::copySTKField(const ScalarFieldType* source, ScalarFieldType* target) {
 
-  const stk_classic::mesh::BucketVector& bv = this->bulkData->buckets(this->metaData->node_rank());
+  stk::mesh::BulkData& mesh = source->get_mesh();
+  const stk::mesh::BucketVector& bv = mesh.buckets(stk::topology::NODE_RANK);
 
-  for(stk_classic::mesh::BucketVector::const_iterator it = bv.begin() ; it != bv.end() ; ++it) {
+  for(stk::mesh::BucketVector::const_iterator it = bv.begin() ; it != bv.end() ; ++it) {
 
-    const stk_classic::mesh::Bucket& bucket = **it;
+    const stk::mesh::Bucket& bucket = **it;
 
-    stk_classic::mesh::BucketArray<ScalarFieldType>
-    source_array(*source, bucket);
-    stk_classic::mesh::BucketArray<ScalarFieldType>
-    target_array(*target, bucket);
+    BucketArray<ScalarFieldType> source_array(*source, bucket);
+    BucketArray<ScalarFieldType> target_array(*target, bucket);
 
     const int num_nodes_in_bucket = source_array.dimension(0);
 
