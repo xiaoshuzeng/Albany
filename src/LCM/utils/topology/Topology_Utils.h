@@ -22,13 +22,13 @@ namespace LCM {
 ///
 inline
 void
-display_connectivity(BulkData * bulk_data, EntityRank cell_rank)
+display_connectivity(BulkData & bulk_data, EntityRank cell_rank)
 {
   // Create a list of element entities
   EntityVector
   elements;
 
-  stk_classic::mesh::get_entities(*(bulk_data), cell_rank, elements);
+  stk::mesh::get_entities(bulk_data, cell_rank, elements);
 
   typedef EntityVector::size_type size_type;
 
@@ -38,24 +38,23 @@ display_connectivity(BulkData * bulk_data, EntityRank cell_rank)
 
   for (size_type i = 0; i < number_of_elements; ++i) {
 
-    PairIterRelation
-    relations = elements[i]->relations(NODE_RANK);
+    Entity const* relations = bulk_data.begin_nodes(elements[i]);
 
     EntityId const
-    element_id = elements[i]->identifier();
+    element_id = bulk_data.identifier(elements[i]);
 
     std::cout << std::setw(16) << element_id << ":";
 
     size_t const
-    nodes_per_element = relations.size();
+      nodes_per_element = bulk_data.num_nodes(elements[i]);
 
     for (size_t j = 0; j < nodes_per_element; ++j) {
 
-      Entity const &
-      node = *(relations[j].entity());
+      Entity
+      node = relations[j];
 
       EntityId const
-      node_id = node.identifier();
+      node_id = bulk_data.identifier(node);
 
       std::cout << std::setw(16) << node_id;
     }
@@ -74,22 +73,25 @@ display_connectivity(BulkData * bulk_data, EntityRank cell_rank)
 ///
 inline
 void
-display_relation(Entity const & entity)
+display_relation(BulkData& bulk_data, Entity entity)
 {
   std::cout << "Relations for entity (identifier,rank): ";
-  std::cout << entity.identifier() << "," << entity.entity_rank();
+  std::cout << bulk_data.identifier(entity) << "," << bulk_data.entity_rank(entity);
   std::cout << '\n';
 
-  PairIterRelation
-  relations = entity.relations();
+  for (stk::topology::rank_t rank = stk::topology::NODE_RANK; rank <= stk::topology::ELEMENT_RANK; ++rank) {
+    Entity const* relations = bulk_data.begin(entity, rank);
+    stk::mesh::ConnectivityOrdinal const* ords = bulk_data.begin_ordinals(entity, rank);
 
-  for (size_t i = 0; i < relations.size(); ++i) {
-    std::cout << "entity:\t";
-    std::cout << relations[i].entity()->identifier() << ",";
-    std::cout << relations[i].entity()->entity_rank();
-    std::cout << "\tlocal id: ";
-    std::cout << relations[i].identifier();
-    std::cout << '\n';
+    size_t num_rels = bulk_data.num_connectivity(entity, rank);
+    for (size_t i = 0; i < num_rels; ++i) {
+      std::cout << "entity:\t";
+      std::cout << bulk_data.identifier(relations[i]) << ",";
+      std::cout << bulk_data.entity_rank(relations[i]);
+      std::cout << "\tlocal id: ";
+      std::cout << ords[i];
+      std::cout << '\n';
+    }
   }
   return;
 }
@@ -102,64 +104,32 @@ display_relation(Entity const & entity)
 ///
 inline
 void
-display_relation(Entity const & entity, EntityRank const rank)
+display_relation(BulkData& bulk_data, Entity entity, EntityRank const rank)
 {
   std::cout << "Relations of rank ";
   std::cout << rank;
   std::cout << " for entity (identifier,rank): ";
-  std::cout << entity.identifier() << "," << entity.entity_rank();
+  std::cout << bulk_data.identifier(entity) << "," << bulk_data.entity_rank(entity);
   std::cout << '\n';
 
-  PairIterRelation
-  relations = entity.relations(rank);
+  Entity const*
+  relations = bulk_data.begin(entity, rank);
 
-  for (size_t i = 0; i < relations.size(); ++i) {
+  size_t
+  num_rels = bulk_data.num_connectivity(entity, rank);
+
+  stk::mesh::ConnectivityOrdinal const*
+  ords = bulk_data.begin_ordinals(entity, rank);
+
+  for (size_t i = 0; i < num_rels; ++i) {
     std::cout << "entity:\t";
-    std::cout << relations[i].entity()->identifier() << ",";
-    std::cout << relations[i].entity()->entity_rank();
+    std::cout << bulk_data.identifier(relations[i]) << ",";
+    std::cout << bulk_data.entity_rank(relations[i]);
     std::cout << "\tlocal id: ";
-    std::cout << relations[i].identifier();
+    std::cout << ords[i];
     std::cout << '\n';
   }
   return;
-}
-
-inline
-bool
-is_one_down(Entity const & entity, Relation const & relation)
-{
-  EntityRank const
-  entity_rank = entity.entity_rank();
-
-  EntityRank const
-  target_rank = relation.entity_rank();
-
-  return entity_rank - target_rank == 1;
-}
-
-inline
-bool
-is_one_up(Entity const & entity, Relation const & relation)
-{
-  EntityRank const
-  entity_rank = entity.entity_rank();
-
-  EntityRank const
-  target_rank = relation.entity_rank();
-
-  return target_rank - entity_rank == 1;
-}
-
-///
-/// Test whether a given source entity and relation are
-/// valid in the sense of the graph representation.
-/// Multilevel relations are not valid.
-///
-inline
-bool
-is_graph_relation(Entity const & source_entity, Relation const & relation)
-{
-  return is_one_down(source_entity, relation);
 }
 
 ///
@@ -170,53 +140,15 @@ is_graph_relation(Entity const & source_entity, Relation const & relation)
 inline
 bool
 is_needed_for_stk(
-    Entity const & source_entity,
-    Relation const & relation,
+    BulkData& bulk_data,
+    Entity source_entity,
+    EntityRank target_rank,
     EntityRank const cell_rank)
 {
   EntityRank const
-  source_rank = source_entity.entity_rank();
+  source_rank = bulk_data.entity_rank(source_entity);
 
-  EntityRank const
-  target_rank = relation.entity_rank();
-
-  return (source_rank == cell_rank) && (target_rank == NODE_RANK);
-}
-
-// TODO: returning PairIterRelation(*relation_vector) below
-// stores temporary iterators to relation_vector that are
-// invalid outside the scope of these functions.
-// Perhaps change to returning the vector itself but this will require
-// change of interface for functions that return relations.
-
-///
-/// Iterators to all relations.
-///
-inline
-PairIterRelation
-relations_all(Entity const & entity)
-{
-  return entity.relations();
-}
-
-///
-/// Iterators to relations one level up.
-///
-inline
-PairIterRelation
-relations_one_up(Entity const & entity)
-{
-  return entity.relations(entity.entity_rank() + 1);
-}
-
-///
-/// Iterators to relations one level down.
-///
-inline
-PairIterRelation
-relations_one_down(Entity const & entity)
-{
-  return entity.relations(entity.entity_rank() - 1);
+  return (source_rank == stk::topology::ELEMENT_RANK) && (target_rank == NODE_RANK);
 }
 
 ///
@@ -295,12 +227,12 @@ entity_label(EntityRank const rank)
 //
 inline
 std::string
-entity_string(Entity const & entity)
+entity_string(BulkData& bulk_data, Entity entity)
 {
   std::ostringstream
   oss;
 
-  oss << entity_label(entity.entity_rank()) << '-' << entity.identifier();
+  oss << entity_label(bulk_data.entity_rank(entity)) << '-' << bulk_data.identifier(entity);
 
   return oss.str();
 }

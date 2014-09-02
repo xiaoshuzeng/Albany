@@ -128,14 +128,14 @@ void createInterfaceParts(
   Albany::AbstractSTKMeshStruct &
   stk_mesh_struct = dynamic_cast<Albany::AbstractSTKMeshStruct &>(*mesh_struct);
 
-  stk_classic::mesh::fem::FEMMetaData &
-  fem_meta_data = *(stk_mesh_struct.metaData);
+  stk::mesh::MetaData &
+  meta_data = *(stk_mesh_struct.metaData);
 
-  stk_classic::mesh::Part &
-  bulk_part = *(fem_meta_data.get_part(bulk_part_name));
+  stk::mesh::Part &
+  bulk_part = *(meta_data.get_part(bulk_part_name));
 
   shards::CellTopology const &
-  bulk_cell_topology = fem_meta_data.get_cell_topology(bulk_part);
+  bulk_cell_topology = meta_data.get_cell_topology(bulk_part);
 
   std::string const &
   interface_part_name(adapt_params->get<std::string>("Interface Block Name"));
@@ -144,19 +144,19 @@ void createInterfaceParts(
   interface_cell_topology =
       shards::interfaceCellTopogyFromBulkCellTopogy(bulk_cell_topology);
 
-  stk_classic::mesh::EntityRank const
-  interface_dimension = interface_cell_topology.getDimension();
+  stk::mesh::EntityRank const
+    interface_dimension = (stk::mesh::EntityRank) interface_cell_topology.getDimension();
 
-  stk_classic::mesh::Part &
+  stk::mesh::Part &
   interface_part =
-      fem_meta_data.declare_part(interface_part_name, interface_dimension);
+      meta_data.declare_part(interface_part_name, interface_dimension);
 
-  stk_classic::mesh::fem::set_cell_topology(
+  stk::mesh::set_cell_topology(
       interface_part, interface_cell_topology
   );
 
 #ifdef ALBANY_SEACAS
-  stk_classic::io::put_io_part_attribute(interface_part);
+  stk::io::put_io_part_attribute(interface_part);
 #endif // ALBANY_SEACAS
 
   // Augment the MeshSpecsStruct array with one additional entry for
@@ -258,10 +258,10 @@ Albany::DiscretizationFactory::createMeshSpecs() {
       meshStruct2D->setFieldAndBulkData(epetra_comm, discParams, neq, req,
                                         sis, meshStruct2D->getMeshSpecs()[0]->worksetSize);
       Ioss::Init::Initializer io;
-      	    Teuchos::RCP<stk_classic::io::MeshData> mesh_data =Teuchos::rcp(new stk_classic::io::MeshData);
-      	    stk_classic::io::create_output_mesh("IceSheet.exo", MPI_COMM_WORLD, *meshStruct2D->bulkData, *mesh_data);
-      	    stk_classic::io::define_output_fields(*mesh_data, *meshStruct2D->metaData);
-      	    stk_classic::io::process_output_request(*mesh_data, *meshStruct2D->bulkData, 0.0);
+      Teuchos::RCP<stk::io::StkMeshIoBroker> mesh_data =Teuchos::rcp(new stk::io::StkMeshIoBroker(MPI_COMM_WORLD));
+      mesh_data->set_bulk_data(*meshStruct2D->bulkData);
+      size_t idx = mesh_data->create_output_mesh("IceSheet.exo", stk::io::WRITE_RESULTS);
+      mesh_data->process_output_request(idx, 0.0);
   }
   else if(method == "Extruded") {
   	  meshStruct = Teuchos::rcp(new Albany::ExtrudedSTKMeshStruct(discParams, epetra_comm));

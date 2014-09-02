@@ -31,7 +31,7 @@
 #include <stk_mesh/base/Field.hpp>
 #include <stk_mesh/base/FieldTraits.hpp>
 #ifdef ALBANY_SEACAS
-  #include <stk_io/MeshReadWriteUtils.hpp>
+  #include <stk_io/StkMeshIoBroker.hpp>
 #endif
 
 
@@ -161,9 +161,9 @@ namespace Albany {
       std::pair<unsigned, unsigned> latitude_longitude;
     };
 
-    const stk_classic::mesh::fem::FEMMetaData& getSTKMetaData(){ return metaData; }
+    const stk::mesh::MetaData& getSTKMetaData(){ return metaData; }
 
-    const stk_classic::mesh::BulkData& getSTKBulkData(){ return bulkData; }
+    const stk::mesh::BulkData& getSTKBulkData(){ return bulkData; }
 
   private:
 
@@ -173,8 +173,7 @@ namespace Albany {
     //! Private to prohibit copying
     STKDiscretization& operator=(const STKDiscretization&);
 
-    inline int gid(const stk_classic::mesh::Entity& node) const;
-    inline int gid(const stk_classic::mesh::Entity* node) const;
+    inline int gid(const stk::mesh::Entity node) const;
 
     // Copy values from STK Mesh field to given Epetra_Vector
     void getSolutionField(Epetra_Vector &result) const;
@@ -213,7 +212,7 @@ namespace Albany {
     void setupNetCDFOutput();
     int processNetCDFOutputRequest(const Epetra_Vector&);
     //! Find the local side id number within parent element
-    unsigned determine_local_side_id( const stk_classic::mesh::Entity & elem , stk_classic::mesh::Entity & side );
+    unsigned determine_local_side_id( const stk::mesh::Entity elem , stk::mesh::Entity side );
     //! Call stk_io for creating exodus output file
     Teuchos::RCP<Teuchos::FancyOStream> out;
 
@@ -226,8 +225,8 @@ namespace Albany {
 
 
     //! Stk Mesh Objects
-    stk_classic::mesh::fem::FEMMetaData& metaData;
-    stk_classic::mesh::BulkData& bulkData;
+    stk::mesh::MetaData& metaData;
+    stk::mesh::BulkData& bulkData;
 
     //! Epetra communicator
     Teuchos::RCP<const Epetra_Comm> comm;
@@ -283,11 +282,11 @@ namespace Albany {
     std::vector<std::vector<std::vector<double> > > nodesOnElemStateVec;
 
     //! list of all owned nodes, saved for setting solution
-    std::vector< stk_classic::mesh::Entity * > ownednodes ;
-    std::vector< stk_classic::mesh::Entity * > cells ;
+    std::vector< stk::mesh::Entity > ownednodes ;
+    std::vector< stk::mesh::Entity > cells ;
 
     //! list of all overlap nodes, saved for getting coordinates for mesh motion
-    std::vector< stk_classic::mesh::Entity * > overlapnodes ;
+    std::vector< stk::mesh::Entity > overlapnodes ;
 
     //! Number of elements on this processor
     int numOwnedNodes;
@@ -309,9 +308,11 @@ namespace Albany {
 
     // Used in Exodus writing capability
 #ifdef ALBANY_SEACAS
-    stk_classic::io::MeshData* mesh_data;
+    stk::io::StkMeshIoBroker* mesh_data;
 
     int outputInterval;
+
+    size_t outputFileIdx;
 #endif
     bool interleavedOrdering;
 
@@ -339,11 +340,11 @@ namespace Albany {
       return -1;
     }
 
-    ssize_t entity_in_list(const stk_classic::mesh::Entity *value, std::vector<stk_classic::mesh::Entity *> vector) {
+    ssize_t entity_in_list(stk::mesh::Entity value, std::vector<stk::mesh::Entity> const& arg_vector) {
 
-      std::size_t count = vector.size();
+      std::size_t count = arg_vector.size();
       for(std::size_t i=0; i < count; i++) {
-        if(vector[i]->identifier() == value->identifier())
+        if(bulkData.identifier(arg_vector[i]) == bulkData.identifier(value))
           return i;
       }
       return -1;

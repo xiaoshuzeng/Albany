@@ -720,7 +720,10 @@ IF (ALBANY_LCM)
   ENDIF()
 ENDIF()
 
-
+# Can remove this once rebalance is in Trilnos again
+IF(ALBANY_STK_REBALANCE)
+  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} albanySTKRebalance)
+endif()
 
 # Repeat libraries twice to catch circular dependencies
 SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ${ALBANY_LIBRARIES})

@@ -57,7 +57,7 @@
       <ParameterList name="Rythmos">
         
          <ParameterList name="Integrator Settings">
-           <Parameter name="Final Time" type="double" value="345600"/>
+           <Parameter name="Final Time" type="double" value="11600"/>
            <!-- change to 12*24*3600 to get full 12 days -->
            <ParameterList name="Integrator Selection">
 	     <Parameter name="Integrator Type" type="string" value="Default Integrator"/>

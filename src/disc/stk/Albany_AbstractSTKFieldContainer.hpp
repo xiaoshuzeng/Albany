@@ -18,7 +18,7 @@
 
 #include <stk_mesh/base/Field.hpp>
 #include <stk_mesh/base/FieldTraits.hpp>
-#include <stk_mesh/fem/CoordinateSystems.hpp>
+#include <stk_mesh/base/CoordinateSystems.hpp>
 
 namespace Albany {
 
@@ -32,25 +32,25 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
 
 
     // Tensor per Node  - (Node, Dim, Dim)
-    typedef stk_classic::mesh::Field<double, stk_classic::mesh::Cartesian, stk_classic::mesh::Cartesian> TensorFieldType ;
+    typedef stk::mesh::Field<double, stk::mesh::Cartesian, stk::mesh::Cartesian> TensorFieldType ;
     // Vector per Node  - (Node, Dim)
-    typedef stk_classic::mesh::Field<double, stk_classic::mesh::Cartesian> VectorFieldType ;
+    typedef stk::mesh::Field<double, stk::mesh::Cartesian> VectorFieldType ;
     // One double scalar per Node  - (Node)
-    typedef stk_classic::mesh::Field<double>                      ScalarFieldType ;
+    typedef stk::mesh::Field<double>                      ScalarFieldType ;
     // One int scalar per Node  - (Node)
-    typedef stk_classic::mesh::Field<int>                         IntScalarFieldType ;
+    typedef stk::mesh::Field<int>                         IntScalarFieldType ;
 
-    typedef stk_classic::mesh::Cartesian QPTag; // need to invent shards::ArrayDimTag
+    typedef stk::mesh::Cartesian QPTag; // need to invent shards::ArrayDimTag
     // Tensor3 per QP   - (Cell, QP, Dim, Dim, Dim)
-    typedef stk_classic::mesh::Field<double, QPTag, stk_classic::mesh::Cartesian, 
-                                                    stk_classic::mesh::Cartesian,
-                                                    stk_classic::mesh::Cartesian> QPTensor3FieldType ;
+    typedef stk::mesh::Field<double, QPTag, stk::mesh::Cartesian,
+                             stk::mesh::Cartesian,
+                             stk::mesh::Cartesian> QPTensor3FieldType ;
     // Tensor per QP   - (Cell, QP, Dim, Dim)
-    typedef stk_classic::mesh::Field<double, QPTag, stk_classic::mesh::Cartesian, stk_classic::mesh::Cartesian> QPTensorFieldType ;
+    typedef stk::mesh::Field<double, QPTag, stk::mesh::Cartesian, stk::mesh::Cartesian> QPTensorFieldType ;
     // Vector per QP   - (Cell, QP, Dim)
-    typedef stk_classic::mesh::Field<double, QPTag, stk_classic::mesh::Cartesian > QPVectorFieldType ;
+    typedef stk::mesh::Field<double, QPTag, stk::mesh::Cartesian > QPVectorFieldType ;
     // One scalar per QP   - (Cell, QP)
-    typedef stk_classic::mesh::Field<double, QPTag>                      QPScalarFieldType ;
+    typedef stk::mesh::Field<double, QPTag>                      QPScalarFieldType ;
 
     typedef std::vector<std::string> ScalarValueState;
     typedef std::vector<QPScalarFieldType*> QPScalarState;
@@ -69,7 +69,7 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     IntScalarFieldType* getProcRankField(){ return proc_rank_field; }
     IntScalarFieldType* getRefineField(){ return refine_field; }
 #ifdef ALBANY_LCM
-    IntScalarFieldType* getFractureState(){ return fracture_state; }
+    IntScalarFieldType* getFractureState(stk::topology::rank_t rank){ return fracture_state[rank]; }
 #endif // ALBANY_LCM
     ScalarFieldType* getSphereVolumeField(){ return sphereVolume_field; }
 
@@ -87,9 +87,9 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
       return time;
     }
 
-    virtual void fillSolnVector(Epetra_Vector& soln, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
-    virtual void saveSolnVector(const Epetra_Vector& soln, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
-    virtual void saveResVector(const Epetra_Vector& res, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
+    virtual void fillSolnVector(Epetra_Vector& soln, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
+    virtual void saveSolnVector(const Epetra_Vector& soln, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
+    virtual void saveResVector(const Epetra_Vector& res, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map) = 0;
 
     virtual void transferSolutionToCoords() = 0;
 
@@ -99,7 +99,7 @@ class AbstractSTKFieldContainer : public AbstractFieldContainer {
     IntScalarFieldType* proc_rank_field;
     IntScalarFieldType* refine_field;
 #ifdef ALBANY_LCM
-    IntScalarFieldType* fracture_state;
+    IntScalarFieldType* fracture_state[stk::topology::ELEMENT_RANK];
 #endif // ALBANY_LCM
      ScalarFieldType* sphereVolume_field; // Required for Peridynamics in LCM
 

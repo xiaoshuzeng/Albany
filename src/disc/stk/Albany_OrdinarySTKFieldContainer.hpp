@@ -18,8 +18,7 @@ class OrdinarySTKFieldContainer : public GenericSTKFieldContainer<Interleaved> {
   public:
 
     OrdinarySTKFieldContainer(const Teuchos::RCP<Teuchos::ParameterList>& params_,
-                              stk_classic::mesh::fem::FEMMetaData* metaData_,
-                              stk_classic::mesh::BulkData* bulkData_,
+                              stk::mesh::MetaData* metaData_,
                               const int neq_,
                               const AbstractFieldContainer::FieldContainerRequirements& req,
                               const int numDim_,
@@ -32,9 +31,9 @@ class OrdinarySTKFieldContainer : public GenericSTKFieldContainer<Interleaved> {
 
     AbstractSTKFieldContainer::VectorFieldType* getSolutionField(){ return solution_field; };
 
-    void fillSolnVector(Epetra_Vector& soln, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
-    void saveSolnVector(const Epetra_Vector& soln, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
-    void saveResVector(const Epetra_Vector& res, stk_classic::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
+    void fillSolnVector(Epetra_Vector& soln, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
+    void saveSolnVector(const Epetra_Vector& soln, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
+    void saveResVector(const Epetra_Vector& res, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
 
     void transferSolutionToCoords();
 

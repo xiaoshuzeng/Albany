@@ -7,7 +7,7 @@
 #if !defined(LCM_Topology_Subgraph_h)
 #define LCM_Topology_Subgraph_h
 
-#include <stk_mesh/base/FieldData.hpp>
+#include <stk_mesh/base/FieldBase.hpp>
 
 #include "Topology_Types.h"
 
@@ -195,7 +195,7 @@ public:
   /// was replaced by a new point.
   ///
   void
-  updateElementNodeConnectivity(Entity & point, ElementNodeMap & map);
+  updateElementNodeConnectivity(Entity point, ElementNodeMap & map);
 
   ///
   /// \brief Splits an articulation point.
@@ -217,7 +217,7 @@ public:
   /// the new node. If the nodal connectivity of an element does not
   /// change, do not add to the map.
   ///
-  std::map<Entity*, Entity*>
+  std::map<Entity, Entity>
   splitArticulationPoint(Vertex vertex);
 
   ///
@@ -269,37 +269,35 @@ public:
   BulkData *
   getBulkData();
 
-  stk_classic::mesh::fem::FEMMetaData *
+  stk::mesh::MetaData *
   getMetaData();
 
-  EntityRank const
-  getCellRank();
 
   EntityRank const
   getBoundaryRank();
 
   IntScalarFieldType &
-  getFractureState();
+  getFractureState(EntityRank rank);
 
   void
-  setFractureState(Entity const & e, FractureState const fs);
+  setFractureState(Entity e, FractureState const fs);
 
   FractureState
-  getFractureState(Entity const & e);
+  getFractureState(Entity e);
 
   bool
-  isOpen(Entity const & e);
+  isOpen(Entity e);
 
   bool
-  isInternalAndOpen(Entity const & e);
+  isInternalAndOpen(Entity e);
 
   bool
-  isInternal(Entity const & e) {
+  isInternal(Entity e) {
 
-    assert(e.entity_rank() == getBoundaryRank());
+    assert(getBulkData()->entity_rank(e) == getBoundaryRank());
 
     Vertex
-    vertex = globalToLocal(e.key());
+    vertex = globalToLocal(getBulkData()->entity_key(e));
 
     boost::graph_traits<Graph>::degree_size_type
     number_in_edges = boost::in_degree(vertex, *this);
