@@ -60,14 +60,14 @@ evaluateTangent(const double alpha,
 		Epetra_MultiVector* gx,
 		Epetra_MultiVector* gp)
 {
-  Teuchos::RCP<Epetra_MultiVector> dgdx;
-  if (gx != NULL && Vx != NULL)
-    dgdx = Teuchos::rcp(new Epetra_MultiVector(x.Map(), 1));
-  else
-    dgdx = Teuchos::rcp(gx,false);
-  evaluateGradient(current_time, xdot, xdotdot, x, p, deriv_p, g, dgdx.get(), NULL, NULL, gp);
-  if (gx != NULL && Vx != NULL)
-    gx->Multiply('T', 'N', alpha, *dgdx, *Vx, 0.0);
+
+  if (gx != NULL || gp != NULL)
+    evaluateGradient(current_time, xdot, xdotdot, x, p, deriv_p, g, gx, NULL, NULL, gp);
+
+  if (gx != NULL && Vx != NULL) {
+    Epetra_MultiVector dgdx(*gx); //is this needed?
+    gx->Multiply('T', 'N', alpha, dgdx, *Vx, 0.0);
+  }
 }
 
 void
@@ -94,12 +94,9 @@ evaluateGradient(const double current_time,
 
   // Evaluate dg/dx
   if (dg_dx != NULL) {
-    int im = -1;
-    for (int i=0; i<x.Map().NumMyElements(); i++) {
-       if (x[i] == mxv) { (*dg_dx)[0][i] = 1.0; im = i; }
-       else             (*dg_dx)[0][i] = 0.0;
-    }
-
+    dg_dx->PutScalar(0.0);
+    int lid = x.Map().LID(global_index);
+    if(lid >= 0) (*dg_dx)[0][lid] = 1.0;
   }
 
   // Evaluate dg/dxdot
@@ -125,16 +122,6 @@ computeMaxValue(const Epetra_Vector& x, double& global_max, int& global_index)
   for (int node=0; node<num_my_nodes; node++) {
     if (interleavedOrdering)  index = node*neq+eq;
     else                      index = node + eq*num_my_nodes;
-    if (x[index] > my_max) {
-      my_max = x[index];
-      my_index = index;
-    }
-  }
-
-  // Check remainder (AGS: NOT SURE HOW THIS CODE GETS CALLED?)
-  if (num_my_nodes*neq+eq < x.MyLength()) {
-    if (interleavedOrdering)  index = num_my_nodes*neq+eq;
-    else                      index = num_my_nodes + eq*num_my_nodes;
     if (x[index] > my_max) {
       my_max = x[index];
       my_index = index;
