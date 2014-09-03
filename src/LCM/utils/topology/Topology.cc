@@ -76,7 +76,7 @@ Topology::Topology(
   // Fracture the mesh randomly
   // Probability that fracture_criterion will return true.
   double const
-  probability = 0.01;
+  probability = 1.0;
 
   setFractureCriterion(
       Teuchos::rcp(new FractureCriterionRandom(
@@ -731,7 +731,7 @@ void
 Topology::splitOpenFaces()
 {
   // 3D only for now.
-  assert(getSpaceDimension() == VOLUME_RANK);
+  assert(getSpaceDimension() == stk::topology::ELEMENT_RANK);
 
   EntityVector
   points;
@@ -798,7 +798,7 @@ Topology::splitOpenFaces()
 #if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
-      file_name = "graph-pre-segment-" + entity_string(point) + ".dot";
+      file_name = "graph-pre-segment-" + entity_string(bulk_data, point) + ".dot";
       outputToGraphviz(file_name);
     }
 #endif // DEBUG_LCM_TOPOLOGY
@@ -838,7 +838,7 @@ Topology::splitOpenFaces()
 #if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
-        file_name = "graph-pre-clone-" + entity_string(segment) + ".dot";
+        file_name = "graph-pre-clone-" + entity_string(bulk_data, segment) + ".dot";
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
@@ -901,7 +901,7 @@ Topology::splitOpenFaces()
 #if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
-        file_name = "graph-pre-split-" + entity_string(segment) + ".dot";
+        file_name = "graph-pre-split-" + entity_string(bulk_data, segment) + ".dot";
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
@@ -915,7 +915,7 @@ Topology::splitOpenFaces()
 #if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
-        file_name = "graph-post-split-" + entity_string(segment) + ".dot";
+        file_name = "graph-post-split-" + entity_string(bulk_data, segment) + ".dot";
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
@@ -955,7 +955,7 @@ Topology::splitOpenFaces()
 #if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
-      file_name = "graph-pre-split-" + entity_string(point) + ".dot";
+      file_name = "graph-pre-split-" + entity_string(bulk_data, point) + ".dot";
       outputToGraphviz(file_name);
       subgraph.outputToGraphviz("sub" + file_name);
     }
@@ -970,7 +970,7 @@ Topology::splitOpenFaces()
 #if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
-      file_name = "graph-post-split-" + entity_string(point) + ".dot";
+      file_name = "graph-post-split-" + entity_string(bulk_data, point) + ".dot";
       outputToGraphviz(file_name);
       subgraph.outputToGraphviz("sub" + file_name);
     }

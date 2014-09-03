@@ -9,7 +9,7 @@
 
 #include "Topology_Types.h"
 
-//#define DEBUG_LCM_TOPOLOGY
+#define DEBUG_LCM_TOPOLOGY
 
 namespace LCM {
 
@@ -227,7 +227,7 @@ entity_label(EntityRank const rank)
 //
 inline
 std::string
-entity_string(BulkData& bulk_data, Entity entity)
+entity_string(BulkData & bulk_data, Entity entity)
 {
   std::ostringstream
   oss;
