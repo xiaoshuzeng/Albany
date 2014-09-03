@@ -88,7 +88,6 @@ Albany::ExtrudedSTKMeshStruct::ExtrudedSTKMeshStruct(const Teuchos::RCP<Teuchos:
   Albany::AbstractFieldContainer::FieldContainerRequirements req;
   meshStruct2D->setFieldAndBulkData(comm, params, 1, req, sis, meshStruct2D->getMeshSpecs()[0]->worksetSize);
 
-  std::vector<stk::mesh::Entity> cells;
   stk::mesh::Selector select_owned_in_part = stk::mesh::Selector(meshStruct2D->metaData->universal_part()) & stk::mesh::Selector(meshStruct2D->metaData->locally_owned_part());
   int numCells = stk::mesh::count_selected_entities(select_owned_in_part, meshStruct2D->bulkData->buckets(stk::topology::ELEMENT_RANK));
 
@@ -167,8 +166,8 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
   bool Ordering = params->get("Columnwise Ordering", false);
   bool isTetra = true;
 
-  stk::mesh::BulkData& bulkData = *meshStruct2D->bulkData;
-  stk::mesh::MetaData& metaData = bulkData.mesh_meta_data();
+  const stk::mesh::BulkData& bulkData2D = *meshStruct2D->bulkData;
+  const stk::mesh::MetaData& metaData2D = *meshStruct2D->metaData; //bulkData2D.mesh_meta_data();
 
   std::vector<double> levelsNormalizedThickness(numLayers + 1), temperatureNormalizedZ;
 
@@ -184,29 +183,29 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
     std::cout<< levelsNormalizedThickness[i] << " ";
   std::cout<< "\n";*/
 
-  stk::mesh::Selector select_owned_in_part = stk::mesh::Selector(metaData.universal_part()) & stk::mesh::Selector(metaData.locally_owned_part());
+  stk::mesh::Selector select_owned_in_part = stk::mesh::Selector(metaData2D.universal_part()) & stk::mesh::Selector(metaData2D.locally_owned_part());
 
-  stk::mesh::Selector select_overlap_in_part = stk::mesh::Selector(metaData.universal_part()) & (stk::mesh::Selector(metaData.locally_owned_part()) | stk::mesh::Selector(metaData.globally_shared_part()));
+  stk::mesh::Selector select_overlap_in_part = stk::mesh::Selector(metaData2D.universal_part()) & (stk::mesh::Selector(metaData2D.locally_owned_part()) | stk::mesh::Selector(metaData2D.globally_shared_part()));
 
-  stk::mesh::Selector select_edges = stk::mesh::Selector(*metaData.get_part("LateralSide")) & (stk::mesh::Selector(metaData.locally_owned_part()) | stk::mesh::Selector(metaData.globally_shared_part()));
+  stk::mesh::Selector select_edges = stk::mesh::Selector(*metaData2D.get_part("LateralSide")) & (stk::mesh::Selector(metaData2D.locally_owned_part()) | stk::mesh::Selector(metaData2D.globally_shared_part()));
 
-  std::vector<stk::mesh::Entity> cells;
-  stk::mesh::get_selected_entities(select_overlap_in_part, bulkData.buckets(stk::topology::ELEMENT_RANK), cells);
+  std::vector<stk::mesh::Entity> cells2D;
+  stk::mesh::get_selected_entities(select_overlap_in_part, bulkData2D.buckets(stk::topology::ELEMENT_RANK), cells2D);
 
-  std::vector<stk::mesh::Entity> nodes;
-  stk::mesh::get_selected_entities(select_overlap_in_part, bulkData.buckets(stk::topology::NODE_RANK), nodes);
+  std::vector<stk::mesh::Entity> nodes2D;
+  stk::mesh::get_selected_entities(select_overlap_in_part, bulkData2D.buckets(stk::topology::NODE_RANK), nodes2D);
 
-  std::vector<stk::mesh::Entity> edges;
-  stk::mesh::get_selected_entities(select_edges, bulkData.buckets(metaData.side_rank()), edges);
+  std::vector<stk::mesh::Entity> edges2D;
+  stk::mesh::get_selected_entities(select_edges, bulkData2D.buckets(metaData2D.side_rank()), edges2D);
 
   long long int maxOwnedElements2D(0), maxOwnedNodes2D(0), maxOwnedSides2D(0), numOwnedNodes2D(0);
-  for (int i = 0; i < cells.size(); i++)
-    maxOwnedElements2D = std::max(maxOwnedElements2D, (long long int) bulkData.identifier(cells[i]));
-  for (int i = 0; i < nodes.size(); i++)
-    maxOwnedNodes2D = std::max(maxOwnedNodes2D, (long long int) bulkData.identifier(nodes[i]));
-  for (int i = 0; i < edges.size(); i++)
-    maxOwnedSides2D = std::max(maxOwnedSides2D, (long long int) bulkData.identifier(edges[i]));
-  numOwnedNodes2D = stk::mesh::count_selected_entities(select_owned_in_part, bulkData.buckets(stk::topology::NODE_RANK));
+  for (int i = 0; i < cells2D.size(); i++)
+    maxOwnedElements2D = std::max(maxOwnedElements2D, (long long int) bulkData2D.identifier(cells2D[i]));
+  for (int i = 0; i < nodes2D.size(); i++)
+    maxOwnedNodes2D = std::max(maxOwnedNodes2D, (long long int) bulkData2D.identifier(nodes2D[i]));
+  for (int i = 0; i < edges2D.size(); i++)
+    maxOwnedSides2D = std::max(maxOwnedSides2D, (long long int) bulkData2D.identifier(edges2D[i]));
+  numOwnedNodes2D = stk::mesh::count_selected_entities(select_owned_in_part, bulkData2D.buckets(stk::topology::NODE_RANK));
 
   comm->MaxAll(&maxOwnedElements2D, &maxGlobalElements2D, 1);
   comm->MaxAll(&maxOwnedNodes2D, &maxGlobalVertices2dId, 1);
@@ -218,9 +217,9 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
 
   //std::cout << "Num Global Elements: " << maxGlobalElements2D<< " " << maxGlobalVertices2dId<< " " << maxGlobalEdges2D << std::endl;
 
-  std::vector<int> indices(nodes.size()), serialIndices;
-  for (int i = 0; i < nodes.size(); ++i)
-    indices[i] = bulkData.identifier(nodes[i]) - 1;
+  std::vector<int> indices(nodes2D.size()), serialIndices;
+  for (int i = 0; i < nodes2D.size(); ++i)
+    indices[i] = bulkData2D.identifier(nodes2D[i]) - 1;
 
   const Epetra_Map nodes_map(-1, indices.size(), &indices[0], 0, *comm);
   int numMyElements = (comm->MyPID() == 0) ? numGlobalVertices2D : 0;
@@ -325,22 +324,22 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
   if (comm->MyPID() == 0) std::cout << " done." << std::endl;
 
   long long int elemColumnShift = (Ordering == 1) ? 1 : maxGlobalElements2D;
-  int lElemColumnShift = (Ordering == 1) ? 1 : cells.size();
+  int lElemColumnShift = (Ordering == 1) ? 1 : cells2D.size();
   int elemLayerShift = (Ordering == 0) ? 1 : numLayers;
 
   long long int vertexColumnShift = (Ordering == 1) ? 1 : maxGlobalVertices2dId;
-  int lVertexColumnShift = (Ordering == 1) ? 1 : nodes.size();
+  int lVertexColumnShift = (Ordering == 1) ? 1 : nodes2D.size();
   int vertexLayerShift = (Ordering == 0) ? 1 : numLayers + 1;
 
   long long int edgeColumnShift = (Ordering == 1) ? 1 : maxGlobalEdges2D;
-  int lEdgeColumnShift = (Ordering == 1) ? 1 : edges.size();
+  int lEdgeColumnShift = (Ordering == 1) ? 1 : edges2D.size();
   int edgeLayerShift = (Ordering == 0) ? 1 : numLayers;
 
   this->SetupFieldData(comm, neq_, req, sis, worksetSize);
 
-  metaData.commit();
+  metaData->commit();
 
-  bulkData.modification_begin(); // Begin modifying the mesh
+  bulkData->modification_begin(); // Begin modifying the mesh
 
   stk::mesh::PartVector nodePartVec;
   stk::mesh::PartVector singlePartVec(1);
@@ -351,25 +350,25 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
 
   AbstractSTKFieldContainer::IntScalarFieldType* proc_rank_field = fieldContainer->getProcRankField();
   AbstractSTKFieldContainer::VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
-  stk::mesh::Field<double>* surface_velocity_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_velocity");
-  stk::mesh::Field<double>* surface_velocity_RMS_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_velocity_rms");
-  stk::mesh::Field<double>* surface_height_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
-  stk::mesh::Field<double>* thickness_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "thickness");
-  stk::mesh::Field<double>* basal_friction_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "basal_friction");
-  stk::mesh::Field<double>* temperature_field = metaData.get_field<stk::mesh::Field<double> >(stk::topology::ELEMENT_RANK, "temperature");
+  stk::mesh::Field<double>* surface_velocity_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_velocity");
+  stk::mesh::Field<double>* surface_velocity_RMS_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_velocity_rms");
+  stk::mesh::Field<double>* surface_height_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
+  stk::mesh::Field<double>* thickness_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "thickness");
+  stk::mesh::Field<double>* basal_friction_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "basal_friction");
+  stk::mesh::Field<double>* temperature_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::ELEMENT_RANK, "temperature");
 
   std::vector<long long int> prismMpasIds(NumBaseElemeNodes), prismGlobalIds(2 * NumBaseElemeNodes);
 
-  for (int i = 0; i < (numLayers + 1) * nodes.size(); i++) {
+  for (int i = 0; i < (numLayers + 1) * nodes2D.size(); i++) {
     int ib = (Ordering == 0) * (i % lVertexColumnShift) + (Ordering == 1) * (i / vertexLayerShift);
     int il = (Ordering == 0) * (i / lVertexColumnShift) + (Ordering == 1) * (i % vertexLayerShift);
     stk::mesh::Entity node;
-    stk::mesh::Entity node2d = nodes[ib];
-    stk::mesh::EntityId node2dId = bulkData.identifier(node2d) - 1;
+    stk::mesh::Entity node2d = nodes2D[ib];
+    stk::mesh::EntityId node2dId = bulkData2D.identifier(node2d) - 1;
     if (il == 0)
-      node = bulkData.declare_entity(stk::topology::NODE_RANK, il * vertexColumnShift + vertexLayerShift * node2dId + 1, singlePartVec);
+      node = bulkData->declare_entity(stk::topology::NODE_RANK, il * vertexColumnShift + vertexLayerShift * node2dId + 1, singlePartVec);
     else
-      node = bulkData.declare_entity(stk::topology::NODE_RANK, il * vertexColumnShift + vertexLayerShift * node2dId + 1, nodePartVec);
+      node = bulkData->declare_entity(stk::topology::NODE_RANK, il * vertexColumnShift + vertexLayerShift * node2dId + 1, nodePartVec);
 
     double* coord = stk::mesh::field_data(*coordinates_field, node);
     double* coord2d = stk::mesh::field_data(*coordinates_field, node2d);
@@ -409,7 +408,7 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
 
   long long int tetrasLocalIdsOnPrism[3][4];
 
-  for (int i = 0; i < cells.size() * numLayers; i++) {
+  for (int i = 0; i < cells2D.size() * numLayers; i++) {
 
     int ib = (Ordering == 0) * (i % lElemColumnShift) + (Ordering == 1) * (i / elemLayerShift);
     int il = (Ordering == 0) * (i / lElemColumnShift) + (Ordering == 1) * (i % elemLayerShift);
@@ -420,10 +419,10 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
 
     //TODO: this could be done only in the first layer and then copied into the other layers
 
-    stk::mesh::Entity const* rel = bulkData.begin_nodes(cells[ib]);
+    stk::mesh::Entity const* rel = bulkData2D.begin_nodes(cells2D[ib]);
     double tempOnPrism = 0; //Set temperature constant on each prism/Hexa
     for (int j = 0; j < NumBaseElemeNodes; j++) {
-      stk::mesh::EntityId node2dId = bulkData.identifier(rel[j]) - 1;
+      stk::mesh::EntityId node2dId = bulkData2D.identifier(rel[j]) - 1;
       int node2dLId = nodes_map.LID((long long int)(node2dId));
       stk::mesh::EntityId mpasLowerId = vertexLayerShift * node2dId;
       stk::mesh::EntityId lowerId = shift + vertexLayerShift * node2dId;
@@ -438,12 +437,12 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
     case Tetrahedron: {
       tetrasFromPrismStructured(&prismMpasIds[0], &prismGlobalIds[0], tetrasLocalIdsOnPrism);
 
-      stk::mesh::EntityId prismId = il * elemColumnShift + elemLayerShift * (bulkData.identifier(cells[ib]) - 1);
+      stk::mesh::EntityId prismId = il * elemColumnShift + elemLayerShift * (bulkData2D.identifier(cells2D[ib]) - 1);
       for (int iTetra = 0; iTetra < 3; iTetra++) {
-        stk::mesh::Entity elem = bulkData.declare_entity(stk::topology::ELEMENT_RANK, 3 * prismId + iTetra + 1, singlePartVec);
+        stk::mesh::Entity elem = bulkData->declare_entity(stk::topology::ELEMENT_RANK, 3 * prismId + iTetra + 1, singlePartVec);
         for (int j = 0; j < 4; j++) {
-          stk::mesh::Entity node = bulkData.get_entity(stk::topology::NODE_RANK, tetrasLocalIdsOnPrism[iTetra][j] + 1);
-          bulkData.declare_relation(elem, node, j);
+          stk::mesh::Entity node = bulkData->get_entity(stk::topology::NODE_RANK, tetrasLocalIdsOnPrism[iTetra][j] + 1);
+          bulkData->declare_relation(elem, node, j);
         }
         int* p_rank = (int*) stk::mesh::field_data(*proc_rank_field, elem);
         p_rank[0] = comm->MyPID();
@@ -456,11 +455,11 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
       break;
     case Wedge:
     case Hexahedron: {
-      stk::mesh::EntityId prismId = il * elemColumnShift + elemLayerShift * (bulkData.identifier(cells[ib]) - 1);
-      stk::mesh::Entity elem = bulkData.declare_entity(stk::topology::ELEMENT_RANK, prismId + 1, singlePartVec);
+      stk::mesh::EntityId prismId = il * elemColumnShift + elemLayerShift * (bulkData2D.identifier(cells2D[ib]) - 1);
+      stk::mesh::Entity elem = bulkData->declare_entity(stk::topology::ELEMENT_RANK, prismId + 1, singlePartVec);
       for (int j = 0; j < 2 * NumBaseElemeNodes; j++) {
-        stk::mesh::Entity node = bulkData.get_entity(stk::topology::NODE_RANK, prismGlobalIds[j] + 1);
-        bulkData.declare_relation(elem, node, j);
+        stk::mesh::Entity node = bulkData->get_entity(stk::topology::NODE_RANK, prismGlobalIds[j] + 1);
+        bulkData->declare_relation(elem, node, j);
       }
       int* p_rank = (int*) stk::mesh::field_data(*proc_rank_field, elem);
       p_rank[0] = comm->MyPID();
@@ -511,45 +510,47 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
                                                       { { { 1, 2 }, { 0, 2 }, { 0, 1 } }, { { 0, 2 }, { 1, 2 }, { 0, 1 } } },
                                                       { { { 0, 1 }, { 1, 2 }, { 0, 2 } }, { { 0, 1 }, { 0, 2 }, { 1, 2 } } } };
 
-  for (int i = 0; i < edges.size() * numLayers; i++) {
+  for (int i = 0; i < edges2D.size() * numLayers; i++) {
     int ib = (Ordering == 0) * (i % lEdgeColumnShift) + (Ordering == 1) * (i / edgeLayerShift);
     // if(!isBoundaryEdge[ib]) continue; //WARNING: assuming that all the edges stored are boundary edges!!
 
-    stk::mesh::Entity edge2d = edges[ib];
-    stk::mesh::Entity const* rel = bulkData.begin_elements(edge2d);
+    stk::mesh::Entity edge2d = edges2D[ib];
+    stk::mesh::Entity const* rel = bulkData2D.begin_elements(edge2d);
     int il = (Ordering == 0) * (i / lEdgeColumnShift) + (Ordering == 1) * (i % edgeLayerShift);
     stk::mesh::Entity elem2d = rel[0];
-    stk::mesh::EntityId edgeLID = bulkData.identifier(rel[0]);
+    stk::mesh::EntityId edgeLID = bulkData2D.identifier(rel[0]);
 
-    stk::mesh::EntityId basalElemId = bulkData.identifier(elem2d) - 1;
-    stk::mesh::EntityId Edge2dId = bulkData.identifier(edge2d) - 1;
+    stk::mesh::EntityId basalElemId = bulkData2D.identifier(elem2d) - 1;
+    stk::mesh::EntityId Edge2dId = bulkData2D.identifier(edge2d) - 1;
     switch (ElemShape) {
     case Tetrahedron: {
-      rel = bulkData.begin_nodes(elem2d);
+      rel = bulkData2D.begin_nodes(elem2d);
       for (int j = 0; j < NumBaseElemeNodes; j++) {
-        stk::mesh::EntityId node2dId = bulkData.identifier(rel[j]) - 1;
+        stk::mesh::EntityId node2dId = bulkData2D.identifier(rel[j]) - 1;
         prismMpasIds[j] = vertexLayerShift * node2dId;
       }
       int minIndex;
       int pType = prismType(&prismMpasIds[0], minIndex);
       stk::mesh::EntityId tetraId = 3 * il * elemColumnShift + 3 * elemLayerShift * basalElemId;
 
-      stk::mesh::Entity elem0 = bulkData.get_entity(stk::topology::ELEMENT_RANK, tetraId + tetraAdjacentToPrismLateralFace[minIndex][pType][edgeLID][0] + 1);
-      stk::mesh::Entity elem1 = bulkData.get_entity(stk::topology::ELEMENT_RANK, tetraId + tetraAdjacentToPrismLateralFace[minIndex][pType][edgeLID][1] + 1);
+      stk::mesh::Entity elem0 = bulkData->get_entity(stk::topology::ELEMENT_RANK, tetraId + tetraAdjacentToPrismLateralFace[minIndex][pType][edgeLID][0] + 1);
+      stk::mesh::Entity elem1 = bulkData->get_entity(stk::topology::ELEMENT_RANK, tetraId + tetraAdjacentToPrismLateralFace[minIndex][pType][edgeLID][1] + 1);
 
-      stk::mesh::Entity side0 = bulkData.declare_entity(metaData.side_rank(), 2 * edgeColumnShift * il +  2 * Edge2dId * edgeLayerShift + 1, singlePartVec);
-      stk::mesh::Entity side1 = bulkData.declare_entity(metaData.side_rank(), 2 * edgeColumnShift * il +  2 * Edge2dId * edgeLayerShift + 1 + 1, singlePartVec);
+      std::cout << "side_rank " << metaData->side_rank() <<std::endl;
+      stk::mesh::Entity side0 = bulkData->declare_entity(metaData->side_rank(), 2 * edgeColumnShift * il +  2 * Edge2dId * edgeLayerShift + 1, singlePartVec);
+      stk::mesh::Entity side1 = bulkData->declare_entity(metaData->side_rank(), 2 * edgeColumnShift * il +  2 * Edge2dId * edgeLayerShift + 1 + 1, singlePartVec);
 
-      bulkData.declare_relation(elem0, side0, tetraFaceIdOnPrismFaceId[minIndex][edgeLID]);
-      bulkData.declare_relation(elem1, side1, tetraFaceIdOnPrismFaceId[minIndex][edgeLID]);
+      bulkData->declare_relation(elem0, side0, tetraFaceIdOnPrismFaceId[minIndex][edgeLID]);
+      bulkData->declare_relation(elem1, side1, tetraFaceIdOnPrismFaceId[minIndex][edgeLID]);
 
-      stk::mesh::Entity const* rel_elemNodes0 = bulkData.begin_nodes(elem0);
-      stk::mesh::Entity const* rel_elemNodes1 = bulkData.begin_nodes(elem1);
+      stk::mesh::Entity const* rel_elemNodes0 = bulkData->begin_nodes(elem0);
+      stk::mesh::Entity const* rel_elemNodes1 = bulkData->begin_nodes(elem1);
       for (int j = 0; j < 3; j++) {
+        std::cout << j <<", " << edgeLID << ", " << minIndex << ", " << tetraFaceIdOnPrismFaceId[minIndex][edgeLID] << ","  << std::endl;
         stk::mesh::Entity node0 = rel_elemNodes0[this->meshSpecs[0]->ctd.side[tetraFaceIdOnPrismFaceId[minIndex][edgeLID]].node[j]];
-        bulkData.declare_relation(side0, node0, j);
+        bulkData->declare_relation(side0, node0, j);
         stk::mesh::Entity node1 = rel_elemNodes1[this->meshSpecs[0]->ctd.side[tetraFaceIdOnPrismFaceId[minIndex][edgeLID]].node[j]];
-        bulkData.declare_relation(side1, node1, j);
+        bulkData->declare_relation(side1, node1, j);
       }
     }
 
@@ -557,14 +558,14 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
     case Wedge:
     case Hexahedron: {
       stk::mesh::EntityId prismId = il * elemColumnShift + elemLayerShift * basalElemId;
-      stk::mesh::Entity elem = bulkData.get_entity(stk::topology::ELEMENT_RANK, prismId + 1);
-      stk::mesh::Entity side = bulkData.declare_entity(metaData.side_rank(), edgeColumnShift * il +Edge2dId * edgeLayerShift + 1, singlePartVec);
-      bulkData.declare_relation(elem, side, edgeLID);
+      stk::mesh::Entity elem = bulkData->get_entity(stk::topology::ELEMENT_RANK, prismId + 1);
+      stk::mesh::Entity side = bulkData->declare_entity(metaData->side_rank(), edgeColumnShift * il +Edge2dId * edgeLayerShift + 1, singlePartVec);
+      bulkData->declare_relation(elem, side, edgeLID);
 
-      stk::mesh::Entity const* rel_elemNodes = bulkData.begin_nodes(elem);
+      stk::mesh::Entity const* rel_elemNodes = bulkData->begin_nodes(elem);
       for (int j = 0; j < 4; j++) {
         stk::mesh::Entity node = rel_elemNodes[this->meshSpecs[0]->ctd.side[edgeLID].node[j]];
-        bulkData.declare_relation(side, node, j);
+        bulkData->declare_relation(side, node, j);
       }
     }
     break;
@@ -581,17 +582,17 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
   long long int edgeOffset = maxGlobalEdges2D * numLayers;
   if(ElemShape == Tetrahedron) edgeOffset *= 2;
 
-  for (int i = 0; i < cells.size(); i++) {
-    stk::mesh::Entity elem2d = cells[i];
-    stk::mesh::EntityId elem2d_id = bulkData.identifier(elem2d) - 1;
-    stk::mesh::Entity side = bulkData.declare_entity(metaData.side_rank(), elem2d_id + edgeOffset + 1, singlePartVec);
-    stk::mesh::Entity elem = bulkData.get_entity(stk::topology::ELEMENT_RANK, elem2d_id * numSubelemOnPrism * elemLayerShift + 1);
-    bulkData.declare_relation(elem, side, basalSideLID);
+  for (int i = 0; i < cells2D.size(); i++) {
+    stk::mesh::Entity elem2d = cells2D[i];
+    stk::mesh::EntityId elem2d_id = bulkData2D.identifier(elem2d) - 1;
+    stk::mesh::Entity side = bulkData->declare_entity(metaData->side_rank(), elem2d_id + edgeOffset + 1, singlePartVec);
+    stk::mesh::Entity elem = bulkData->get_entity(stk::topology::ELEMENT_RANK, elem2d_id * numSubelemOnPrism * elemLayerShift + 1);
+    bulkData->declare_relation(elem, side, basalSideLID);
 
-    stk::mesh::Entity const* rel_elemNodes = bulkData.begin_nodes(elem);
+    stk::mesh::Entity const* rel_elemNodes = bulkData->begin_nodes(elem);
     for (int j = 0; j < numBasalSidePoints; j++) {
       stk::mesh::Entity node = rel_elemNodes[this->meshSpecs[0]->ctd.side[basalSideLID].node[j]];
-      bulkData.declare_relation(side, node, j);
+      bulkData->declare_relation(side, node, j);
     }
   }
 
@@ -599,21 +600,21 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
 
   edgeOffset += maxGlobalElements2D;
 
-  for (int i = 0; i < cells.size(); i++) {
-    stk::mesh::Entity elem2d = cells[i];
-    stk::mesh::EntityId elem2d_id = bulkData.identifier(elem2d) - 1;
-    stk::mesh::Entity side = bulkData.declare_entity(metaData.side_rank(), elem2d_id  + edgeOffset + 1, singlePartVec);
-    stk::mesh::Entity elem = bulkData.get_entity(stk::topology::ELEMENT_RANK, elem2d_id * numSubelemOnPrism * elemLayerShift + (numLayers - 1) * numSubelemOnPrism * elemColumnShift + 1 + (numSubelemOnPrism - 1));
-    bulkData.declare_relation(elem, side, upperSideLID);
+  for (int i = 0; i < cells2D.size(); i++) {
+    stk::mesh::Entity elem2d = cells2D[i];
+    stk::mesh::EntityId elem2d_id = bulkData2D.identifier(elem2d) - 1;
+    stk::mesh::Entity side = bulkData->declare_entity(metaData->side_rank(), elem2d_id  + edgeOffset + 1, singlePartVec);
+    stk::mesh::Entity elem = bulkData->get_entity(stk::topology::ELEMENT_RANK, elem2d_id * numSubelemOnPrism * elemLayerShift + (numLayers - 1) * numSubelemOnPrism * elemColumnShift + 1 + (numSubelemOnPrism - 1));
+    bulkData->declare_relation(elem, side, upperSideLID);
 
-    stk::mesh::Entity const* rel_elemNodes = bulkData.begin_nodes(elem);
+    stk::mesh::Entity const* rel_elemNodes = bulkData->begin_nodes(elem);
     for (int j = 0; j < numBasalSidePoints; j++) {
       stk::mesh::Entity node = rel_elemNodes[this->meshSpecs[0]->ctd.side[upperSideLID].node[j]];
-      bulkData.declare_relation(side, node, j);
+      bulkData->declare_relation(side, node, j);
     }
   }
 
-  bulkData.modification_end();
+  bulkData->modification_end();
 
 }
 
