@@ -55,8 +55,7 @@ cmake \
  -D Trilinos_ENABLE_Piro:BOOL=ON \
  -D Trilinos_ENABLE_STK:BOOL=ON \
  -D Trilinos_ENABLE_STKClassic:BOOL=OFF \
- -D Trilinos_ENABLE_SEACASIoss:BOOL=ON \
- -D Trilinos_ENABLE_SEACASExodus:BOOL=ON \
+ -D Trilinos_ENABLE_SEACAS:BOOL=ON \
  -D Trilinos_ENABLE_STKUtil:BOOL=ON \
  -D Trilinos_ENABLE_STKTopology:BOOL=ON \
  -D Trilinos_ENABLE_STKMesh:BOOL=ON \
