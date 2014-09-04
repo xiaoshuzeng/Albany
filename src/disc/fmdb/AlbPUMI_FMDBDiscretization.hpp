@@ -129,7 +129,7 @@ template<class Output>
     void detachQPData();
 
     // After mesh modification, need to update the element connectivity and nodal coordinates
-    void updateMesh(bool shouldTransferIPData);
+    void updateMesh(bool shouldTransferIPData = false);
 
     //! Accessor function to get coordinates for ML. Memory controlled here.
     void getOwned_xyz(double **x, double **y, double **z, double **rbm,
