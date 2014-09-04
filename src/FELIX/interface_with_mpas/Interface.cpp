@@ -558,11 +558,10 @@ void velocity_solver_export_2d_data(MPI_Comm reducedComm,
     const std::vector<double>& betaData,
     const std::vector<int>& indexToVertexID) {
 
-  Teuchos::RCP<stk_classic::io::MeshData> mesh_data = Teuchos::rcp(
-      new stk_classic::io::MeshData);
-  stk_classic::io::create_output_mesh("mesh2D.exo", reducedComm,
-      *meshStruct2D->bulkData, *mesh_data);
-  stk_classic::io::define_output_fields(*mesh_data, *meshStruct->metaData);
+  Teuchos::RCP<stk::io::StkMeshIoBroker> mesh_data = Teuchos::rcp(new stk::io::StkMeshIoBroker(reducedComm));
+  mesh_data->set_bulk_data(*meshStruct2D->bulkData);
+  size_t idx = mesh_data->create_output_mesh("mesh2D.exo", stk::io::WRITE_RESULTS);
+  mesh_data->process_output_request(idx, 0.0);
 }
 
 
@@ -601,36 +600,35 @@ void velocity_solver_solve_fo(int nLayers, int nGlobalVertices,
         Albany::OrdinarySTKFieldContainer<false> >(
         meshStruct->getFieldContainer())->getSolutionField();
 
+  typedef Albany::AbstractSTKFieldContainer::ScalarFieldType ScalarFieldType;
+  typedef Albany::AbstractSTKFieldContainer::QPScalarFieldType ElemScalarFieldType;
+
+
+
   for (UInt j = 0; j < numVertices3D; ++j) {
     int ib = (ordering == 0) * (j % lVertexColumnShift)
         + (ordering == 1) * (j / vertexLayerShift);
     int il = (ordering == 0) * (j / lVertexColumnShift)
         + (ordering == 1) * (j % vertexLayerShift);
     int gId = il * vertexColumnShift + vertexLayerShift * indexToVertexID[ib];
-    stk_classic::mesh::Entity& node = *meshStruct->bulkData->get_entity(
-        meshStruct->metaData->node_rank(), gId + 1);
-    double* coord = stk_classic::mesh::field_data(
-        *meshStruct->getCoordinatesField(), node);
-    coord[2] = elevationData[ib]
-        - levelsNormalizedThickness[nLayers - il] * regulThk[ib];
-    double* sHeight = stk_classic::mesh::field_data(
-        *meshStruct->metaData->get_field < stk_classic::mesh::Field<double>
-            > ("surface_height"), node);
+    stk::mesh::Entity node = meshStruct->bulkData->get_entity(stk::topology::NODE_RANK, gId + 1);
+    double* coord = stk::mesh::field_data(*meshStruct->getCoordinatesField(), node);
+    coord[2] = elevationData[ib] - levelsNormalizedThickness[nLayers - il] * regulThk[ib];
+
+     double* sHeight = stk::mesh::field_data(*meshStruct->metaData->get_field <ScalarFieldType> (stk::topology::NODE_RANK, "surface_height"), node);
     sHeight[0] = elevationData[ib];
-    double* thickness = stk_classic::mesh::field_data(
-        *meshStruct->metaData->get_field < stk_classic::mesh::Field<double>
-            > ("thickness"), node);
+    double* thickness = stk::mesh::field_data(*meshStruct->metaData->get_field <ScalarFieldType> (stk::topology::NODE_RANK, "thickness"), node);
     thickness[0] = thicknessData[ib];
-    double* sol = stk_classic::mesh::field_data(*solutionField, node);
+    double* sol = stk::mesh::field_data(*solutionField, node);
     sol[0] = velocityOnVertices[j];
     sol[1] = velocityOnVertices[j + numVertices3D];
     if (il == 0) {
-      double* beta = stk_classic::mesh::field_data(
-          *meshStruct->metaData->get_field < stk_classic::mesh::Field<double>
-              > ("basal_friction"), node);
+      double* beta = stk::mesh::field_data(*meshStruct->metaData->get_field <ScalarFieldType> (stk::topology::NODE_RANK, "basal_friction"), node);
       beta[0] = std::max(betaData[ib], minBeta);
     }
   }
+
+  ElemScalarFieldType* temperature_field = meshStruct->metaData->get_field<ElemScalarFieldType>(stk::topology::ELEMENT_RANK, "temperature");
 
   for (UInt j = 0; j < numPrisms; ++j) {
     int ib = (ordering == 0) * (j % (lElemColumnShift / 3))
@@ -640,11 +638,8 @@ void velocity_solver_solve_fo(int nLayers, int nGlobalVertices,
     int gId = il * elemColumnShift + elemLayerShift * indexToTriangleID[ib];
     int lId = il * lElemColumnShift + elemLayerShift * ib;
     for (int iTetra = 0; iTetra < 3; iTetra++) {
-      stk_classic::mesh::Entity& elem = *meshStruct->bulkData->get_entity(
-          meshStruct->metaData->element_rank(), ++gId);
-      double* temperature = stk_classic::mesh::field_data(
-          *meshStruct->metaData->get_field < stk_classic::mesh::Field<double>
-              > ("temperature"), elem);
+      stk::mesh::Entity elem = meshStruct->bulkData->get_entity(stk::topology::ELEMENT_RANK, ++gId);
+      double* temperature = stk::mesh::field_data(*temperature_field, elem);
       temperature[0] = temperatureOnTetra[lId++];
     }
   }
@@ -706,14 +701,10 @@ void velocity_solver_solve_fo(int nLayers, int nGlobalVertices,
 }
 
 void velocity_solver_export_fo_velocity(MPI_Comm reducedComm) {
-  Ioss::Init::Initializer io;
-  Teuchos::RCP<stk_classic::io::MeshData> mesh_data = Teuchos::rcp(
-      new stk_classic::io::MeshData);
-  stk_classic::io::create_output_mesh("IceSheet.exo", reducedComm,
-      *meshStruct->bulkData, *mesh_data);
-  stk_classic::io::define_output_fields(*mesh_data, *meshStruct->metaData);
-  stk_classic::io::process_output_request(*mesh_data, *meshStruct->bulkData,
-      0.0);
+  Teuchos::RCP<stk::io::StkMeshIoBroker> mesh_data = Teuchos::rcp(new stk::io::StkMeshIoBroker(reducedComm));
+    mesh_data->set_bulk_data(*meshStruct->bulkData);
+    size_t idx = mesh_data->create_output_mesh("IceSheet.exo", stk::io::WRITE_RESULTS);
+    mesh_data->process_output_request(idx, 0.0);
 }
 
 void velocity_solver_finalize() {

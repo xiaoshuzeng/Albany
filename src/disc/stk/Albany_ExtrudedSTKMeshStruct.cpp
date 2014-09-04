@@ -348,14 +348,19 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
 
   singlePartVec[0] = nsPartVec["Bottom"];
 
+  typedef AbstractSTKFieldContainer::ScalarFieldType ScalarFieldType;
+  typedef AbstractSTKFieldContainer::VectorFieldType VectorFieldType;
+  typedef AbstractSTKFieldContainer::QPScalarFieldType ElemScalarFieldType;
+
+
   AbstractSTKFieldContainer::IntScalarFieldType* proc_rank_field = fieldContainer->getProcRankField();
-  AbstractSTKFieldContainer::VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
-  stk::mesh::Field<double>* surface_velocity_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_velocity");
-  stk::mesh::Field<double>* surface_velocity_RMS_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_velocity_rms");
-  stk::mesh::Field<double>* surface_height_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
-  stk::mesh::Field<double>* thickness_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "thickness");
-  stk::mesh::Field<double>* basal_friction_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "basal_friction");
-  stk::mesh::Field<double>* temperature_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::ELEMENT_RANK, "temperature");
+  VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
+  VectorFieldType* surface_velocity_field = metaData->get_field<VectorFieldType>(stk::topology::NODE_RANK, "surface_velocity");
+  VectorFieldType* surface_velocity_RMS_field = metaData->get_field<VectorFieldType>(stk::topology::NODE_RANK, "surface_velocity_rms");
+  ScalarFieldType* surface_height_field = metaData->get_field<ScalarFieldType>(stk::topology::NODE_RANK, "surface_height");
+  ScalarFieldType* thickness_field = metaData->get_field<ScalarFieldType>(stk::topology::NODE_RANK, "thickness");
+  ScalarFieldType* basal_friction_field = metaData->get_field<ScalarFieldType>(stk::topology::NODE_RANK, "basal_friction");
+  ElemScalarFieldType* temperature_field = metaData->get_field<ElemScalarFieldType>(stk::topology::ELEMENT_RANK, "temperature");
 
   std::vector<long long int> prismMpasIds(NumBaseElemeNodes), prismGlobalIds(2 * NumBaseElemeNodes);
 

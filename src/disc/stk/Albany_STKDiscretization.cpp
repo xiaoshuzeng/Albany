@@ -837,8 +837,12 @@ void Albany::STKDiscretization::computeWorksetInfo()
 
   const int numBuckets =  buckets.size();
 
-  AbstractSTKFieldContainer::VectorFieldType* coordinates_field = stkMeshStruct->getCoordinatesField();
-  AbstractSTKFieldContainer::ScalarFieldType* sphereVolume_field;
+  typedef AbstractSTKFieldContainer::ScalarFieldType ScalarFieldType;
+  typedef AbstractSTKFieldContainer::VectorFieldType VectorFieldType;
+  typedef AbstractSTKFieldContainer::TensorFieldType TensorFieldType;
+
+  VectorFieldType* coordinates_field = stkMeshStruct->getCoordinatesField();
+  ScalarFieldType* sphereVolume_field;
 
   if(stkMeshStruct->getFieldContainer()->hasSphereVolumeField())
     sphereVolume_field = stkMeshStruct->getFieldContainer()->getSphereVolumeField();
@@ -895,12 +899,13 @@ void Albany::STKDiscretization::computeWorksetInfo()
       for (int is=0; is< nodal_states.size(); ++is) {
         const std::string& name = nodal_states[is]->name;
         const Albany::StateStruct::FieldDims& dim = nodal_states[is]->dim;
-        const stk::mesh::Field<double>& field = *metaData.get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, name);
         MDArray& array = stateArrays.elemStateArrays[b][name];
         std::vector<double>& stateVec = nodesOnElemStateVec[b][is];
         int dim0 = buck.size(); //may be different from dim[0];
         switch (dim.size()) {
         case 2:     //scalar
+        {
+          const ScalarFieldType& field = *metaData.get_field<ScalarFieldType>(stk::topology::NODE_RANK, name);
           stateVec.resize(dim0*dim[1]);
           array.assign<BuckTag, NodeTag>(stateVec.data(),dim0,dim[1]);
           for (int i=0; i < dim0; i++) {
@@ -912,7 +917,10 @@ void Albany::STKDiscretization::computeWorksetInfo()
             }
           }
           break;
+        }
         case 3:  //vector
+        {
+          const VectorFieldType& field = *metaData.get_field<VectorFieldType>(stk::topology::NODE_RANK, name);
           stateVec.resize(dim0*dim[1]*dim[2]);
           array.assign<BuckTag, NodeTag,CompTag>(stateVec.data(),dim0,dim[1],dim[2]);
           for (int i=0; i < dim0; i++) {
@@ -926,7 +934,10 @@ void Albany::STKDiscretization::computeWorksetInfo()
             }
           }
           break;
+        }
         case 4: //tensor
+        {
+          const TensorFieldType& field = *metaData.get_field<TensorFieldType>(stk::topology::NODE_RANK, name);
           stateVec.resize(dim0*dim[1]*dim[2]*dim[3]);
           array.assign<BuckTag, NodeTag, CompTag, CompTag>(stateVec.data(),dim0,dim[1],dim[2],dim[3]);
           for (int i=0; i < dim0; i++) {
@@ -941,6 +952,7 @@ void Albany::STKDiscretization::computeWorksetInfo()
             }
           }
           break;
+        }
         }
       }
     }
