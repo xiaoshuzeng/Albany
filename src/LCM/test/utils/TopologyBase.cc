@@ -68,7 +68,7 @@ int main(int ac, char* av[])
 
   topology.setEntitiesOpen();
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
   std::string
   gviz_filename = LCM::parallelize_string("before") + ".dot";
 
@@ -84,7 +84,7 @@ int main(int ac, char* av[])
 
   topology.splitOpenFaces();
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
   gviz_filename = LCM::parallelize_string("after") + ".dot";
   topology.outputToGraphviz(gviz_filename, type);
 #endif
