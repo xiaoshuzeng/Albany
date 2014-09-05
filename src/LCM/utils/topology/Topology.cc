@@ -1088,16 +1088,28 @@ Topology::setEntitiesOpen()
 
     case ELEMENT_RANK:
       {
-        Entity const* segments = getBulkData()->begin_edges(entity);
-        size_t const num_segments = getBulkData()->num_edges(entity);
+        Entity const *
+        segments = getBulkData()->begin_edges(entity);
+
+        size_t const
+        num_segments = getBulkData()->num_edges(entity);
+
         for (size_t j = 0; j < num_segments; ++j) {
-          Entity segment = segments[j];
+          Entity
+          segment = segments[j];
+
           setFractureState(segment, OPEN);
 
-          Entity const* points = getBulkData()->begin_nodes(segment);
-          size_t const num_points = getBulkData()->num_edges(segment);
+          Entity const *
+          points = getBulkData()->begin_nodes(segment);
+
+          size_t const
+          num_points = getBulkData()->num_edges(segment);
+
           for (size_t k = 0; k < num_points; ++k) {
-            Entity point = points[k];
+            Entity
+            point = points[k];
+
             setFractureState(point, OPEN);
           }
         }
@@ -1106,10 +1118,16 @@ Topology::setEntitiesOpen()
 
     case EDGE_RANK:
       {
-        Entity const* points = getBulkData()->begin_nodes(entity);
-        size_t const num_points = getBulkData()->num_edges(entity);
+        Entity const *
+        points = getBulkData()->begin_nodes(entity);
+
+        size_t const
+        num_points = getBulkData()->num_edges(entity);
+
         for (size_t j = 0; j < num_points; ++j) {
-          Entity point = points[j];
+          Entity
+          point = points[j];
+
           setFractureState(point, OPEN);
         }
       }
