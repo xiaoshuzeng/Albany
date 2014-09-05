@@ -79,7 +79,7 @@ display_relation(BulkData& bulk_data, Entity entity)
   std::cout << bulk_data.identifier(entity) << "," << bulk_data.entity_rank(entity);
   std::cout << '\n';
 
-  for (stk::topology::rank_t rank = stk::topology::NODE_RANK; rank <= stk::topology::ELEMENT_RANK; ++rank) {
+  for (stk::topology::rank_t rank = NODE_RANK; rank <= ELEMENT_RANK; ++rank) {
     Entity const* relations = bulk_data.begin(entity, rank);
     stk::mesh::ConnectivityOrdinal const* ords = bulk_data.begin_ordinals(entity, rank);
 
@@ -148,7 +148,7 @@ is_needed_for_stk(
   EntityRank const
   source_rank = bulk_data.entity_rank(source_entity);
 
-  return (source_rank == stk::topology::ELEMENT_RANK) && (target_rank == NODE_RANK);
+  return (source_rank == ELEMENT_RANK) && (target_rank == NODE_RANK);
 }
 
 ///
