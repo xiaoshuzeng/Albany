@@ -1177,17 +1177,23 @@ Topology::outputToGraphviz(
 
       for (EntityRank target_rank = NODE_RANK; target_rank < getMetaData()->entity_rank_count(); ++target_rank) {
         if (getBulkData()->count_valid_connectivity(source_entity, target_rank) > 0) {
-          Entity const* relations = getBulkData()->begin(source_entity, target_rank);
-          size_t const num_relations = getBulkData()->num_connectivity(source_entity, target_rank);
-          stk::mesh::ConnectivityOrdinal const* ords = getBulkData()->begin_ordinals(source_entity, target_rank);
+          Entity const *
+          relations = getBulkData()->begin(source_entity, target_rank);
+
+          size_t const
+          num_relations =
+              getBulkData()->num_connectivity(source_entity, target_rank);
+
+          stk::mesh::ConnectivityOrdinal const *
+          ords = getBulkData()->begin_ordinals(source_entity, target_rank);
 
           for (size_t j = 0; j < num_relations; ++j) {
 
             Entity
-              target_entity = relations[j];
+            target_entity = relations[j];
 
             bool
-              is_valid_target_rank = false;
+            is_valid_target_rank = false;
 
             switch (output_type) {
 
@@ -1210,7 +1216,7 @@ Topology::outputToGraphviz(
 
             case BIDIRECTIONAL_UNILEVEL:
               is_valid_target_rank =
-                                                   (target_rank == rank + 1) || (target_rank + 1 == rank);
+                  (target_rank == rank + 1) || (target_rank + 1 == rank);
               break;
 
             case BIDIRECTIONAL_MULTILEVEL:
@@ -1222,10 +1228,10 @@ Topology::outputToGraphviz(
             if (is_valid_target_rank == false) continue;
 
             EntityPair
-              entity_pair = std::make_pair(source_entity, target_entity);
+            entity_pair = std::make_pair(source_entity, target_entity);
 
             EdgeId const
-              edge_id = ords[j];
+            edge_id = ords[j];
 
             relation_list.push_back(entity_pair);
             relation_local_id.push_back(edge_id);
@@ -1285,7 +1291,6 @@ Topology::getNumberEntitiesByRank(
 
   return number_entities;
 }
-
 
 Part &
 Topology::getFractureBulkPart()
