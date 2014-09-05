@@ -40,18 +40,18 @@ public:
   Topology(RCP<Albany::AbstractDiscretization> & discretization);
 
   ///
-  /// \brief Iterates over the boundary entities of the mesh of (all entities
-  /// of rank dimension-1) and checks fracture criterion.
+  /// \brief Iterates over the boundary entities of the mesh of (all
+  /// entities of rank dimension-1) and checks fracture criterion.
   ///
-  /// If fracture_criterion is met, the entity and all lower order entities
-  /// associated with it are marked as open.
+  /// If fracture_criterion is met, the entity and all lower order
+  /// entities associated with it are marked as open.
   ///
   size_t
   setEntitiesOpen();
 
   ///
-  /// \brief Output the graph associated with the mesh to graphviz .dot
-  /// file for visualization purposes.
+  /// \brief Output the graph associated with the mesh to graphviz
+  /// .dot file for visualization purposes.
   ///
   /// \param[in] output file
   ///
@@ -73,9 +73,10 @@ public:
   ///
   /// \brief Initializes the default stk mesh object needed by class.
   ///
-  /// Creates the full mesh representation of the mesh. Default stk mesh
-  /// object has only elements and nodes. Function will delete unneeded
-  /// relations between as described in Topology::remove_extra_relations().
+  /// Creates the full mesh representation of the mesh. Default stk
+  /// mesh object has only elements and nodes. Function will delete
+  /// unneeded relations between as described in
+  /// Topology::remove_extra_relations().
   ///
   /// \attention Function must be called before mesh modification begins.
   ///
@@ -98,18 +99,20 @@ public:
 
   ///
   /// Our canonical graph representation has edges (relations) that
-  /// connect vertices (entities) with a difference in dimension (rank)
-  /// of exactly one.
-  /// This method removes all relations that do not conform to the above,
-  /// leaving intact those needed for STK (between cells and points).
-  /// This is required for the graph fracture algorithm to work.
+  /// connect vertices (entities) with a difference in dimension
+  /// (rank) of exactly one.
+  ///
+  /// This method removes all relations that do not conform to the
+  /// above, leaving intact those needed for STK (between cells and
+  /// points).  This is required for the graph fracture algorithm to
+  /// work.
   ///
   void
   removeMultiLevelRelations();
 
   ///
-  /// \brief After mesh manipulations are complete, need to recreate
-  ///        a stk mesh understood by Albany_STKDiscretization.
+  /// \brief After mesh manipulations are complete, need to recreate a
+  ///        stk mesh understood by Albany_STKDiscretization.
   ///
   /// Recreates the nodal connectivity using connectivity_.
   ///
@@ -125,9 +128,10 @@ public:
   ///
   /// \return vector of nodes for the face
   ///
-  /// Return an ordered list of nodes which describe the input face. In 2D,
-  /// the face of the element is a line segment. In 3D, the face is a surface.
-  /// Generalized for all element types valid in stk_mesh. Valid in 2D and 3D.
+  /// Return an ordered list of nodes which describe the input
+  /// face. In 2D, the face of the element is a line segment. In 3D,
+  /// the face is a surface.  Generalized for all element types valid
+  /// in stk_mesh. Valid in 2D and 3D.
   ///
   /// \attention Assumes all mesh elements are same type.
   ///
@@ -163,7 +167,8 @@ public:
   ////
   EntityVector
   createSurfaceElementConnectivity(
-      Entity face_top, Entity face_bottom);
+      Entity face_top,
+      Entity face_bottom);
 
   ///
   /// \brief Create vectors describing the vertices and edges of the
@@ -224,14 +229,18 @@ public:
   /// \brief Adds a relation between two entities
   ///
   void
-  addRelation(Entity source_entity, Entity target_entity,
+  addRelation(
+      Entity source_entity,
+      Entity target_entity,
       EdgeId local_relation_id);
 
   ///
   /// \brief Removes the relation between two entities
   ///
   void
-  removeRelation(Entity source_entity, Entity target_entity,
+  removeRelation(
+      Entity source_entity,
+      Entity target_entity,
       EdgeId local_relation_id);
 
   ///
@@ -251,7 +260,8 @@ public:
   /// \brief Gets the local relation id (0,1,2,...) between two entities
   ///
   EdgeId
-  getLocalRelationId(Entity source_entity,
+  getLocalRelationId(
+      Entity source_entity,
       Entity target_entity);
 
   ///
@@ -346,7 +356,8 @@ public:
   ///        nodes of an input entity
   ///
   EntityVector
-  getFormerElementNodes(Entity element,
+  getFormerElementNodes(
+      Entity element,
       std::vector<EntityVector> const & entities);
 
   ///
@@ -366,8 +377,8 @@ public:
   barycentricSubdivision();
 
   ///
-  /// \brief Finds the closest nodes(Entities of rank 0) to each of the three points in the input vector.
-  /// EntityVector
+  /// \brief Finds the closest nodes(Entities of rank 0) to each of
+  /// the three points in the input vector.  EntityVector
   std::vector<Entity>
   getClosestNodes(std::vector<std::vector<double> > points);
 
@@ -386,8 +397,9 @@ public:
   getDistanceNodeAndPoint(Entity node, std::vector<double> point);
 
   ///
-  /// \brief Returns the coordinates of the points that form a equilateral triangle.
-  ///        This triangle lies on the plane that intersects the ellipsoid.
+  /// \brief Returns the coordinates of the points that form a
+  ///        equilateral triangle.  This triangle lies on the plane
+  ///        that intersects the ellipsoid.
   ///
   std::vector<std::vector<double> >
   getCoordinatesOfTriangle(std::vector<double> const normalToPlane);
@@ -406,21 +418,23 @@ public:
 
   ///
   /// \brief Returns the coordinates of the max and min of x y and z
-  ///        in the order max of, min of x, max of y, min of y, max of z, min of z
+  ///        in the order max of, min of x, max of y, min of y, max of
+  ///        z, min of z
   ///
   std::vector<double>
   getCoordinatesOfMaxAndMin();
 
   ///
-  /// \brief Returns the edges necessary to compute the shortest path on the outer surface
-  ///        of the mesh
+  /// \brief Returns the edges necessary to compute the shortest path
+  ///        on the outer surface of the mesh
   ///
   std::vector<Entity>
   MeshEdgesShortestPath();
 
   ///
-  /// \brief Returns the shortest path over the boundary faces given three input nodes
-  ///        and the edges that belong to the outer surface
+  /// \brief Returns the shortest path over the boundary faces given
+  ///        three input nodes and the edges that belong to the outer
+  ///        surface
   ///
   std::vector<std::vector<int> >
   shortestpathOnBoundaryFaces(
@@ -440,20 +454,23 @@ public:
   edgesDirections();
 
   ///
-  /// \brief Returns the directions of all the boundary edges of the input mesh
+  /// \brief Returns the directions of all the boundary edges of the
+  /// input mesh
   ///
   std::vector<std::vector<int> >
   edgesDirectionsOuterSurface();
 
 
   ///
-  /// \brief Returns the directions of all of the faces of the input mesh
+  /// \brief Returns the directions of all of the faces of the input
+  /// mesh
   ///
   std::vector<std::vector<int> >
   facesDirections();
 
   ///
-  /// \brief Returns a vector with the areas of each of the faces of the input mesh
+  /// \brief Returns a vector with the areas of each of the faces of
+  /// the input mesh
   ///
   std::vector<double>
   facesAreas();
@@ -473,25 +490,27 @@ public:
   outputForMpsFile();
 
   ///
-  /// \brief Returns the 1-D boundary required to compute the minimum surface of the
-  ///        input mesh. The input to this function is a shortest path (composed by egdes)
-  ///        between three nodes
+  /// \brief Returns the 1-D boundary required to compute the minimum
+  ///        surface of the input mesh. The input to this function is
+  ///        a shortest path (composed by egdes) between three nodes
   ///
   std::vector<std::vector<int> >
   boundaryVector(std::vector<std::vector<int> > & shortPath);
 
   ///
-  /// \brief Returns the 1-D boundary required to compute the minimum surface of the input
-  ///        mesh boundary faces. The input to this function is a shortest path
-  ///        (composed by edges) between three nodes
+  /// \brief Returns the 1-D boundary required to compute the minimum
+  ///        surface of the input mesh boundary faces. The input to
+  ///        this function is a shortest path (composed by edges)
+  ///        between three nodes
   ///
   std::vector<std::vector<int> >
   boundaryVectorOuterSurface(std::vector<std::vector<int> > & shortPath);
 
   ///
-  /// \brief Returns the corresponding entities of rank 2 that build the minimum surface.
-  ///        It takes as an input the resulting vector taken from the solution of the
-  ///        linear programming solver
+  /// \brief Returns the corresponding entities of rank 2 that build
+  ///        the minimum surface.  It takes as an input the resulting
+  ///        vector taken from the solution of the linear programming
+  ///        solver
   ///
   std::vector<Entity>
   MinimumSurfaceFaces(std::vector<int> VectorFromLPSolver);
@@ -509,7 +528,6 @@ public:
   std::vector<double>
   findCoordinates(unsigned int nodeIdentifier);
 
-  ///----------------------------------------------------------------------
   ///
   /// \brief Practice creating the barycentric subdivision
   ///
