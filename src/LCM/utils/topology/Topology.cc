@@ -1086,7 +1086,7 @@ Topology::setEntitiesOpen()
       exit(1);
       break;
 
-    case VOLUME_RANK:
+    case ELEMENT_RANK:
       {
         Entity const* segments = getBulkData()->begin_edges(entity);
         size_t const num_segments = getBulkData()->num_edges(entity);

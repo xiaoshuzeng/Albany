@@ -205,7 +205,7 @@ entity_label(EntityRank const rank)
   case FACE_RANK:
     oss << "Polygon";
     break;
-  case VOLUME_RANK:
+  case ELEMENT_RANK:
     oss << "Polyhedron";
     break;
   case 4:
@@ -271,7 +271,7 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
     case FACE_RANK:
       oss << "2";
       break;
-    case VOLUME_RANK:
+    case ELEMENT_RANK:
       oss << "8";
       break;
     case 4:
@@ -300,7 +300,7 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
     case FACE_RANK:
       oss << "1";
       break;
-    case VOLUME_RANK:
+    case ELEMENT_RANK:
       oss << "7";
       break;
     case 4:

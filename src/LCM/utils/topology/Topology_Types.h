@@ -125,7 +125,7 @@ static EntityRank const
 FACE_RANK = stk::topology::FACE_RANK;
 
 static EntityRank const
-VOLUME_RANK = stk::topology::ELEMENT_RANK;
+ELEMENT_RANK = stk::topology::ELEMENT_RANK;
 
 ///
 /// \brief Struct to store the data needed for creation or
