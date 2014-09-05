@@ -622,7 +622,7 @@ public:
 
   bool
   isBulkCell(Entity e)
-  {return (getBulkData()->entity_rank(e) == stk::topology::ELEMENT_RANK) && isInBulk(e);}
+  {return (getBulkData()->entity_rank(e) == ELEMENT_RANK) && isInBulk(e);}
 
   bool
   isInInterface(Entity e)
@@ -630,7 +630,7 @@ public:
 
   bool
   isInterfaceCell(Entity e)
-  {return (getBulkData()->entity_rank(e) == stk::topology::ELEMENT_RANK) && isInInterface(e);}
+  {return (getBulkData()->entity_rank(e) == ELEMENT_RANK) && isInInterface(e);}
 
   //
   // Set fracture state. Do nothing for cells (elements).
@@ -639,7 +639,7 @@ public:
   setFractureState(Entity e, FractureState const fs)
   {
     EntityRank const rank = getBulkData()->entity_rank(e);
-    if (rank < stk::topology::ELEMENT_RANK) {
+    if (rank < ELEMENT_RANK) {
       *(stk::mesh::field_data(getFractureState(rank), e)) = static_cast<int>(fs);
     }
   }
@@ -651,7 +651,7 @@ public:
   getFractureState(Entity e)
   {
     EntityRank const rank = getBulkData()->entity_rank(e);
-    return rank >= stk::topology::ELEMENT_RANK ?
+    return rank >= ELEMENT_RANK ?
     CLOSED :
     static_cast<FractureState>(*(stk::mesh::field_data(getFractureState(rank), e)));
   }
