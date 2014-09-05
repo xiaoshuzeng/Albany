@@ -21,7 +21,7 @@ Topology::divideSegmentsHalf()
 {
 //get the segment from the original mesh
   std::vector<Entity>
-  initial_entities_1D = getEntitiesByRank(*(getBulkData()), stk::topology::EDGE_RANK);
+  initial_entities_1D = getEntitiesByRank(*(getBulkData()), EDGE_RANK);
   std::vector<Entity> vector_nodes;
 
 //Adding nodes to the divide segments by half
@@ -30,7 +30,7 @@ Topology::divideSegmentsHalf()
   addEntities(request1);
 
   std::vector<Entity>
-  initial_entities_0D = getEntitiesByRank(*(getBulkData()), stk::topology::NODE_RANK);
+  initial_entities_0D = getEntitiesByRank(*(getBulkData()), NODE_RANK);
 
 //add a relation from the former segment to a new node
   for (unsigned int i = 0; i < initial_entities_1D.size(); i++) {
@@ -42,7 +42,7 @@ Topology::divideSegmentsHalf()
   requests_step1_2[1] = initial_entities_1D.size();
   addEntities(requests_step1_2);
   std::vector<Entity>
-  modified_entities_1D = getEntitiesByRank(*(getBulkData()), stk::topology::EDGE_RANK);
+  modified_entities_1D = getEntitiesByRank(*(getBulkData()), EDGE_RANK);
 
   for (unsigned int i = 0; i < initial_entities_1D.size(); i++) {
 //Look for all the relations for each segment
@@ -86,7 +86,7 @@ Topology::addCentroid()
 {
   //get the faces form the original mesh
   std::vector<Entity>
-  initial_entities_2D = getEntitiesByRank(*(getBulkData()), stk::topology::FACE_RANK);
+  initial_entities_2D = getEntitiesByRank(*(getBulkData()), FACE_RANK);
 
   //Adding nodes to the faces
   std::vector<size_t> request2(getSpaceDimension() + 1, 0);
@@ -99,24 +99,24 @@ Topology::connectCentroid()
 {
   //get the faces form the original mesh
   std::vector<Entity>
-  initial_entities_2D = getEntitiesByRank(*(getBulkData()), stk::topology::FACE_RANK);
+  initial_entities_2D = getEntitiesByRank(*(getBulkData()), FACE_RANK);
 
   //get the centroid
   std::vector<Entity>
-  modified_entities_0D = getEntitiesByRank(*(getBulkData()), stk::topology::NODE_RANK);
+  modified_entities_0D = getEntitiesByRank(*(getBulkData()), NODE_RANK);
 
   //adding new segment
   std::vector<size_t> request2(getSpaceDimension() + 1, 0);
   request2[1] = 6 * initial_entities_2D.size();
   addEntities(request2);
   std::vector<Entity>
-  modified_entities_1D = getEntitiesByRank(*(getBulkData()), stk::topology::EDGE_RANK);
+  modified_entities_1D = getEntitiesByRank(*(getBulkData()), EDGE_RANK);
 
   for (unsigned int i = 0; i < initial_entities_2D.size(); i++) {
 
     //get boundary nodes
     std::vector<Entity>
-    boundary_entities_0D = getBoundaryEntities(initial_entities_2D[i], stk::topology::NODE_RANK);
+    boundary_entities_0D = getBoundaryEntities(initial_entities_2D[i], NODE_RANK);
 
     //adding new relation
     for (int j = 0; j < getNumberLowerRankEntities(initial_entities_2D[i]);
@@ -134,7 +134,7 @@ Topology::addNewFaces()
 {
   //get the faces form the original mesh
   std::vector<Entity>
-  initial_entities_2D = getEntitiesByRank(*(getBulkData()), stk::topology::FACE_RANK);
+  initial_entities_2D = getEntitiesByRank(*(getBulkData()), FACE_RANK);
 
   //Adding nodes to the faces
   std::vector<size_t> request2(getSpaceDimension() + 1, 0);
@@ -143,7 +143,7 @@ Topology::addNewFaces()
 
   //get boundary nodes
   std::vector<Entity>
-  boundary_entities_1D = getBoundaryEntities(initial_entities_2D[0], stk::topology::EDGE_RANK);
+  boundary_entities_1D = getBoundaryEntities(initial_entities_2D[0], EDGE_RANK);
 
   for (unsigned i = 0; i < boundary_entities_1D.size(); i++) {
     std::cout << getBulkData()->identifier(boundary_entities_1D[i]) << std::endl;
@@ -154,7 +154,7 @@ Topology::connectNewFaces()
 {
   //get the faces form the original mesh
   std::vector<Entity>
-  initial_entities_2D = getEntitiesByRank(*(getBulkData()), stk::topology::FACE_RANK);
+  initial_entities_2D = getEntitiesByRank(*(getBulkData()), FACE_RANK);
 
 }
 
