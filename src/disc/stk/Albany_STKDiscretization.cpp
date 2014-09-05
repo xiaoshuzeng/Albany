@@ -2086,7 +2086,7 @@ Albany::STKDiscretization::printVertexConnectivity(){
 }
 
 void
-Albany::STKDiscretization::updateMesh()
+Albany::STKDiscretization::updateMesh(bool /*shouldTransferIPData*/)
 {
 
   computeOwnedNodesAndUnknowns();

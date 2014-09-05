@@ -109,23 +109,15 @@ typedef std::map<Vertex, size_t> ComponentMap;
 typedef std::map<Entity, Entity> ElementNodeMap;
 
 enum FractureState {CLOSED = 0, OPEN = 1};
-
 enum VTKCellType {INVALID = 0, VERTEX = 1, LINE = 2, TRIANGLE = 5, QUAD = 9};
 
-static EntityRank const
-INVALID_RANK = stk::topology::INVALID_RANK;
-
-static EntityRank const
-NODE_RANK = stk::topology::NODE_RANK;
-
-static EntityRank const
-EDGE_RANK = stk::topology::EDGE_RANK;
-
-static EntityRank const
-FACE_RANK = stk::topology::FACE_RANK;
-
-static EntityRank const
-VOLUME_RANK = stk::topology::ELEMENT_RANK;
+// Ugly re-definitions but better to have everything the we need
+// defined here.
+static EntityRank const INVALID_RANK = stk::topology::INVALID_RANK;
+static EntityRank const NODE_RANK    = stk::topology::NODE_RANK;
+static EntityRank const EDGE_RANK    = stk::topology::EDGE_RANK;
+static EntityRank const FACE_RANK    = stk::topology::FACE_RANK;
+static EntityRank const ELEMENT_RANK = stk::topology::ELEMENT_RANK;
 
 ///
 /// \brief Struct to store the data needed for creation or

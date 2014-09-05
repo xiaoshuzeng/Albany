@@ -35,6 +35,7 @@ Teuchos::RCP<const Epetra_Comm> mpiComm;
 Teuchos::RCP<Teuchos::ParameterList> discParams;
 Teuchos::RCP<Albany::SolverFactory> slvrfctry;
 Teuchos::RCP<Thyra::ModelEvaluator<double> > solver;
+bool keptMesh =false;
 
 typedef struct TET_ {
   int verts[4];
@@ -656,8 +657,16 @@ void velocity_solver_solve_fo(int nLayers, int nGlobalVertices,
       paramList->sublist("Problem").set("Solution Method", "Steady");
   }
 
-  albanyApp->createDiscretization();
-  albanyApp->finalSetUp(paramList);
+
+
+  if(!keptMesh) {
+    albanyApp->createDiscretization();
+    albanyApp->finalSetUp(paramList);
+  }
+  else
+    albanyApp->getDiscretization()->updateMesh();
+
+
 
   solver = slvrfctry->createThyraSolverAndGetAlbanyApp(albanyApp, mpiComm,
       mpiComm, Teuchos::null, false);
@@ -697,6 +706,8 @@ void velocity_solver_solve_fo(int nLayers, int nGlobalVertices,
     velocityOnVertices[j + numVertices3D] = solution[lId1];
   }
 
+  keptMesh = true;
+
   //UInt componentGlobalLength = (nLayers+1)*nGlobalVertices; //mesh3DPtr->numGlobalVertices();
 }
 
@@ -721,6 +732,7 @@ void velocity_solver_finalize() {
  */
 
 void velocity_solver_compute_2d_grid(MPI_Comm reducedComm) {
+  keptMesh = false;
   mpiComm = Albany::createEpetraCommFromMpiComm(reducedComm);
 }
 
@@ -750,6 +762,7 @@ void velocity_solver_extrude_3d_grid(int nLayers, int nGlobalTriangles,
   albanyApp->initialSetUp(paramList);
 
   int neq = 2;
+
   meshStruct = Teuchos::rcp(
       new Albany::MpasSTKMeshStruct(discParams, mpiComm, indexToTriangleID,
           nGlobalTriangles, nLayers, Ordering));

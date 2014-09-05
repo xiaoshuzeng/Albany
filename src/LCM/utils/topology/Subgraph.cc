@@ -687,7 +687,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
       EntityRank
       current_rank = getVertexRank(current_vertex);
 
-      if (current_rank != stk::topology::ELEMENT_RANK) continue;
+      if (current_rank != ELEMENT_RANK) continue;
 
       if (component_number == number_components - 1) continue;
 

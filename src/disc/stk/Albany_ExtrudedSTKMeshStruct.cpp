@@ -352,9 +352,9 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
   typedef AbstractSTKFieldContainer::VectorFieldType VectorFieldType;
   typedef AbstractSTKFieldContainer::QPScalarFieldType ElemScalarFieldType;
 
-
   AbstractSTKFieldContainer::IntScalarFieldType* proc_rank_field = fieldContainer->getProcRankField();
   VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
+  stk::mesh::FieldBase const* coordinates_field2d = bulkData2D.mesh_meta_data().coordinate_field();
   VectorFieldType* surface_velocity_field = metaData->get_field<VectorFieldType>(stk::topology::NODE_RANK, "surface_velocity");
   VectorFieldType* surface_velocity_RMS_field = metaData->get_field<VectorFieldType>(stk::topology::NODE_RANK, "surface_velocity_rms");
   ScalarFieldType* surface_height_field = metaData->get_field<ScalarFieldType>(stk::topology::NODE_RANK, "surface_height");
@@ -376,7 +376,7 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
       node = bulkData->declare_entity(stk::topology::NODE_RANK, il * vertexColumnShift + vertexLayerShift * node2dId + 1, nodePartVec);
 
     double* coord = stk::mesh::field_data(*coordinates_field, node);
-    double* coord2d = stk::mesh::field_data(*coordinates_field, node2d);
+    double const* coord2d = (double const*) stk::mesh::field_data(*coordinates_field2d, node2d);
     coord[0] = coord2d[0];
     coord[1] = coord2d[1];
 

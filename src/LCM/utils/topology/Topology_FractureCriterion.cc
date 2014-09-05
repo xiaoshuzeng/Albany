@@ -17,7 +17,7 @@ FractureCriterionTraction::FractureCriterionTraction(
     double const critical_traction,
     double const beta) :
 AbstractFractureCriterion(topology, bulk_block_name, interface_block_name),
-stress_field_(*(getMetaData().get_field<TensorFieldType>(stk::topology::NODE_RANK, stress_name))),
+stress_field_(*(getMetaData().get_field<TensorFieldType>(NODE_RANK, stress_name))),
 critical_traction_(critical_traction),
 beta_(beta)
 {
