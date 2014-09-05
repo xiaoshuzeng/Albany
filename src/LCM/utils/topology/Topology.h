@@ -728,7 +728,7 @@ private:
   /// Pointer to failure criterion object
   RCP<AbstractFractureCriterion> fracture_criterion_;
 
-protected:
+private:
   ///
   /// \brief Hide default constructor for Topology
   ///
