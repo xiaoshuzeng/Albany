@@ -76,12 +76,17 @@ void
 display_relation(BulkData& bulk_data, Entity entity)
 {
   std::cout << "Relations for entity (identifier,rank): ";
-  std::cout << bulk_data.identifier(entity) << "," << bulk_data.entity_rank(entity);
+  std::cout << bulk_data.identifier(entity) << ",";
+  std::cout << bulk_data.entity_rank(entity);
   std::cout << '\n';
 
   for (stk::topology::rank_t rank = NODE_RANK; rank <= ELEMENT_RANK; ++rank) {
-    Entity const* relations = bulk_data.begin(entity, rank);
-    stk::mesh::ConnectivityOrdinal const* ords = bulk_data.begin_ordinals(entity, rank);
+
+    Entity const *
+    relations = bulk_data.begin(entity, rank);
+
+    stk::mesh::ConnectivityOrdinal const *
+    ords = bulk_data.begin_ordinals(entity, rank);
 
     size_t num_rels = bulk_data.num_connectivity(entity, rank);
     for (size_t i = 0; i < num_rels; ++i) {
@@ -109,7 +114,8 @@ display_relation(BulkData& bulk_data, Entity entity, EntityRank const rank)
   std::cout << "Relations of rank ";
   std::cout << rank;
   std::cout << " for entity (identifier,rank): ";
-  std::cout << bulk_data.identifier(entity) << "," << bulk_data.entity_rank(entity);
+  std::cout << bulk_data.identifier(entity) << ",";
+  std::cout << bulk_data.entity_rank(entity);
   std::cout << '\n';
 
   Entity const*
@@ -194,7 +200,11 @@ entity_label(EntityRank const rank)
 
   switch (rank) {
   default:
-    oss << rank << "-Polytope";
+    std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
+    std::cerr << '\n';
+    std::cerr << "Entity rank is invalid: " << rank;
+    std::cerr << '\n';
+    exit(1);
     break;
   case NODE_RANK:
     oss << "Point";
@@ -208,6 +218,7 @@ entity_label(EntityRank const rank)
   case ELEMENT_RANK:
     oss << "Polyhedron";
     break;
+#if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
   case 4:
     oss << "Polychoron";
     break;
@@ -217,6 +228,7 @@ entity_label(EntityRank const rank)
   case 6:
     oss << "Polypeton";
     break;
+#endif // LCM_TOPOLOGY_HIGH_DIMENSIONS
   }
 
   return oss.str();
@@ -232,7 +244,8 @@ entity_string(BulkData & bulk_data, Entity entity)
   std::ostringstream
   oss;
 
-  oss << entity_label(bulk_data.entity_rank(entity)) << '-' << bulk_data.identifier(entity);
+  oss << entity_label(bulk_data.entity_rank(entity)) << '-';
+  oss << bulk_data.identifier(entity);
 
   return oss.str();
 }
@@ -260,7 +273,11 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
   case CLOSED:
     switch (rank) {
     default:
-      oss << 2 * (rank + 1);
+      std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
+      std::cerr << '\n';
+      std::cerr << "Entity rank is invalid: " << rank;
+      std::cerr << '\n';
+      exit(1);
       break;
     case NODE_RANK:
       oss << "6";
@@ -274,6 +291,7 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
     case ELEMENT_RANK:
       oss << "8";
       break;
+#if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
     case 4:
       oss << "10";
       break;
@@ -283,13 +301,18 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
     case 6:
       oss << "14";
       break;
+#endif // LCM_TOPOLOGY_HIGH_DIMENSIONS
     }
     break;
 
   case OPEN:
     switch (rank) {
     default:
-      oss << 2 * rank + 1;
+      std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
+      std::cerr << '\n';
+      std::cerr << "Entity rank is invalid: " << rank;
+      std::cerr << '\n';
+      exit(1);
       break;
     case NODE_RANK:
       oss << "5";
@@ -303,6 +326,7 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
     case ELEMENT_RANK:
       oss << "7";
       break;
+#if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
     case 4:
       oss << "9";
       break;
@@ -312,6 +336,7 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
     case 6:
       oss << "13";
       break;
+#endif // LCM_TOPOLOGY_HIGH_DIMENSIONS
     }
     break;
   }

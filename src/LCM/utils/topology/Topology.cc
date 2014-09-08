@@ -195,7 +195,9 @@ Topology::createDiscretization()
   Entity
   first_cell = cells[0];
 
-  setCellTopology(stk::mesh::get_cell_topology(getBulkData()->bucket(first_cell)));
+  setCellTopology(
+      stk::mesh::get_cell_topology(getBulkData()->bucket(first_cell))
+  );
 
   return;
 }
@@ -281,10 +283,18 @@ void Topology::removeMultiLevelRelations()
       EdgeIdList
       multilevel_relation_ids;
 
-      for (EntityRank target_rank = NODE_RANK; target_rank < getMetaData()->entity_rank_count(); ++target_rank) {
-        Entity const* relations = getBulkData()->begin(entity, target_rank);
-        size_t const num_relations = getBulkData()->num_connectivity(entity, target_rank);
-        stk::mesh::ConnectivityOrdinal const* ords = getBulkData()->begin_ordinals(entity, target_rank);
+      for (EntityRank target_rank = NODE_RANK;
+          target_rank < getMetaData()->entity_rank_count();
+          ++target_rank) {
+
+        Entity const *
+        relations = getBulkData()->begin(entity, target_rank);
+
+        size_t const
+        num_relations = getBulkData()->num_connectivity(entity, target_rank);
+
+        stk::mesh::ConnectivityOrdinal const *
+        ords = getBulkData()->begin_ordinals(entity, target_rank);
 
         // Collect relations to delete
         for (size_t r = 0; r < num_relations; ++r) {
@@ -388,7 +398,8 @@ Topology::getBoundaryEntityNodes(Entity boundary_entity)
   nodes;
 
   Entity const* relations = getBulkData()->begin_elements(boundary_entity);
-  stk::mesh::ConnectivityOrdinal const* ords = getBulkData()->begin_element_ordinals(boundary_entity);
+  stk::mesh::ConnectivityOrdinal const *
+  ords = getBulkData()->begin_element_ordinals(boundary_entity);
 
   Entity
   first_cell = relations[0];
@@ -405,9 +416,14 @@ Topology::getBoundaryEntityNodes(Entity boundary_entity)
     cell_order = getCellTopology().getNodeMap(boundary_rank, face_order, i);
 
     // Brute force approach. Maybe there is a better way to do this?
-    Entity const* node_relations = getBulkData()->begin_nodes(first_cell);
-    size_t const num_nodes = getBulkData()->num_nodes(first_cell);
-    stk::mesh::ConnectivityOrdinal const* node_ords = getBulkData()->begin_node_ordinals(first_cell);
+    Entity const *
+    node_relations = getBulkData()->begin_nodes(first_cell);
+
+    size_t const
+    num_nodes = getBulkData()->num_nodes(first_cell);
+
+    stk::mesh::ConnectivityOrdinal const *
+    node_ords = getBulkData()->begin_node_ordinals(first_cell);
 
     for (size_t i = 0; i < num_nodes; ++i) {
       if (node_ords[i] == cell_order) {
@@ -697,11 +713,18 @@ Topology::createStar(
   subgraph_entities.insert(getBulkData()->entity_key(entity));
 
   assert(getMetaData()->spatial_dimension() == 3);
-  EntityRank const one_up = (EntityRank)(getBulkData()->entity_rank(entity) + 1);
 
-  Entity const* relations = getBulkData()->begin(entity, one_up);
-  size_t const num_relations = getBulkData()->num_connectivity(entity, one_up);
-  stk::mesh::ConnectivityOrdinal const* ords = getBulkData()->begin_ordinals(entity, one_up);
+  EntityRank const
+  one_up = static_cast<EntityRank>(getBulkData()->entity_rank(entity) + 1);
+
+  Entity const *
+  relations = getBulkData()->begin(entity, one_up);
+
+  size_t const
+  num_relations = getBulkData()->num_connectivity(entity, one_up);
+
+  stk::mesh::ConnectivityOrdinal const *
+  ords = getBulkData()->begin_ordinals(entity, one_up);
 
   for (size_t i = 0; i < num_relations; ++i) {
 
@@ -798,7 +821,8 @@ Topology::splitOpenFaces()
 #if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
-      file_name = "graph-pre-segment-" + entity_string(bulk_data, point) + ".dot";
+      file_name =
+          "graph-pre-segment-" + entity_string(bulk_data, point) + ".dot";
       outputToGraphviz(file_name);
     }
 #endif // DEBUG_LCM_TOPOLOGY
@@ -838,15 +862,19 @@ Topology::splitOpenFaces()
 #if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
-        file_name = "graph-pre-clone-" + entity_string(bulk_data, segment) + ".dot";
+        file_name =
+            "graph-pre-clone-" + entity_string(bulk_data, segment) + ".dot";
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
 #endif // DEBUG_LCM_TOPOLOGY
 
       // Collect open faces
-      Entity const* face_relations = getBulkData()->begin_faces(segment);
-      size_t const num_face_relations = getBulkData()->num_faces(segment);
+      Entity const *
+      face_relations = getBulkData()->begin_faces(segment);
+
+      size_t const
+      num_face_relations = getBulkData()->num_faces(segment);
 
       EntityVector
       open_faces;
@@ -896,12 +924,15 @@ Topology::splitOpenFaces()
 
       // Split the articulation point (current segment)
       Vertex
-      segment_vertex = subgraph.globalToLocal(getBulkData()->entity_key(segment));
+      segment_vertex =
+          subgraph.globalToLocal(getBulkData()->entity_key(segment));
 
 #if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
-        file_name = "graph-pre-split-" + entity_string(bulk_data, segment) + ".dot";
+        file_name =
+            "graph-pre-split-" + entity_string(bulk_data, segment) + ".dot";
+
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
@@ -915,7 +946,8 @@ Topology::splitOpenFaces()
 #if defined(DEBUG_LCM_TOPOLOGY)
       {
         std::string const
-        file_name = "graph-post-split-" + entity_string(bulk_data, segment) + ".dot";
+        file_name =
+            "graph-post-split-" + entity_string(bulk_data, segment) + ".dot";
         outputToGraphviz(file_name);
         subgraph.outputToGraphviz("sub" + file_name);
       }
@@ -955,7 +987,9 @@ Topology::splitOpenFaces()
 #if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
-      file_name = "graph-pre-split-" + entity_string(bulk_data, point) + ".dot";
+      file_name =
+          "graph-pre-split-" + entity_string(bulk_data, point) + ".dot";
+
       outputToGraphviz(file_name);
       subgraph.outputToGraphviz("sub" + file_name);
     }
@@ -970,7 +1004,9 @@ Topology::splitOpenFaces()
 #if defined(DEBUG_LCM_TOPOLOGY)
     {
       std::string const
-      file_name = "graph-post-split-" + entity_string(bulk_data, point) + ".dot";
+      file_name =
+          "graph-post-split-" + entity_string(bulk_data, point) + ".dot";
+
       outputToGraphviz(file_name);
       subgraph.outputToGraphviz("sub" + file_name);
     }
@@ -1191,10 +1227,20 @@ Topology::outputToGraphviz(
       FractureState const
       fracture_state = getFractureState(source_entity);
 
-      gviz_out << dot_entity(getBulkData()->identifier(source_entity), rank, fracture_state);
+      EntityId const
+      source_id = getBulkData()->identifier(source_entity);
 
-      for (EntityRank target_rank = NODE_RANK; target_rank < getMetaData()->entity_rank_count(); ++target_rank) {
-        if (getBulkData()->count_valid_connectivity(source_entity, target_rank) > 0) {
+      gviz_out << dot_entity(source_id, rank, fracture_state);
+
+      for (EntityRank target_rank = NODE_RANK;
+          target_rank < getMetaData()->entity_rank_count();
+          ++target_rank) {
+
+        unsigned const
+        num_valid_conn =
+            getBulkData()->count_valid_connectivity(source_entity, target_rank);
+
+        if (num_valid_conn > 0) {
           Entity const *
           relations = getBulkData()->begin(source_entity, target_rank);
 
