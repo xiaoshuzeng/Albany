@@ -612,13 +612,13 @@ public:
   getFractureCriterion()
   {return fracture_criterion_;}
 
-  Part &
+  stk::mesh::Part &
   getFractureBulkPart();
 
-  Part &
+  stk::mesh::Part &
   getFractureInterfacePart();
 
-  Part &
+  stk::mesh::Part &
   getLocalPart()
   {return getMetaData()->locally_owned_part();}
 

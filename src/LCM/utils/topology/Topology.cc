@@ -1032,7 +1032,7 @@ Topology::splitOpenFaces()
   stk::mesh::EntityRank const
   interface_rank = ELEMENT_RANK;
 
-  Part &
+  stk::mesh::Part &
   interface_part = fracture_criterion_->getInterfacePart();
 
   stk::mesh::PartVector
@@ -1356,13 +1356,13 @@ Topology::getNumberEntitiesByRank(
   return number_entities;
 }
 
-Part &
+stk::mesh::Part &
 Topology::getFractureBulkPart()
 {
   return fracture_criterion_->getBulkPart();
 }
 
-Part &
+stk::mesh::Part &
 Topology::getFractureInterfacePart()
 {
   return fracture_criterion_->getInterfacePart();
