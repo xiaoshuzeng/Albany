@@ -47,7 +47,6 @@ using stk::mesh::Field;
 using stk::mesh::MetaData;
 using stk::mesh::PairIterRelation;
 using stk::mesh::Part;
-using stk::mesh::PartVector;
 using stk::mesh::Relation;
 using stk::mesh::Selector;
 

@@ -207,7 +207,7 @@ Topology::createDiscretization()
 //
 void Topology::graphInitialization()
 {
-  PartVector add_parts;
+  stk::mesh::PartVector add_parts;
   stk::mesh::create_adjacent_entities(*(getBulkData()), add_parts);
 
   getBulkData()->modification_begin();
@@ -1035,7 +1035,7 @@ Topology::splitOpenFaces()
   Part &
   interface_part = fracture_criterion_->getInterfacePart();
 
-  PartVector
+  stk::mesh::PartVector
   interface_parts;
 
   interface_parts.push_back(&interface_part);
