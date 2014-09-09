@@ -1111,7 +1111,7 @@ Topology::setEntitiesOpen()
     setFractureState(entity, OPEN);
     ++counter;
 
-    switch(ELEMENT_RANK) {
+    switch(getSpaceDimension()) {
 
     default:
       std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
