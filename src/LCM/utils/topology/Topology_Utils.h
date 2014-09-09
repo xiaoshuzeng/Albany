@@ -40,7 +40,7 @@ display_connectivity(stk::mesh::BulkData & bulk_data, stk::mesh::EntityRank cell
 
     Entity const* relations = bulk_data.begin_nodes(elements[i]);
 
-    EntityId const
+    stk::mesh::EntityId const
     element_id = bulk_data.identifier(elements[i]);
 
     std::cout << std::setw(16) << element_id << ":";
@@ -53,7 +53,7 @@ display_connectivity(stk::mesh::BulkData & bulk_data, stk::mesh::EntityRank cell
       Entity
       node = relations[j];
 
-      EntityId const
+      stk::mesh::EntityId const
       node_id = bulk_data.identifier(node);
 
       std::cout << std::setw(16) << node_id;
@@ -376,7 +376,7 @@ dot_footer()
 inline
 std::string
 dot_entity(
-    EntityId const id,
+    stk::mesh::EntityId const id,
     stk::mesh::EntityRank const rank,
     FractureState const fracture_state)
 {
@@ -442,9 +442,9 @@ relation_color(unsigned int const relation_id)
 inline
 std::string
 dot_relation(
-    EntityId const source_id,
+    stk::mesh::EntityId const source_id,
     stk::mesh::EntityRank const source_rank,
-    EntityId const target_id,
+    stk::mesh::EntityId const target_id,
     stk::mesh::EntityRank const target_rank,
     unsigned int const relation_local_id)
 {

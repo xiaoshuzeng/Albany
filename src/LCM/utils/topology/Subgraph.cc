@@ -923,7 +923,7 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
     FractureState const
     fracture_state = getFractureState(entity);
 
-    EntityId const
+    stk::mesh::EntityId const
     entity_id = getBulkData()->identifier(entity);
 
     gviz_out << dot_entity(entity_id, rank, fracture_state);

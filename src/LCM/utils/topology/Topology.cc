@@ -654,7 +654,7 @@ Topology::getBoundary()
         EntityVectorIndex const
         number_nodes = nodes.size();
 
-        std::vector<EntityId>
+        std::vector<stk::mesh::EntityId>
         node_ids(number_nodes);
 
         for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
@@ -1040,7 +1040,7 @@ Topology::splitOpenFaces()
 
   interface_parts.push_back(&interface_part);
 
-  EntityId
+  stk::mesh::EntityId
   new_id = getNumberEntitiesByRank(bulk_data, interface_rank) + 1;
 
   // Create the interface connectivity
@@ -1227,7 +1227,7 @@ Topology::outputToGraphviz(
       FractureState const
       fracture_state = getFractureState(source_entity);
 
-      EntityId const
+      stk::mesh::EntityId const
       source_id = getBulkData()->identifier(source_entity);
 
       gviz_out << dot_entity(source_id, rank, fracture_state);

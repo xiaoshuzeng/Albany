@@ -44,7 +44,6 @@
 #include "Albany_Utils.hpp"
 
 using stk::mesh::Entity;
-using stk::mesh::EntityId;
 using stk::mesh::Field;
 using stk::mesh::MetaData;
 using stk::mesh::PairIterRelation;
@@ -65,7 +64,7 @@ typedef stk::mesh::EntityVector::size_type EntityVectorIndex;
 typedef RelationVector::size_type RelationVectorIndex;
 typedef std::vector<Intrepid::Vector<double> > Coordinates;
 typedef Coordinates::size_type CoordinatesIndex;
-typedef std::vector<std::vector<EntityId> > Connectivity;
+typedef std::vector<std::vector<stk::mesh::EntityId> > Connectivity;
 typedef Connectivity::size_type ConnectivityIndex;
 
 typedef boost::vertex_name_t VertexName;

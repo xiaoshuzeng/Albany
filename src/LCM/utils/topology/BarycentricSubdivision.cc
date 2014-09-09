@@ -157,7 +157,7 @@ Topology::getLocalRelationId(const Entity source_entity,
   bool
   found = false;
 
-  EntityId const
+  stk::mesh::EntityId const
   target_entity_identifier = getBulkData()->identifier(target_entity);
 
   stk::mesh::EntityRank const
