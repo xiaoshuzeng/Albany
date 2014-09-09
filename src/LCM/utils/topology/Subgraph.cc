@@ -14,19 +14,19 @@ namespace LCM {
 //
 Subgraph::Subgraph(
     Topology & topology,
-    std::set<EntityKey>::iterator first_vertex,
-    std::set<EntityKey>::iterator last_vertex,
+    std::set<stk::mesh::EntityKey>::iterator first_vertex,
+    std::set<stk::mesh::EntityKey>::iterator last_vertex,
     std::set<stkEdge>::iterator first_edge,
     std::set<stkEdge>::iterator last_edge) :
     topology_(topology)
 {
   // Insert vertices and create the vertex map
-  for (std::set<EntityKey>::iterator vertex_iterator = first_vertex;
+  for (std::set<stk::mesh::EntityKey>::iterator vertex_iterator = first_vertex;
       vertex_iterator != last_vertex;
       ++vertex_iterator) {
 
     // get global vertex
-    EntityKey
+    stk::mesh::EntityKey
     global_vertex = *vertex_iterator;
 
     // get entity
@@ -41,10 +41,10 @@ Subgraph::Subgraph(
     Vertex
     local_vertex = boost::add_vertex(*this);
 
-    std::pair<Vertex, EntityKey>
+    std::pair<Vertex, stk::mesh::EntityKey>
     local_to_global = std::make_pair(local_vertex, global_vertex);
 
-    std::pair<EntityKey, Vertex>
+    std::pair<stk::mesh::EntityKey, Vertex>
     global_to_local = std::make_pair(global_vertex, local_vertex);
 
     local_global_vertex_map_.insert(local_to_global);
@@ -68,10 +68,10 @@ Subgraph::Subgraph(
     global_edge = *edge_iterator;
 
     // Get global source and target vertices
-    EntityKey
+    stk::mesh::EntityKey
     global_source_vertex = global_edge.source;
 
-    EntityKey
+    stk::mesh::EntityKey
     global_target_vertex = global_edge.target;
 
     // Get local source and target vertices
@@ -157,10 +157,10 @@ Subgraph::isInternalAndOpen(Entity e)
 //
 // Map a vertex in the subgraph to a entity in the stk mesh.
 //
-EntityKey
+stk::mesh::EntityKey
 Subgraph::localToGlobal(Vertex local_vertex)
 {
-  std::map<Vertex, EntityKey>::const_iterator
+  std::map<Vertex, stk::mesh::EntityKey>::const_iterator
   vertex_map_iterator = local_global_vertex_map_.find(local_vertex);
 
   assert(vertex_map_iterator != local_global_vertex_map_.end());
@@ -172,9 +172,9 @@ Subgraph::localToGlobal(Vertex local_vertex)
 // Map a entity in the stk mesh to a vertex in the subgraph.
 //
 Vertex
-Subgraph::globalToLocal(EntityKey global_vertex_key)
+Subgraph::globalToLocal(stk::mesh::EntityKey global_vertex_key)
 {
-  std::map<EntityKey, Vertex>::const_iterator
+  std::map<stk::mesh::EntityKey, Vertex>::const_iterator
   vertex_map_iterator = global_local_vertex_map_.find(global_vertex_key);
 
   assert(vertex_map_iterator != global_local_vertex_map_.end());
@@ -201,7 +201,7 @@ Subgraph::addVertex(stk::mesh::EntityRank vertex_rank)
 
   getBulkData()->generate_new_entities(requests, new_entities);
 
-  EntityKey
+  stk::mesh::EntityKey
   global_vertex = getBulkData()->entity_key(new_entities[0]);
 
   // Add the vertex to the subgraph
@@ -209,10 +209,10 @@ Subgraph::addVertex(stk::mesh::EntityRank vertex_rank)
   local_vertex = boost::add_vertex(*this);
 
   // Update maps
-  std::pair<Vertex, EntityKey>
+  std::pair<Vertex, stk::mesh::EntityKey>
   local_to_global = std::make_pair(local_vertex, global_vertex);
 
-  std::pair<EntityKey, Vertex>
+  std::pair<stk::mesh::EntityKey, Vertex>
   global_to_local = std::make_pair(global_vertex, local_vertex);
 
   local_global_vertex_map_.insert(local_to_global);
@@ -235,7 +235,7 @@ void
 Subgraph::removeVertex(Vertex const vertex)
 {
   // get the global entity key of vertex
-  EntityKey
+  stk::mesh::EntityKey
   key = localToGlobal(vertex);
 
   // look up entity from key
@@ -271,10 +271,10 @@ Subgraph::addEdge(
     Vertex const local_target_vertex)
 {
   // get global entities
-  EntityKey
+  stk::mesh::EntityKey
   global_source_key = localToGlobal(local_source_vertex);
 
-  EntityKey
+  stk::mesh::EntityKey
   global_target_key = localToGlobal(local_target_vertex);
 
   Entity
@@ -334,10 +334,10 @@ Subgraph::removeEdge(
   boost::remove_edge(local_source_vertex, local_target_vertex, *this);
 
   // remove relation from stk mesh
-  EntityKey
+  stk::mesh::EntityKey
   global_source_id = localToGlobal(local_source_vertex);
 
-  EntityKey
+  stk::mesh::EntityKey
   global_target_id = localToGlobal(local_target_vertex);
 
   Entity
@@ -805,10 +805,10 @@ void
 Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
 {
   // Get the entity for the old and new vertices
-  EntityKey
+  stk::mesh::EntityKey
   old_key = localToGlobal(old_vertex);
 
-  EntityKey
+  stk::mesh::EntityKey
   new_key = localToGlobal(new_vertex);
 
   Entity
@@ -911,7 +911,7 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
 
   for (VertexIterator i = vertices_begin; i != vertices_end; ++i) {
 
-    EntityKey
+    stk::mesh::EntityKey
     key = localToGlobal(*i);
 
     Entity
@@ -948,13 +948,13 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
       Vertex
       target = boost::target(out_edge, *this);
 
-      EntityKey
+      stk::mesh::EntityKey
       source_key = localToGlobal(source);
 
       Entity
       global_source = getBulkData()->get_entity(source_key);
 
-      EntityKey
+      stk::mesh::EntityKey
       target_key = localToGlobal(target);
 
       Entity

@@ -37,8 +37,8 @@ public:
   ///
   Subgraph(
       Topology & topology,
-      std::set<EntityKey>::iterator first_vertex,
-      std::set<EntityKey>::iterator last_vertex,
+      std::set<stk::mesh::EntityKey>::iterator first_vertex,
+      std::set<stk::mesh::EntityKey>::iterator last_vertex,
       std::set<stkEdge>::iterator first_edge,
       std::set<stkEdge>::iterator last_edge);
 
@@ -51,7 +51,7 @@ public:
   ///Return the global entity key (in the stk mesh) given a local
   ///subgraph vertex (in the boost subgraph).
   ///
-  EntityKey
+  stk::mesh::EntityKey
   localToGlobal(Vertex local_vertex);
 
   ///
@@ -64,7 +64,7 @@ public:
   ///  stk mesh).
   ///
   Vertex
-  globalToLocal(EntityKey global_vertex_key);
+  globalToLocal(stk::mesh::EntityKey global_vertex_key);
 
   ///
   ///\brief Add a vertex in the subgraph.
@@ -326,12 +326,12 @@ private:
   ///
   /// map local vertex -> global entity key
   ///
-  std::map<Vertex, EntityKey> local_global_vertex_map_;
+  std::map<Vertex, stk::mesh::EntityKey> local_global_vertex_map_;
 
   ///
   /// map global entity key -> local vertex
   ///
-  std::map<EntityKey, Vertex> global_local_vertex_map_;
+  std::map<stk::mesh::EntityKey, Vertex> global_local_vertex_map_;
 };
 // class Subgraph
 

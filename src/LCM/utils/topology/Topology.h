@@ -187,7 +187,7 @@ public:
   void
   createStar(
       Entity entity,
-      std::set<EntityKey> & subgraph_entities,
+      std::set<stk::mesh::EntityKey> & subgraph_entities,
       std::set<stkEdge, EdgeLessThan> & subgraph_edges);
 
   ///

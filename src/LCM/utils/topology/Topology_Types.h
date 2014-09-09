@@ -45,7 +45,6 @@
 
 using stk::mesh::Entity;
 using stk::mesh::EntityId;
-using stk::mesh::EntityKey;
 using stk::mesh::Field;
 using stk::mesh::MetaData;
 using stk::mesh::PairIterRelation;
@@ -131,8 +130,8 @@ static stk::mesh::EntityRank const ELEMENT_RANK = stk::topology::ELEMENT_RANK;
 /// Used to create edges from the stk mesh object in a boost graph
 ///
 struct stkEdge {
-  EntityKey source;
-  EntityKey target;
+  stk::mesh::EntityKey source;
+  stk::mesh::EntityKey target;
   EdgeId local_id;
 };
 

@@ -707,7 +707,7 @@ Topology::createSurfaceElementConnectivity(
 void
 Topology::createStar(
     Entity entity,
-    std::set<EntityKey> & subgraph_entities,
+    std::set<stk::mesh::EntityKey> & subgraph_entities,
     std::set<stkEdge, EdgeLessThan> & subgraph_edges)
 {
   subgraph_entities.insert(getBulkData()->entity_key(entity));
@@ -835,7 +835,7 @@ Topology::splitOpenFaces()
       segment = *j;
 
       // Create star of segment
-      std::set<EntityKey>
+      std::set<stk::mesh::EntityKey>
       subgraph_entities;
 
       std::set<stkEdge, EdgeLessThan>
@@ -844,10 +844,10 @@ Topology::splitOpenFaces()
       createStar(segment, subgraph_entities, subgraph_edges);
 
       // Iterators
-      std::set<EntityKey>::iterator
+      std::set<stk::mesh::EntityKey>::iterator
       first_entity = subgraph_entities.begin();
 
-      std::set<EntityKey>::iterator
+      std::set<stk::mesh::EntityKey>::iterator
       last_entity = subgraph_entities.end();
 
       std::set<stkEdge>::iterator
@@ -906,7 +906,7 @@ Topology::splitOpenFaces()
         Vertex
         new_face_vertex = subgraph.cloneBoundaryEntity(face_vertex);
 
-        EntityKey
+        stk::mesh::EntityKey
         new_face_key = subgraph.localToGlobal(new_face_vertex);
 
         Entity
@@ -957,7 +957,7 @@ Topology::splitOpenFaces()
     // All open faces and segments have been dealt with.
     // Split the node articulation point
     // Create star of node
-    std::set<EntityKey>
+    std::set<stk::mesh::EntityKey>
     subgraph_entities;
 
     std::set<stkEdge, EdgeLessThan>
@@ -966,10 +966,10 @@ Topology::splitOpenFaces()
     createStar(point, subgraph_entities, subgraph_edges);
 
     // Iterators
-    std::set<EntityKey>::iterator
+    std::set<stk::mesh::EntityKey>::iterator
     first_entity = subgraph_entities.begin();
 
-    std::set<EntityKey>::iterator
+    std::set<stk::mesh::EntityKey>::iterator
     last_entity = subgraph_entities.end();
 
     std::set<stkEdge>::iterator
