@@ -240,11 +240,15 @@ Albany::CismSTKMeshStruct::constructMesh(
   unsigned int ebNo = 0; //element block #??? 
   int sideID = 0;
 
-  AbstractSTKFieldContainer::VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
-  stk::mesh::Field<double>* surfaceHeight_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
-  stk::mesh::Field<double>* flowFactor_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::ELEMENT_RANK, "flow_factor");
-  stk::mesh::Field<double>* temperature_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::ELEMENT_RANK, "temperature");
-  stk::mesh::Field<double>* basal_friction_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "basal_friction");
+  typedef AbstractSTKFieldContainer::ScalarFieldType ScalarFieldType;
+  typedef AbstractSTKFieldContainer::VectorFieldType VectorFieldType;
+  typedef AbstractSTKFieldContainer::QPScalarFieldType ElemScalarFieldType;
+
+  VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
+  ScalarFieldType* surfaceHeight_field = metaData->get_field<ScalarFieldType>(stk::topology::NODE_RANK, "surface_height");
+  ElemScalarFieldType* flowFactor_field = metaData->get_field<ElemScalarFieldType>(stk::topology::ELEMENT_RANK, "flow_factor");
+  ElemScalarFieldType* temperature_field = metaData->get_field<ElemScalarFieldType>(stk::topology::ELEMENT_RANK, "temperature");
+  ScalarFieldType* basal_friction_field = metaData->get_field<ScalarFieldType>(stk::topology::NODE_RANK, "basal_friction");
 
   if(!surfaceHeight_field) 
      have_sh = false;

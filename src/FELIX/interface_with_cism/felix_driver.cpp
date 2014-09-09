@@ -26,7 +26,7 @@
 Teuchos::RCP<Albany::CismSTKMeshStruct> meshStruct;
 Teuchos::RCP<Albany::Application> albanyApp;
 Teuchos::RCP<const Epetra_Comm> mpiComm;
-Teuchos::RCP<Teuchos::ParameterList> paramList;
+Teuchos::RCP<Teuchos::ParameterList> parameterList;
 Teuchos::RCP<Teuchos::ParameterList> discParams;
 Teuchos::RCP<Albany::SolverFactory> slvrfctry;
 Teuchos::RCP<Thyra::ModelEvaluator<double> > solver;
@@ -242,8 +242,8 @@ void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const 
     // Read input file, the name of which is provided in the Glimmer/CISM .config file.
     if (debug_output_verbosity != 0 & mpiComm->MyPID() == 0) std::cout << "In felix_driver: creating Albany mesh struct..." << std::endl;
     slvrfctry = Teuchos::rcp(new Albany::SolverFactory(input_fname, comm));
-    paramList = Teuchos::rcp(&slvrfctry->getParameters(),false);
-    discParams = Teuchos::sublist(paramList, "Discretization", true);
+    parameterList = Teuchos::rcp(&slvrfctry->getParameters(),false);
+    discParams = Teuchos::sublist(parameterList, "Discretization", true);
     Albany::AbstractFieldContainer::FieldContainerRequirements req;
     int neq = 2; //number of equations - 2 for FO Stokes
     //IK, 11/14/13, debug output: check that pointers that are passed from CISM are not null 
@@ -261,7 +261,7 @@ void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const 
     
 
     albanyApp = Teuchos::rcp(new Albany::Application(mpiComm));
-    albanyApp->initialSetUp(paramList);
+    albanyApp->initialSetUp(parameterList);
     meshStruct = Teuchos::rcp(new Albany::CismSTKMeshStruct(discParams, mpiComm, xyz_at_nodes_Ptr, global_node_id_owned_map_Ptr, global_element_id_active_owned_map_Ptr, 
                                                            global_element_conn_active_Ptr, global_basal_face_id_active_owned_map_Ptr, global_basal_face_conn_active_Ptr, 
                                                            beta_at_nodes_Ptr, surf_height_at_nodes_Ptr, flwa_at_active_elements_Ptr, nNodes, nElementsActive, nCellsActive, 
@@ -380,14 +380,14 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
     //NOTE - IMPORTANT: Glen's Law Homotopy parameter should be set to 1.0 in the parameter list for this logic to work!!! 
     if (!first_time_step)
     {
-       meshStruct->setRestartDataTime(paramList->sublist("Problem").get("Homotopy Restart Step", 1.));
-       double homotopy = paramList->sublist("Problem").sublist("FELIX Viscosity").get("Glen's Law Homotopy Parameter", 1.0);
+       meshStruct->setRestartDataTime(parameterList->sublist("Problem").get("Homotopy Restart Step", 1.));
+       double homotopy = parameterList->sublist("Problem").sublist("FELIX Viscosity").get("Glen's Law Homotopy Parameter", 1.0);
        if(meshStruct->restartDataTime()== homotopy)
-         paramList->sublist("Problem").set("Solution Method", "Steady");
+         parameterList->sublist("Problem").set("Solution Method", "Steady");
     }
 
     albanyApp->createDiscretization();
-    albanyApp->finalSetUp(paramList);
+    albanyApp->finalSetUp(parameterList);
 
     solver = slvrfctry->createThyraSolverAndGetAlbanyApp(albanyApp, mpiComm, mpiComm, Teuchos::null, false);
 

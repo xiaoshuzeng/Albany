@@ -78,7 +78,7 @@ int main(int ac, char* av[])
   // Will fully separate the elements in the mesh by replacing element nodes
   // Get a vector containing the element set of the mesh.
   std::vector<stk::mesh::Entity> element_lst;
-  stk::mesh::get_entities(bulkData,stk::topology::ELEMENT_RANK,element_lst);
+  stk::mesh::get_entities(bulkData, LCM::ELEMENT_RANK, element_lst);
 
   // Modifies mesh for graph algorithm
   // Function must be called each time before there are changes to the mesh
@@ -130,7 +130,7 @@ int main(int ac, char* av[])
   Epetra_Vector displacement = Epetra_Vector(*(dof_map),true);
 
   // Add displacement to nodes
-  stk::mesh::get_entities(bulkData,stk::topology::ELEMENT_RANK,element_lst);
+  stk::mesh::get_entities(bulkData, LCM::ELEMENT_RANK, element_lst);
 
   // displacement scale factor
   double alpha = 0.5;

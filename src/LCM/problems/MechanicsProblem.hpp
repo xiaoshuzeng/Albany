@@ -364,6 +364,9 @@ protected:
 #include "LatticeDefGrad.hpp"
 #include "TransportCoefficients.hpp"
 
+// Helium bubble specific evaluators
+#include "HeliumODEs.hpp"
+
 // Damage equation specific evaluators
 #include "DamageCoefficients.hpp"
 
@@ -628,6 +631,10 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   std::string eqilibriumParameter =
       (*fnm)["Concentration_Equilibrium_Parameter"];
   std::string gradient_element_length = (*fnm)["Gradient_Element_Length"];
+  // Helium bubble evolution
+  std::string heliumConcentration = (*fnm)["Helium_Concentration"];
+  std::string totalBubbleDensity = (*fnm)["Total_Bubble_Density"];
+  std::string bubbleVolumeFraction = (*fnm)["Bubble_Volume_Fraction"];
 
   if (have_mech_eq_) {
     Teuchos::ArrayRCP<std::string> dof_names(1);
@@ -1073,7 +1080,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         dl_->dummy,
         eb_name,
         "scalar",
-        38.7, // JTO: What sort of Magic is 38.7 !?!
+        38.7e-6, // JTO: What sort of Magic is 38.7 !?!
         true,
         output_flag);
     ev = rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
@@ -1936,7 +1943,6 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     //Output
     p->set<std::string>("Trapped Concentration Name", trappedConcentration);
-    p->set<std::string>("Mechanical Deformation Gradient Name", trappedConcentration);
     p->set<std::string>("Total Concentration Name", totalConcentration);
     p->set<std::string>("Mechanical Deformation Gradient Name", "Fm");
     p->set<std::string>("Effective Diffusivity Name", effectiveDiffusivity);
@@ -1959,6 +1965,18 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         material_db_->getElementBlockParam<bool>(eb_name, "Output "+trappedConcentration);
     if (output_flag) {
       p = stateMgr.registerStateVariable(trappedConcentration, dl_->qp_scalar,
+          dl_->dummy, eb_name, "scalar", 0.0, false, output_flag);
+      ev = rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      fm0.template registerEvaluator<EvalT>(ev);
+    }
+
+    output_flag = false;
+    // Total Concentration
+    if (material_db_->isElementBlockParam(eb_name, "Output "+totalConcentration))
+      output_flag =
+        material_db_->getElementBlockParam<bool>(eb_name, "Output "+totalConcentration);
+    if (output_flag) {
+      p = stateMgr.registerStateVariable(totalConcentration, dl_->qp_scalar,
           dl_->dummy, eb_name, "scalar", 0.0, false, output_flag);
       ev = rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
       fm0.template registerEvaluator<EvalT>(ev);

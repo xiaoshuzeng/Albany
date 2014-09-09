@@ -22,7 +22,7 @@ namespace LCM {
 ///
 inline
 void
-display_connectivity(BulkData & bulk_data, EntityRank cell_rank)
+display_connectivity(stk::mesh::BulkData & bulk_data, stk::mesh::EntityRank cell_rank)
 {
   // Create a list of element entities
   EntityVector
@@ -73,15 +73,20 @@ display_connectivity(BulkData & bulk_data, EntityRank cell_rank)
 ///
 inline
 void
-display_relation(BulkData& bulk_data, Entity entity)
+display_relation(stk::mesh::BulkData& bulk_data, Entity entity)
 {
   std::cout << "Relations for entity (identifier,rank): ";
-  std::cout << bulk_data.identifier(entity) << "," << bulk_data.entity_rank(entity);
+  std::cout << bulk_data.identifier(entity) << ",";
+  std::cout << bulk_data.entity_rank(entity);
   std::cout << '\n';
 
-  for (stk::topology::rank_t rank = stk::topology::NODE_RANK; rank <= stk::topology::ELEMENT_RANK; ++rank) {
-    Entity const* relations = bulk_data.begin(entity, rank);
-    stk::mesh::ConnectivityOrdinal const* ords = bulk_data.begin_ordinals(entity, rank);
+  for (stk::topology::rank_t rank = NODE_RANK; rank <= ELEMENT_RANK; ++rank) {
+
+    Entity const *
+    relations = bulk_data.begin(entity, rank);
+
+    stk::mesh::ConnectivityOrdinal const *
+    ords = bulk_data.begin_ordinals(entity, rank);
 
     size_t num_rels = bulk_data.num_connectivity(entity, rank);
     for (size_t i = 0; i < num_rels; ++i) {
@@ -104,12 +109,13 @@ display_relation(BulkData& bulk_data, Entity entity)
 ///
 inline
 void
-display_relation(BulkData& bulk_data, Entity entity, EntityRank const rank)
+display_relation(stk::mesh::BulkData& bulk_data, Entity entity, stk::mesh::EntityRank const rank)
 {
   std::cout << "Relations of rank ";
   std::cout << rank;
   std::cout << " for entity (identifier,rank): ";
-  std::cout << bulk_data.identifier(entity) << "," << bulk_data.entity_rank(entity);
+  std::cout << bulk_data.identifier(entity) << ",";
+  std::cout << bulk_data.entity_rank(entity);
   std::cout << '\n';
 
   Entity const*
@@ -140,15 +146,15 @@ display_relation(BulkData& bulk_data, Entity entity, EntityRank const rank)
 inline
 bool
 is_needed_for_stk(
-    BulkData& bulk_data,
+    stk::mesh::BulkData& bulk_data,
     Entity source_entity,
-    EntityRank target_rank,
-    EntityRank const cell_rank)
+    stk::mesh::EntityRank target_rank,
+    stk::mesh::EntityRank const cell_rank)
 {
-  EntityRank const
+  stk::mesh::EntityRank const
   source_rank = bulk_data.entity_rank(source_entity);
 
-  return (source_rank == stk::topology::ELEMENT_RANK) && (target_rank == NODE_RANK);
+  return (source_rank == ELEMENT_RANK) && (target_rank == NODE_RANK);
 }
 
 ///
@@ -187,14 +193,18 @@ parallelize_string(std::string const & string)
 //
 inline
 std::string
-entity_label(EntityRank const rank)
+entity_label(stk::mesh::EntityRank const rank)
 {
   std::ostringstream
   oss;
 
   switch (rank) {
   default:
-    oss << rank << "-Polytope";
+    std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
+    std::cerr << '\n';
+    std::cerr << "Entity rank is invalid: " << rank;
+    std::cerr << '\n';
+    exit(1);
     break;
   case NODE_RANK:
     oss << "Point";
@@ -205,9 +215,10 @@ entity_label(EntityRank const rank)
   case FACE_RANK:
     oss << "Polygon";
     break;
-  case VOLUME_RANK:
+  case ELEMENT_RANK:
     oss << "Polyhedron";
     break;
+#if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
   case 4:
     oss << "Polychoron";
     break;
@@ -217,6 +228,7 @@ entity_label(EntityRank const rank)
   case 6:
     oss << "Polypeton";
     break;
+#endif // LCM_TOPOLOGY_HIGH_DIMENSIONS
   }
 
   return oss.str();
@@ -227,12 +239,13 @@ entity_label(EntityRank const rank)
 //
 inline
 std::string
-entity_string(BulkData & bulk_data, Entity entity)
+entity_string(stk::mesh::BulkData & bulk_data, Entity entity)
 {
   std::ostringstream
   oss;
 
-  oss << entity_label(bulk_data.entity_rank(entity)) << '-' << bulk_data.identifier(entity);
+  oss << entity_label(bulk_data.entity_rank(entity)) << '-';
+  oss << bulk_data.identifier(entity);
 
   return oss.str();
 }
@@ -242,7 +255,7 @@ entity_string(BulkData & bulk_data, Entity entity)
 //
 inline
 std::string
-entity_color(EntityRank const rank, FractureState const fracture_state)
+entity_color(stk::mesh::EntityRank const rank, FractureState const fracture_state)
 {
   std::ostringstream
   oss;
@@ -260,7 +273,11 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
   case CLOSED:
     switch (rank) {
     default:
-      oss << 2 * (rank + 1);
+      std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
+      std::cerr << '\n';
+      std::cerr << "Entity rank is invalid: " << rank;
+      std::cerr << '\n';
+      exit(1);
       break;
     case NODE_RANK:
       oss << "6";
@@ -271,9 +288,10 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
     case FACE_RANK:
       oss << "2";
       break;
-    case VOLUME_RANK:
+    case ELEMENT_RANK:
       oss << "8";
       break;
+#if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
     case 4:
       oss << "10";
       break;
@@ -283,13 +301,18 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
     case 6:
       oss << "14";
       break;
+#endif // LCM_TOPOLOGY_HIGH_DIMENSIONS
     }
     break;
 
   case OPEN:
     switch (rank) {
     default:
-      oss << 2 * rank + 1;
+      std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
+      std::cerr << '\n';
+      std::cerr << "Entity rank is invalid: " << rank;
+      std::cerr << '\n';
+      exit(1);
       break;
     case NODE_RANK:
       oss << "5";
@@ -300,9 +323,10 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
     case FACE_RANK:
       oss << "1";
       break;
-    case VOLUME_RANK:
+    case ELEMENT_RANK:
       oss << "7";
       break;
+#if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
     case 4:
       oss << "9";
       break;
@@ -312,6 +336,7 @@ entity_color(EntityRank const rank, FractureState const fracture_state)
     case 6:
       oss << "13";
       break;
+#endif // LCM_TOPOLOGY_HIGH_DIMENSIONS
     }
     break;
   }
@@ -352,7 +377,7 @@ inline
 std::string
 dot_entity(
     EntityId const id,
-    EntityRank const rank,
+    stk::mesh::EntityRank const rank,
     FractureState const fracture_state)
 {
   std::ostringstream
@@ -418,9 +443,9 @@ inline
 std::string
 dot_relation(
     EntityId const source_id,
-    EntityRank const source_rank,
+    stk::mesh::EntityRank const source_rank,
     EntityId const target_id,
-    EntityRank const target_rank,
+    stk::mesh::EntityRank const target_rank,
     unsigned int const relation_local_id)
 {
   std::ostringstream

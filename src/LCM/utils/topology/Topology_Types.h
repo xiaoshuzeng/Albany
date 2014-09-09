@@ -43,14 +43,12 @@
 #include "Albany_STKDiscretization.hpp"
 #include "Albany_Utils.hpp"
 
-using stk::mesh::Bucket;
-using stk::mesh::BulkData;
 using stk::mesh::Entity;
 using stk::mesh::EntityId;
 using stk::mesh::EntityKey;
-using stk::mesh::EntityRank;
 using stk::mesh::EntityVector;
 using stk::mesh::Field;
+using stk::mesh::MetaData;
 using stk::mesh::PairIterRelation;
 using stk::mesh::Part;
 using stk::mesh::PartVector;
@@ -74,7 +72,7 @@ typedef Connectivity::size_type ConnectivityIndex;
 
 typedef boost::vertex_name_t VertexName;
 typedef boost::edge_name_t EdgeName;
-typedef boost::property<VertexName, EntityRank> VertexProperty;
+typedef boost::property<VertexName, stk::mesh::EntityRank> VertexProperty;
 typedef boost::property<EdgeName, EdgeId> EdgeProperty;
 typedef boost::listS ListS;
 typedef boost::vecS VectorS;
@@ -109,23 +107,15 @@ typedef std::map<Vertex, size_t> ComponentMap;
 typedef std::map<Entity, Entity> ElementNodeMap;
 
 enum FractureState {CLOSED = 0, OPEN = 1};
-
 enum VTKCellType {INVALID = 0, VERTEX = 1, LINE = 2, TRIANGLE = 5, QUAD = 9};
 
-static EntityRank const
-INVALID_RANK = stk::topology::INVALID_RANK;
-
-static EntityRank const
-NODE_RANK = stk::topology::NODE_RANK;
-
-static EntityRank const
-EDGE_RANK = stk::topology::EDGE_RANK;
-
-static EntityRank const
-FACE_RANK = stk::topology::FACE_RANK;
-
-static EntityRank const
-VOLUME_RANK = stk::topology::ELEMENT_RANK;
+// Ugly re-definitions but better to have everything the we need
+// defined here.
+static stk::mesh::EntityRank const INVALID_RANK = stk::topology::INVALID_RANK;
+static stk::mesh::EntityRank const NODE_RANK    = stk::topology::NODE_RANK;
+static stk::mesh::EntityRank const EDGE_RANK    = stk::topology::EDGE_RANK;
+static stk::mesh::EntityRank const FACE_RANK    = stk::topology::FACE_RANK;
+static stk::mesh::EntityRank const ELEMENT_RANK = stk::topology::ELEMENT_RANK;
 
 ///
 /// \brief Struct to store the data needed for creation or

@@ -348,14 +348,19 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
 
   singlePartVec[0] = nsPartVec["Bottom"];
 
+  typedef AbstractSTKFieldContainer::ScalarFieldType ScalarFieldType;
+  typedef AbstractSTKFieldContainer::VectorFieldType VectorFieldType;
+  typedef AbstractSTKFieldContainer::QPScalarFieldType ElemScalarFieldType;
+
   AbstractSTKFieldContainer::IntScalarFieldType* proc_rank_field = fieldContainer->getProcRankField();
-  AbstractSTKFieldContainer::VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
-  stk::mesh::Field<double>* surface_velocity_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_velocity");
-  stk::mesh::Field<double>* surface_velocity_RMS_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_velocity_rms");
-  stk::mesh::Field<double>* surface_height_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "surface_height");
-  stk::mesh::Field<double>* thickness_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "thickness");
-  stk::mesh::Field<double>* basal_friction_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::NODE_RANK, "basal_friction");
-  stk::mesh::Field<double>* temperature_field = metaData->get_field<stk::mesh::Field<double> >(stk::topology::ELEMENT_RANK, "temperature");
+  VectorFieldType* coordinates_field = fieldContainer->getCoordinatesField();
+  stk::mesh::FieldBase const* coordinates_field2d = bulkData2D.mesh_meta_data().coordinate_field();
+  VectorFieldType* surface_velocity_field = metaData->get_field<VectorFieldType>(stk::topology::NODE_RANK, "surface_velocity");
+  VectorFieldType* surface_velocity_RMS_field = metaData->get_field<VectorFieldType>(stk::topology::NODE_RANK, "surface_velocity_rms");
+  ScalarFieldType* surface_height_field = metaData->get_field<ScalarFieldType>(stk::topology::NODE_RANK, "surface_height");
+  ScalarFieldType* thickness_field = metaData->get_field<ScalarFieldType>(stk::topology::NODE_RANK, "thickness");
+  ScalarFieldType* basal_friction_field = metaData->get_field<ScalarFieldType>(stk::topology::NODE_RANK, "basal_friction");
+  ElemScalarFieldType* temperature_field = metaData->get_field<ElemScalarFieldType>(stk::topology::ELEMENT_RANK, "temperature");
 
   std::vector<long long int> prismMpasIds(NumBaseElemeNodes), prismGlobalIds(2 * NumBaseElemeNodes);
 
@@ -371,7 +376,7 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
       node = bulkData->declare_entity(stk::topology::NODE_RANK, il * vertexColumnShift + vertexLayerShift * node2dId + 1, nodePartVec);
 
     double* coord = stk::mesh::field_data(*coordinates_field, node);
-    double* coord2d = stk::mesh::field_data(*coordinates_field, node2d);
+    double const* coord2d = (double const*) stk::mesh::field_data(*coordinates_field2d, node2d);
     coord[0] = coord2d[0];
     coord[1] = coord2d[1];
 
@@ -516,9 +521,11 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
 
     stk::mesh::Entity edge2d = edges2D[ib];
     stk::mesh::Entity const* rel = bulkData2D.begin_elements(edge2d);
+    stk::mesh::ConnectivityOrdinal const* ordinals = bulkData2D.begin_element_ordinals(edge2d);
+
     int il = (Ordering == 0) * (i / lEdgeColumnShift) + (Ordering == 1) * (i % edgeLayerShift);
     stk::mesh::Entity elem2d = rel[0];
-    stk::mesh::EntityId edgeLID = bulkData2D.identifier(rel[0]);
+    stk::mesh::EntityId edgeLID = ordinals[0]; //bulkData2D.identifier(rel[0]);
 
     stk::mesh::EntityId basalElemId = bulkData2D.identifier(elem2d) - 1;
     stk::mesh::EntityId Edge2dId = bulkData2D.identifier(edge2d) - 1;
@@ -536,7 +543,6 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
       stk::mesh::Entity elem0 = bulkData->get_entity(stk::topology::ELEMENT_RANK, tetraId + tetraAdjacentToPrismLateralFace[minIndex][pType][edgeLID][0] + 1);
       stk::mesh::Entity elem1 = bulkData->get_entity(stk::topology::ELEMENT_RANK, tetraId + tetraAdjacentToPrismLateralFace[minIndex][pType][edgeLID][1] + 1);
 
-      std::cout << "side_rank " << metaData->side_rank() <<std::endl;
       stk::mesh::Entity side0 = bulkData->declare_entity(metaData->side_rank(), 2 * edgeColumnShift * il +  2 * Edge2dId * edgeLayerShift + 1, singlePartVec);
       stk::mesh::Entity side1 = bulkData->declare_entity(metaData->side_rank(), 2 * edgeColumnShift * il +  2 * Edge2dId * edgeLayerShift + 1 + 1, singlePartVec);
 
@@ -546,7 +552,7 @@ void Albany::ExtrudedSTKMeshStruct::setFieldAndBulkData(const Teuchos::RCP<const
       stk::mesh::Entity const* rel_elemNodes0 = bulkData->begin_nodes(elem0);
       stk::mesh::Entity const* rel_elemNodes1 = bulkData->begin_nodes(elem1);
       for (int j = 0; j < 3; j++) {
-        std::cout << j <<", " << edgeLID << ", " << minIndex << ", " << tetraFaceIdOnPrismFaceId[minIndex][edgeLID] << ","  << std::endl;
+     //   std::cout << j <<", " << edgeLID << ", " << minIndex << ", " << tetraFaceIdOnPrismFaceId[minIndex][edgeLID] << ","  << std::endl;
         stk::mesh::Entity node0 = rel_elemNodes0[this->meshSpecs[0]->ctd.side[tetraFaceIdOnPrismFaceId[minIndex][edgeLID]].node[j]];
         bulkData->declare_relation(side0, node0, j);
         stk::mesh::Entity node1 = rel_elemNodes1[this->meshSpecs[0]->ctd.side[tetraFaceIdOnPrismFaceId[minIndex][edgeLID]].node[j]];
