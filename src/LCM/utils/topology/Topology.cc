@@ -145,7 +145,7 @@ Topology::initializeFractureState()
 
   for (stk::mesh::EntityRank rank = NODE_RANK; rank < ELEMENT_RANK; ++rank) {
 
-    std::vector<Bucket*> const &
+    std::vector<stk::mesh::Bucket*> const &
     buckets = getBulkData()->buckets(rank);
 
     EntityVector
@@ -184,7 +184,7 @@ Topology::createDiscretization()
   Selector
   local_selector = getLocalPart();
 
-  std::vector<Bucket*> const &
+  std::vector<stk::mesh::Bucket*> const &
   buckets = getBulkData()->buckets(ELEMENT_RANK);
 
   EntityVector
@@ -444,7 +444,7 @@ Topology::getNodalCoordinates()
   Selector
   local_selector = getMetaData()->locally_owned_part();
 
-  std::vector<Bucket*> const &
+  std::vector<stk::mesh::Bucket*> const &
   buckets = getBulkData()->buckets(NODE_RANK);
 
   EntityVector
@@ -613,7 +613,7 @@ Topology::getBoundary()
   Selector
   local_part = getLocalPart();
 
-  std::vector<Bucket*> const &
+  std::vector<stk::mesh::Bucket*> const &
   buckets = getBulkData()->buckets(boundary_entity_rank);
 
   EntityVector
@@ -1343,7 +1343,7 @@ Topology::getNumberEntitiesByRank(
     BulkData const & bulk_data,
     stk::mesh::EntityRank entity_rank)
 {
-  std::vector<Bucket*>
+  std::vector<stk::mesh::Bucket*>
   buckets = bulk_data.buckets(entity_rank);
 
   EntityVectorIndex

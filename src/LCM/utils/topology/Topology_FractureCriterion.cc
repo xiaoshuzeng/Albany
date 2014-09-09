@@ -57,10 +57,10 @@ FractureCriterionTraction::check(
   Entity
   element_1 = relations_up[1];
 
-  Bucket const &
+  stk::mesh::Bucket const &
   bucket_0 = bulk_data.bucket(element_0);
 
-  Bucket const &
+  stk::mesh::Bucket const &
   bucket_1 = bulk_data.bucket(element_1);
 
   bool const
@@ -137,7 +137,7 @@ FractureCriterionTraction::computeNormals()
   Selector
   local_selector = getMetaData().locally_owned_part();
 
-  std::vector<Bucket*> const &
+  std::vector<stk::mesh::Bucket*> const &
   node_buckets = getBulkData().buckets(NODE_RANK);
 
   EntityVector
@@ -164,7 +164,7 @@ FractureCriterionTraction::computeNormals()
 
   }
 
-  std::vector<Bucket*> const &
+  std::vector<stk::mesh::Bucket*> const &
     face_buckets = bulk_data_.buckets(getMetaData().side_rank());
 
   EntityVector

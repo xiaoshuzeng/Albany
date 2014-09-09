@@ -43,7 +43,6 @@
 #include "Albany_STKDiscretization.hpp"
 #include "Albany_Utils.hpp"
 
-using stk::mesh::Bucket;
 using stk::mesh::BulkData;
 using stk::mesh::Entity;
 using stk::mesh::EntityId;
