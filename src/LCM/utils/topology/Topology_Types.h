@@ -43,7 +43,6 @@
 #include "Albany_STKDiscretization.hpp"
 #include "Albany_Utils.hpp"
 
-using stk::mesh::Field;
 using stk::mesh::Relation;
 
 using Teuchos::RCP;
