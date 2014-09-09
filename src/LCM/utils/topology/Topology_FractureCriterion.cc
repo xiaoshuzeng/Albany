@@ -70,7 +70,7 @@ FractureCriterionTraction::check(
   if (is_embedded == false) return false;
 
   // Now traction check
-  EntityVector
+  stk::mesh::EntityVector
   nodes = getTopology().getBoundaryEntityNodes(interface);
 
   EntityVectorIndex const
@@ -140,7 +140,7 @@ FractureCriterionTraction::computeNormals()
   std::vector<stk::mesh::Bucket*> const &
   node_buckets = getBulkData().buckets(NODE_RANK);
 
-  EntityVector
+  stk::mesh::EntityVector
   nodes;
 
   stk::mesh::get_selected_entities(local_selector, node_buckets, nodes);
@@ -167,7 +167,7 @@ FractureCriterionTraction::computeNormals()
   std::vector<stk::mesh::Bucket*> const &
     face_buckets = bulk_data_.buckets(getMetaData().side_rank());
 
-  EntityVector
+  stk::mesh::EntityVector
   faces;
 
   stk::mesh::get_selected_entities(local_selector, face_buckets, faces);
@@ -182,7 +182,7 @@ FractureCriterionTraction::computeNormals()
     Entity
     face = faces[i];
 
-    EntityVector
+    stk::mesh::EntityVector
     nodes = getTopology().getBoundaryEntityNodes(face);
 
     Intrepid::Vector<double> &

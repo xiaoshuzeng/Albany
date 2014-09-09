@@ -135,7 +135,7 @@ public:
   ///
   /// \attention Assumes all mesh elements are same type.
   ///
-  EntityVector
+  stk::mesh::EntityVector
   getBoundaryEntityNodes(Entity boundary_entity);
 
   std::vector<Intrepid::Vector<double> >
@@ -165,7 +165,7 @@ public:
   ///
   /// \attention Assumes that all elements have the same topology
   ////
-  EntityVector
+  stk::mesh::EntityVector
   createSurfaceElementConnectivity(
       Entity face_top,
       Entity face_bottom);
@@ -247,7 +247,7 @@ public:
   /// \brief Returns a vector with all the mesh entities of a
   ///        specific rank
   ///
-  EntityVector
+  stk::mesh::EntityVector
   getEntitiesByRank(stk::mesh::BulkData const & mesh, stk::mesh::EntityRank entity_rank);
 
   ///
@@ -276,7 +276,7 @@ public:
   ///        given entity. The input rank is the rank of the
   ///        returned entities.
   ///
-  EntityVector
+  stk::mesh::EntityVector
   getDirectlyConnectedEntities(
       Entity entity,
       stk::mesh::EntityRank entity_rank);
@@ -285,7 +285,7 @@ public:
   /// \brief Checks if an entity exists inside a specific vector
   ///
   bool
-  findEntityInVector(EntityVector & entities, Entity entity);
+  findEntityInVector(stk::mesh::EntityVector & entities, Entity entity);
 
   ///
   /// \brief Returns a group of entities connected indirectly to a
@@ -297,7 +297,7 @@ public:
   /// the input entity
   ///
   ///
-  EntityVector
+  stk::mesh::EntityVector
   getBoundaryEntities(Entity entity, stk::mesh::EntityRank entity_rank);
 
   ///
@@ -312,14 +312,14 @@ public:
   ///        adjacent segments are connected to a given common
   ///        point. it returns adjacent segments
   ///
-  EntityVector
+  stk::mesh::EntityVector
   findAdjacentSegments(Entity segment, Entity node);
 
   ///
   /// \brief Returns all the highest dimensional topology entities
   ///        to which a given face belongs
   ///
-  EntityVector
+  stk::mesh::EntityVector
   findCellRelations(Entity face);
 
   ///
@@ -327,7 +327,7 @@ public:
   ///        element. Including those connected between the faces
   ///        barycenters and the faces boundary nodes
   ///
-  EntityVector
+  stk::mesh::EntityVector
   findSegmentsFromElement(Entity element);
 
   ///
@@ -339,9 +339,9 @@ public:
   ///
   /// \brief returns the adjacent segments from a given face
   ///
-  EntityVector
+  stk::mesh::EntityVector
   findAdjacentSegmentsFromFace(
-      std::vector<EntityVector> const & faces_inside_element,
+      std::vector<stk::mesh::EntityVector> const & faces_inside_element,
       Entity face,
       int element_number);
 
@@ -355,10 +355,10 @@ public:
   /// \brief Returns a vector with the corresponding former boundary
   ///        nodes of an input entity
   ///
-  EntityVector
+  stk::mesh::EntityVector
   getFormerElementNodes(
       Entity element,
-      std::vector<EntityVector> const & entities);
+      std::vector<stk::mesh::EntityVector> const & entities);
 
   ///
   /// \brief Generates the coordinate of a given barycenter
@@ -367,7 +367,7 @@ public:
   ///
   void
   computeBarycentricCoordinates(
-      EntityVector const & entities,
+      stk::mesh::EntityVector const & entities,
       Entity barycenter);
 
   ///
@@ -378,7 +378,7 @@ public:
 
   ///
   /// \brief Finds the closest nodes(Entities of rank 0) to each of
-  /// the three points in the input vector.  EntityVector
+  /// the three points in the input vector.  stk::mesh::EntityVector
   std::vector<Entity>
   getClosestNodes(std::vector<std::vector<double> > points);
 
@@ -730,7 +730,7 @@ private:
 
   RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct_;
 
-  std::vector<EntityVector> connectivity_;
+  std::vector<stk::mesh::EntityVector> connectivity_;
 
   std::map<int, int> element_global_to_local_ids_;
 

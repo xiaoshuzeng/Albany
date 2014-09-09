@@ -196,7 +196,7 @@ Subgraph::addVertex(stk::mesh::EntityRank vertex_rank)
 
   requests[vertex_rank] = 1;
 
-  EntityVector
+  stk::mesh::EntityVector
   new_entities;
 
   getBulkData()->generate_new_entities(requests, new_entities);

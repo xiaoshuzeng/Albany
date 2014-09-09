@@ -25,12 +25,12 @@ void
 display_connectivity(stk::mesh::BulkData & bulk_data, stk::mesh::EntityRank cell_rank)
 {
   // Create a list of element entities
-  EntityVector
+  stk::mesh::EntityVector
   elements;
 
   stk::mesh::get_entities(bulk_data, cell_rank, elements);
 
-  typedef EntityVector::size_type size_type;
+  typedef stk::mesh::EntityVector::size_type size_type;
 
   // Loop over the elements
   size_type const

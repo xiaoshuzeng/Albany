@@ -46,7 +46,6 @@
 using stk::mesh::Entity;
 using stk::mesh::EntityId;
 using stk::mesh::EntityKey;
-using stk::mesh::EntityVector;
 using stk::mesh::Field;
 using stk::mesh::MetaData;
 using stk::mesh::PairIterRelation;
@@ -63,7 +62,7 @@ using Albany::STKDiscretization;
 namespace LCM {
 
 typedef stk::mesh::RelationIdentifier EdgeId;
-typedef EntityVector::size_type EntityVectorIndex;
+typedef stk::mesh::EntityVector::size_type EntityVectorIndex;
 typedef RelationVector::size_type RelationVectorIndex;
 typedef std::vector<Intrepid::Vector<double> > Coordinates;
 typedef Coordinates::size_type CoordinatesIndex;
