@@ -118,7 +118,7 @@ size_t const
 Subgraph::getSpaceDimension()
 {return getTopology().getSpaceDimension();}
 
-RCP<Albany::AbstractSTKMeshStruct> &
+Teuchos::RCP<Albany::AbstractSTKMeshStruct> &
 Subgraph::getSTKMeshStruct()
 {return getTopology().getSTKMeshStruct();}
 

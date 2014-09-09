@@ -34,11 +34,11 @@ Topology::Topology(
     stk_mesh_struct_(Teuchos::null),
     fracture_criterion_(Teuchos::null)
 {
-  RCP<Teuchos::ParameterList>
+  Teuchos::RCP<Teuchos::ParameterList>
   params = Teuchos::rcp(new Teuchos::ParameterList("params"));
 
   // Create discretization object
-  RCP<Teuchos::ParameterList>
+  Teuchos::RCP<Teuchos::ParameterList>
   disc_params = Teuchos::sublist(params, "Discretization");
 
   // Set Method to Exodus and set input file name
@@ -46,23 +46,23 @@ Topology::Topology(
   disc_params->set<std::string>("Exodus Input File Name", input_file);
   disc_params->set<std::string>("Exodus Output File Name", output_file);
 
-  RCP<Teuchos::ParameterList>
+  Teuchos::RCP<Teuchos::ParameterList>
   problem_params = Teuchos::sublist(params, "Problem");
 
-  RCP<Teuchos::ParameterList>
+  Teuchos::RCP<Teuchos::ParameterList>
   adapt_params = Teuchos::sublist(problem_params, "Adaptation");
 
-  RCP<Epetra_Comm>
+  Teuchos::RCP<Epetra_Comm>
   communicator = Albany::createEpetraCommFromMpiComm(Albany_MPI_COMM_WORLD);
 
   Albany::DiscretizationFactory
   disc_factory(params, communicator);
 
   // Needed, otherwise segfaults.
-  Teuchos::ArrayRCP<RCP<Albany::MeshSpecsStruct> >
+  Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >
   mesh_specs = disc_factory.createMeshSpecs();
 
-  RCP<Albany::StateInfoStruct>
+  Teuchos::RCP<Albany::StateInfoStruct>
   state_info = Teuchos::rcp(new Albany::StateInfoStruct());
 
   // The default fields
@@ -99,7 +99,7 @@ Topology::Topology(
 // previously created. Topology::graphInitialization();
 //
 Topology::
-Topology(RCP<Albany::AbstractDiscretization> & discretization) :
+Topology(Teuchos::RCP<Albany::AbstractDiscretization> & discretization) :
   discretization_(Teuchos::null),
   stk_mesh_struct_(Teuchos::null),
   fracture_criterion_(Teuchos::null)
@@ -372,7 +372,7 @@ void Topology::restoreElementToNodeConnectivity()
   STKDiscretization &
   stk_discretization = static_cast<STKDiscretization &>(*discretization_);
 
-  RCP<Epetra_Comm>
+  Teuchos::RCP<Epetra_Comm>
   communicator = Albany::createEpetraCommFromMpiComm(Albany_MPI_COMM_WORLD);
 
   //stk_discretization.updateMesh(stkMeshStruct_, communicator);

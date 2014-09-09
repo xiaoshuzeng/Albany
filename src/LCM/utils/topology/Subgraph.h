@@ -263,7 +263,7 @@ public:
   size_t const
   getSpaceDimension();
 
-  RCP<Albany::AbstractSTKMeshStruct> &
+  Teuchos::RCP<Albany::AbstractSTKMeshStruct> &
   getSTKMeshStruct();
 
   stk::mesh::BulkData *

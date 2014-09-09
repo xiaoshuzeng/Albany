@@ -43,8 +43,6 @@
 #include "Albany_STKDiscretization.hpp"
 #include "Albany_Utils.hpp"
 
-using Teuchos::RCP;
-
 using Albany::STKDiscretization;
 
 namespace LCM {

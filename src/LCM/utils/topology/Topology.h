@@ -37,7 +37,7 @@ public:
   ///
   /// Use if already have an Albany mesh object
   ///
-  Topology(RCP<Albany::AbstractDiscretization> & discretization);
+  Topology(Teuchos::RCP<Albany::AbstractDiscretization> & discretization);
 
   ///
   /// \brief Iterates over the boundary entities of the mesh of (all
@@ -556,18 +556,18 @@ public:
   /// Accessors and mutators
   ///
   void
-  setSTKMeshStruct(RCP<Albany::AbstractSTKMeshStruct> const & sms)
+  setSTKMeshStruct(Teuchos::RCP<Albany::AbstractSTKMeshStruct> const & sms)
   {stk_mesh_struct_ = sms;}
 
-  RCP<Albany::AbstractSTKMeshStruct> &
+  Teuchos::RCP<Albany::AbstractSTKMeshStruct> &
   getSTKMeshStruct()
   {return stk_mesh_struct_;}
 
   void
-  setDiscretization(RCP<Albany::AbstractDiscretization> const & d)
+  setDiscretization(Teuchos::RCP<Albany::AbstractDiscretization> const & d)
   {discretization_ = d;}
 
-  RCP<Albany::AbstractDiscretization> &
+  Teuchos::RCP<Albany::AbstractDiscretization> &
   getDiscretization()
   {return discretization_;}
 
@@ -605,10 +605,10 @@ public:
   {return *(stk_mesh_struct_->getFieldContainer()->getFractureState(rank));}
 
   void
-  setFractureCriterion(RCP<AbstractFractureCriterion> const & fc)
+  setFractureCriterion(Teuchos::RCP<AbstractFractureCriterion> const & fc)
   {fracture_criterion_ = fc;}
 
-  RCP<AbstractFractureCriterion> &
+  Teuchos::RCP<AbstractFractureCriterion> &
   getFractureCriterion()
   {return fracture_criterion_;}
 
@@ -726,9 +726,9 @@ private:
 
   //
   //
-  RCP<Albany::AbstractDiscretization> discretization_;
+  Teuchos::RCP<Albany::AbstractDiscretization> discretization_;
 
-  RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct_;
+  Teuchos::RCP<Albany::AbstractSTKMeshStruct> stk_mesh_struct_;
 
   std::vector<stk::mesh::EntityVector> connectivity_;
 
@@ -744,7 +744,7 @@ private:
   shards::CellTopology cell_topology_;
 
   /// Pointer to failure criterion object
-  RCP<AbstractFractureCriterion> fracture_criterion_;
+  Teuchos::RCP<AbstractFractureCriterion> fracture_criterion_;
 
 private:
   ///
