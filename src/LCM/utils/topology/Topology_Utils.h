@@ -80,7 +80,7 @@ display_relation(stk::mesh::BulkData& bulk_data, stk::mesh::Entity entity)
   std::cout << bulk_data.entity_rank(entity);
   std::cout << '\n';
 
-  for (stk::topology::rank_t rank = NODE_RANK; rank <= ELEMENT_RANK; ++rank) {
+  for (stk::topology::rank_t rank = stk::topology::NODE_RANK; rank <= stk::topology::ELEMENT_RANK; ++rank) {
 
     stk::mesh::Entity const *
     relations = bulk_data.begin(entity, rank);
@@ -154,7 +154,7 @@ is_needed_for_stk(
   stk::mesh::EntityRank const
   source_rank = bulk_data.entity_rank(source_entity);
 
-  return (source_rank == ELEMENT_RANK) && (target_rank == NODE_RANK);
+  return (source_rank == stk::topology::ELEMENT_RANK) && (target_rank == stk::topology::NODE_RANK);
 }
 
 ///
@@ -206,16 +206,16 @@ entity_label(stk::mesh::EntityRank const rank)
     std::cerr << '\n';
     exit(1);
     break;
-  case NODE_RANK:
+  case stk::topology::NODE_RANK:
     oss << "Point";
     break;
-  case EDGE_RANK:
+  case stk::topology::EDGE_RANK:
     oss << "Segment";
     break;
-  case FACE_RANK:
+  case stk::topology::FACE_RANK:
     oss << "Polygon";
     break;
-  case ELEMENT_RANK:
+  case stk::topology::ELEMENT_RANK:
     oss << "Polyhedron";
     break;
 #if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
@@ -279,16 +279,16 @@ entity_color(stk::mesh::EntityRank const rank, FractureState const fracture_stat
       std::cerr << '\n';
       exit(1);
       break;
-    case NODE_RANK:
+    case stk::topology::NODE_RANK:
       oss << "6";
       break;
-    case EDGE_RANK:
+    case stk::topology::EDGE_RANK:
       oss << "4";
       break;
-    case FACE_RANK:
+    case stk::topology::FACE_RANK:
       oss << "2";
       break;
-    case ELEMENT_RANK:
+    case stk::topology::ELEMENT_RANK:
       oss << "8";
       break;
 #if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
@@ -314,16 +314,16 @@ entity_color(stk::mesh::EntityRank const rank, FractureState const fracture_stat
       std::cerr << '\n';
       exit(1);
       break;
-    case NODE_RANK:
+    case stk::topology::NODE_RANK:
       oss << "5";
       break;
-    case EDGE_RANK:
+    case stk::topology::EDGE_RANK:
       oss << "3";
       break;
-    case FACE_RANK:
+    case stk::topology::FACE_RANK:
       oss << "1";
       break;
-    case ELEMENT_RANK:
+    case stk::topology::ELEMENT_RANK:
       oss << "7";
       break;
 #if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)

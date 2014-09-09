@@ -17,7 +17,7 @@ FractureCriterionTraction::FractureCriterionTraction(
     double const critical_traction,
     double const beta) :
 AbstractFractureCriterion(topology, bulk_block_name, interface_block_name),
-stress_field_(*(getMetaData().get_field<TensorFieldType>(NODE_RANK, stress_name))),
+stress_field_(*(getMetaData().get_field<TensorFieldType>(stk::topology::NODE_RANK, stress_name))),
 critical_traction_(critical_traction),
 beta_(beta)
 {
@@ -138,7 +138,7 @@ FractureCriterionTraction::computeNormals()
   local_selector = getMetaData().locally_owned_part();
 
   std::vector<stk::mesh::Bucket*> const &
-  node_buckets = getBulkData().buckets(NODE_RANK);
+  node_buckets = getBulkData().buckets(stk::topology::NODE_RANK);
 
   stk::mesh::EntityVector
   nodes;

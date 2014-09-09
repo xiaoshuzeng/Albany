@@ -681,7 +681,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
 
   // Create a map of elements to new node numbers
   // only if the input vertex is a node
-  if (vertex_rank == NODE_RANK) {
+  if (vertex_rank == stk::topology::NODE_RANK) {
     stk::mesh::Entity
     point = getBulkData()->get_entity(localToGlobal(vertex));
 
@@ -697,7 +697,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
       stk::mesh::EntityRank
       current_rank = getVertexRank(current_vertex);
 
-      if (current_rank != ELEMENT_RANK) continue;
+      if (current_rank != stk::topology::ELEMENT_RANK) continue;
 
       if (component_number == number_components - 1) continue;
 

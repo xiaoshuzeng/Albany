@@ -130,7 +130,7 @@ int main(int ac, char* av[]){
 	{
 		std::vector<stk::mesh::Entity> temp;
 		//Obtain all the entities of rank 0
-		temp = topology.getBoundaryEntities(*I_entities, LCM::NODE_RANK);
+		temp = topology.getBoundaryEntities(*I_entities, stk::topology::NODE_RANK);
 		std::vector<int> temp2; std::vector<stk::mesh::Entity>::const_iterator I_nodes;
 		//Get the identifiers of the entities above
 		for (I_nodes = temp.begin(); I_nodes != temp.end(); I_nodes++)
@@ -152,7 +152,7 @@ int main(int ac, char* av[]){
 	for (unsigned int i = 0;i<(EntitiesMinSurface.size());i++)
 	{
 		//Compute the area
-                std::vector<stk::mesh::Entity> Nodes =  topology.getBoundaryEntities(EntitiesMinSurface[i], LCM::NODE_RANK);
+                std::vector<stk::mesh::Entity> Nodes =  topology.getBoundaryEntities(EntitiesMinSurface[i], stk::topology::NODE_RANK);
 		double a =  topology.getDistanceBetweenNodes(Nodes[0], Nodes[1]);
 		double b =  topology.getDistanceBetweenNodes(Nodes[1], Nodes[2]);
 		double c =  topology.getDistanceBetweenNodes(Nodes[2], Nodes[0]);
