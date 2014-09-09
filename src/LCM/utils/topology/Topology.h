@@ -112,7 +112,7 @@ public:
 
   ///
   /// \brief After mesh manipulations are complete, need to recreate a
-  ///        stk mesh understood by Albany_STKDiscretization.
+  ///        stk mesh understood by Albany::STKDiscretization.
   ///
   /// Recreates the nodal connectivity using connectivity_.
   ///

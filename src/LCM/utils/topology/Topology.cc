@@ -174,8 +174,8 @@ Topology::createDiscretization()
 {
   // Need to access the bulk_data and meta_data classes in the mesh
   // data structure
-  STKDiscretization &
-  stk_discretization = static_cast<STKDiscretization &>(*getDiscretization());
+  Albany::STKDiscretization &
+  stk_discretization = static_cast<Albany::STKDiscretization &>(*getDiscretization());
 
   setSTKMeshStruct(stk_discretization.getSTKMeshStruct());
 
@@ -341,7 +341,7 @@ void Topology::removeMultiLevelRelations()
 
 //
 // After mesh manipulations are complete, need to recreate a stk
-// mesh understood by Albany_STKDiscretization.
+// mesh understood by Albany::STKDiscretization.
 //
 void Topology::restoreElementToNodeConnectivity()
 {
@@ -369,8 +369,8 @@ void Topology::restoreElementToNodeConnectivity()
   }
 
   // Recreate Albany STK Discretization
-  STKDiscretization &
-  stk_discretization = static_cast<STKDiscretization &>(*discretization_);
+  Albany::STKDiscretization &
+  stk_discretization = static_cast<Albany::STKDiscretization &>(*discretization_);
 
   Teuchos::RCP<Epetra_Comm>
   communicator = Albany::createEpetraCommFromMpiComm(Albany_MPI_COMM_WORLD);

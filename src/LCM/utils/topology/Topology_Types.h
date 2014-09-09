@@ -43,8 +43,6 @@
 #include "Albany_STKDiscretization.hpp"
 #include "Albany_Utils.hpp"
 
-using Albany::STKDiscretization;
-
 namespace LCM {
 
 typedef stk::mesh::RelationIdentifier EdgeId;
