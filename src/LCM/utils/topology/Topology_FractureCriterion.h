@@ -49,7 +49,7 @@ public:
 
   virtual
   bool
-  check(BulkData & mesh, Entity interface) = 0;
+  check(stk::mesh::BulkData & mesh, Entity interface) = 0;
 
   virtual
   ~AbstractFractureCriterion() {}
@@ -69,7 +69,7 @@ public:
   Albany::AbstractSTKMeshStruct const &
   getAbstractSTKMeshStruct() {return stk_mesh_struct_;}
 
-  BulkData const &
+  stk::mesh::BulkData const &
   getBulkData() {return bulk_data_;}
 
   MetaData const &
@@ -101,7 +101,7 @@ protected:
   Albany::AbstractSTKMeshStruct const &
   stk_mesh_struct_;
 
-  BulkData const &
+  stk::mesh::BulkData const &
   bulk_data_;
 
   MetaData const &
@@ -140,7 +140,7 @@ public:
   probability_(probability) {}
 
   bool
-  check(BulkData & bulk_data, Entity interface)
+  check(stk::mesh::BulkData & bulk_data, Entity interface)
   {
     stk::mesh::EntityRank const rank = bulk_data.entity_rank(interface);
 

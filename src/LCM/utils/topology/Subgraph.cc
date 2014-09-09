@@ -122,7 +122,7 @@ RCP<Albany::AbstractSTKMeshStruct> &
 Subgraph::getSTKMeshStruct()
 {return getTopology().getSTKMeshStruct();}
 
-BulkData *
+stk::mesh::BulkData *
 Subgraph::getBulkData()
 {return getTopology().getBulkData();}
 

@@ -768,7 +768,7 @@ Topology::splitOpenFaces()
   std::set<EntityPair>
   fractured_faces;
 
-  BulkData &
+  stk::mesh::BulkData &
   bulk_data = *getBulkData();
 
   stk::mesh::get_selected_entities(
@@ -1340,7 +1340,7 @@ Topology::outputToGraphviz(
 //
 EntityVectorIndex
 Topology::getNumberEntitiesByRank(
-    BulkData const & bulk_data,
+    stk::mesh::BulkData const & bulk_data,
     stk::mesh::EntityRank entity_rank)
 {
   std::vector<stk::mesh::Bucket*>

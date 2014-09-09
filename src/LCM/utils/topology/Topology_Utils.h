@@ -22,7 +22,7 @@ namespace LCM {
 ///
 inline
 void
-display_connectivity(BulkData & bulk_data, stk::mesh::EntityRank cell_rank)
+display_connectivity(stk::mesh::BulkData & bulk_data, stk::mesh::EntityRank cell_rank)
 {
   // Create a list of element entities
   EntityVector
@@ -73,7 +73,7 @@ display_connectivity(BulkData & bulk_data, stk::mesh::EntityRank cell_rank)
 ///
 inline
 void
-display_relation(BulkData& bulk_data, Entity entity)
+display_relation(stk::mesh::BulkData& bulk_data, Entity entity)
 {
   std::cout << "Relations for entity (identifier,rank): ";
   std::cout << bulk_data.identifier(entity) << ",";
@@ -109,7 +109,7 @@ display_relation(BulkData& bulk_data, Entity entity)
 ///
 inline
 void
-display_relation(BulkData& bulk_data, Entity entity, stk::mesh::EntityRank const rank)
+display_relation(stk::mesh::BulkData& bulk_data, Entity entity, stk::mesh::EntityRank const rank)
 {
   std::cout << "Relations of rank ";
   std::cout << rank;
@@ -146,7 +146,7 @@ display_relation(BulkData& bulk_data, Entity entity, stk::mesh::EntityRank const
 inline
 bool
 is_needed_for_stk(
-    BulkData& bulk_data,
+    stk::mesh::BulkData& bulk_data,
     Entity source_entity,
     stk::mesh::EntityRank target_rank,
     stk::mesh::EntityRank const cell_rank)
@@ -239,7 +239,7 @@ entity_label(stk::mesh::EntityRank const rank)
 //
 inline
 std::string
-entity_string(BulkData & bulk_data, Entity entity)
+entity_string(stk::mesh::BulkData & bulk_data, Entity entity)
 {
   std::ostringstream
   oss;

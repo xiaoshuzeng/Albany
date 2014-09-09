@@ -266,7 +266,7 @@ public:
   RCP<Albany::AbstractSTKMeshStruct> &
   getSTKMeshStruct();
 
-  BulkData *
+  stk::mesh::BulkData *
   getBulkData();
 
   stk::mesh::MetaData *

@@ -248,13 +248,13 @@ public:
   ///        specific rank
   ///
   EntityVector
-  getEntitiesByRank(BulkData const & mesh, stk::mesh::EntityRank entity_rank);
+  getEntitiesByRank(stk::mesh::BulkData const & mesh, stk::mesh::EntityRank entity_rank);
 
   ///
   /// \brief Number of entities of a specific rank
   ///
   EntityVectorIndex
-  getNumberEntitiesByRank(BulkData const & bulk_date, stk::mesh::EntityRank entity_rank);
+  getNumberEntitiesByRank(stk::mesh::BulkData const & bulk_date, stk::mesh::EntityRank entity_rank);
 
   ///
   /// \brief Gets the local relation id (0,1,2,...) between two entities
@@ -575,7 +575,7 @@ public:
   getSTKDiscretization()
   {return static_cast<Albany::STKDiscretization*>(discretization_.get());}
 
-  BulkData *
+  stk::mesh::BulkData *
   getBulkData()
   {return stk_mesh_struct_->bulkData;}
 

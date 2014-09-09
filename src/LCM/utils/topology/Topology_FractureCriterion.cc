@@ -35,7 +35,7 @@ beta_(beta)
 
 bool
 FractureCriterionTraction::check(
-    BulkData & bulk_data,
+    stk::mesh::BulkData & bulk_data,
     Entity interface)
 {
   // Check the adjacent bulk elements. Proceed only
