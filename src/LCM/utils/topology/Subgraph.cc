@@ -29,9 +29,13 @@ Subgraph::Subgraph(
     EntityKey
     global_vertex = *vertex_iterator;
 
+    // get entity
+    Entity
+    vertex_entity = getBulkData()->get_entity(global_vertex);
+
     // get entity rank
     EntityRank
-    vertex_rank = getBulkData()->entity_rank(getBulkData()->get_entity(global_vertex));
+    vertex_rank = getBulkData()->entity_rank(vertex_entity);
 
     // create new local vertex
     Vertex
@@ -604,11 +608,17 @@ Subgraph::updateElementNodeConnectivity(Entity point, ElementNodeMap & map)
     element = i->first;
 
     // Identify relation id and remove
-    Entity const* relations = getBulkData()->begin_nodes(element);
-    stk::mesh::ConnectivityOrdinal const* ords = getBulkData()->begin_node_ordinals(element);
-    size_t const num_relations = getBulkData()->num_nodes(element);
+    Entity const *
+    relations = getBulkData()->begin_nodes(element);
 
-    EdgeId edge_id;
+    stk::mesh::ConnectivityOrdinal const *
+    ords = getBulkData()->begin_node_ordinals(element);
+
+    size_t const
+    num_relations = getBulkData()->num_nodes(element);
+
+    EdgeId
+    edge_id;
 
     bool
     found = false;
@@ -811,15 +821,25 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
   // out edges of the new vertex. If the edge does not exist, add.
   assert(getMetaData()->spatial_dimension() == 3);
 
-  EntityRank const one_down = (EntityRank)(getBulkData()->entity_rank(old_entity) - 1);
+  EntityRank const
+  one_down = (EntityRank)(getBulkData()->entity_rank(old_entity) - 1);
 
-  Entity const* old_relations = getBulkData()->begin(old_entity, one_down);
-  size_t const num_old_relations = getBulkData()->num_connectivity(old_entity, one_down);
-  stk::mesh::ConnectivityOrdinal const* old_relation_ords = getBulkData()->begin_ordinals(old_entity, one_down);
+  Entity const *
+  old_relations = getBulkData()->begin(old_entity, one_down);
+
+  size_t const
+  num_old_relations = getBulkData()->num_connectivity(old_entity, one_down);
+
+  stk::mesh::ConnectivityOrdinal const *
+  old_relation_ords = getBulkData()->begin_ordinals(old_entity, one_down);
 
   for (size_t i = 0; i < num_old_relations; ++i) {
-    Entity const* new_relations = getBulkData()->begin(new_entity, one_down);
-    size_t const num_new_relations = getBulkData()->num_connectivity(new_entity, one_down);
+
+    Entity const *
+    new_relations = getBulkData()->begin(new_entity, one_down);
+
+    size_t const
+    num_new_relations = getBulkData()->num_connectivity(new_entity, one_down);
 
     // assume the edge doesn't exist
     bool
@@ -903,7 +923,10 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
     FractureState const
     fracture_state = getFractureState(entity);
 
-    gviz_out << dot_entity(getBulkData()->identifier(entity), rank, fracture_state);
+    EntityId const
+    entity_id = getBulkData()->identifier(entity);
+
+    gviz_out << dot_entity(entity_id, rank, fracture_state);
 
     // write the edges in the subgraph
     OutEdgeIterator
