@@ -43,7 +43,6 @@
 #include "Albany_STKDiscretization.hpp"
 #include "Albany_Utils.hpp"
 
-using stk::mesh::Entity;
 using stk::mesh::Field;
 using stk::mesh::MetaData;
 using stk::mesh::PairIterRelation;
@@ -99,9 +98,9 @@ typedef Albany::AbstractSTKFieldContainer::TensorFieldType
     TensorFieldType;
 
 // Specific to topological manipulation
-typedef std::pair<Entity, Entity> EntityPair;
+typedef std::pair<stk::mesh::Entity, stk::mesh::Entity> EntityPair;
 typedef std::map<Vertex, size_t> ComponentMap;
-typedef std::map<Entity, Entity> ElementNodeMap;
+typedef std::map<stk::mesh::Entity, stk::mesh::Entity> ElementNodeMap;
 
 enum FractureState {CLOSED = 0, OPEN = 1};
 enum VTKCellType {INVALID = 0, VERTEX = 1, LINE = 2, TRIANGLE = 5, QUAD = 9};

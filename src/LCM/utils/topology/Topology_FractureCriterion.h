@@ -49,7 +49,7 @@ public:
 
   virtual
   bool
-  check(stk::mesh::BulkData & mesh, Entity interface) = 0;
+  check(stk::mesh::BulkData & mesh, stk::mesh::Entity interface) = 0;
 
   virtual
   ~AbstractFractureCriterion() {}
@@ -140,7 +140,7 @@ public:
   probability_(probability) {}
 
   bool
-  check(stk::mesh::BulkData & bulk_data, Entity interface)
+  check(stk::mesh::BulkData & bulk_data, stk::mesh::Entity interface)
   {
     stk::mesh::EntityRank const rank = bulk_data.entity_rank(interface);
 
@@ -181,7 +181,7 @@ public:
   open_(true) {}
 
   bool
-  check(stk::mesh::BulkData& mesh, Entity interface)
+  check(stk::mesh::BulkData& mesh, stk::mesh::Entity interface)
   {
     stk::mesh::EntityRank const rank = mesh.entity_rank(interface);
 
@@ -229,7 +229,7 @@ public:
       double const beta);
 
   bool
-  check(stk::mesh::BulkData & bulk_data, Entity interface);
+  check(stk::mesh::BulkData & bulk_data, stk::mesh::Entity interface);
 
 private:
 

@@ -128,7 +128,7 @@ Topology(RCP<Albany::AbstractDiscretization> & discretization) :
 // Check fracture criterion
 //
 bool
-Topology::checkOpen(Entity e)
+Topology::checkOpen(stk::mesh::Entity e)
 {
   return fracture_criterion_->check(*getBulkData(), e);
 }
@@ -155,7 +155,7 @@ Topology::initializeFractureState()
 
     for (EntityVectorIndex i = 0; i < entities.size(); ++i) {
 
-      Entity
+      stk::mesh::Entity
       entity = entities[i];
 
       setFractureState(entity, CLOSED);
@@ -192,7 +192,7 @@ Topology::createDiscretization()
 
   stk::mesh::get_selected_entities(local_selector, buckets, cells);
 
-  Entity
+  stk::mesh::Entity
   first_cell = cells[0];
 
   setCellTopology(
@@ -235,7 +235,7 @@ void Topology::removeNodeRelations()
   getBulkData()->modification_begin();
 
   for (size_t i = 0; i < elements.size(); ++i) {
-    Entity const* relations = getBulkData()->begin_nodes(elements[i]);
+    stk::mesh::Entity const* relations = getBulkData()->begin_nodes(elements[i]);
     size_t const num_relations = getBulkData()->num_nodes(elements[i]);
 
     stk::mesh::EntityVector
@@ -274,7 +274,7 @@ void Topology::removeMultiLevelRelations()
 
     for (RelationVectorIndex i = 0; i < entities.size(); ++i) {
 
-      Entity
+      stk::mesh::Entity
       entity = entities[i];
 
       stk::mesh::EntityVector
@@ -287,7 +287,7 @@ void Topology::removeMultiLevelRelations()
           target_rank < getMetaData()->entity_rank_count();
           ++target_rank) {
 
-        Entity const *
+        stk::mesh::Entity const *
         relations = getBulkData()->begin(entity, target_rank);
 
         size_t const
@@ -320,7 +320,7 @@ void Topology::removeMultiLevelRelations()
       // Delete them
       for (EdgeIdListIndex i = 0; i < multilevel_relation_ids.size(); ++i) {
 
-        Entity
+        stk::mesh::Entity
         far_entity = far_entities[i];
 
         EdgeId const
@@ -354,14 +354,14 @@ void Topology::restoreElementToNodeConnectivity()
 
   // Add relations from element to nodes
   for (size_t i = 0; i < elements.size(); ++i) {
-    Entity
+    stk::mesh::Entity
     element = elements[i];
 
     stk::mesh::EntityVector
     element_connectivity = connectivity_[i];
 
     for (size_t j = 0; j < element_connectivity.size(); ++j) {
-      Entity
+      stk::mesh::Entity
       node = element_connectivity[j];
 
       getBulkData()->declare_relation(element, node, j);
@@ -387,7 +387,7 @@ void Topology::restoreElementToNodeConnectivity()
 // Determine nodes associated with a boundary entity
 //
 stk::mesh::EntityVector
-Topology::getBoundaryEntityNodes(Entity boundary_entity)
+Topology::getBoundaryEntityNodes(stk::mesh::Entity boundary_entity)
 {
   stk::mesh::EntityRank const
   boundary_rank = getBulkData()->entity_rank(boundary_entity);
@@ -397,11 +397,11 @@ Topology::getBoundaryEntityNodes(Entity boundary_entity)
   stk::mesh::EntityVector
   nodes;
 
-  Entity const* relations = getBulkData()->begin_elements(boundary_entity);
+  stk::mesh::Entity const* relations = getBulkData()->begin_elements(boundary_entity);
   stk::mesh::ConnectivityOrdinal const *
   ords = getBulkData()->begin_element_ordinals(boundary_entity);
 
-  Entity
+  stk::mesh::Entity
   first_cell = relations[0];
 
   EdgeId const
@@ -416,7 +416,7 @@ Topology::getBoundaryEntityNodes(Entity boundary_entity)
     cell_order = getCellTopology().getNodeMap(boundary_rank, face_order, i);
 
     // Brute force approach. Maybe there is a better way to do this?
-    Entity const *
+    stk::mesh::Entity const *
     node_relations = getBulkData()->begin_nodes(first_cell);
 
     size_t const
@@ -469,7 +469,7 @@ Topology::getNodalCoordinates()
 
   for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
 
-    Entity
+    stk::mesh::Entity
     node = entities[i];
 
     double const * const
@@ -629,7 +629,7 @@ Topology::getBoundary()
 
   for (EntityVectorIndex i = 0; i < number_entities; ++i) {
 
-    Entity
+    stk::mesh::Entity
     entity = entities[i];
 
     size_t const
@@ -680,8 +680,8 @@ Topology::getBoundary()
 //
 stk::mesh::EntityVector
 Topology::createSurfaceElementConnectivity(
-    Entity face_top,
-    Entity face_bottom)
+    stk::mesh::Entity face_top,
+    stk::mesh::Entity face_bottom)
 {
   stk::mesh::EntityVector
   top = getBoundaryEntityNodes(face_top);
@@ -706,7 +706,7 @@ Topology::createSurfaceElementConnectivity(
 //
 void
 Topology::createStar(
-    Entity entity,
+    stk::mesh::Entity entity,
     std::set<stk::mesh::EntityKey> & subgraph_entities,
     std::set<stkEdge, EdgeLessThan> & subgraph_edges)
 {
@@ -717,7 +717,7 @@ Topology::createStar(
   stk::mesh::EntityRank const
   one_up = static_cast<stk::mesh::EntityRank>(getBulkData()->entity_rank(entity) + 1);
 
-  Entity const *
+  stk::mesh::Entity const *
   relations = getBulkData()->begin(entity, one_up);
 
   size_t const
@@ -728,7 +728,7 @@ Topology::createStar(
 
   for (size_t i = 0; i < num_relations; ++i) {
 
-    Entity
+    stk::mesh::Entity
     source = relations[i];
 
     if (isInterfaceCell(source) == true) continue;
@@ -779,7 +779,7 @@ Topology::splitOpenFaces()
   // Collect open points
   for (stk::mesh::EntityVector::iterator i = points.begin();i != points.end(); ++i) {
 
-    Entity
+    stk::mesh::Entity
     point = *i;
 
     if (getFractureState(point) == OPEN) {
@@ -793,10 +793,10 @@ Topology::splitOpenFaces()
   for (stk::mesh::EntityVector::iterator i = open_points.begin();
       i != open_points.end(); ++i) {
 
-    Entity
+    stk::mesh::Entity
     point = *i;
 
-    Entity const* relations = getBulkData()->begin_edges(point);
+    stk::mesh::Entity const* relations = getBulkData()->begin_edges(point);
     size_t const num_relations = getBulkData()->num_edges(point);
 
     stk::mesh::EntityVector
@@ -805,7 +805,7 @@ Topology::splitOpenFaces()
     // Collect open segments.
     for (size_t j = 0; j < num_relations; ++j) {
 
-      Entity
+      stk::mesh::Entity
       segment = relations[j];
 
       bool const
@@ -831,7 +831,7 @@ Topology::splitOpenFaces()
     for (stk::mesh::EntityVector::iterator j = open_segments.begin();
         j != open_segments.end(); ++j) {
 
-      Entity
+      stk::mesh::Entity
       segment = *j;
 
       // Create star of segment
@@ -870,7 +870,7 @@ Topology::splitOpenFaces()
 #endif // DEBUG_LCM_TOPOLOGY
 
       // Collect open faces
-      Entity const *
+      stk::mesh::Entity const *
       face_relations = getBulkData()->begin_faces(segment);
 
       size_t const
@@ -881,7 +881,7 @@ Topology::splitOpenFaces()
 
       for (size_t k = 0; k < num_face_relations; ++k) {
 
-        Entity
+        stk::mesh::Entity
         face = face_relations[k];
 
         bool const
@@ -897,7 +897,7 @@ Topology::splitOpenFaces()
       for (stk::mesh::EntityVector::iterator k = open_faces.begin();
           k != open_faces.end(); ++k) {
 
-        Entity
+        stk::mesh::Entity
         face = *k;
 
         Vertex
@@ -909,7 +909,7 @@ Topology::splitOpenFaces()
         stk::mesh::EntityKey
         new_face_key = subgraph.localToGlobal(new_face_vertex);
 
-        Entity
+        stk::mesh::Entity
         new_face = bulk_data.get_entity(new_face_key);
 
         // Reset fracture state for both old and new faces
@@ -1016,7 +1016,7 @@ Topology::splitOpenFaces()
     for (ElementNodeMap::iterator j = new_connectivity.begin();
         j != new_connectivity.end(); ++j) {
 
-      Entity
+      stk::mesh::Entity
       new_point = j->second;
 
       bulk_data.copy_entity_fields(point, new_point);
@@ -1047,14 +1047,14 @@ Topology::splitOpenFaces()
   for (std::set<EntityPair>::iterator i =
       fractured_faces.begin(); i != fractured_faces.end(); ++i) {
 
-    Entity face1 = i->first;
-    Entity face2 = i->second;
+    stk::mesh::Entity face1 = i->first;
+    stk::mesh::Entity face2 = i->second;
 
     stk::mesh::EntityVector
     interface_points = createSurfaceElementConnectivity(face1, face2);
 
     // Insert the surface element
-    Entity
+    stk::mesh::Entity
     new_surface = bulk_data.declare_entity(
         interface_rank,
         new_id,
@@ -1066,7 +1066,7 @@ Topology::splitOpenFaces()
 
     // Connect to points
     for (EntityVectorIndex j = 0; j < interface_points.size(); ++j) {
-      Entity point = points[j];
+      stk::mesh::Entity point = points[j];
 
       bulk_data.declare_relation(new_surface, point, j);
     }
@@ -1101,7 +1101,7 @@ Topology::setEntitiesOpen()
   // Iterate over the boundary entities
   for (EntityVectorIndex i = 0; i < boundary_entities.size(); ++i) {
 
-    Entity
+    stk::mesh::Entity
     entity = boundary_entities[i];
 
     if (isInternal(entity) == false) continue;
@@ -1124,26 +1124,26 @@ Topology::setEntitiesOpen()
 
     case ELEMENT_RANK:
       {
-        Entity const *
+        stk::mesh::Entity const *
         segments = getBulkData()->begin_edges(entity);
 
         size_t const
         num_segments = getBulkData()->num_edges(entity);
 
         for (size_t j = 0; j < num_segments; ++j) {
-          Entity
+          stk::mesh::Entity
           segment = segments[j];
 
           setFractureState(segment, OPEN);
 
-          Entity const *
+          stk::mesh::Entity const *
           points = getBulkData()->begin_nodes(segment);
 
           size_t const
           num_points = getBulkData()->num_nodes(segment);
 
           for (size_t k = 0; k < num_points; ++k) {
-            Entity
+            stk::mesh::Entity
             point = points[k];
 
             setFractureState(point, OPEN);
@@ -1154,14 +1154,14 @@ Topology::setEntitiesOpen()
 
     case EDGE_RANK:
       {
-        Entity const *
+        stk::mesh::Entity const *
         points = getBulkData()->begin_nodes(entity);
 
         size_t const
         num_points = getBulkData()->num_nodes(entity);
 
         for (size_t j = 0; j < num_points; ++j) {
-          Entity
+          stk::mesh::Entity
           point = points[j];
 
           setFractureState(point, OPEN);
@@ -1221,7 +1221,7 @@ Topology::outputToGraphviz(
 
     for (EntityVectorIndex i = 0; i < entities.size(); ++i) {
 
-      Entity
+      stk::mesh::Entity
       source_entity = entities[i];
 
       FractureState const
@@ -1241,7 +1241,7 @@ Topology::outputToGraphviz(
             getBulkData()->count_valid_connectivity(source_entity, target_rank);
 
         if (num_valid_conn > 0) {
-          Entity const *
+          stk::mesh::Entity const *
           relations = getBulkData()->begin(source_entity, target_rank);
 
           size_t const
@@ -1253,7 +1253,7 @@ Topology::outputToGraphviz(
 
           for (size_t j = 0; j < num_relations; ++j) {
 
-            Entity
+            stk::mesh::Entity
             target_entity = relations[j];
 
             bool
@@ -1311,10 +1311,10 @@ Topology::outputToGraphviz(
     EntityPair
     entity_pair = relation_list[i];
 
-    Entity
+    stk::mesh::Entity
     source = entity_pair.first;
 
-    Entity
+    stk::mesh::Entity
     target = entity_pair.second;
 
     gviz_out << dot_relation(

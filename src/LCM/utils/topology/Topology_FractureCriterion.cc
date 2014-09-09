@@ -36,11 +36,11 @@ beta_(beta)
 bool
 FractureCriterionTraction::check(
     stk::mesh::BulkData & bulk_data,
-    Entity interface)
+    stk::mesh::Entity interface)
 {
   // Check the adjacent bulk elements. Proceed only
   // if both elements belong to the bulk part.
-  Entity const *
+  stk::mesh::Entity const *
   relations_up = bulk_data.begin(
       interface,
       (stk::mesh::EntityRank)(bulk_data.entity_rank(interface) + 1)
@@ -51,10 +51,10 @@ FractureCriterionTraction::check(
           (stk::mesh::EntityRank)(bulk_data.entity_rank(interface) + 1)
          ) == 2);
 
-  Entity
+  stk::mesh::Entity
   element_0 = relations_up[0];
 
-  Entity
+  stk::mesh::Entity
   element_1 = relations_up[1];
 
   stk::mesh::Bucket const &
@@ -88,7 +88,7 @@ FractureCriterionTraction::check(
   // average yields the value.
   for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
 
-    Entity
+    stk::mesh::Entity
     node = nodes[i];
 
     double * const
@@ -179,7 +179,7 @@ FractureCriterionTraction::computeNormals()
 
   for (EntityVectorIndex i = 0; i < number_normals; ++i) {
 
-    Entity
+    stk::mesh::Entity
     face = faces[i];
 
     stk::mesh::EntityVector

@@ -122,8 +122,8 @@ int main (int ac, char* av[]){
 			std::vector<std::vector<double> > pointsOnPlane = topology.getCoordinatesOfTriangle(normalToPlane);
 
 
-			//Finds the Node (Entity of rank 0) that is closest to each of the points on the plane
-			std::vector<Entity> closestNodes = topology.getClosestNodesOnSurface(pointsOnPlane);
+			//Finds the Node (stk::mesh::Entity of rank 0) that is closest to each of the points on the plane
+			std::vector<stk::mesh::Entity> closestNodes = topology.getClosestNodesOnSurface(pointsOnPlane);
 
 			//Finds the identifiers of the nodes (entity rank 0) along the shortest
 			//path connecting the three points

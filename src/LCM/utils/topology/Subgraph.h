@@ -183,7 +183,7 @@ public:
   /// boundary entity may be a valid candidate in another step. If only 1
   /// in edge: Return.
   ///
-  /// Entity must have satisfied the fracture criterion and be labeled open
+  /// stk::mesh::Entity must have satisfied the fracture criterion and be labeled open
   /// in map is_open. If not open: Return.
   ///
   Vertex
@@ -195,7 +195,7 @@ public:
   /// was replaced by a new point.
   ///
   void
-  updateElementNodeConnectivity(Entity point, ElementNodeMap & map);
+  updateElementNodeConnectivity(stk::mesh::Entity point, ElementNodeMap & map);
 
   ///
   /// \brief Splits an articulation point.
@@ -217,7 +217,7 @@ public:
   /// the new node. If the nodal connectivity of an element does not
   /// change, do not add to the map.
   ///
-  std::map<Entity, Entity>
+  std::map<stk::mesh::Entity, stk::mesh::Entity>
   splitArticulationPoint(Vertex vertex);
 
   ///
@@ -280,19 +280,19 @@ public:
   getFractureState(stk::mesh::EntityRank rank);
 
   void
-  setFractureState(Entity e, FractureState const fs);
+  setFractureState(stk::mesh::Entity e, FractureState const fs);
 
   FractureState
-  getFractureState(Entity e);
+  getFractureState(stk::mesh::Entity e);
 
   bool
-  isOpen(Entity e);
+  isOpen(stk::mesh::Entity e);
 
   bool
-  isInternalAndOpen(Entity e);
+  isInternalAndOpen(stk::mesh::Entity e);
 
   bool
-  isInternal(Entity e) {
+  isInternal(stk::mesh::Entity e) {
 
     assert(getBulkData()->entity_rank(e) == getBoundaryRank());
 

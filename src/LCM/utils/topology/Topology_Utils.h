@@ -38,7 +38,7 @@ display_connectivity(stk::mesh::BulkData & bulk_data, stk::mesh::EntityRank cell
 
   for (size_type i = 0; i < number_of_elements; ++i) {
 
-    Entity const* relations = bulk_data.begin_nodes(elements[i]);
+    stk::mesh::Entity const* relations = bulk_data.begin_nodes(elements[i]);
 
     stk::mesh::EntityId const
     element_id = bulk_data.identifier(elements[i]);
@@ -50,7 +50,7 @@ display_connectivity(stk::mesh::BulkData & bulk_data, stk::mesh::EntityRank cell
 
     for (size_t j = 0; j < nodes_per_element; ++j) {
 
-      Entity
+      stk::mesh::Entity
       node = relations[j];
 
       stk::mesh::EntityId const
@@ -73,7 +73,7 @@ display_connectivity(stk::mesh::BulkData & bulk_data, stk::mesh::EntityRank cell
 ///
 inline
 void
-display_relation(stk::mesh::BulkData& bulk_data, Entity entity)
+display_relation(stk::mesh::BulkData& bulk_data, stk::mesh::Entity entity)
 {
   std::cout << "Relations for entity (identifier,rank): ";
   std::cout << bulk_data.identifier(entity) << ",";
@@ -82,7 +82,7 @@ display_relation(stk::mesh::BulkData& bulk_data, Entity entity)
 
   for (stk::topology::rank_t rank = NODE_RANK; rank <= ELEMENT_RANK; ++rank) {
 
-    Entity const *
+    stk::mesh::Entity const *
     relations = bulk_data.begin(entity, rank);
 
     stk::mesh::ConnectivityOrdinal const *
@@ -109,7 +109,7 @@ display_relation(stk::mesh::BulkData& bulk_data, Entity entity)
 ///
 inline
 void
-display_relation(stk::mesh::BulkData& bulk_data, Entity entity, stk::mesh::EntityRank const rank)
+display_relation(stk::mesh::BulkData& bulk_data, stk::mesh::Entity entity, stk::mesh::EntityRank const rank)
 {
   std::cout << "Relations of rank ";
   std::cout << rank;
@@ -118,7 +118,7 @@ display_relation(stk::mesh::BulkData& bulk_data, Entity entity, stk::mesh::Entit
   std::cout << bulk_data.entity_rank(entity);
   std::cout << '\n';
 
-  Entity const*
+  stk::mesh::Entity const*
   relations = bulk_data.begin(entity, rank);
 
   size_t
@@ -147,7 +147,7 @@ inline
 bool
 is_needed_for_stk(
     stk::mesh::BulkData& bulk_data,
-    Entity source_entity,
+    stk::mesh::Entity source_entity,
     stk::mesh::EntityRank target_rank,
     stk::mesh::EntityRank const cell_rank)
 {
@@ -202,7 +202,7 @@ entity_label(stk::mesh::EntityRank const rank)
   default:
     std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
     std::cerr << '\n';
-    std::cerr << "Entity rank is invalid: " << rank;
+    std::cerr << "stk::mesh::Entity rank is invalid: " << rank;
     std::cerr << '\n';
     exit(1);
     break;
@@ -239,7 +239,7 @@ entity_label(stk::mesh::EntityRank const rank)
 //
 inline
 std::string
-entity_string(stk::mesh::BulkData & bulk_data, Entity entity)
+entity_string(stk::mesh::BulkData & bulk_data, stk::mesh::Entity entity)
 {
   std::ostringstream
   oss;
@@ -275,7 +275,7 @@ entity_color(stk::mesh::EntityRank const rank, FractureState const fracture_stat
     default:
       std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
       std::cerr << '\n';
-      std::cerr << "Entity rank is invalid: " << rank;
+      std::cerr << "stk::mesh::Entity rank is invalid: " << rank;
       std::cerr << '\n';
       exit(1);
       break;
@@ -310,7 +310,7 @@ entity_color(stk::mesh::EntityRank const rank, FractureState const fracture_stat
     default:
       std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
       std::cerr << '\n';
-      std::cerr << "Entity rank is invalid: " << rank;
+      std::cerr << "stk::mesh::Entity rank is invalid: " << rank;
       std::cerr << '\n';
       exit(1);
       break;
