@@ -44,7 +44,6 @@
 #include "Albany_Utils.hpp"
 
 using stk::mesh::Field;
-using stk::mesh::MetaData;
 using stk::mesh::Relation;
 using stk::mesh::Selector;
 

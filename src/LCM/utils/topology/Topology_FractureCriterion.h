@@ -72,7 +72,7 @@ public:
   stk::mesh::BulkData const &
   getBulkData() {return bulk_data_;}
 
-  MetaData const &
+  stk::mesh::MetaData const &
   getMetaData() {return meta_data_;}
 
   Intrepid::Index
@@ -104,7 +104,7 @@ protected:
   stk::mesh::BulkData const &
   bulk_data_;
 
-  MetaData const &
+  stk::mesh::MetaData const &
   meta_data_;
 
   Intrepid::Index
