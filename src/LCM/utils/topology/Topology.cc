@@ -1140,7 +1140,7 @@ Topology::setEntitiesOpen()
           points = getBulkData()->begin_nodes(segment);
 
           size_t const
-          num_points = getBulkData()->num_edges(segment);
+          num_points = getBulkData()->num_nodes(segment);
 
           for (size_t k = 0; k < num_points; ++k) {
             Entity
@@ -1158,7 +1158,7 @@ Topology::setEntitiesOpen()
         points = getBulkData()->begin_nodes(entity);
 
         size_t const
-        num_points = getBulkData()->num_edges(entity);
+        num_points = getBulkData()->num_nodes(entity);
 
         for (size_t j = 0; j < num_points; ++j) {
           Entity
