@@ -45,7 +45,6 @@
 
 using stk::mesh::Field;
 using stk::mesh::Relation;
-using stk::mesh::Selector;
 
 using Teuchos::RCP;
 

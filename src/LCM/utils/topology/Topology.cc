@@ -140,7 +140,7 @@ Topology::checkOpen(stk::mesh::Entity e)
 void
 Topology::initializeFractureState()
 {
-  Selector
+  stk::mesh::Selector
   local_part = getLocalPart();
 
   for (stk::mesh::EntityRank rank = NODE_RANK; rank < ELEMENT_RANK; ++rank) {
@@ -181,7 +181,7 @@ Topology::createDiscretization()
 
   // Get the topology of the elements. NOTE: Assumes one element
   // type in mesh.
-  Selector
+  stk::mesh::Selector
   local_selector = getLocalPart();
 
   std::vector<stk::mesh::Bucket*> const &
@@ -441,7 +441,7 @@ Topology::getBoundaryEntityNodes(stk::mesh::Entity boundary_entity)
 std::vector<Intrepid::Vector<double> >
 Topology::getNodalCoordinates()
 {
-  Selector
+  stk::mesh::Selector
   local_selector = getMetaData()->locally_owned_part();
 
   std::vector<stk::mesh::Bucket*> const &
@@ -610,7 +610,7 @@ Topology::getBoundary()
   stk::mesh::EntityRank const
   boundary_entity_rank = getBoundaryRank();
 
-  Selector
+  stk::mesh::Selector
   local_part = getLocalPart();
 
   std::vector<stk::mesh::Bucket*> const &
@@ -762,7 +762,7 @@ Topology::splitOpenFaces()
   stk::mesh::EntityVector
   open_points;
 
-  Selector
+  stk::mesh::Selector
   local_bulk = getLocalBulkSelector();
 
   std::set<EntityPair>
@@ -1087,7 +1087,7 @@ Topology::setEntitiesOpen()
   stk::mesh::EntityVector
   boundary_entities;
 
-  Selector
+  stk::mesh::Selector
   local_bulk = getLocalBulkSelector();
 
   stk::mesh::get_selected_entities(

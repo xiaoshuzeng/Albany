@@ -622,13 +622,13 @@ public:
   getLocalPart()
   {return getMetaData()->locally_owned_part();}
 
-  Selector
+  stk::mesh::Selector
   getLocalBulkSelector()
-  {return Selector(getLocalPart() & getFractureBulkPart());}
+  {return stk::mesh::Selector(getLocalPart() & getFractureBulkPart());}
 
-  Selector
+  stk::mesh::Selector
   getLocalInterfaceSelector()
-  {return Selector(getLocalPart() & getFractureInterfacePart());}
+  {return stk::mesh::Selector(getLocalPart() & getFractureInterfacePart());}
 
   bool
   isLocalEntity(stk::mesh::Entity e)

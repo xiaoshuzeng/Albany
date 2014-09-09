@@ -134,7 +134,7 @@ FractureCriterionTraction::check(
 void
 FractureCriterionTraction::computeNormals()
 {
-  Selector
+  stk::mesh::Selector
   local_selector = getMetaData().locally_owned_part();
 
   std::vector<stk::mesh::Bucket*> const &
