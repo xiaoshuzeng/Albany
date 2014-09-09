@@ -7,7 +7,9 @@
 #include "ATO_Optimizer.hpp"
 #include "Teuchos_TestForException.hpp"
 #include "ATO_Solver.hpp"
+#ifdef ATO_USES_NLOPT
 #include <nlopt.h>
+#endif //ATO_USES_NLOPT
 #include <algorithm>
 
 namespace ATO {
@@ -20,13 +22,20 @@ OptimizerFactory::create(const Teuchos::ParameterList& optimizerParams)
 {
   std::string optPackage = optimizerParams.get<std::string>("Package");
   if( optPackage == "OC"  )  return Teuchos::rcp(new Optimizer_OC(optimizerParams));
+#ifdef ATO_USES_NLOPT
   else
   if( optPackage == "NLopt"  )  return Teuchos::rcp(new Optimizer_NLopt(optimizerParams));
+#endif //ATO_USES_NLOPT
   else
     TEUCHOS_TEST_FOR_EXCEPTION(
       true, Teuchos::Exceptions::InvalidParameter, std::endl 
       << "Error!  Optimization package: " << optPackage << " Unknown!" << std::endl 
-      << "Valid options are (OC, NLopt)" << std::endl);
+      << "Valid options are\n"
+      << "/t OC ... optimiality criterion\n"
+#ifdef ATO_USES_NLOPT
+      << "/t NLopt ... NLOPT library\n" 
+#endif //ATO_USES_NLOPT
+      << std::endl);
 }
 
 /**********************************************************************/
@@ -57,6 +66,7 @@ Optimizer(optimizerParams)
   _stabExponent  = optimizerParams.get<double>("Stabilization Parameter");
 }
 
+#ifdef ATO_USES_NLOPT
 /**********************************************************************/
 Optimizer_NLopt::Optimizer_NLopt(const Teuchos::ParameterList& optimizerParams) :
 Optimizer(optimizerParams)
@@ -72,6 +82,7 @@ Optimizer(optimizerParams)
   _optMethod     = optimizerParams.get<std::string>("Method");
   _volConvTol = optimizerParams.get<double>("Volume Enforcement Convergence Tolerance");
 }
+#endif //ATO_USES_NLOPT
 
 /**********************************************************************/
 void
@@ -93,6 +104,7 @@ Optimizer_OC::~Optimizer_OC()
   if( dfdp   ) delete [] dfdp;
 }
 
+#ifdef ATO_USES_NLOPT
 /******************************************************************************/
 Optimizer_NLopt::~Optimizer_NLopt()
 /******************************************************************************/
@@ -100,6 +112,7 @@ Optimizer_NLopt::~Optimizer_NLopt()
   if( p      ) delete [] p;
   if( p_last ) delete [] p_last;
 }
+#endif //ATO_USES_NLOPT
 
 
 /******************************************************************************/
@@ -218,6 +231,7 @@ Optimizer_OC::computeUpdatedTopology()
   } while ( fabs(vol - _volConstraint*_optVolume) > _volConvTol );
 }
 
+#ifdef ATO_USES_NLOPT
 /******************************************************************************/
 void
 Optimizer_NLopt::Initialize()
@@ -359,6 +373,7 @@ Optimizer_NLopt::constraint( unsigned int n, const double* x,
   Optimizer_NLopt* NLopt = reinterpret_cast<Optimizer_NLopt*>(data);
   return NLopt->constraint_backend(n, x, grad);
 }
+#endif //ATO_USES_NLOPT
 
 
 }

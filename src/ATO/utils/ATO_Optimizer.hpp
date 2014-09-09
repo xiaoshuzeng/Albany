@@ -14,7 +14,9 @@
 
 #include "Teuchos_ParameterList.hpp"
 
+#ifdef ATO_USES_NLOPT
 #include "nlopt.h"
+#endif //ATO_USES_NLOPT
 
 namespace ATO {
 
@@ -74,6 +76,7 @@ class Optimizer_OC : public Optimizer {
 
 };
 
+#ifdef ATO_USES_NLOPT
 class Optimizer_NLopt : public Optimizer {
  public:
   Optimizer_NLopt(const Teuchos::ParameterList& optimizerParams);
@@ -103,6 +106,7 @@ class Optimizer_NLopt : public Optimizer {
   double constraint_backend( unsigned int n, const double* x, double* grad );
   static double constraint( unsigned int n, const double* x, double* grad, void* data);
 };
+#endif //ATO_USES_NLOPT
 
 
 class OptimizerFactory {

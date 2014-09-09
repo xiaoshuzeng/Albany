@@ -113,6 +113,7 @@ namespace ATO {
     void copyTopologyIntoStateMgr(const double* p, Albany::StateManager& stateMgr );
     void copyObjectiveFromStateMgr( double& f, double* dfdp );
     void zeroSet();
+    void buildFilterOperator(const Teuchos::RCP<Albany::Application> app) const;
     Teuchos::RCP<const Teuchos::ParameterList> getValidProblemParameters() const;
     Teuchos::RCP<Teuchos::ParameterList> 
       createInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appParams, int physIndex) const;
