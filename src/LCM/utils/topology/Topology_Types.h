@@ -48,7 +48,6 @@ using stk::mesh::BulkData;
 using stk::mesh::Entity;
 using stk::mesh::EntityId;
 using stk::mesh::EntityKey;
-using stk::mesh::EntityRank;
 using stk::mesh::EntityVector;
 using stk::mesh::Field;
 using stk::mesh::MetaData;
@@ -75,7 +74,7 @@ typedef Connectivity::size_type ConnectivityIndex;
 
 typedef boost::vertex_name_t VertexName;
 typedef boost::edge_name_t EdgeName;
-typedef boost::property<VertexName, EntityRank> VertexProperty;
+typedef boost::property<VertexName, stk::mesh::EntityRank> VertexProperty;
 typedef boost::property<EdgeName, EdgeId> EdgeProperty;
 typedef boost::listS ListS;
 typedef boost::vecS VectorS;
@@ -114,11 +113,11 @@ enum VTKCellType {INVALID = 0, VERTEX = 1, LINE = 2, TRIANGLE = 5, QUAD = 9};
 
 // Ugly re-definitions but better to have everything the we need
 // defined here.
-static EntityRank const INVALID_RANK = stk::topology::INVALID_RANK;
-static EntityRank const NODE_RANK    = stk::topology::NODE_RANK;
-static EntityRank const EDGE_RANK    = stk::topology::EDGE_RANK;
-static EntityRank const FACE_RANK    = stk::topology::FACE_RANK;
-static EntityRank const ELEMENT_RANK = stk::topology::ELEMENT_RANK;
+static stk::mesh::EntityRank const INVALID_RANK = stk::topology::INVALID_RANK;
+static stk::mesh::EntityRank const NODE_RANK    = stk::topology::NODE_RANK;
+static stk::mesh::EntityRank const EDGE_RANK    = stk::topology::EDGE_RANK;
+static stk::mesh::EntityRank const FACE_RANK    = stk::topology::FACE_RANK;
+static stk::mesh::EntityRank const ELEMENT_RANK = stk::topology::ELEMENT_RANK;
 
 ///
 /// \brief Struct to store the data needed for creation or

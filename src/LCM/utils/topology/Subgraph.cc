@@ -34,7 +34,7 @@ Subgraph::Subgraph(
     vertex_entity = getBulkData()->get_entity(global_vertex);
 
     // get entity rank
-    EntityRank
+    stk::mesh::EntityRank
     vertex_rank = getBulkData()->entity_rank(vertex_entity);
 
     // create new local vertex
@@ -130,12 +130,12 @@ stk::mesh::MetaData *
 Subgraph::getMetaData()
 {return getTopology().getMetaData();}
 
-EntityRank const
+stk::mesh::EntityRank const
 Subgraph::getBoundaryRank()
 {return getTopology().getBoundaryRank();}
 
 IntScalarFieldType &
-Subgraph::getFractureState(EntityRank rank)
+Subgraph::getFractureState(stk::mesh::EntityRank rank)
 {return getTopology().getFractureState(rank);}
 
 void
@@ -186,7 +186,7 @@ Subgraph::globalToLocal(EntityKey global_vertex_key)
 // Add a vertex in the subgraph.
 //
 Vertex
-Subgraph::addVertex(EntityRank vertex_rank)
+Subgraph::addVertex(stk::mesh::EntityRank vertex_rank)
 {
   // Insert the vertex into the stk mesh
   // First have to request a new entity of rank N
@@ -357,7 +357,7 @@ Subgraph::removeEdge(
 //
 //
 //
-EntityRank
+stk::mesh::EntityRank
 Subgraph::getVertexRank(Vertex const vertex)
 {
   VertexNamePropertyMap
@@ -537,7 +537,7 @@ Subgraph::testArticulationPoint(
 Vertex
 Subgraph::cloneBoundaryEntity(Vertex vertex)
 {
-  EntityRank
+  stk::mesh::EntityRank
   vertex_rank = getVertexRank(vertex);
 
   assert(vertex_rank == getBoundaryRank());
@@ -648,7 +648,7 @@ Subgraph::updateElementNodeConnectivity(Entity point, ElementNodeMap & map)
 std::map<Entity, Entity>
 Subgraph::splitArticulationPoint(Vertex vertex)
 {
-  EntityRank
+  stk::mesh::EntityRank
   vertex_rank = Subgraph::getVertexRank(vertex);
 
   size_t
@@ -694,7 +694,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
       size_t
       component_number = (*i).second;
 
-      EntityRank
+      stk::mesh::EntityRank
       current_rank = getVertexRank(current_vertex);
 
       if (current_rank != ELEMENT_RANK) continue;
@@ -821,8 +821,8 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
   // out edges of the new vertex. If the edge does not exist, add.
   assert(getMetaData()->spatial_dimension() == 3);
 
-  EntityRank const
-  one_down = (EntityRank)(getBulkData()->entity_rank(old_entity) - 1);
+  stk::mesh::EntityRank const
+  one_down = (stk::mesh::EntityRank)(getBulkData()->entity_rank(old_entity) - 1);
 
   Entity const *
   old_relations = getBulkData()->begin(old_entity, one_down);
@@ -917,7 +917,7 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
     Entity
     entity = getBulkData()->get_entity(key);
 
-    EntityRank const
+    stk::mesh::EntityRank const
     rank = getBulkData()->entity_rank(entity);
 
     FractureState const

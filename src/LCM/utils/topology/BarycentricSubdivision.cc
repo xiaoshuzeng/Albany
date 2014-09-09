@@ -33,7 +33,7 @@ Topology::setHighestIds()
 
   highest_ids_.resize(number_dimensions);
 
-  for (EntityRank rank = NODE_RANK; rank < number_dimensions; ++rank) {
+  for (stk::mesh::EntityRank rank = NODE_RANK; rank < number_dimensions; ++rank) {
     highest_ids_[rank] = getNumberEntitiesByRank(*getBulkData(), rank);
   }
 
@@ -45,7 +45,7 @@ Topology::setHighestIds()
 // \brief Adds a new entity of rank 3 to the mesh
 //
 void
-Topology::addElement(EntityRank entity_rank)
+Topology::addElement(stk::mesh::EntityRank entity_rank)
 {
   stk::mesh::PartVector part_vector(1);
   part_vector[0] = stk_mesh_struct_->partVec[0];
@@ -117,7 +117,7 @@ Topology::removeRelation(Entity source_entity, Entity target_entity,
 //
 std::vector<Entity>
 Topology::getEntitiesByRank(const stk::mesh::BulkData & mesh,
-    EntityRank entity_rank)
+    stk::mesh::EntityRank entity_rank)
 {
   std::vector<Entity> entities;
   const std::vector<stk::mesh::Bucket*> & ks = mesh.buckets(entity_rank);
@@ -160,7 +160,7 @@ Topology::getLocalRelationId(const Entity source_entity,
   EntityId const
   target_entity_identifier = getBulkData()->identifier(target_entity);
 
-  EntityRank const
+  stk::mesh::EntityRank const
   target_entity_entity_rank = getBulkData()->entity_rank(target_entity);
 
   Entity const*
@@ -194,7 +194,7 @@ Topology::getNumberLowerRankEntities(const Entity entity)
   unsigned int count = 0;
   unsigned int entity_rank = getBulkData()->entity_rank(entity);
 
-  for (EntityRank rank = NODE_RANK; rank < entity_rank; ++rank) {
+  for (stk::mesh::EntityRank rank = NODE_RANK; rank < entity_rank; ++rank) {
     count += getBulkData()->num_connectivity(entity, rank);
   }
 
@@ -208,7 +208,7 @@ Topology::getNumberLowerRankEntities(const Entity entity)
 //
 std::vector<Entity>
 Topology::getDirectlyConnectedEntities(const Entity entity,
-    EntityRank entity_rank)
+    stk::mesh::EntityRank entity_rank)
 {
   Entity const*
   relations = getBulkData()->begin(entity, entity_rank);
@@ -252,14 +252,14 @@ Topology::findEntityInVector(std::vector<Entity> & entities,
 //
 std::vector<Entity>
 Topology::getBoundaryEntities(const Entity entity,
-    EntityRank entity_rank)
+    stk::mesh::EntityRank entity_rank)
 {
 
-  EntityRank given_entity_rank = getBulkData()->entity_rank(entity);
+  stk::mesh::EntityRank given_entity_rank = getBulkData()->entity_rank(entity);
   //Get entities of  "given_entity_rank -1"
   std::vector<std::vector<Entity> > boundary_entities(given_entity_rank + 1);
   boundary_entities[given_entity_rank - 1] =
-    getDirectlyConnectedEntities(entity, (EntityRank) (given_entity_rank - 1));
+    getDirectlyConnectedEntities(entity, (stk::mesh::EntityRank) (given_entity_rank - 1));
   std::vector<Entity>::iterator iterator_entities1;
   std::vector<Entity>::iterator iterator_entities2;
   std::vector<Entity> temp_vector1;
@@ -268,7 +268,7 @@ Topology::getBoundaryEntities(const Entity entity,
         iterator_entities1 != boundary_entities[ii].end();
         ++iterator_entities1) {
       temp_vector1 = getDirectlyConnectedEntities(*iterator_entities1,
-                                                  (EntityRank)(ii - 1));
+                                                  (stk::mesh::EntityRank)(ii - 1));
       for (iterator_entities2 = temp_vector1.begin();
           iterator_entities2 != temp_vector1.end(); ++iterator_entities2) {
         // If the entity pointed to by iterator_entities2 is not in boundary_entities[ii - 1],

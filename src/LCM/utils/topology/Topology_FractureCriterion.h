@@ -142,9 +142,9 @@ public:
   bool
   check(BulkData & bulk_data, Entity interface)
   {
-    EntityRank const rank = bulk_data.entity_rank(interface);
+    stk::mesh::EntityRank const rank = bulk_data.entity_rank(interface);
 
-    assert(bulk_data.num_connectivity(interface, (EntityRank)(rank+1)) == 2);
+    assert(bulk_data.num_connectivity(interface, (stk::mesh::EntityRank)(rank+1)) == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
@@ -183,9 +183,9 @@ public:
   bool
   check(stk::mesh::BulkData& mesh, Entity interface)
   {
-    EntityRank const rank = mesh.entity_rank(interface);
+    stk::mesh::EntityRank const rank = mesh.entity_rank(interface);
 
-    assert(mesh.num_connectivity(interface, (EntityRank)(rank+1)) == 2);
+    assert(mesh.num_connectivity(interface, (stk::mesh::EntityRank)(rank+1)) == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;

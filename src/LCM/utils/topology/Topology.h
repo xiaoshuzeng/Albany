@@ -209,7 +209,7 @@ public:
   /// \brief Adds a new entity of rank 3 to the mesh
   ///
   void
-  addElement(EntityRank entity_rank);
+  addElement(stk::mesh::EntityRank entity_rank);
 
   ///
   /// \brief creates several entities at a time. The information
@@ -248,13 +248,13 @@ public:
   ///        specific rank
   ///
   EntityVector
-  getEntitiesByRank(BulkData const & mesh, EntityRank entity_rank);
+  getEntitiesByRank(BulkData const & mesh, stk::mesh::EntityRank entity_rank);
 
   ///
   /// \brief Number of entities of a specific rank
   ///
   EntityVectorIndex
-  getNumberEntitiesByRank(BulkData const & bulk_date, EntityRank entity_rank);
+  getNumberEntitiesByRank(BulkData const & bulk_date, stk::mesh::EntityRank entity_rank);
 
   ///
   /// \brief Gets the local relation id (0,1,2,...) between two entities
@@ -279,7 +279,7 @@ public:
   EntityVector
   getDirectlyConnectedEntities(
       Entity entity,
-      EntityRank entity_rank);
+      stk::mesh::EntityRank entity_rank);
 
   ///
   /// \brief Checks if an entity exists inside a specific vector
@@ -298,7 +298,7 @@ public:
   ///
   ///
   EntityVector
-  getBoundaryEntities(Entity entity, EntityRank entity_rank);
+  getBoundaryEntities(Entity entity, stk::mesh::EntityRank entity_rank);
 
   ///
   /// \brief Checks if a segment is connected to an input node.
@@ -594,14 +594,14 @@ public:
   size_t const
   getSpaceDimension() {return static_cast<size_t>(getSTKMeshStruct()->numDim);}
 
-  EntityRank const
+  stk::mesh::EntityRank const
   getBoundaryRank()
   {
     return getMetaData()->side_rank();
   }
 
   IntScalarFieldType &
-  getFractureState(EntityRank rank)
+  getFractureState(stk::mesh::EntityRank rank)
   {return *(stk_mesh_struct_->getFieldContainer()->getFractureState(rank));}
 
   void
@@ -656,7 +656,7 @@ public:
   void
   setFractureState(Entity e, FractureState const fs)
   {
-    EntityRank const rank = getBulkData()->entity_rank(e);
+    stk::mesh::EntityRank const rank = getBulkData()->entity_rank(e);
     if (rank < ELEMENT_RANK) {
       *(stk::mesh::field_data(getFractureState(rank), e)) = static_cast<int>(fs);
     }
@@ -668,7 +668,7 @@ public:
   FractureState
   getFractureState(Entity e)
   {
-    EntityRank const rank = getBulkData()->entity_rank(e);
+    stk::mesh::EntityRank const rank = getBulkData()->entity_rank(e);
     return rank >= ELEMENT_RANK ?
     CLOSED :
     static_cast<FractureState>(*(stk::mesh::field_data(getFractureState(rank), e)));

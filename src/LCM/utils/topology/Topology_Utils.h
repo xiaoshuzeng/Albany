@@ -22,7 +22,7 @@ namespace LCM {
 ///
 inline
 void
-display_connectivity(BulkData & bulk_data, EntityRank cell_rank)
+display_connectivity(BulkData & bulk_data, stk::mesh::EntityRank cell_rank)
 {
   // Create a list of element entities
   EntityVector
@@ -109,7 +109,7 @@ display_relation(BulkData& bulk_data, Entity entity)
 ///
 inline
 void
-display_relation(BulkData& bulk_data, Entity entity, EntityRank const rank)
+display_relation(BulkData& bulk_data, Entity entity, stk::mesh::EntityRank const rank)
 {
   std::cout << "Relations of rank ";
   std::cout << rank;
@@ -148,10 +148,10 @@ bool
 is_needed_for_stk(
     BulkData& bulk_data,
     Entity source_entity,
-    EntityRank target_rank,
-    EntityRank const cell_rank)
+    stk::mesh::EntityRank target_rank,
+    stk::mesh::EntityRank const cell_rank)
 {
-  EntityRank const
+  stk::mesh::EntityRank const
   source_rank = bulk_data.entity_rank(source_entity);
 
   return (source_rank == ELEMENT_RANK) && (target_rank == NODE_RANK);
@@ -193,7 +193,7 @@ parallelize_string(std::string const & string)
 //
 inline
 std::string
-entity_label(EntityRank const rank)
+entity_label(stk::mesh::EntityRank const rank)
 {
   std::ostringstream
   oss;
@@ -255,7 +255,7 @@ entity_string(BulkData & bulk_data, Entity entity)
 //
 inline
 std::string
-entity_color(EntityRank const rank, FractureState const fracture_state)
+entity_color(stk::mesh::EntityRank const rank, FractureState const fracture_state)
 {
   std::ostringstream
   oss;
@@ -377,7 +377,7 @@ inline
 std::string
 dot_entity(
     EntityId const id,
-    EntityRank const rank,
+    stk::mesh::EntityRank const rank,
     FractureState const fracture_state)
 {
   std::ostringstream
@@ -443,9 +443,9 @@ inline
 std::string
 dot_relation(
     EntityId const source_id,
-    EntityRank const source_rank,
+    stk::mesh::EntityRank const source_rank,
     EntityId const target_id,
-    EntityRank const target_rank,
+    stk::mesh::EntityRank const target_rank,
     unsigned int const relation_local_id)
 {
   std::ostringstream

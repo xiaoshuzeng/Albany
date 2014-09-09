@@ -77,7 +77,7 @@ public:
   ///  to the maps localGlobalVertexMap and globalLocalVertexMap.
   ///
   Vertex
-  addVertex(EntityRank vertex_rank);
+  addVertex(stk::mesh::EntityRank vertex_rank);
 
   ///
   /// \brief Remove vertex in subgraph
@@ -132,7 +132,7 @@ public:
   ///
   /// \return Rank of vertex
   ///
-  EntityRank
+  stk::mesh::EntityRank
   getVertexRank(Vertex const vertex);
 
   ///
@@ -273,11 +273,11 @@ public:
   getMetaData();
 
 
-  EntityRank const
+  stk::mesh::EntityRank const
   getBoundaryRank();
 
   IntScalarFieldType &
-  getFractureState(EntityRank rank);
+  getFractureState(stk::mesh::EntityRank rank);
 
   void
   setFractureState(Entity e, FractureState const fs);

@@ -43,12 +43,12 @@ FractureCriterionTraction::check(
   Entity const *
   relations_up = bulk_data.begin(
       interface,
-      (EntityRank)(bulk_data.entity_rank(interface) + 1)
+      (stk::mesh::EntityRank)(bulk_data.entity_rank(interface) + 1)
   );
 
   assert(bulk_data.num_connectivity(
           interface,
-          (EntityRank)(bulk_data.entity_rank(interface) + 1)
+          (stk::mesh::EntityRank)(bulk_data.entity_rank(interface) + 1)
          ) == 2);
 
   Entity
