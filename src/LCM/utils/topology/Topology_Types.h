@@ -51,6 +51,7 @@ using stk::mesh::EntityKey;
 using stk::mesh::EntityRank;
 using stk::mesh::EntityVector;
 using stk::mesh::Field;
+using stk::mesh::MetaData;
 using stk::mesh::PairIterRelation;
 using stk::mesh::Part;
 using stk::mesh::PartVector;

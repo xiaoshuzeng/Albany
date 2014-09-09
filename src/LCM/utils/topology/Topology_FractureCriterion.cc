@@ -34,13 +34,22 @@ beta_(beta)
 
 
 bool
-FractureCriterionTraction::check(stk::mesh::BulkData& mesh, Entity interface)
+FractureCriterionTraction::check(
+    BulkData & bulk_data,
+    Entity interface)
 {
   // Check the adjacent bulk elements. Proceed only
   // if both elements belong to the bulk part.
-  Entity const* relations_up = mesh.begin(interface, (EntityRank)(mesh.entity_rank(interface) + 1));
+  Entity const *
+  relations_up = bulk_data.begin(
+      interface,
+      (EntityRank)(bulk_data.entity_rank(interface) + 1)
+  );
 
-  assert(mesh.num_connectivity(interface, (EntityRank)(mesh.entity_rank(interface) + 1)) == 2);
+  assert(bulk_data.num_connectivity(
+          interface,
+          (EntityRank)(bulk_data.entity_rank(interface) + 1)
+         ) == 2);
 
   Entity
   element_0 = relations_up[0];
@@ -49,10 +58,10 @@ FractureCriterionTraction::check(stk::mesh::BulkData& mesh, Entity interface)
   element_1 = relations_up[1];
 
   Bucket const &
-  bucket_0 = mesh.bucket(element_0);
+  bucket_0 = bulk_data.bucket(element_0);
 
   Bucket const &
-  bucket_1 = mesh.bucket(element_1);
+  bucket_1 = bulk_data.bucket(element_1);
 
   bool const
   is_embedded =
@@ -93,7 +102,7 @@ FractureCriterionTraction::check(stk::mesh::BulkData& mesh, Entity interface)
   stress = stress / static_cast<double>(number_nodes);
 
   Intrepid::Index const
-  face_index = mesh.identifier(interface) - 1;
+  face_index = bulk_data.identifier(interface) - 1;
 
   Intrepid::Vector<double> const &
   normal = normals_[face_index];
@@ -125,7 +134,7 @@ FractureCriterionTraction::check(stk::mesh::BulkData& mesh, Entity interface)
 void
 FractureCriterionTraction::computeNormals()
 {
-  stk::mesh::Selector
+  Selector
   local_selector = getMetaData().locally_owned_part();
 
   std::vector<Bucket*> const &

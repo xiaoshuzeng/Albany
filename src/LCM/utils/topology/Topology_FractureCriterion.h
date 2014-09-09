@@ -49,7 +49,7 @@ public:
 
   virtual
   bool
-  check(stk::mesh::BulkData& mesh, Entity interface) = 0;
+  check(BulkData & mesh, Entity interface) = 0;
 
   virtual
   ~AbstractFractureCriterion() {}
@@ -69,19 +69,19 @@ public:
   Albany::AbstractSTKMeshStruct const &
   getAbstractSTKMeshStruct() {return stk_mesh_struct_;}
 
-  stk::mesh::BulkData const &
+  BulkData const &
   getBulkData() {return bulk_data_;}
 
-  stk::mesh::MetaData const &
+  MetaData const &
   getMetaData() {return meta_data_;}
 
   Intrepid::Index
   getDimension() {return dimension_;}
 
-  stk::mesh::Part &
+  Part &
   getBulkPart() {return bulk_part_;}
 
-  stk::mesh::Part &
+  Part &
   getInterfacePart() {return interface_part_;}
 
 protected:
@@ -101,19 +101,19 @@ protected:
   Albany::AbstractSTKMeshStruct const &
   stk_mesh_struct_;
 
-  stk::mesh::BulkData const &
+  BulkData const &
   bulk_data_;
 
-  stk::mesh::MetaData const &
+  MetaData const &
   meta_data_;
 
   Intrepid::Index
   dimension_;
 
-  stk::mesh::Part &
+  Part &
   bulk_part_;
 
-  stk::mesh::Part &
+  Part &
   interface_part_;
 
 private:
@@ -140,11 +140,11 @@ public:
   probability_(probability) {}
 
   bool
-  check(stk::mesh::BulkData& mesh, Entity interface)
+  check(BulkData & bulk_data, Entity interface)
   {
-    EntityRank const rank = mesh.entity_rank(interface);
+    EntityRank const rank = bulk_data.entity_rank(interface);
 
-    assert(mesh.num_connectivity(interface, (EntityRank)(rank+1)) == 2);
+    assert(bulk_data.num_connectivity(interface, (EntityRank)(rank+1)) == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
@@ -229,7 +229,7 @@ public:
       double const beta);
 
   bool
-  check(stk::mesh::BulkData& mesh, Entity interface);
+  check(stk::mesh::BulkData & bulk_data, Entity interface);
 
 private:
 
