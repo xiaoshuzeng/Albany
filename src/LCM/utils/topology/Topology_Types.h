@@ -49,7 +49,6 @@ using stk::mesh::PairIterRelation;
 using stk::mesh::Part;
 using stk::mesh::PartVector;
 using stk::mesh::Relation;
-using stk::mesh::RelationVector;
 using stk::mesh::Selector;
 
 using Teuchos::RCP;
@@ -60,7 +59,7 @@ namespace LCM {
 
 typedef stk::mesh::RelationIdentifier EdgeId;
 typedef stk::mesh::EntityVector::size_type EntityVectorIndex;
-typedef RelationVector::size_type RelationVectorIndex;
+typedef stk::mesh::RelationVector::size_type RelationVectorIndex;
 typedef std::vector<Intrepid::Vector<double> > Coordinates;
 typedef Coordinates::size_type CoordinatesIndex;
 typedef std::vector<std::vector<stk::mesh::EntityId> > Connectivity;
