@@ -272,7 +272,6 @@ public:
   stk::mesh::MetaData *
   getMetaData();
 
-
   stk::mesh::EntityRank const
   getBoundaryRank();
 
@@ -292,7 +291,8 @@ public:
   isInternalAndOpen(stk::mesh::Entity e);
 
   bool
-  isInternal(stk::mesh::Entity e) {
+  isInternal(stk::mesh::Entity e)
+  {
 
     assert(getBulkData()->entity_rank(e) == getBoundaryRank());
 

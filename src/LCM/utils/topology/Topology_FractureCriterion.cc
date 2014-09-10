@@ -7,7 +7,7 @@
 #include "Topology.h"
 #include "Topology_FractureCriterion.h"
 
-namespace LCM{
+namespace LCM {
 
 FractureCriterionTraction::FractureCriterionTraction(
     Topology & topology,
@@ -16,10 +16,13 @@ FractureCriterionTraction::FractureCriterionTraction(
     std::string const & stress_name,
     double const critical_traction,
     double const beta) :
-AbstractFractureCriterion(topology, bulk_block_name, interface_block_name),
-stress_field_(*(getMetaData().get_field<TensorFieldType>(stk::topology::NODE_RANK, stress_name))),
-critical_traction_(critical_traction),
-beta_(beta)
+    AbstractFractureCriterion(topology, bulk_block_name, interface_block_name),
+    stress_field_(
+        *(getMetaData().get_field<TensorFieldType>(
+            stk::topology::NODE_RANK,
+            stress_name))),
+    critical_traction_(critical_traction),
+    beta_(beta)
 {
   if (&stress_field_ == 0) {
     std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
@@ -32,7 +35,6 @@ beta_(beta)
   computeNormals();
 }
 
-
 bool
 FractureCriterionTraction::check(
     stk::mesh::BulkData & bulk_data,
@@ -43,13 +45,13 @@ FractureCriterionTraction::check(
   stk::mesh::Entity const *
   relations_up = bulk_data.begin(
       interface,
-      (stk::mesh::EntityRank)(bulk_data.entity_rank(interface) + 1)
-  );
+      (stk::mesh::EntityRank) (bulk_data.entity_rank(interface) + 1)
+      );
 
   assert(bulk_data.num_connectivity(
-          interface,
-          (stk::mesh::EntityRank)(bulk_data.entity_rank(interface) + 1)
-         ) == 2);
+      interface,
+      (stk::mesh::EntityRank )(bulk_data.entity_rank(interface) + 1)
+      ) == 2);
 
   stk::mesh::Entity
   element_0 = relations_up[0];
@@ -165,7 +167,7 @@ FractureCriterionTraction::computeNormals()
   }
 
   std::vector<stk::mesh::Bucket*> const &
-    face_buckets = bulk_data_.buckets(getMetaData().side_rank());
+  face_buckets = bulk_data_.buckets(getMetaData().side_rank());
 
   stk::mesh::EntityVector
   faces;

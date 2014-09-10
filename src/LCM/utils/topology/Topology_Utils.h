@@ -22,7 +22,9 @@ namespace LCM {
 ///
 inline
 void
-display_connectivity(stk::mesh::BulkData & bulk_data, stk::mesh::EntityRank cell_rank)
+display_connectivity(
+    stk::mesh::BulkData & bulk_data,
+    stk::mesh::EntityRank cell_rank)
 {
   // Create a list of element entities
   stk::mesh::EntityVector
@@ -46,7 +48,7 @@ display_connectivity(stk::mesh::BulkData & bulk_data, stk::mesh::EntityRank cell
     std::cout << std::setw(16) << element_id << ":";
 
     size_t const
-      nodes_per_element = bulk_data.num_nodes(elements[i]);
+    nodes_per_element = bulk_data.num_nodes(elements[i]);
 
     for (size_t j = 0; j < nodes_per_element; ++j) {
 
@@ -80,7 +82,8 @@ display_relation(stk::mesh::BulkData& bulk_data, stk::mesh::Entity entity)
   std::cout << bulk_data.entity_rank(entity);
   std::cout << '\n';
 
-  for (stk::topology::rank_t rank = stk::topology::NODE_RANK; rank <= stk::topology::ELEMENT_RANK; ++rank) {
+  for (stk::topology::rank_t rank = stk::topology::NODE_RANK;
+      rank <= stk::topology::ELEMENT_RANK; ++rank) {
 
     stk::mesh::Entity const *
     relations = bulk_data.begin(entity, rank);
@@ -109,7 +112,10 @@ display_relation(stk::mesh::BulkData& bulk_data, stk::mesh::Entity entity)
 ///
 inline
 void
-display_relation(stk::mesh::BulkData& bulk_data, stk::mesh::Entity entity, stk::mesh::EntityRank const rank)
+display_relation(
+    stk::mesh::BulkData & bulk_data,
+    stk::mesh::Entity entity,
+    stk::mesh::EntityRank const rank)
 {
   std::cout << "Relations of rank ";
   std::cout << rank;
@@ -146,7 +152,7 @@ display_relation(stk::mesh::BulkData& bulk_data, stk::mesh::Entity entity, stk::
 inline
 bool
 is_needed_for_stk(
-    stk::mesh::BulkData& bulk_data,
+    stk::mesh::BulkData & bulk_data,
     stk::mesh::Entity source_entity,
     stk::mesh::EntityRank target_rank,
     stk::mesh::EntityRank const cell_rank)
@@ -154,15 +160,15 @@ is_needed_for_stk(
   stk::mesh::EntityRank const
   source_rank = bulk_data.entity_rank(source_entity);
 
-  return (source_rank == stk::topology::ELEMENT_RANK) && (target_rank == stk::topology::NODE_RANK);
+  return (source_rank == stk::topology::ELEMENT_RANK)
+      && (target_rank == stk::topology::NODE_RANK);
 }
 
 ///
 /// Add a dash and processor rank to a string. Useful for output
 /// file names.
 ///
-inline
-std::string
+inline std::string
 parallelize_string(std::string const & string)
 {
   std::ostringstream
@@ -191,8 +197,7 @@ parallelize_string(std::string const & string)
 //
 // Auxiliary for graphviz output
 //
-inline
-std::string
+inline std::string
 entity_label(stk::mesh::EntityRank const rank)
 {
   std::ostringstream
@@ -219,13 +224,13 @@ entity_label(stk::mesh::EntityRank const rank)
     oss << "Polyhedron";
     break;
 #if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
-  case 4:
+    case 4:
     oss << "Polychoron";
     break;
-  case 5:
+    case 5:
     oss << "Polyteron";
     break;
-  case 6:
+    case 6:
     oss << "Polypeton";
     break;
 #endif // LCM_TOPOLOGY_HIGH_DIMENSIONS
@@ -237,8 +242,7 @@ entity_label(stk::mesh::EntityRank const rank)
 //
 // Auxiliary for graphviz output
 //
-inline
-std::string
+inline std::string
 entity_string(stk::mesh::BulkData & bulk_data, stk::mesh::Entity entity)
 {
   std::ostringstream
@@ -253,9 +257,10 @@ entity_string(stk::mesh::BulkData & bulk_data, stk::mesh::Entity entity)
 //
 // Auxiliary for graphviz output
 //
-inline
-std::string
-entity_color(stk::mesh::EntityRank const rank, FractureState const fracture_state)
+inline std::string
+entity_color(
+    stk::mesh::EntityRank const rank,
+    FractureState const fracture_state)
 {
   std::ostringstream
   oss;
@@ -292,13 +297,13 @@ entity_color(stk::mesh::EntityRank const rank, FractureState const fracture_stat
       oss << "8";
       break;
 #if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
-    case 4:
+      case 4:
       oss << "10";
       break;
-    case 5:
+      case 5:
       oss << "12";
       break;
-    case 6:
+      case 6:
       oss << "14";
       break;
 #endif // LCM_TOPOLOGY_HIGH_DIMENSIONS
@@ -327,13 +332,13 @@ entity_color(stk::mesh::EntityRank const rank, FractureState const fracture_stat
       oss << "7";
       break;
 #if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
-    case 4:
+      case 4:
       oss << "9";
       break;
-    case 5:
+      case 5:
       oss << "11";
       break;
-    case 6:
+      case 6:
       oss << "13";
       break;
 #endif // LCM_TOPOLOGY_HIGH_DIMENSIONS
@@ -347,8 +352,7 @@ entity_color(stk::mesh::EntityRank const rank, FractureState const fracture_stat
 //
 // Auxiliary for graphviz output
 //
-inline
-std::string
+inline std::string
 dot_header()
 {
   std::string
@@ -363,8 +367,7 @@ dot_header()
 //
 // Auxiliary for graphviz output
 //
-inline
-std::string
+inline std::string
 dot_footer()
 {
   return "}";
@@ -373,8 +376,7 @@ dot_footer()
 //
 // Auxiliary for graphviz output
 //
-inline
-std::string
+inline std::string
 dot_entity(
     stk::mesh::EntityId const id,
     stk::mesh::EntityRank const rank,
@@ -402,8 +404,7 @@ dot_entity(
 //
 // Auxiliary for graphviz output
 //
-inline
-std::string
+inline std::string
 relation_color(unsigned int const relation_id)
 {
   std::ostringstream
@@ -439,8 +440,7 @@ relation_color(unsigned int const relation_id)
 //
 // Auxiliary for graphviz output
 //
-inline
-std::string
+inline std::string
 dot_relation(
     stk::mesh::EntityId const source_id,
     stk::mesh::EntityRank const source_rank,
@@ -466,6 +466,6 @@ dot_relation(
   return oss.str();
 }
 
-}// namespace LCM
+}  // namespace LCM
 
 #endif // LCM_Topology_Utils_h

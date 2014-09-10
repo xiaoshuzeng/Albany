@@ -112,47 +112,69 @@ Subgraph::Subgraph(
 //
 Topology &
 Subgraph::getTopology()
-{return topology_;}
+{
+  return topology_;
+}
 
 size_t const
 Subgraph::getSpaceDimension()
-{return getTopology().getSpaceDimension();}
+{
+  return getTopology().getSpaceDimension();
+}
 
 Teuchos::RCP<Albany::AbstractSTKMeshStruct> &
 Subgraph::getSTKMeshStruct()
-{return getTopology().getSTKMeshStruct();}
+{
+  return getTopology().getSTKMeshStruct();
+}
 
 stk::mesh::BulkData *
 Subgraph::getBulkData()
-{return getTopology().getBulkData();}
+{
+  return getTopology().getBulkData();
+}
 
 stk::mesh::MetaData *
 Subgraph::getMetaData()
-{return getTopology().getMetaData();}
+{
+  return getTopology().getMetaData();
+}
 
 stk::mesh::EntityRank const
 Subgraph::getBoundaryRank()
-{return getTopology().getBoundaryRank();}
+{
+  return getTopology().getBoundaryRank();
+}
 
 IntScalarFieldType &
 Subgraph::getFractureState(stk::mesh::EntityRank rank)
-{return getTopology().getFractureState(rank);}
+{
+  return getTopology().getFractureState(rank);
+}
 
 void
 Subgraph::setFractureState(stk::mesh::Entity e, FractureState const fs)
-{getTopology().setFractureState(e, fs);}
+{
+  getTopology().setFractureState(e, fs);
+}
 
 FractureState
 Subgraph::getFractureState(stk::mesh::Entity e)
-{return getTopology().getFractureState(e);}
+{
+  return getTopology().getFractureState(e);
+}
 
 bool
 Subgraph::isOpen(stk::mesh::Entity e)
-{return getTopology().isOpen(e);}
+{
+  return getTopology().isOpen(e);
+}
 
 bool
 Subgraph::isInternalAndOpen(stk::mesh::Entity e)
-{return getTopology().isInternalAndOpen(e);}
+{
+  return getTopology().isInternalAndOpen(e);
+}
 
 //
 // Map a vertex in the subgraph to a entity in the stk mesh.
@@ -284,7 +306,7 @@ Subgraph::addEdge(
   global_target_vertex = getBulkData()->get_entity(global_target_key);
 
   assert(getBulkData()->entity_rank(global_source_vertex) -
-         getBulkData()->entity_rank(global_target_vertex) == 1);
+      getBulkData()->entity_rank(global_target_vertex) == 1);
 
   // Add edge to local graph
   std::pair<Edge, bool>
@@ -347,9 +369,9 @@ Subgraph::removeEdge(
   global_target_vertex = getBulkData()->get_entity(global_target_id);
 
   getBulkData()->destroy_relation(
-    global_source_vertex,
-    global_target_vertex,
-    edge_id);
+      global_source_vertex,
+      global_target_vertex,
+      edge_id);
 
   return;
 }
@@ -388,7 +410,8 @@ typedef boost::graph_traits<UGraph>::edge_descriptor UEdge;
 namespace {
 
 void
-writeGraphviz(std::string const & output_filename, UGraph const & graph) {
+writeGraphviz(std::string const & output_filename, UGraph const & graph)
+{
   // Open output file
   std::ofstream
   gviz_out;
@@ -601,7 +624,9 @@ Subgraph::cloneBoundaryEntity(Vertex vertex)
 // Restore element to node connectivity needed by STK.
 //
 void
-Subgraph::updateElementNodeConnectivity(stk::mesh::Entity point, ElementNodeMap & map)
+Subgraph::updateElementNodeConnectivity(
+    stk::mesh::Entity point,
+    ElementNodeMap & map)
 {
   for (ElementNodeMap::iterator i = map.begin(); i != map.end(); ++i) {
     stk::mesh::Entity
@@ -822,7 +847,8 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
   assert(getMetaData()->spatial_dimension() == 3);
 
   stk::mesh::EntityRank const
-  one_down = (stk::mesh::EntityRank)(getBulkData()->entity_rank(old_entity) - 1);
+  one_down =
+      (stk::mesh::EntityRank) (getBulkData()->entity_rank(old_entity) - 1);
 
   stk::mesh::Entity const *
   old_relations = getBulkData()->begin(old_entity, one_down);
@@ -964,12 +990,12 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
       edge_id = getEdgeId(out_edge);
 
       gviz_out << dot_relation(
-        getBulkData()->identifier(global_source),
-        getBulkData()->entity_rank(global_source),
-        getBulkData()->identifier(global_target),
-        getBulkData()->entity_rank(global_target),
-        edge_id
-      );
+          getBulkData()->identifier(global_source),
+          getBulkData()->entity_rank(global_source),
+          getBulkData()->identifier(global_target),
+          getBulkData()->entity_rank(global_target),
+          edge_id
+          );
 
     }
 

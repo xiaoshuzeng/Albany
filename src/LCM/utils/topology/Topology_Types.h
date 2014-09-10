@@ -76,21 +76,28 @@ typedef boost::graph_traits<Graph>::out_edge_iterator OutEdgeIterator;
 typedef boost::graph_traits<Graph>::in_edge_iterator InEdgeIterator;
 
 typedef Albany::AbstractSTKFieldContainer::IntScalarFieldType
-    IntScalarFieldType;
+IntScalarFieldType;
 
 typedef Albany::AbstractSTKFieldContainer::VectorFieldType
-    VectorFieldType;
+VectorFieldType;
 
 typedef Albany::AbstractSTKFieldContainer::TensorFieldType
-    TensorFieldType;
+TensorFieldType;
 
 // Specific to topological manipulation
 typedef std::pair<stk::mesh::Entity, stk::mesh::Entity> EntityPair;
 typedef std::map<Vertex, size_t> ComponentMap;
 typedef std::map<stk::mesh::Entity, stk::mesh::Entity> ElementNodeMap;
 
-enum FractureState {CLOSED = 0, OPEN = 1};
-enum VTKCellType {INVALID = 0, VERTEX = 1, LINE = 2, TRIANGLE = 5, QUAD = 9};
+enum FractureState
+{
+  CLOSED = 0, OPEN = 1
+};
+
+enum VTKCellType
+{
+  INVALID = 0, VERTEX = 1, LINE = 2, TRIANGLE = 5, QUAD = 9
+};
 
 ///
 /// \brief Struct to store the data needed for creation or
@@ -106,7 +113,8 @@ enum VTKCellType {INVALID = 0, VERTEX = 1, LINE = 2, TRIANGLE = 5, QUAD = 9};
 ///
 /// Used to create edges from the stk mesh object in a boost graph
 ///
-struct stkEdge {
+struct stkEdge
+{
   stk::mesh::EntityKey source;
   stk::mesh::EntityKey target;
   EdgeId local_id;
@@ -118,7 +126,7 @@ struct stkEdge {
 struct EdgeLessThan
 {
   bool operator()(stkEdge const & a, stkEdge const & b) const
-  {
+      {
     if (a.source < b.source) return true;
     if (a.source > b.source) return false;
     // source a and b are the same - check target
