@@ -58,6 +58,10 @@ namespace LCM {
     	"Concentration_Equilibrium_Parameter") );
     name_map->insert( std::make_pair("Gradient_Element_Length",
     	"Gradient_Element_Length") );
+    // helium ODEs
+    name_map->insert( std::make_pair("He_Concentration","He_Concentration") );
+    name_map->insert( std::make_pair("Total_Bubble_Density","Total_Bubble_Density") );
+    name_map->insert( std::make_pair("Bubble_Volume_Fraction_","Bubble_Volume_Fraction") );
     // geo-models
     name_map->insert( std::make_pair("Back_Stress","Back_Stress") );
     name_map->insert( std::make_pair("Cap_Parameter","Cap_Parameter") );
