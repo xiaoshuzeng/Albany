@@ -383,7 +383,6 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Albany::FieldManagerChoice fieldManagerChoice,
     const Teuchos::RCP<Teuchos::ParameterList>& responseList)
 {
-  using Teuchos::ParameterList;
   using PHX::DataLayout;
   using PHX::MDALayout;
   using std::vector;
@@ -397,8 +396,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
   // Collect problem-specific response parameters
 
-  Teuchos::RCP<ParameterList> pFromProb = Teuchos::rcp(
-      new ParameterList("Response Parameters from Problem"));
+  Teuchos::RCP<Teuchos::ParameterList> pFromProb = Teuchos::rcp(
+      new Teuchos::ParameterList("Response Parameters from Problem"));
 
   // get the name of the current element block
   std::string eb_name = meshSpecs.ebName;
@@ -705,7 +704,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     offset += num_dims_;
   }
   else if (have_mech_) { // constant configuration
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList);
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Material Property Name", "Displacement");
     p->set<Teuchos::RCP<DataLayout> >("Data Layout", dl_->qp_vector);
@@ -776,7 +775,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
   else if ((!have_temperature_eq_ && have_temperature_)
       || have_transport_eq_ || have_transport_) {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList);
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Material Property Name", temperature);
     p->set<Teuchos::RCP<DataLayout> >("Data Layout", dl_->qp_scalar);
@@ -867,7 +866,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     offset++;
   }
   else if (!have_damage_eq_ && have_damage_) {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList);
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Material Property Name", "Damage");
     p->set<Teuchos::RCP<DataLayout> >("Data Layout", dl_->qp_scalar);
@@ -920,7 +919,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     offset++;
   }
   else if (have_pore_pressure_) { // constant Pressure
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList);
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Material Property Name", "Pressure");
     p->set<Teuchos::RCP<DataLayout> >("Data Layout", dl_->qp_scalar);
@@ -970,7 +969,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     offset++; // for lattice concentration
   }
   else if (have_transport_) { // Constant transport scalar value
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList);
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Material Property Name", "Transport");
     p->set<Teuchos::RCP<DataLayout> >("Data Layout", dl_->qp_scalar);
@@ -1021,7 +1020,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   { // Time
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Time"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Time"));
     p->set<std::string>("Time Name", "Time");
     p->set<std::string>("Delta Time Name", "Delta Time");
     p->set<Teuchos::RCP<DataLayout> >("Workset Scalar Data Layout", dl_->workset_scalar);
@@ -1041,7 +1040,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_mech_eq_) { // Current Coordinates
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Current Coordinates"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Current Coordinates"));
     p->set<std::string>("Reference Coordinates Name", "Coord Vec");
     p->set<std::string>("Displacement Name", "Displacement");
     p->set<std::string>("Current Coordinates Name", "Current Coordinates");
@@ -1055,7 +1054,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       temp = material_db_->
           getElementBlockParam<double>(eb_name, "Initial Temperature");
     }
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Save Temperature"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Save Temperature"));
     p = stateMgr.registerStateVariable(temperature,
         dl_->qp_scalar,
         dl_->dummy,
@@ -1069,7 +1068,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_pore_pressure_eq_ || have_pore_pressure_) {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Save Pore Pressure"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Save Pore Pressure"));
     p = stateMgr.registerStateVariable(porePressure,
         dl_->qp_scalar,
         dl_->dummy,
@@ -1083,7 +1082,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_transport_eq_ || have_transport_) {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Save Transport"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Save Transport"));
     bool output_flag(true);
     if (material_db_->isElementBlockParam(eb_name, "Output IP" + transport))
       output_flag =
@@ -1104,7 +1103,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_hydrostress_eq_ || have_hydrostress_) {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Save HydroStress"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Save HydroStress"));
     p = stateMgr.registerStateVariable(hydroStress,
         dl_->qp_scalar,
         dl_->dummy,
@@ -1118,7 +1117,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_source_) { // Source
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList);
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Source Name", "Source");
     p->set<std::string>("Variable Name", "Displacement");
@@ -1133,8 +1132,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   { // Constitutive Model Parameters
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(
-        new ParameterList("Constitutive Model Parameters"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
+        new Teuchos::ParameterList("Constitutive Model Parameters"));
     std::string matName = material_db_->getElementBlockParam<std::string>(
         eb_name, "material");
     Teuchos::ParameterList& param_list =
@@ -1156,8 +1155,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_mech_eq_) {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(
-        new ParameterList("Constitutive Model Interface"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
+        new Teuchos::ParameterList("Constitutive Model Interface"));
     std::string matName = material_db_->getElementBlockParam<std::string>(
         eb_name, "material");
     Teuchos::ParameterList& param_list =
@@ -1202,7 +1201,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     { // Surface Basis
       // SurfaceBasis_Def.hpp
-      Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Surface Basis"));
+      Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Surface Basis"));
 
       // inputs
       p->set<std::string>("Reference Coordinates Name", "Coord Vec");
@@ -1226,7 +1225,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     if (have_mech_eq_) { // Surface Jump
       //SurfaceVectorJump_Def.hpp
-      Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Surface Vector Jump"));
+      Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Surface Vector Jump"));
 
       // inputs
       p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
@@ -1246,7 +1245,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     if ((have_temperature_eq_ || have_pore_pressure_eq_) ||
         (have_transport_eq_)) { // Surface Temperature Jump
       //SurfaceScalarJump_Def.hpp
-      Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Surface Scalar Jump"));
+      Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Surface Scalar Jump"));
 
       // inputs
       p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
@@ -1289,7 +1288,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     if (have_mech_eq_) { // Surface Gradient
       //SurfaceVectorGradient_Def.hpp
-      Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Surface Vector Gradient"));
+      Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Surface Vector Gradient"));
 
       // inputs
       p->set<RealType>("thickness", thickness);
@@ -1363,8 +1362,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     // Surface Gradient Operator
     if (have_pore_pressure_eq_) {
       //SurfaceScalarGradientOperator_Def.hpp
-      Teuchos::RCP<ParameterList> p = Teuchos::rcp(
-          new ParameterList("Surface Scalar Gradient Operator"));
+      Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
+          new Teuchos::ParameterList("Surface Scalar Gradient Operator"));
       // inputs
       p->set<RealType>("thickness", thickness);
       p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
@@ -1396,8 +1395,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     if (have_transport_eq_) {
       //SurfaceScalarGradientOperator_Def.hpp
-      Teuchos::RCP<ParameterList> p = Teuchos::rcp(
-          new ParameterList("Surface Scalar Gradient Operator"));
+      Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
+          new Teuchos::ParameterList("Surface Scalar Gradient Operator"));
       // inputs
       p->set<RealType>("thickness", thickness);
       p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
@@ -1430,8 +1429,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     if (have_hydrostress_eq_) {
       //SurfaceScalarGradientOperator_Def.hpp
-      Teuchos::RCP<ParameterList> p = Teuchos::rcp(
-          new ParameterList("Surface Scalar Gradient Operator"));
+      Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
+          new Teuchos::ParameterList("Surface Scalar Gradient Operator"));
       // inputs
       p->set<RealType>("thickness", thickness);
       p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
@@ -1464,8 +1463,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     {
       if (have_mech_eq_) { // Surface Residual
         // SurfaceVectorResidual_Def.hpp
-        Teuchos::RCP<ParameterList> p = Teuchos::rcp(
-            new ParameterList("Surface Vector Residual"));
+        Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
+            new Teuchos::ParameterList("Surface Vector Residual"));
 
         // inputs
         p->set<RealType>("thickness", thickness);
@@ -1500,7 +1499,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   } else {
 
     if (have_mech_eq_) { // Kinematics quantities
-      Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Kinematics"));
+      Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Kinematics"));
 
       p->set<bool>("Weighted Volume Average J", volume_average_j);
       p->set<RealType>(
@@ -1626,7 +1625,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     }
     if (have_mech_eq_)
     { // Residual
-      Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Displacement Residual"));
+      Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Displacement Residual"));
       //Input
       p->set<std::string>("Stress Name", firstPK);
       p->set<std::string>("Weighted Gradient BF Name", "wGrad BF");
@@ -1643,7 +1642,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
   if (have_mech_eq_) {
     // convert Cauchy stress to first Piola-Kirchhoff
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("First PK Stress"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("First PK Stress"));
     //Input
     p->set<std::string>("Stress Name", cauchy);
     p->set<std::string>("DefGrad Name", defgrad);
@@ -1670,7 +1669,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
   // Element length in the direction of solution gradient
   if ((have_stab_pressure_eq_ || have_pore_pressure_eq_ || have_transport_eq_)) {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Gradient_Element_Length"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Gradient_Element_Length"));
     //Input
     if (!surface_element) {  // bulk element length
       if (have_pore_pressure_eq_) {
@@ -1709,7 +1708,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_pore_pressure_eq_) {  // Porosity
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList);
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Porosity Name", porosity);
     p->set<std::string>("QP Coordinate Vector Name", "Coord Vec");
@@ -1750,7 +1749,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_pore_pressure_eq_) { // Biot Coefficient
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList);
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Biot Coefficient Name", biotCoeff);
     p->set<std::string>("QP Coordinate Vector Name", "Coord Vec");
@@ -1768,7 +1767,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_pore_pressure_eq_) { // Biot Modulus
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList);
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Biot Modulus Name", biotModulus);
     p->set<std::string>("QP Coordinate Vector Name", "Coord Vec");
@@ -1790,7 +1789,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_pore_pressure_eq_) { // Kozeny-Carman Permeaiblity
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList);
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Kozeny-Carman Permeability Name", kcPerm);
     p->set<std::string>("QP Coordinate Vector Name", "Coord Vec");
@@ -1832,7 +1831,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
   // Pore Pressure Residual (Bulk Element)
   if (have_pore_pressure_eq_ && !surface_element) {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Pore_Pressure Residual"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Pore_Pressure Residual"));
 
     //Input
 
@@ -1919,7 +1918,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_pore_pressure_eq_ && surface_element) { // Pore Pressure Resid for Surface
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Pore_Pressure Residual"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Pore_Pressure Residual"));
 
     //Input
     p->set<RealType>("thickness", thickness);
@@ -1955,7 +1954,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_transport_eq_ || have_transport_) { // Transport Coefficients
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Transport Coefficients"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Transport Coefficients"));
 
     std::string matName = material_db_->getElementBlockParam<std::string>(
         eb_name, "material");
@@ -2179,8 +2178,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   // Transport of the temperature field
   if (have_temperature_eq_ && !surface_element)
       {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(
-        new ParameterList("ThermoMechanical Coefficients"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
+        new Teuchos::ParameterList("ThermoMechanical Coefficients"));
 
     std::string matName =
         material_db_->getElementBlockParam<std::string>(eb_name, "material");
@@ -2212,7 +2211,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   // Transport of the temperature field
   if (have_temperature_eq_ && !surface_element)
       {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Temperature Residual"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Temperature Residual"));
 
     // Input
     p->set<std::string>("Scalar Variable Name", "Temperature");
@@ -2247,7 +2246,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
   // Hydrogen Transport model proposed in Foulk et al 2014
   if (have_transport_eq_ && !surface_element) {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Transport Residual"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Transport Residual"));
 
     //Input
     p->set<std::string>("Element Length Name", gradient_element_length);
@@ -2327,7 +2326,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_transport_eq_ && surface_element) { // Transport Resid for Surface
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("Transport Residual"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Transport Residual"));
 
     //Input
     p->set<RealType>("thickness", thickness);
@@ -2380,7 +2379,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_hydrostress_eq_ && !surface_element) { // L2 hydrostatic stress projection
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("HydroStress Residual"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("HydroStress Residual"));
 
     //Input
     p->set<std::string>("Weighted BF Name", "wBF");
@@ -2412,7 +2411,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_hydrostress_eq_ && surface_element) { // Hydrostress Projection Resid for Surface
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(new ParameterList("HydroStress Residual"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("HydroStress Residual"));
 
     //Input
     p->set<RealType>("thickness", thickness);
@@ -2441,8 +2440,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   if (have_stab_pressure_eq_) {
-    Teuchos::RCP<ParameterList> p = Teuchos::rcp(
-        new ParameterList("Stabilized Pressure Residual"));
+    Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
+        new Teuchos::ParameterList("Stabilized Pressure Residual"));
     //Input
     p->set<std::string>("Shear Modulus Name", "Shear Modulus");
     p->set<std::string>("Bulk Modulus Name", "Bulk Modulus");
