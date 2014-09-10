@@ -179,26 +179,43 @@ Topology::createDiscretization()
   stk_discretization =
       static_cast<Albany::STKDiscretization &>(*getDiscretization());
 
-  setSTKMeshStruct(stk_discretization.getSTKMeshStruct());
+  Teuchos::RCP<Albany::AbstractSTKMeshStruct>
+  stk_mesh_struct = stk_discretization.getSTKMeshStruct();
 
-  // Get the topology of the elements. NOTE: Assumes one element
-  // type in mesh.
-  stk::mesh::Selector
-  local_selector = getLocalPart();
+  setSTKMeshStruct(stk_mesh_struct);
 
-  std::vector<stk::mesh::Bucket *> const &
-  buckets = getBulkData()->buckets(stk::topology::ELEMENT_RANK);
+  stk::mesh::MetaData &
+  meta_data = *(stk_mesh_struct->metaData);
 
-  stk::mesh::EntityVector
-  cells;
+  std::string const
+  bulk_part_name = "bulk";
 
-  stk::mesh::get_selected_entities(local_selector, buckets, cells);
+  stk::mesh::Part &
+  bulk_part = *(meta_data.get_part(bulk_part_name));
 
-  stk::mesh::Entity
-  first_cell = cells[0];
+  shards::CellTopology const &
+  bulk_cell_topology = meta_data.get_cell_topology(bulk_part);
 
-  setCellTopology(
-      stk::mesh::get_cell_topology(getBulkData()->bucket(first_cell)));
+  // Set the bulk topology
+  setCellTopology(bulk_cell_topology);
+
+  // Now the interface
+  std::string const
+  interface_part_name = "interface";
+
+  shards::CellTopology const
+  interface_cell_topology =
+      LCM::interfaceCellTopogyFromBulkCellTopogy(bulk_cell_topology);
+
+  stk::mesh::EntityRank const
+  interface_dimension = static_cast<stk::mesh::EntityRank>(
+      interface_cell_topology.getDimension());
+
+  stk::mesh::Part &
+  interface_part =
+      meta_data.declare_part(interface_part_name, interface_dimension);
+
+  stk::mesh::set_cell_topology(interface_part, interface_cell_topology);
 
   return;
 }
