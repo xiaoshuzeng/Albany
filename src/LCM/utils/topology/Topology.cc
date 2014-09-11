@@ -49,8 +49,22 @@ Topology::Topology(
   Teuchos::RCP<Teuchos::ParameterList>
   problem_params = Teuchos::sublist(params, "Problem");
 
+  // Make adaptation list to force Albany::DiscretizationFactory
+  // to create interface block.
   Teuchos::RCP<Teuchos::ParameterList>
   adapt_params = Teuchos::sublist(problem_params, "Adaptation");
+
+  adapt_params->set<std::string>("Method", "Topmod");
+
+  std::string const
+  bulk_part_name = "bulk";
+
+  adapt_params->set<std::string>("Bulk Block Name", bulk_part_name);
+
+  std::string const
+  interface_part_name = "interface";
+
+  adapt_params->set<std::string>("Interface Block Name", interface_part_name);
 
   Teuchos::RCP<Epetra_Comm>
   communicator = Albany::createEpetraCommFromMpiComm(Albany_MPI_COMM_WORLD);
@@ -84,9 +98,6 @@ Topology::Topology(
   stk::mesh::MetaData &
   meta_data = *(stk_mesh_struct->metaData);
 
-  std::string const
-  bulk_part_name = "bulk";
-
   stk::mesh::Part &
   bulk_part = *(meta_data.get_part(bulk_part_name));
 
@@ -104,8 +115,8 @@ Topology::Topology(
   setFractureCriterion(
       Teuchos::rcp(new FractureCriterionRandom(
           *this,
-          "bulk",
-          "interface",
+          bulk_part_name,
+          interface_part_name,
           probability))
           );
 

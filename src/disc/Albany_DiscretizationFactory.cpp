@@ -75,15 +75,15 @@ void createInterfaceParts(
     )
 {
   bool const
-  do_adaption = adapt_params.is_null() == false;
+  do_adaptation = adapt_params.is_null() == false;
 
-  if (do_adaption == false) return;
+  if (do_adaptation == false) return;
 
   std::string const &
-  adaption_method_name = adapt_params->get<std::string>("Method");
+  adaptation_method_name = adapt_params->get<std::string>("Method");
 
   bool const
-  is_topology_modification = adaption_method_name == "Topmod";
+  is_topology_modification = adaptation_method_name == "Topmod";
 
   if (is_topology_modification == false) return;
 
