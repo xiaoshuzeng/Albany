@@ -2232,86 +2232,115 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
   // Helium ODEs
   if (have_transport_eq_ || have_transport_)
-  {
-	  // Get material list prior to establishing a new parameter list
-	  std::string matName = material_db_->getElementBlockParam<std::string>(
-	          eb_name, "material");
-	  Teuchos::ParameterList& param_list =
-	          material_db_->getElementBlockSublist(eb_name, matName);
+      {
+    // Get material list prior to establishing a new parameter list
+    std::string matName = material_db_->getElementBlockParam<std::string>(
+        eb_name, "material");
+    Teuchos::ParameterList& param_list =
+        material_db_->getElementBlockSublist(eb_name, matName);
 
-	  // Check if Tritium Sublist exists. If true, move forward
-	  if (param_list.isSublist("Tritium Coefficients")) {
+    // Check if Tritium Sublist exists. If true, move forward
+    if (param_list.isSublist("Tritium Coefficients")) {
 
-	      RCP<ParameterList> p = rcp(new ParameterList("Helium ODEs"));
+      Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(
+          new Teuchos::ParameterList("Helium ODEs"));
 
-          // Rather than combine lists, we choose to invoke multiple parameter lists and
-          // stuff them separately into p. All lists need to be reflected in HeliumODEs_Def.hpp
-          Teuchos::ParameterList& param_list_1 = material_db_->
-              getElementBlockSublist(eb_name, matName).sublist(
-              "Transport Coefficients");
-          Teuchos::ParameterList& param_list_2 = material_db_->
-              getElementBlockSublist(eb_name, matName).sublist(
-              "Tritium Coefficients");
-          Teuchos::ParameterList& param_list_3 = material_db_->
-              getElementBlockSublist(eb_name, matName).sublist(
-              "Molar Volume");
+      // Rather than combine lists, we choose to invoke multiple parameter
+      // lists and stuff them separately into p.
+      // All lists need to be reflected in HeliumODEs_Def.hpp
+      Teuchos::ParameterList& param_list_1 = material_db_->
+          getElementBlockSublist(eb_name, matName).sublist(
+          "Transport Coefficients");
+      Teuchos::ParameterList& param_list_2 = material_db_->
+          getElementBlockSublist(eb_name, matName).sublist(
+          "Tritium Coefficients");
+      Teuchos::ParameterList& param_list_3 = material_db_->
+          getElementBlockSublist(eb_name, matName).sublist(
+          "Molar Volume");
 
-          p->set<Teuchos::ParameterList*>("Transport Parameters", &param_list_1);
-          p->set<Teuchos::ParameterList*>("Tritium Parameters", &param_list_2);
-          p->set<Teuchos::ParameterList*>("Molar Volume", &param_list_3);
+      p->set<Teuchos::ParameterList*>("Transport Parameters", &param_list_1);
+      p->set<Teuchos::ParameterList*>("Tritium Parameters", &param_list_2);
+      p->set<Teuchos::ParameterList*>("Molar Volume", &param_list_3);
 
-          //Input
-          p->set<std::string>("Total Concentration Name","Total Concentration");
-          p->set<std::string>("Delta Time Name", "Delta Time");
-          p->set<std::string>("Diffusion Coefficient Name", "Diffusion Coefficient");
-          // Output
-          p->set<std::string>("He Concentration Name", "He Concentration");
-          p->set<std::string>("Total Bubble Density Name", "Total Bubble Density");
-          p->set<std::string>("Bubble Volume Fraction Name", "Bubble Volume Fraction");
+      //Input
+      p->set<std::string
+          >("Total Concentration Name", "Total Concentration");
+      p->set<std::string>("Delta Time Name", "Delta Time");
+      p->set<std::string
+          >("Diffusion Coefficient Name", "Diffusion Coefficient");
+      // Output
+      p->set<std::string>("He Concentration Name", "He Concentration");
+      p->set<std::string
+          >("Total Bubble Density Name", "Total Bubble Density");
+      p->set<std::string
+          >("Bubble Volume Fraction Name", "Bubble Volume Fraction");
 
-          ev = rcp(
-              new LCM::HeliumODEs<EvalT, AlbanyTraits>(*p, dl_));
-          fm0.template registerEvaluator<EvalT>(ev);
+      ev = Teuchos::rcp(
+          new LCM::HeliumODEs<EvalT, PHAL::AlbanyTraits>(*p, dl_));
+      fm0.template registerEvaluator<EvalT>(ev);
 
-          // Outputting state variables
-          //
-          // Using field names registered for surface elements (he_concentration, etc.)
-          // NOTE: All output variables are stated
-          //
-          // helium concentration
-          bool output_flag(false);
-          if (material_db_->isElementBlockParam(eb_name, "Output "+he_concentration))
-    	      output_flag =
-                  material_db_->getElementBlockParam<bool>(eb_name, "Output "+he_concentration);
-          if (output_flag) {
-    	      p = stateMgr.registerStateVariable(he_concentration, dl_->qp_scalar,
-                  dl_->dummy, eb_name, "scalar", 0.0, true, output_flag);
-              ev = rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
-              fm0.template registerEvaluator<EvalT>(ev);
-          }
-          // total bubble density
-          output_flag = false;
-          if (material_db_->isElementBlockParam(eb_name, "Output "+total_bubble_density))
-              output_flag =
-                  material_db_->getElementBlockParam<bool>(eb_name, "Output "+total_bubble_density);
-          if (output_flag) {
-   	          p = stateMgr.registerStateVariable(total_bubble_density, dl_->qp_scalar,
-                  dl_->dummy, eb_name, "scalar", 0.0, true, output_flag);
-              ev = rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
-              fm0.template registerEvaluator<EvalT>(ev);
-          }
-          // bubble volume fraction
-          output_flag = false;
-          if (material_db_->isElementBlockParam(eb_name, "Output "+bubble_volume_fraction))
-              output_flag =
-                  material_db_->getElementBlockParam<bool>(eb_name, "Output "+bubble_volume_fraction);
-          if (output_flag) {
-              p = stateMgr.registerStateVariable(bubble_volume_fraction, dl_->qp_scalar,
-                  dl_->dummy, eb_name, "scalar", 0.0, true, output_flag);
-              ev = rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
-              fm0.template registerEvaluator<EvalT>(ev);
-          }
+      // Outputting state variables
+      //
+      // Using field names registered for surface elements
+      // (he_concentration, etc.)
+      // NOTE: All output variables are stated
+      //
+      // helium concentration
+      bool output_flag(false);
+      if (material_db_->isElementBlockParam(
+          eb_name,
+          "Output " + he_concentration))
+        output_flag =
+            material_db_->getElementBlockParam<bool>(
+                eb_name,
+                "Output " + he_concentration);
+      if (output_flag) {
+        p = stateMgr.registerStateVariable(he_concentration, dl_->qp_scalar,
+            dl_->dummy, eb_name, "scalar", 0.0, true, output_flag);
+        ev = Teuchos::rcp(
+            new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
+        fm0.template registerEvaluator<EvalT>(ev);
       }
+      // total bubble density
+      output_flag = false;
+      if (material_db_->isElementBlockParam(
+          eb_name,
+          "Output " + total_bubble_density))
+        output_flag =
+            material_db_->getElementBlockParam<bool>(
+                eb_name,
+                "Output " + total_bubble_density);
+      if (output_flag) {
+        p = stateMgr.registerStateVariable(total_bubble_density, dl_->qp_scalar,
+            dl_->dummy, eb_name, "scalar", 0.0, true, output_flag);
+        ev = Teuchos::rcp(
+            new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
+        fm0.template registerEvaluator<EvalT>(ev);
+      }
+      // bubble volume fraction
+      output_flag = false;
+      if (material_db_->isElementBlockParam(
+          eb_name,
+          "Output " + bubble_volume_fraction))
+        output_flag =
+            material_db_->getElementBlockParam<bool>(
+                eb_name,
+                "Output " + bubble_volume_fraction);
+      if (output_flag) {
+        p = stateMgr.registerStateVariable(
+            bubble_volume_fraction,
+            dl_->qp_scalar,
+            dl_->dummy,
+            eb_name,
+            "scalar",
+            0.0,
+            true,
+            output_flag);
+        ev = Teuchos::rcp(
+            new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
+        fm0.template registerEvaluator<EvalT>(ev);
+      }
+    }
   }
 
   // Transport of the temperature field
@@ -2720,7 +2749,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     Albany::ResponseUtilities<EvalT, PHAL::AlbanyTraits> respUtils(dl_);
     return
-        respUtils.constructResponses(fm0, *responseList, pFromProb, stateMgr);
+    respUtils.constructResponses(fm0, *responseList, pFromProb, stateMgr);
 
   }
 
