@@ -58,7 +58,6 @@ Topology::Topology(
   Albany::DiscretizationFactory
   disc_factory(params, communicator);
 
-  // Needed, otherwise segfaults.
   Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >
   mesh_specs = disc_factory.createMeshSpecs();
 
@@ -69,9 +68,33 @@ Topology::Topology(
   Albany::AbstractFieldContainer::FieldContainerRequirements
   req;
 
-  setDiscretization(disc_factory.createDiscretization(3, state_info, req));
+  Teuchos::RCP<Albany::AbstractDiscretization> const &
+  abstract_disc = disc_factory.createDiscretization(3, state_info, req);
 
-  Topology::createDiscretization();
+  setDiscretization(abstract_disc);
+
+  Albany::STKDiscretization &
+  stk_disc = static_cast<Albany::STKDiscretization &>(*abstract_disc);
+
+  Teuchos::RCP<Albany::AbstractSTKMeshStruct>
+  stk_mesh_struct = stk_disc.getSTKMeshStruct();
+
+  setSTKMeshStruct(stk_mesh_struct);
+
+  stk::mesh::MetaData &
+  meta_data = *(stk_mesh_struct->metaData);
+
+  std::string const
+  bulk_part_name = "bulk";
+
+  stk::mesh::Part &
+  bulk_part = *(meta_data.get_part(bulk_part_name));
+
+  shards::CellTopology const &
+  bulk_cell_topology = meta_data.get_cell_topology(bulk_part);
+
+  // Set the bulk topology
+  setCellTopology(bulk_cell_topology);
 
   // Fracture the mesh randomly
   // Probability that fracture_criterion will return true.
@@ -105,8 +128,6 @@ Topology(Teuchos::RCP<Albany::AbstractDiscretization> & discretization) :
     fracture_criterion_(Teuchos::null)
 {
   setDiscretization(discretization);
-
-  Topology::createDiscretization();
 
   // Fracture the mesh randomly
   // Probability that fracture_criterion will return true.
@@ -163,59 +184,6 @@ Topology::initializeFractureState()
 
     }
   }
-
-  return;
-}
-
-//
-// Create Albany discretization
-//
-void
-Topology::createDiscretization()
-{
-  // Need to access the bulk_data and meta_data classes in the mesh
-  // data structure
-  Albany::STKDiscretization &
-  stk_discretization =
-      static_cast<Albany::STKDiscretization &>(*getDiscretization());
-
-  Teuchos::RCP<Albany::AbstractSTKMeshStruct>
-  stk_mesh_struct = stk_discretization.getSTKMeshStruct();
-
-  setSTKMeshStruct(stk_mesh_struct);
-
-  stk::mesh::MetaData &
-  meta_data = *(stk_mesh_struct->metaData);
-
-  std::string const
-  bulk_part_name = "bulk";
-
-  stk::mesh::Part &
-  bulk_part = *(meta_data.get_part(bulk_part_name));
-
-  shards::CellTopology const &
-  bulk_cell_topology = meta_data.get_cell_topology(bulk_part);
-
-  // Set the bulk topology
-  setCellTopology(bulk_cell_topology);
-
-  // Now the interface
-  std::string const
-  interface_part_name = "interface";
-
-  shards::CellTopology const
-  interface_cell_topology =
-      LCM::interfaceCellTopogyFromBulkCellTopogy(bulk_cell_topology);
-
-  stk::mesh::EntityRank const
-  interface_dimension = static_cast<stk::mesh::EntityRank>(
-      interface_cell_topology.getDimension());
-
-  stk::mesh::Part &
-  interface_part =
-      meta_data.declare_part(interface_part_name, interface_dimension);
-
-  stk::mesh::set_cell_topology(interface_part, interface_cell_topology);
 
   return;
 }

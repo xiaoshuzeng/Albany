@@ -58,7 +58,7 @@ int main(int ac, char* av[])
   // Read the mesh
   //
   Teuchos::GlobalMPISession
-  mpiSession(&ac,&av);
+  mpiSession(&ac, &av);
 
   LCM::Topology
   topology(input_file, output_file);
