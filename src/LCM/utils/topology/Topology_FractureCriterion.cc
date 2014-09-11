@@ -7,7 +7,7 @@
 #include "Topology.h"
 #include "Topology_FractureCriterion.h"
 
-namespace LCM{
+namespace LCM {
 
 FractureCriterionTraction::FractureCriterionTraction(
     Topology & topology,
@@ -16,10 +16,13 @@ FractureCriterionTraction::FractureCriterionTraction(
     std::string const & stress_name,
     double const critical_traction,
     double const beta) :
-AbstractFractureCriterion(topology, bulk_block_name, interface_block_name),
-stress_field_(*(getMetaData().get_field<TensorFieldType>(NODE_RANK, stress_name))),
-critical_traction_(critical_traction),
-beta_(beta)
+    AbstractFractureCriterion(topology, bulk_block_name, interface_block_name),
+    stress_field_(
+        *(getMetaData().get_field<TensorFieldType>(
+            stk::topology::NODE_RANK,
+            stress_name))),
+    critical_traction_(critical_traction),
+    beta_(beta)
 {
   if (&stress_field_ == 0) {
     std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
@@ -32,29 +35,28 @@ beta_(beta)
   computeNormals();
 }
 
-
 bool
 FractureCriterionTraction::check(
     stk::mesh::BulkData & bulk_data,
-    Entity interface)
+    stk::mesh::Entity interface)
 {
   // Check the adjacent bulk elements. Proceed only
   // if both elements belong to the bulk part.
-  Entity const *
+  stk::mesh::Entity const *
   relations_up = bulk_data.begin(
       interface,
-      (stk::mesh::EntityRank)(bulk_data.entity_rank(interface) + 1)
-  );
+      (stk::mesh::EntityRank) (bulk_data.entity_rank(interface) + 1)
+      );
 
   assert(bulk_data.num_connectivity(
-          interface,
-          (stk::mesh::EntityRank)(bulk_data.entity_rank(interface) + 1)
-         ) == 2);
+      interface,
+      (stk::mesh::EntityRank )(bulk_data.entity_rank(interface) + 1)
+      ) == 2);
 
-  Entity
+  stk::mesh::Entity
   element_0 = relations_up[0];
 
-  Entity
+  stk::mesh::Entity
   element_1 = relations_up[1];
 
   stk::mesh::Bucket const &
@@ -70,7 +72,7 @@ FractureCriterionTraction::check(
   if (is_embedded == false) return false;
 
   // Now traction check
-  EntityVector
+  stk::mesh::EntityVector
   nodes = getTopology().getBoundaryEntityNodes(interface);
 
   EntityVectorIndex const
@@ -88,7 +90,7 @@ FractureCriterionTraction::check(
   // average yields the value.
   for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
 
-    Entity
+    stk::mesh::Entity
     node = nodes[i];
 
     double * const
@@ -134,13 +136,13 @@ FractureCriterionTraction::check(
 void
 FractureCriterionTraction::computeNormals()
 {
-  Selector
+  stk::mesh::Selector
   local_selector = getMetaData().locally_owned_part();
 
   std::vector<stk::mesh::Bucket*> const &
-  node_buckets = getBulkData().buckets(NODE_RANK);
+  node_buckets = getBulkData().buckets(stk::topology::NODE_RANK);
 
-  EntityVector
+  stk::mesh::EntityVector
   nodes;
 
   stk::mesh::get_selected_entities(local_selector, node_buckets, nodes);
@@ -165,9 +167,9 @@ FractureCriterionTraction::computeNormals()
   }
 
   std::vector<stk::mesh::Bucket*> const &
-    face_buckets = bulk_data_.buckets(getMetaData().side_rank());
+  face_buckets = bulk_data_.buckets(getMetaData().side_rank());
 
-  EntityVector
+  stk::mesh::EntityVector
   faces;
 
   stk::mesh::get_selected_entities(local_selector, face_buckets, faces);
@@ -179,10 +181,10 @@ FractureCriterionTraction::computeNormals()
 
   for (EntityVectorIndex i = 0; i < number_normals; ++i) {
 
-    Entity
+    stk::mesh::Entity
     face = faces[i];
 
-    EntityVector
+    stk::mesh::EntityVector
     nodes = getTopology().getBoundaryEntityNodes(face);
 
     Intrepid::Vector<double> &

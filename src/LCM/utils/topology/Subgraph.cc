@@ -14,23 +14,23 @@ namespace LCM {
 //
 Subgraph::Subgraph(
     Topology & topology,
-    std::set<EntityKey>::iterator first_vertex,
-    std::set<EntityKey>::iterator last_vertex,
+    std::set<stk::mesh::EntityKey>::iterator first_vertex,
+    std::set<stk::mesh::EntityKey>::iterator last_vertex,
     std::set<stkEdge>::iterator first_edge,
     std::set<stkEdge>::iterator last_edge) :
     topology_(topology)
 {
   // Insert vertices and create the vertex map
-  for (std::set<EntityKey>::iterator vertex_iterator = first_vertex;
+  for (std::set<stk::mesh::EntityKey>::iterator vertex_iterator = first_vertex;
       vertex_iterator != last_vertex;
       ++vertex_iterator) {
 
     // get global vertex
-    EntityKey
+    stk::mesh::EntityKey
     global_vertex = *vertex_iterator;
 
     // get entity
-    Entity
+    stk::mesh::Entity
     vertex_entity = getBulkData()->get_entity(global_vertex);
 
     // get entity rank
@@ -41,10 +41,10 @@ Subgraph::Subgraph(
     Vertex
     local_vertex = boost::add_vertex(*this);
 
-    std::pair<Vertex, EntityKey>
+    std::pair<Vertex, stk::mesh::EntityKey>
     local_to_global = std::make_pair(local_vertex, global_vertex);
 
-    std::pair<EntityKey, Vertex>
+    std::pair<stk::mesh::EntityKey, Vertex>
     global_to_local = std::make_pair(global_vertex, local_vertex);
 
     local_global_vertex_map_.insert(local_to_global);
@@ -68,10 +68,10 @@ Subgraph::Subgraph(
     global_edge = *edge_iterator;
 
     // Get global source and target vertices
-    EntityKey
+    stk::mesh::EntityKey
     global_source_vertex = global_edge.source;
 
-    EntityKey
+    stk::mesh::EntityKey
     global_target_vertex = global_edge.target;
 
     // Get local source and target vertices
@@ -112,55 +112,77 @@ Subgraph::Subgraph(
 //
 Topology &
 Subgraph::getTopology()
-{return topology_;}
+{
+  return topology_;
+}
 
 size_t const
 Subgraph::getSpaceDimension()
-{return getTopology().getSpaceDimension();}
+{
+  return getTopology().getSpaceDimension();
+}
 
-RCP<Albany::AbstractSTKMeshStruct> &
+Teuchos::RCP<Albany::AbstractSTKMeshStruct> &
 Subgraph::getSTKMeshStruct()
-{return getTopology().getSTKMeshStruct();}
+{
+  return getTopology().getSTKMeshStruct();
+}
 
 stk::mesh::BulkData *
 Subgraph::getBulkData()
-{return getTopology().getBulkData();}
+{
+  return getTopology().getBulkData();
+}
 
 stk::mesh::MetaData *
 Subgraph::getMetaData()
-{return getTopology().getMetaData();}
+{
+  return getTopology().getMetaData();
+}
 
 stk::mesh::EntityRank const
 Subgraph::getBoundaryRank()
-{return getTopology().getBoundaryRank();}
+{
+  return getTopology().getBoundaryRank();
+}
 
 IntScalarFieldType &
 Subgraph::getFractureState(stk::mesh::EntityRank rank)
-{return getTopology().getFractureState(rank);}
+{
+  return getTopology().getFractureState(rank);
+}
 
 void
-Subgraph::setFractureState(Entity e, FractureState const fs)
-{getTopology().setFractureState(e, fs);}
+Subgraph::setFractureState(stk::mesh::Entity e, FractureState const fs)
+{
+  getTopology().setFractureState(e, fs);
+}
 
 FractureState
-Subgraph::getFractureState(Entity e)
-{return getTopology().getFractureState(e);}
+Subgraph::getFractureState(stk::mesh::Entity e)
+{
+  return getTopology().getFractureState(e);
+}
 
 bool
-Subgraph::isOpen(Entity e)
-{return getTopology().isOpen(e);}
+Subgraph::isOpen(stk::mesh::Entity e)
+{
+  return getTopology().isOpen(e);
+}
 
 bool
-Subgraph::isInternalAndOpen(Entity e)
-{return getTopology().isInternalAndOpen(e);}
+Subgraph::isInternalAndOpen(stk::mesh::Entity e)
+{
+  return getTopology().isInternalAndOpen(e);
+}
 
 //
 // Map a vertex in the subgraph to a entity in the stk mesh.
 //
-EntityKey
+stk::mesh::EntityKey
 Subgraph::localToGlobal(Vertex local_vertex)
 {
-  std::map<Vertex, EntityKey>::const_iterator
+  std::map<Vertex, stk::mesh::EntityKey>::const_iterator
   vertex_map_iterator = local_global_vertex_map_.find(local_vertex);
 
   assert(vertex_map_iterator != local_global_vertex_map_.end());
@@ -172,9 +194,9 @@ Subgraph::localToGlobal(Vertex local_vertex)
 // Map a entity in the stk mesh to a vertex in the subgraph.
 //
 Vertex
-Subgraph::globalToLocal(EntityKey global_vertex_key)
+Subgraph::globalToLocal(stk::mesh::EntityKey global_vertex_key)
 {
-  std::map<EntityKey, Vertex>::const_iterator
+  std::map<stk::mesh::EntityKey, Vertex>::const_iterator
   vertex_map_iterator = global_local_vertex_map_.find(global_vertex_key);
 
   assert(vertex_map_iterator != global_local_vertex_map_.end());
@@ -196,12 +218,12 @@ Subgraph::addVertex(stk::mesh::EntityRank vertex_rank)
 
   requests[vertex_rank] = 1;
 
-  EntityVector
+  stk::mesh::EntityVector
   new_entities;
 
   getBulkData()->generate_new_entities(requests, new_entities);
 
-  EntityKey
+  stk::mesh::EntityKey
   global_vertex = getBulkData()->entity_key(new_entities[0]);
 
   // Add the vertex to the subgraph
@@ -209,10 +231,10 @@ Subgraph::addVertex(stk::mesh::EntityRank vertex_rank)
   local_vertex = boost::add_vertex(*this);
 
   // Update maps
-  std::pair<Vertex, EntityKey>
+  std::pair<Vertex, stk::mesh::EntityKey>
   local_to_global = std::make_pair(local_vertex, global_vertex);
 
-  std::pair<EntityKey, Vertex>
+  std::pair<stk::mesh::EntityKey, Vertex>
   global_to_local = std::make_pair(global_vertex, local_vertex);
 
   local_global_vertex_map_.insert(local_to_global);
@@ -235,11 +257,11 @@ void
 Subgraph::removeVertex(Vertex const vertex)
 {
   // get the global entity key of vertex
-  EntityKey
+  stk::mesh::EntityKey
   key = localToGlobal(vertex);
 
   // look up entity from key
-  Entity
+  stk::mesh::Entity
   entity = getBulkData()->get_entity(key);
 
   // remove the vertex and key from global_local_vertex_map_ and
@@ -271,20 +293,20 @@ Subgraph::addEdge(
     Vertex const local_target_vertex)
 {
   // get global entities
-  EntityKey
+  stk::mesh::EntityKey
   global_source_key = localToGlobal(local_source_vertex);
 
-  EntityKey
+  stk::mesh::EntityKey
   global_target_key = localToGlobal(local_target_vertex);
 
-  Entity
+  stk::mesh::Entity
   global_source_vertex = getBulkData()->get_entity(global_source_key);
 
-  Entity
+  stk::mesh::Entity
   global_target_vertex = getBulkData()->get_entity(global_target_key);
 
   assert(getBulkData()->entity_rank(global_source_vertex) -
-         getBulkData()->entity_rank(global_target_vertex) == 1);
+      getBulkData()->entity_rank(global_target_vertex) == 1);
 
   // Add edge to local graph
   std::pair<Edge, bool>
@@ -334,22 +356,22 @@ Subgraph::removeEdge(
   boost::remove_edge(local_source_vertex, local_target_vertex, *this);
 
   // remove relation from stk mesh
-  EntityKey
+  stk::mesh::EntityKey
   global_source_id = localToGlobal(local_source_vertex);
 
-  EntityKey
+  stk::mesh::EntityKey
   global_target_id = localToGlobal(local_target_vertex);
 
-  Entity
+  stk::mesh::Entity
   global_source_vertex = getBulkData()->get_entity(global_source_id);
 
-  Entity
+  stk::mesh::Entity
   global_target_vertex = getBulkData()->get_entity(global_target_id);
 
   getBulkData()->destroy_relation(
-    global_source_vertex,
-    global_target_vertex,
-    edge_id);
+      global_source_vertex,
+      global_target_vertex,
+      edge_id);
 
   return;
 }
@@ -388,7 +410,8 @@ typedef boost::graph_traits<UGraph>::edge_descriptor UEdge;
 namespace {
 
 void
-writeGraphviz(std::string const & output_filename, UGraph const & graph) {
+writeGraphviz(std::string const & output_filename, UGraph const & graph)
+{
   // Open output file
   std::ofstream
   gviz_out;
@@ -601,14 +624,16 @@ Subgraph::cloneBoundaryEntity(Vertex vertex)
 // Restore element to node connectivity needed by STK.
 //
 void
-Subgraph::updateElementNodeConnectivity(Entity point, ElementNodeMap & map)
+Subgraph::updateElementNodeConnectivity(
+    stk::mesh::Entity point,
+    ElementNodeMap & map)
 {
   for (ElementNodeMap::iterator i = map.begin(); i != map.end(); ++i) {
-    Entity
+    stk::mesh::Entity
     element = i->first;
 
     // Identify relation id and remove
-    Entity const *
+    stk::mesh::Entity const *
     relations = getBulkData()->begin_nodes(element);
 
     stk::mesh::ConnectivityOrdinal const *
@@ -635,7 +660,7 @@ Subgraph::updateElementNodeConnectivity(Entity point, ElementNodeMap & map)
 
     getBulkData()->destroy_relation(element, point, edge_id);
 
-    Entity
+    stk::mesh::Entity
     new_point = i->second;
     getBulkData()->declare_relation(element, new_point, edge_id);
   }
@@ -645,7 +670,7 @@ Subgraph::updateElementNodeConnectivity(Entity point, ElementNodeMap & map)
 //
 // Splits an articulation point.
 //
-std::map<Entity, Entity>
+std::map<stk::mesh::Entity, stk::mesh::Entity>
 Subgraph::splitArticulationPoint(Vertex vertex)
 {
   stk::mesh::EntityRank
@@ -663,7 +688,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
 
   // The function returns an updated connectivity map.
   // If the vertex rank is not node, then this map will be empty.
-  std::map<Entity, Entity>
+  std::map<stk::mesh::Entity, stk::mesh::Entity>
   new_connectivity;
 
   if (number_components == 1) return new_connectivity;
@@ -681,8 +706,8 @@ Subgraph::splitArticulationPoint(Vertex vertex)
 
   // Create a map of elements to new node numbers
   // only if the input vertex is a node
-  if (vertex_rank == NODE_RANK) {
-    Entity
+  if (vertex_rank == stk::topology::NODE_RANK) {
+    stk::mesh::Entity
     point = getBulkData()->get_entity(localToGlobal(vertex));
 
     for (ComponentMap::iterator i = components.begin();
@@ -697,20 +722,20 @@ Subgraph::splitArticulationPoint(Vertex vertex)
       stk::mesh::EntityRank
       current_rank = getVertexRank(current_vertex);
 
-      if (current_rank != ELEMENT_RANK) continue;
+      if (current_rank != stk::topology::ELEMENT_RANK) continue;
 
       if (component_number == number_components - 1) continue;
 
-      Entity
+      stk::mesh::Entity
       element = getBulkData()->get_entity(localToGlobal(current_vertex));
 
       Vertex
       new_vertex = new_vertices[component_number];
 
-      Entity
+      stk::mesh::Entity
       new_node = getBulkData()->get_entity(localToGlobal(new_vertex));
 
-      std::pair<Entity, Entity>
+      std::pair<stk::mesh::Entity, stk::mesh::Entity>
       nc = std::make_pair(element, new_node);
 
       new_connectivity.insert(nc);
@@ -752,7 +777,7 @@ Subgraph::splitArticulationPoint(Vertex vertex)
     size_t
     vertex_component = (*component_iterator).second;
 
-    Entity
+    stk::mesh::Entity
     entity = getBulkData()->get_entity(localToGlobal(source));
 
     if (vertex_component < number_components - 1) {
@@ -805,16 +830,16 @@ void
 Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
 {
   // Get the entity for the old and new vertices
-  EntityKey
+  stk::mesh::EntityKey
   old_key = localToGlobal(old_vertex);
 
-  EntityKey
+  stk::mesh::EntityKey
   new_key = localToGlobal(new_vertex);
 
-  Entity
+  stk::mesh::Entity
   old_entity = getBulkData()->get_entity(old_key);
 
-  Entity
+  stk::mesh::Entity
   new_entity = getBulkData()->get_entity(new_key);
 
   // Iterate over the out edges of the old vertex and check against the
@@ -822,9 +847,10 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
   assert(getMetaData()->spatial_dimension() == 3);
 
   stk::mesh::EntityRank const
-  one_down = (stk::mesh::EntityRank)(getBulkData()->entity_rank(old_entity) - 1);
+  one_down =
+      (stk::mesh::EntityRank) (getBulkData()->entity_rank(old_entity) - 1);
 
-  Entity const *
+  stk::mesh::Entity const *
   old_relations = getBulkData()->begin(old_entity, one_down);
 
   size_t const
@@ -835,7 +861,7 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
 
   for (size_t i = 0; i < num_old_relations; ++i) {
 
-    Entity const *
+    stk::mesh::Entity const *
     new_relations = getBulkData()->begin(new_entity, one_down);
 
     size_t const
@@ -856,7 +882,7 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
       EdgeId
       edge_id = old_relation_ords[i];
 
-      Entity
+      stk::mesh::Entity
       target = old_relations[i];
 
       getBulkData()->declare_relation(new_entity, target, edge_id);
@@ -911,10 +937,10 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
 
   for (VertexIterator i = vertices_begin; i != vertices_end; ++i) {
 
-    EntityKey
+    stk::mesh::EntityKey
     key = localToGlobal(*i);
 
-    Entity
+    stk::mesh::Entity
     entity = getBulkData()->get_entity(key);
 
     stk::mesh::EntityRank const
@@ -923,7 +949,7 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
     FractureState const
     fracture_state = getFractureState(entity);
 
-    EntityId const
+    stk::mesh::EntityId const
     entity_id = getBulkData()->identifier(entity);
 
     gviz_out << dot_entity(entity_id, rank, fracture_state);
@@ -948,28 +974,28 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
       Vertex
       target = boost::target(out_edge, *this);
 
-      EntityKey
+      stk::mesh::EntityKey
       source_key = localToGlobal(source);
 
-      Entity
+      stk::mesh::Entity
       global_source = getBulkData()->get_entity(source_key);
 
-      EntityKey
+      stk::mesh::EntityKey
       target_key = localToGlobal(target);
 
-      Entity
+      stk::mesh::Entity
       global_target = getBulkData()->get_entity(target_key);
 
       EdgeId
       edge_id = getEdgeId(out_edge);
 
       gviz_out << dot_relation(
-        getBulkData()->identifier(global_source),
-        getBulkData()->entity_rank(global_source),
-        getBulkData()->identifier(global_target),
-        getBulkData()->entity_rank(global_target),
-        edge_id
-      );
+          getBulkData()->identifier(global_source),
+          getBulkData()->entity_rank(global_source),
+          getBulkData()->identifier(global_target),
+          getBulkData()->entity_rank(global_target),
+          edge_id
+          );
 
     }
 

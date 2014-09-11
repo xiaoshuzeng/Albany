@@ -43,31 +43,14 @@
 #include "Albany_STKDiscretization.hpp"
 #include "Albany_Utils.hpp"
 
-using stk::mesh::Entity;
-using stk::mesh::EntityId;
-using stk::mesh::EntityKey;
-using stk::mesh::EntityVector;
-using stk::mesh::Field;
-using stk::mesh::MetaData;
-using stk::mesh::PairIterRelation;
-using stk::mesh::Part;
-using stk::mesh::PartVector;
-using stk::mesh::Relation;
-using stk::mesh::RelationVector;
-using stk::mesh::Selector;
-
-using Teuchos::RCP;
-
-using Albany::STKDiscretization;
-
 namespace LCM {
 
 typedef stk::mesh::RelationIdentifier EdgeId;
-typedef EntityVector::size_type EntityVectorIndex;
-typedef RelationVector::size_type RelationVectorIndex;
+typedef stk::mesh::EntityVector::size_type EntityVectorIndex;
+typedef stk::mesh::RelationVector::size_type RelationVectorIndex;
 typedef std::vector<Intrepid::Vector<double> > Coordinates;
 typedef Coordinates::size_type CoordinatesIndex;
-typedef std::vector<std::vector<EntityId> > Connectivity;
+typedef std::vector<std::vector<stk::mesh::EntityId> > Connectivity;
 typedef Connectivity::size_type ConnectivityIndex;
 
 typedef boost::vertex_name_t VertexName;
@@ -93,29 +76,28 @@ typedef boost::graph_traits<Graph>::out_edge_iterator OutEdgeIterator;
 typedef boost::graph_traits<Graph>::in_edge_iterator InEdgeIterator;
 
 typedef Albany::AbstractSTKFieldContainer::IntScalarFieldType
-    IntScalarFieldType;
+IntScalarFieldType;
 
 typedef Albany::AbstractSTKFieldContainer::VectorFieldType
-    VectorFieldType;
+VectorFieldType;
 
 typedef Albany::AbstractSTKFieldContainer::TensorFieldType
-    TensorFieldType;
+TensorFieldType;
 
 // Specific to topological manipulation
-typedef std::pair<Entity, Entity> EntityPair;
+typedef std::pair<stk::mesh::Entity, stk::mesh::Entity> EntityPair;
 typedef std::map<Vertex, size_t> ComponentMap;
-typedef std::map<Entity, Entity> ElementNodeMap;
+typedef std::map<stk::mesh::Entity, stk::mesh::Entity> ElementNodeMap;
 
-enum FractureState {CLOSED = 0, OPEN = 1};
-enum VTKCellType {INVALID = 0, VERTEX = 1, LINE = 2, TRIANGLE = 5, QUAD = 9};
+enum FractureState
+{
+  CLOSED = 0, OPEN = 1
+};
 
-// Ugly re-definitions but better to have everything the we need
-// defined here.
-static stk::mesh::EntityRank const INVALID_RANK = stk::topology::INVALID_RANK;
-static stk::mesh::EntityRank const NODE_RANK    = stk::topology::NODE_RANK;
-static stk::mesh::EntityRank const EDGE_RANK    = stk::topology::EDGE_RANK;
-static stk::mesh::EntityRank const FACE_RANK    = stk::topology::FACE_RANK;
-static stk::mesh::EntityRank const ELEMENT_RANK = stk::topology::ELEMENT_RANK;
+enum VTKCellType
+{
+  INVALID = 0, VERTEX = 1, LINE = 2, TRIANGLE = 5, QUAD = 9
+};
 
 ///
 /// \brief Struct to store the data needed for creation or
@@ -131,9 +113,10 @@ static stk::mesh::EntityRank const ELEMENT_RANK = stk::topology::ELEMENT_RANK;
 ///
 /// Used to create edges from the stk mesh object in a boost graph
 ///
-struct stkEdge {
-  EntityKey source;
-  EntityKey target;
+struct stkEdge
+{
+  stk::mesh::EntityKey source;
+  stk::mesh::EntityKey target;
   EdgeId local_id;
 };
 
@@ -143,7 +126,7 @@ struct stkEdge {
 struct EdgeLessThan
 {
   bool operator()(stkEdge const & a, stkEdge const & b) const
-  {
+      {
     if (a.source < b.source) return true;
     if (a.source > b.source) return false;
     // source a and b are the same - check target

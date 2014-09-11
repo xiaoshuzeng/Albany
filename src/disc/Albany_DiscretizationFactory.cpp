@@ -27,6 +27,10 @@
 #include "Albany_Catalyst_Decorator.hpp"
 #endif
 
+#ifdef ALBANY_LCM
+#include "Topology_Utils.h"
+#endif // ALBANY_LCM
+
 Albany::DiscretizationFactory::DiscretizationFactory(
   const Teuchos::RCP<Teuchos::ParameterList>& topLevelParams,
   const Teuchos::RCP<const Epetra_Comm>& epetra_comm_) :
@@ -63,51 +67,12 @@ Albany::DiscretizationFactory::setMeshMover(const Teuchos::RCP<CUTR::CubitMeshMo
 
 #ifdef ALBANY_LCM
 
-namespace shards {
-
-namespace {
-
-CellTopology
-interfaceCellTopogyFromBulkCellTopogy(
-    CellTopology const & bulk_cell_topology
-)
-{
-  CellTopology
-  interface_cell_topology;
-
-  std::string const &
-  bulk_cell_topology_name = bulk_cell_topology.getName();
-
-  if (bulk_cell_topology_name == "Triangle_3") {
-    interface_cell_topology = CellTopology(getCellTopologyData<Quadrilateral<4> >());
-  } else if (bulk_cell_topology_name == "Quadrilateral_4") {
-    interface_cell_topology = CellTopology(getCellTopologyData<Quadrilateral<4> >());
-  } else if (bulk_cell_topology_name == "Tetrahedron_4") {
-    interface_cell_topology = CellTopology(getCellTopologyData<Wedge<6> >());
-  } else if (bulk_cell_topology_name == "Hexahedron_8") {
-    interface_cell_topology = CellTopology(getCellTopologyData<Hexahedron<8> >());
-  } else {
-    TEUCHOS_TEST_FOR_EXCEPTION(
-      false,
-      std::logic_error,
-      "LogicError: Interface cell topology not implemented for:" <<
-      bulk_cell_topology_name << std::endl
-    );
-  }
-
-  return interface_cell_topology;
-}
-
-} // anonymous namespace
-
-} // namespace shards
-
 namespace {
 
 void createInterfaceParts(
     Teuchos::RCP<Teuchos::ParameterList> const & adapt_params,
     Teuchos::RCP<Albany::AbstractMeshStruct> & mesh_struct
-)
+    )
 {
   bool const
   do_adaption = adapt_params.is_null() == false;
@@ -142,18 +107,17 @@ void createInterfaceParts(
 
   shards::CellTopology const
   interface_cell_topology =
-      shards::interfaceCellTopogyFromBulkCellTopogy(bulk_cell_topology);
+      LCM::interfaceCellTopogyFromBulkCellTopogy(bulk_cell_topology);
 
   stk::mesh::EntityRank const
-    interface_dimension = (stk::mesh::EntityRank) interface_cell_topology.getDimension();
+  interface_dimension = static_cast<stk::mesh::EntityRank>(
+      interface_cell_topology.getDimension());
 
   stk::mesh::Part &
   interface_part =
       meta_data.declare_part(interface_part_name, interface_dimension);
 
-  stk::mesh::set_cell_topology(
-      interface_part, interface_cell_topology
-  );
+  stk::mesh::set_cell_topology(interface_part, interface_cell_topology);
 
 #ifdef ALBANY_SEACAS
   stk::io::put_io_part_attribute(interface_part);
@@ -169,43 +133,55 @@ void createInterfaceParts(
   number_blocks = mesh_specs_struct.size();
 
   Albany::MeshSpecsStruct &
-  last_mss = *(mesh_specs_struct[number_blocks - 1]);
+  last_mesh_specs_struct = *(mesh_specs_struct[number_blocks - 1]);
 
   CellTopologyData const &
-  ictd = *(interface_cell_topology.getCellTopologyData());
+  interface_cell_topology_data =
+      *(interface_cell_topology.getCellTopologyData());
 
   int const
-  dim = interface_cell_topology.getDimension();
+  dimension = interface_cell_topology.getDimension();
 
   int const
-  cub = last_mss.cubatureDegree;
+  cubature_degree = last_mesh_specs_struct.cubatureDegree;
 
   std::vector<std::string>
-  ns, ss;
+  node_sets, side_sets;
 
   int const
-  wss = last_mss.worksetSize;
+  workset_size = last_mesh_specs_struct.worksetSize;
 
   std::string const &
-  ebn = interface_part_name;
+  element_block_name = interface_part_name;
 
   std::map<std::string, int> &
-  ebn2i = last_mss.ebNameToIndex;
+  eb_name_to_index_map = last_mesh_specs_struct.ebNameToIndex;
 
   // Add entry to the map for this block
-  ebn2i.insert(std::make_pair(ebn, number_blocks));
+  eb_name_to_index_map.insert(
+      std::make_pair(element_block_name, number_blocks));
 
   bool const
-  ilo = last_mss.interleavedOrdering;
+  is_interleaved = last_mesh_specs_struct.interleavedOrdering;
 
   Intrepid::EIntrepidPLPoly const
-  cr = last_mss.cubatureRule;
+  cubature_rule = last_mesh_specs_struct.cubatureRule;
 
   mesh_specs_struct.resize(number_blocks + 1);
 
   mesh_specs_struct[number_blocks] =
-      Teuchos::rcp(new Albany::MeshSpecsStruct(
-          ictd, dim, cub, ns, ss, wss, ebn, ebn2i, ilo, cr));
+      Teuchos::rcp(
+          new Albany::MeshSpecsStruct(
+              interface_cell_topology_data,
+              dimension,
+              cubature_degree,
+              node_sets,
+              side_sets,
+              workset_size,
+              element_block_name,
+              eb_name_to_index_map,
+              is_interleaved,
+              cubature_rule));
 
   return;
 }
