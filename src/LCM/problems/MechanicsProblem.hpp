@@ -384,13 +384,12 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     const Teuchos::RCP<Teuchos::ParameterList>& responseList)
 {
   using std::vector;
-  using PHAL::AlbanyTraits;
   using shards::CellTopology;
   using shards::getCellTopologyData;
 
   typedef Teuchos::RCP<
       Intrepid::Basis<RealType, Intrepid::FieldContainer<RealType> > >
-  BasisT;
+  IntrepidBasis;
 
   // Collect problem-specific response parameters
 
@@ -499,7 +498,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       msg);
 
   // get the intrepid basis for the given cell topology
-  BasisT
+  IntrepidBasis
   intrepidBasis = Albany::getIntrepidBasis(meshSpecs.ctd, composite);
 
   if (composite &&
@@ -512,7 +511,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
   // FIXME, this could probably go into the ProblemUtils
   // just like the call to getIntrepidBasis
-  BasisT
+  IntrepidBasis
   surfaceBasis;
   Teuchos::RCP<shards::CellTopology> surfaceTopology;
   Teuchos::RCP<Intrepid::Cubature<RealType> > surfaceCubature;
@@ -607,7 +606,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   bool supports_transient = true;
   int offset = 0;
   // Temporary variable used numerous times below
-  Teuchos::RCP<PHX::Evaluator<AlbanyTraits> > ev;
+  Teuchos::RCP<PHX::Evaluator<PHAL::AlbanyTraits> > ev;
 
   // Define Field Names
   // generate the field name map to deal with outputing surface element info
@@ -713,7 +712,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::ParameterList& paramList = params->sublist("Displacement");
     p->set<Teuchos::ParameterList*>("Parameter List", &paramList);
 
-    ev = Teuchos::rcp(new PHAL::NSMaterialProperty<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::NSMaterialProperty<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
 
   }
@@ -784,7 +783,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::ParameterList& paramList = params->sublist("Temperature");
     p->set<Teuchos::ParameterList*>("Parameter List", &paramList);
 
-    ev = Teuchos::rcp(new PHAL::NSMaterialProperty<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::NSMaterialProperty<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -875,7 +874,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::ParameterList& paramList = params->sublist("Damage");
     p->set<Teuchos::ParameterList*>("Parameter List", &paramList);
 
-    ev = Teuchos::rcp(new PHAL::NSMaterialProperty<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::NSMaterialProperty<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -928,7 +927,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::ParameterList& paramList = params->sublist("Pressure");
     p->set<Teuchos::ParameterList*>("Parameter List", &paramList);
 
-    ev = Teuchos::rcp(new PHAL::NSMaterialProperty<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::NSMaterialProperty<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -978,7 +977,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::ParameterList& paramList = params->sublist("Transport");
     p->set<Teuchos::ParameterList*>("Parameter List", &paramList);
 
-    ev = Teuchos::rcp(new PHAL::NSMaterialProperty<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::NSMaterialProperty<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1024,7 +1023,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<Teuchos::RCP<PHX::DataLayout> >("Workset Scalar Data Layout", dl_->workset_scalar);
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
     p->set<bool>("Disable Transient", true);
-    ev = Teuchos::rcp(new LCM::Time<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new LCM::Time<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
     p = stateMgr.registerStateVariable("Time",
         dl_->workset_scalar,
@@ -1033,7 +1032,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         "scalar",
         0.0,
         true);
-    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1042,7 +1041,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<std::string>("Reference Coordinates Name", "Coord Vec");
     p->set<std::string>("Displacement Name", "Displacement");
     p->set<std::string>("Current Coordinates Name", "Current Coordinates");
-    ev = Teuchos::rcp(new LCM::CurrentCoords<EvalT, AlbanyTraits>(*p, dl_));
+    ev = Teuchos::rcp(new LCM::CurrentCoords<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1061,7 +1060,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         temp,
         true,
         false);
-    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1075,7 +1074,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         0.0,
         true,
         false);
-    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1096,7 +1095,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         38.7e-6, // JTO: What sort of Magic is 38.7 !?!
         true,
         output_flag);
-    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1110,7 +1109,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         0.0,
         true,
         true);
-    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1125,7 +1124,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::ParameterList& paramList = params->sublist("Source Functions");
     p->set<Teuchos::ParameterList*>("Parameter List", &paramList);
 
-    ev = Teuchos::rcp(new PHAL::Source<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::Source<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1147,8 +1146,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     // pass through material properties
     p->set<Teuchos::ParameterList*>("Material Parameters", &param_list);
 
-    Teuchos::RCP<LCM::ConstitutiveModelParameters<EvalT, AlbanyTraits> > cmpEv =
-        Teuchos::rcp(new LCM::ConstitutiveModelParameters<EvalT, AlbanyTraits>(*p, dl_));
+    Teuchos::RCP<LCM::ConstitutiveModelParameters<EvalT, PHAL::AlbanyTraits> > cmpEv =
+        Teuchos::rcp(new LCM::ConstitutiveModelParameters<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(cmpEv);
   }
 
@@ -1174,8 +1173,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<std::string>("Weights Name", "Weights");
     }
 
-    Teuchos::RCP<LCM::ConstitutiveModelInterface<EvalT, AlbanyTraits> > cmiEv =
-        Teuchos::rcp(new LCM::ConstitutiveModelInterface<EvalT, AlbanyTraits>(*p, dl_));
+    Teuchos::RCP<LCM::ConstitutiveModelInterface<EvalT, PHAL::AlbanyTraits> > cmiEv =
+        Teuchos::rcp(new LCM::ConstitutiveModelInterface<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(cmiEv);
 
     // register state variables
@@ -1189,7 +1188,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
           cmiEv->getInitValue(),
           cmiEv->getStateFlag(),
           cmiEv->getOutputFlag());
-      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
       fm0.template registerEvaluator<EvalT>(ev);
     }
   }
@@ -1204,7 +1203,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       // inputs
       p->set<std::string>("Reference Coordinates Name", "Coord Vec");
       p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
-      p->set<BasisT>(
+      p->set<IntrepidBasis>(
           "Intrepid Basis", surfaceBasis);
       if (have_mech_eq_) {
         p->set<std::string>("Current Coordinates Name", "Current Coordinates");
@@ -1217,7 +1216,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<std::string>("Reference Normal Name", "Reference Normal");
       p->set<std::string>("Current Basis Name", "Current Basis");
 
-      ev = Teuchos::rcp(new LCM::SurfaceBasis<EvalT, AlbanyTraits>(*p, dl_));
+      ev = Teuchos::rcp(new LCM::SurfaceBasis<EvalT, PHAL::AlbanyTraits>(*p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
@@ -1229,14 +1228,14 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
       p
           ->set<
-              BasisT >(
+              IntrepidBasis >(
           "Intrepid Basis", surfaceBasis);
       p->set<std::string>("Vector Name", "Current Coordinates");
 
       // outputs
       p->set<std::string>("Vector Jump Name", "Vector Jump");
 
-      ev = Teuchos::rcp(new LCM::SurfaceVectorJump<EvalT, AlbanyTraits>(*p, dl_));
+      ev = Teuchos::rcp(new LCM::SurfaceVectorJump<EvalT, PHAL::AlbanyTraits>(*p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
@@ -1249,7 +1248,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
       p
           ->set<
-              BasisT >(
+              IntrepidBasis >(
           "Intrepid Basis", surfaceBasis);
       if (have_temperature_eq_) {
         p->set<std::string>("Nodal Temperature Name", "Temperature");
@@ -1279,7 +1278,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         p->set<std::string>("MidPlane HydroStress Name", hydroStress);
       }
 
-      ev = Teuchos::rcp(new LCM::SurfaceScalarJump<EvalT, AlbanyTraits>(*p, dl_));
+      ev = Teuchos::rcp(new LCM::SurfaceScalarJump<EvalT, PHAL::AlbanyTraits>(*p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
 
     }
@@ -1316,7 +1315,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<std::string>("Surface Vector Gradient Name", defgrad);
       p->set<std::string>("Surface Vector Gradient Determinant Name", J);
 
-      ev = Teuchos::rcp(new LCM::SurfaceVectorGradient<EvalT, AlbanyTraits>(*p, dl_));
+      ev = Teuchos::rcp(new LCM::SurfaceVectorGradient<EvalT, PHAL::AlbanyTraits>(*p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
 
       // optional output
@@ -1335,7 +1334,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
           1.0,
           false,
           output_flag);
-      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
       fm0.template registerEvaluator<EvalT>(ev);
 
       // need J and J_old to perform time integration for poromechanics problem
@@ -1352,7 +1351,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
             1.0,
             true,
             output_flag);
-        ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+        ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
         fm0.template registerEvaluator<EvalT>(ev);
       }
     }
@@ -1367,7 +1366,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
       p
           ->set<
-              BasisT >(
+              IntrepidBasis >(
           "Intrepid Basis", surfaceBasis);
       p->set<std::string>("Reference Dual Basis Name", "Reference Dual Basis");
       p->set<std::string>("Reference Normal Name", "Reference Normal");
@@ -1387,7 +1386,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
       ev = Teuchos::rcp(
-          new LCM::SurfaceScalarGradientOperator<EvalT, AlbanyTraits>(*p, dl_));
+          new LCM::SurfaceScalarGradientOperator<EvalT, PHAL::AlbanyTraits>(*p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
@@ -1400,7 +1399,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
       p
           ->set<
-              BasisT >(
+              IntrepidBasis >(
           "Intrepid Basis", surfaceBasis);
       p->set<std::string>("Reference Dual Basis Name", "Reference Dual Basis");
       p->set<std::string>("Reference Normal Name", "Reference Normal");
@@ -1420,7 +1419,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
       ev = Teuchos::rcp(
-          new LCM::SurfaceScalarGradientOperator<EvalT, AlbanyTraits>(*p, dl_));
+          new LCM::SurfaceScalarGradientOperator<EvalT, PHAL::AlbanyTraits>(*p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
 
     }
@@ -1434,7 +1433,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
       p
           ->set<
-              BasisT >(
+              IntrepidBasis >(
           "Intrepid Basis", surfaceBasis);
       p->set<std::string>("Reference Dual Basis Name", "Reference Dual Basis");
       p->set<std::string>("Reference Normal Name", "Reference Normal");
@@ -1454,7 +1453,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
       ev = Teuchos::rcp(
-          new LCM::SurfaceScalarGradientOperator<EvalT, AlbanyTraits>(*p, dl_));
+          new LCM::SurfaceScalarGradientOperator<EvalT, PHAL::AlbanyTraits>(*p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
@@ -1469,7 +1468,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature",
             surfaceCubature);
         p
-            ->set<BasisT>(
+            ->set<IntrepidBasis>(
             "Intrepid Basis", surfaceBasis);
 
         p->set<bool>("Compute Membrane Forces", compute_membrane_forces);
@@ -1490,7 +1489,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         p->set<std::string>("Surface Vector Residual Name",
             "Displacement Residual");
 
-        ev = Teuchos::rcp(new LCM::SurfaceVectorResidual<EvalT, AlbanyTraits>(*p, dl_));
+        ev = Teuchos::rcp(new LCM::SurfaceVectorResidual<EvalT, PHAL::AlbanyTraits>(*p, dl_));
         fm0.template registerEvaluator<EvalT>(ev);
       }
     } // end of coehesive/surface element block
@@ -1533,8 +1532,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<std::string>("DetDefGrad Name", J);
       p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
-      //ev = Teuchos::rcp(new LCM::DefGrad<EvalT,AlbanyTraits>(*p));
-      ev = Teuchos::rcp(new LCM::Kinematics<EvalT, AlbanyTraits>(*p, dl_));
+      //ev = Teuchos::rcp(new LCM::DefGrad<EvalT,PHAL::AlbanyTraits>(*p));
+      ev = Teuchos::rcp(new LCM::Kinematics<EvalT, PHAL::AlbanyTraits>(*p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
 
       // optional output
@@ -1554,7 +1553,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
             1.0,
             false,
             output_flag);
-        ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+        ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
         fm0.template registerEvaluator<EvalT>(ev);
       }
 
@@ -1572,7 +1571,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
             1.0,
             true,
             output_flag);
-        ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+        ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
         fm0.template registerEvaluator<EvalT>(ev);
       }
 
@@ -1593,7 +1592,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
               0.0,
               false,
               output_flag);
-          ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+          ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
           fm0.template registerEvaluator<EvalT>(ev);
         }
       }
@@ -1616,7 +1615,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
               0.0,
               false,
               output_flag);
-          ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+          ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
           fm0.template registerEvaluator<EvalT>(ev);
         }
       }
@@ -1633,7 +1632,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
       //Output
       p->set<std::string>("Residual Name", "Displacement Residual");
-      ev = Teuchos::rcp(new LCM::MechanicsResidual<EvalT, AlbanyTraits>(*p, dl_));
+      ev = Teuchos::rcp(new LCM::MechanicsResidual<EvalT, PHAL::AlbanyTraits>(*p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
     }
   }
@@ -1661,7 +1660,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
 
-    ev = Teuchos::rcp(new LCM::FirstPK<EvalT, AlbanyTraits>(*p, dl_));
+    ev = Teuchos::rcp(new LCM::FirstPK<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1701,7 +1700,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     //Output
     p->set<std::string>("Element Length Name", gradient_element_length);
 
-    ev = Teuchos::rcp(new LCM::GradientElementLength<EvalT, AlbanyTraits>(*p, dl_));
+    ev = Teuchos::rcp(new LCM::GradientElementLength<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1722,7 +1721,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         material_db_->getElementBlockSublist(eb_name, "Porosity");
     p->set<Teuchos::ParameterList*>("Parameter List", &paramList);
 
-    ev = Teuchos::rcp(new LCM::Porosity<EvalT, AlbanyTraits>(*p, dl_));
+    ev = Teuchos::rcp(new LCM::Porosity<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
 
     // Output Porosity
@@ -1741,7 +1740,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
           0.5, // This is really bad practice. It needs to be fixed
           false,
           true);
-      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
       fm0.template registerEvaluator<EvalT>(ev);
     }
   }
@@ -1760,7 +1759,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         material_db_->getElementBlockSublist(eb_name, "Biot Coefficient");
     p->set<Teuchos::ParameterList*>("Parameter List", &paramList);
 
-    ev = Teuchos::rcp(new LCM::BiotCoefficient<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new LCM::BiotCoefficient<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1782,7 +1781,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<std::string>("Porosity Name", porosity);
     p->set<std::string>("Biot Coefficient Name", biotCoeff);
 
-    ev = Teuchos::rcp(new LCM::BiotModulus<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new LCM::BiotModulus<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1805,7 +1804,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<std::string>("Porosity Name", porosity);
     p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
-    ev = Teuchos::rcp(new LCM::KCPermeability<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new LCM::KCPermeability<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
 
     // Output
@@ -1822,7 +1821,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
           0.0,
           false,
           true);
-      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
       fm0.template registerEvaluator<EvalT>(ev);
     }
   }
@@ -1893,7 +1892,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<std::string>("Residual Name", "Pore_Pressure Residual");
     p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
-    ev = Teuchos::rcp(new LCM::TLPoroPlasticityResidMass<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new LCM::TLPoroPlasticityResidMass<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
 
     // Output QP pore pressure
@@ -1911,7 +1910,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         0.0,
         true,
         output_flag);
-    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1923,7 +1922,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
     p
         ->set<
-            BasisT >(
+            IntrepidBasis >(
         "Intrepid Basis", surfaceBasis);
     p->set<std::string>("Surface Scalar Gradient Operator Name",
         "Surface Scalar Gradient Operator");
@@ -1947,7 +1946,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<std::string>("Residual Name", "Pore_Pressure Residual");
     p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
-    ev = Teuchos::rcp(new LCM::SurfaceTLPoroMassResidual<EvalT, AlbanyTraits>(*p, dl_));
+    ev = Teuchos::rcp(new LCM::SurfaceTLPoroMassResidual<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1989,7 +1988,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<std::string>("Concentration Equilibrium Parameter Name",
         eqilibriumParameter);
 
-    ev = Teuchos::rcp(new LCM::TransportCoefficients<EvalT, AlbanyTraits>(*p, dl_));
+    ev = Teuchos::rcp(new LCM::TransportCoefficients<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
 
     bool output_flag(false);
@@ -2004,7 +2003,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     if (output_flag) {
       p = stateMgr.registerStateVariable(trappedConcentration, dl_->qp_scalar,
           dl_->dummy, eb_name, "scalar", 0.0, false, output_flag);
-      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
@@ -2020,7 +2019,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     if (output_flag) {
       p = stateMgr.registerStateVariable(totalConcentration, dl_->qp_scalar,
           dl_->dummy, eb_name, "scalar", 0.0, true, output_flag);
-      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
@@ -2036,7 +2035,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     if (output_flag) {
       p = stateMgr.registerStateVariable(strainRateFactor, dl_->qp_scalar,
           dl_->dummy, eb_name, "scalar", 0.0, false, output_flag);
-      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
@@ -2052,7 +2051,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     if (output_flag) {
       p = stateMgr.registerStateVariable(convectionCoefficient, dl_->qp_scalar,
           dl_->dummy, eb_name, "scalar", 0.0, false, output_flag);
-      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
@@ -2068,7 +2067,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     if (output_flag) {
       p = stateMgr.registerStateVariable(diffusionCoefficient, dl_->qp_scalar,
           dl_->dummy, eb_name, "scalar", 1.0, false, output_flag);
-      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
       fm0.template registerEvaluator<EvalT>(ev);
     }
 
@@ -2084,7 +2083,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     if (output_flag) {
       p = stateMgr.registerStateVariable(effectiveDiffusivity, dl_->qp_scalar,
           dl_->dummy, eb_name, "scalar", 1.0, false, output_flag);
-      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, AlbanyTraits>(*p));
+      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
       fm0.template registerEvaluator<EvalT>(ev);
     }
   }
@@ -2202,7 +2201,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<std::string>("Temperature Dot Name", "Temperature Dot");
 
     ev = Teuchos::rcp(
-        new LCM::ThermoMechanicalCoefficients<EvalT, AlbanyTraits>(*p, dl_));
+        new LCM::ThermoMechanicalCoefficients<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -2238,7 +2237,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     // Output
     p->set<std::string>("Residual Name", "Temperature Residual");
 
-    ev = Teuchos::rcp(new LCM::TransportResidual<EvalT, AlbanyTraits>(*p, dl_));
+    ev = Teuchos::rcp(new LCM::TransportResidual<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -2318,7 +2317,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
     ev = Teuchos::rcp(
-        new LCM::HDiffusionDeformationMatterResidual<EvalT, AlbanyTraits>(*p));
+        new LCM::HDiffusionDeformationMatterResidual<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
 
   }
@@ -2331,7 +2330,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
     p
         ->set<
-            BasisT >(
+            IntrepidBasis >(
         "Intrepid Basis", surfaceBasis);
     p->set<std::string>("Surface Scalar Gradient Operator Name",
         "Surface Scalar Gradient Operator");
@@ -2371,7 +2370,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
     ev = Teuchos::rcp(
-        new LCM::SurfaceHDiffusionDefResidual<EvalT, AlbanyTraits>(*p, dl_));
+        new LCM::SurfaceHDiffusionDefResidual<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
 
   }
@@ -2404,7 +2403,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<std::string>("Residual Name", "HydroStress Residual");
     p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
-    ev = Teuchos::rcp(new LCM::ScalarL2ProjectionResidual<EvalT, AlbanyTraits>(*p));
+    ev = Teuchos::rcp(new LCM::ScalarL2ProjectionResidual<EvalT, PHAL::AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -2416,7 +2415,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", surfaceCubature);
     p
         ->set<
-            BasisT >(
+            IntrepidBasis >(
         "Intrepid Basis", surfaceBasis);
     p->set<std::string>("Surface Scalar Gradient Operator Name",
         "Surface Scalar Gradient Operator");
@@ -2433,7 +2432,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
     ev = Teuchos::rcp(
-        new LCM::SurfaceL2ProjectionResidual<EvalT, AlbanyTraits>(*p, dl_));
+        new LCM::SurfaceL2ProjectionResidual<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -2462,7 +2461,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     //Output
     p->set<std::string>("Residual Name", "Pressure Residual");
-    ev = Teuchos::rcp(new LCM::StabilizedPressureResidual<EvalT, AlbanyTraits>(*p, dl_));
+    ev = Teuchos::rcp(new LCM::StabilizedPressureResidual<EvalT, PHAL::AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
