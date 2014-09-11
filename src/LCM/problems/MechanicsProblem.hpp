@@ -383,7 +383,6 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Albany::FieldManagerChoice fieldManagerChoice,
     const Teuchos::RCP<Teuchos::ParameterList>& responseList)
 {
-  using PHX::MDALayout;
   using std::vector;
   using PHAL::AlbanyTraits;
   using shards::CellTopology;
