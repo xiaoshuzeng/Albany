@@ -383,7 +383,6 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Albany::FieldManagerChoice fieldManagerChoice,
     const Teuchos::RCP<Teuchos::ParameterList>& responseList)
 {
-  using PHX::DataLayout;
   using PHX::MDALayout;
   using std::vector;
   using PHAL::AlbanyTraits;
@@ -707,9 +706,9 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Material Property Name", "Displacement");
-    p->set<Teuchos::RCP<DataLayout> >("Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Data Layout", dl_->qp_vector);
     p->set<std::string>("Coordinate Vector Name", "Coord Vec");
-    p->set<Teuchos::RCP<DataLayout> >("Coordinate Vector Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Coordinate Vector Data Layout", dl_->qp_vector);
 
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Displacement");
@@ -778,9 +777,9 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Material Property Name", temperature);
-    p->set<Teuchos::RCP<DataLayout> >("Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Data Layout", dl_->qp_scalar);
     p->set<std::string>("Coordinate Vector Name", "Coord Vec");
-    p->set<Teuchos::RCP<DataLayout> >("Coordinate Vector Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Coordinate Vector Data Layout", dl_->qp_vector);
 
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Temperature");
@@ -869,9 +868,9 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Material Property Name", "Damage");
-    p->set<Teuchos::RCP<DataLayout> >("Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Data Layout", dl_->qp_scalar);
     p->set<std::string>("Coordinate Vector Name", "Coord Vec");
-    p->set<Teuchos::RCP<DataLayout> >("Coordinate Vector Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Coordinate Vector Data Layout", dl_->qp_vector);
 
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Damage");
@@ -922,9 +921,9 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Material Property Name", "Pressure");
-    p->set<Teuchos::RCP<DataLayout> >("Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Data Layout", dl_->qp_scalar);
     p->set<std::string>("Coordinate Vector Name", "Coord Vec");
-    p->set<Teuchos::RCP<DataLayout> >("Coordinate Vector Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Coordinate Vector Data Layout", dl_->qp_vector);
 
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Pressure");
@@ -972,9 +971,9 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList);
 
     p->set<std::string>("Material Property Name", "Transport");
-    p->set<Teuchos::RCP<DataLayout> >("Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Data Layout", dl_->qp_scalar);
     p->set<std::string>("Coordinate Vector Name", "Coord Vec");
-    p->set<Teuchos::RCP<DataLayout> >("Coordinate Vector Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Coordinate Vector Data Layout", dl_->qp_vector);
 
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Transport");
@@ -1023,7 +1022,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     Teuchos::RCP<Teuchos::ParameterList> p = Teuchos::rcp(new Teuchos::ParameterList("Time"));
     p->set<std::string>("Time Name", "Time");
     p->set<std::string>("Delta Time Name", "Delta Time");
-    p->set<Teuchos::RCP<DataLayout> >("Workset Scalar Data Layout", dl_->workset_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Workset Scalar Data Layout", dl_->workset_scalar);
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
     p->set<bool>("Disable Transient", true);
     ev = Teuchos::rcp(new LCM::Time<EvalT, AlbanyTraits>(*p));
@@ -1121,7 +1120,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     p->set<std::string>("Source Name", "Source");
     p->set<std::string>("Variable Name", "Displacement");
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList = params->sublist("Source Functions");
@@ -1382,11 +1381,11 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       // outputs
       p->set<std::string>("Surface Scalar Gradient Operator Name",
           "Surface Scalar Gradient Operator");
-      p->set<Teuchos::RCP<DataLayout> >("Node QP Vector Data Layout",
+      p->set<Teuchos::RCP<PHX::DataLayout> >("Node QP Vector Data Layout",
           dl_->node_qp_vector);
       p->set<std::string>("Surface Scalar Gradient Name",
           "Surface Pressure Gradient");
-      p->set<Teuchos::RCP<DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
+      p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
       ev = Teuchos::rcp(
           new LCM::SurfaceScalarGradientOperator<EvalT, AlbanyTraits>(*p, dl_));
@@ -1414,12 +1413,12 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       // outputs
       p->set<std::string>("Surface Scalar Gradient Operator Name",
           "Surface Scalar Gradient Operator");
-      p->set<Teuchos::RCP<DataLayout> >("Node QP Vector Data Layout",
+      p->set<Teuchos::RCP<PHX::DataLayout> >("Node QP Vector Data Layout",
           dl_->node_qp_vector);
       if (have_transport_eq_ == true)
         p->set<std::string>("Surface Scalar Gradient Name",
             "Surface Transport Gradient");
-      p->set<Teuchos::RCP<DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
+      p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
       ev = Teuchos::rcp(
           new LCM::SurfaceScalarGradientOperator<EvalT, AlbanyTraits>(*p, dl_));
@@ -1449,11 +1448,11 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       // outputs
       p->set<std::string>("Surface Scalar Gradient Operator Name",
           "Surface Scalar Gradient Operator");
-      p->set<Teuchos::RCP<DataLayout> >("Node QP Vector Data Layout",
+      p->set<Teuchos::RCP<PHX::DataLayout> >("Node QP Vector Data Layout",
           dl_->node_qp_vector);
       p->set<std::string>("Surface Scalar Gradient Name",
           "Surface HydroStress Gradient");
-      p->set<Teuchos::RCP<DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
+      p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
       ev = Teuchos::rcp(
           new LCM::SurfaceScalarGradientOperator<EvalT, AlbanyTraits>(*p, dl_));
@@ -1526,14 +1525,14 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
       // send in integration weights and the displacement gradient
       p->set<std::string>("Weights Name", "Weights");
-      p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+      p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
       p->set<std::string>("Gradient QP Variable Name", "Displacement Gradient");
-      p->set<Teuchos::RCP<DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
+      p->set<Teuchos::RCP<PHX::DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
 
       //Outputs: F, J
       p->set<std::string>("DefGrad Name", defgrad); //dl_->qp_tensor also
       p->set<std::string>("DetDefGrad Name", J);
-      p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+      p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
       //ev = Teuchos::rcp(new LCM::DefGrad<EvalT,AlbanyTraits>(*p));
       ev = Teuchos::rcp(new LCM::Kinematics<EvalT, AlbanyTraits>(*p, dl_));
@@ -1753,9 +1752,9 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     p->set<std::string>("Biot Coefficient Name", biotCoeff);
     p->set<std::string>("QP Coordinate Vector Name", "Coord Vec");
-    p->set<Teuchos::RCP<DataLayout> >("Node Data Layout", dl_->node_scalar);
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
-    p->set<Teuchos::RCP<DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node Data Layout", dl_->node_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList =
@@ -1771,9 +1770,9 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     p->set<std::string>("Biot Modulus Name", biotModulus);
     p->set<std::string>("QP Coordinate Vector Name", "Coord Vec");
-    p->set<Teuchos::RCP<DataLayout> >("Node Data Layout", dl_->node_scalar);
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
-    p->set<Teuchos::RCP<DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node Data Layout", dl_->node_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList =
@@ -1793,9 +1792,9 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     p->set<std::string>("Kozeny-Carman Permeability Name", kcPerm);
     p->set<std::string>("QP Coordinate Vector Name", "Coord Vec");
-    p->set<Teuchos::RCP<DataLayout> >("Node Data Layout", dl_->node_scalar);
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
-    p->set<Teuchos::RCP<DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node Data Layout", dl_->node_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
     p->set<Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
     Teuchos::ParameterList& paramList =
@@ -1805,7 +1804,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     // Setting this turns on Kozeny-Carman relation
     p->set<std::string>("Porosity Name", porosity);
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
     ev = Teuchos::rcp(new LCM::KCPermeability<EvalT, AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
@@ -1838,20 +1837,20 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     // Input from nodal points, basis function stuff
     p->set<std::string>("Weights Name", "Weights");
     p->set<std::string>("Weighted BF Name", "wBF");
-    p->set<Teuchos::RCP<DataLayout> >("Node QP Scalar Data Layout",
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node QP Scalar Data Layout",
         dl_->node_qp_scalar);
     p->set<std::string>("Weighted Gradient BF Name", "wGrad BF");
-    p->set<Teuchos::RCP<DataLayout> >("Node QP Vector Data Layout", dl_->node_qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node QP Vector Data Layout", dl_->node_qp_vector);
 
     // Inputs: X, Y at nodes, Cubature, and Basis
     p->set<std::string>("Coordinate Vector Name", "Coord Vec");
-    p->set<Teuchos::RCP<DataLayout> >("Coordinate Data Layout", dl_->vertices_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Coordinate Data Layout", dl_->vertices_vector);
     p->set<Teuchos::RCP<Intrepid::Cubature<RealType> > >("Cubature", cubature);
     p->set<Teuchos::RCP<shards::CellTopology> >("Cell Type", cellType);
 
     // DT for  time integration
     p->set<std::string>("Delta Time Name", "Delta Time");
-    p->set<Teuchos::RCP<DataLayout> >("Workset Scalar Data Layout", dl_->workset_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Workset Scalar Data Layout", dl_->workset_scalar);
 
     p->set<bool>("Have Source", false);
     p->set<std::string>("Source Name", "Source");
@@ -1861,7 +1860,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<std::string>("Element Length Name", gradient_element_length);
     p->set<std::string>("QP Pore Pressure Name", porePressure);
     p->set<std::string>("QP Time Derivative Variable Name", porePressure);
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
     //p->set<std::string>("Material Property Name", "Stabilization Parameter");
     p->set<std::string>("Porosity Name", "Porosity");
@@ -1871,14 +1870,14 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     p->set<std::string>("Biot Modulus Name", biotModulus);
 
     p->set<std::string>("Gradient QP Variable Name", "Pore_Pressure Gradient");
-    p->set<Teuchos::RCP<DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
     if (have_mech_eq_) {
       p->set<bool>("Have Mechanics", true);
       p->set<std::string>("DefGrad Name", defgrad);
-      p->set<Teuchos::RCP<DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
+      p->set<Teuchos::RCP<PHX::DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
       p->set<std::string>("DetDefGrad Name", J);
-      p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+      p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
     }
     RealType stab_param(0.0);
     if (material_db_->isElementBlockParam(eb_name, "Stabilization Parameter")) {
@@ -1893,7 +1892,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     //Output
     p->set<std::string>("Residual Name", "Pore_Pressure Residual");
-    p->set<Teuchos::RCP<DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
     ev = Teuchos::rcp(new LCM::TLPoroPlasticityResidMass<EvalT, AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
@@ -1947,7 +1946,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     //Output
     p->set<std::string>("Residual Name", "Pore_Pressure Residual");
-    p->set<Teuchos::RCP<DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
     ev = Teuchos::rcp(new LCM::SurfaceTLPoroMassResidual<EvalT, AlbanyTraits>(*p, dl_));
     fm0.template registerEvaluator<EvalT>(ev);
@@ -2250,61 +2249,61 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     //Input
     p->set<std::string>("Element Length Name", gradient_element_length);
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
     p->set<std::string>("Weighted BF Name", "wBF");
-    p->set<Teuchos::RCP<DataLayout> >("Node QP Scalar Data Layout", dl_->node_qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node QP Scalar Data Layout", dl_->node_qp_scalar);
 
     p->set<std::string>("Weights Name", "Weights");
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
     p->set<std::string>("Weighted Gradient BF Name", "wGrad BF");
-    p->set<Teuchos::RCP<DataLayout> >("Node QP Vector Data Layout", dl_->node_qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node QP Vector Data Layout", dl_->node_qp_vector);
 
     p->set<std::string>("Gradient BF Name", "Grad BF");
-    p->set<Teuchos::RCP<DataLayout> >("Node QP Vector Data Layout", dl_->node_qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node QP Vector Data Layout", dl_->node_qp_vector);
 
     if (have_mech_eq_) {
       p->set<std::string>("eqps Name", eqps);
-      p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+      p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
       p->set<std::string>("Strain Rate Factor Name", strainRateFactor);
-      p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+      p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
       p->set<std::string>("Tau Contribution Name", convectionCoefficient);
-      p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+      p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
     }
 
     p->set<std::string>("Trapped Concentration Name", trappedConcentration);
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
     p->set<std::string>("Trapped Solvent Name", trappedSolvent);
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
     p->set<std::string>("Deformation Gradient Name", defgrad);
-    p->set<Teuchos::RCP<DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
 
     p->set<std::string>("Effective Diffusivity Name", effectiveDiffusivity);
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
     p->set<std::string>("Diffusion Coefficient Name", diffusionCoefficient);
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
     p->set<std::string>("QP Variable Name", "Transport");
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
     p->set<std::string>("Gradient QP Variable Name", "Transport Gradient");
-    p->set<Teuchos::RCP<DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
     p->set<std::string>("Gradient Hydrostatic Stress Name",
         "HydroStress Gradient");
-    p->set<Teuchos::RCP<DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Vector Data Layout", dl_->qp_vector);
 
     p->set<std::string>("Stress Name", cauchy);
-    p->set<Teuchos::RCP<DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
 
     p->set<std::string>("Delta Time Name", "Delta Time");
-    p->set<Teuchos::RCP<DataLayout> >("Workset Scalar Data Layout", dl_->workset_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Workset Scalar Data Layout", dl_->workset_scalar);
 
     RealType stab_param(0.0);
     if (material_db_->isElementBlockParam(eb_name, "Stabilization Parameter")) {
@@ -2317,7 +2316,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     //Output
     p->set<std::string>("Residual Name", "Transport Residual");
-    p->set<Teuchos::RCP<DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
     ev = Teuchos::rcp(
         new LCM::HDiffusionDeformationMatterResidual<EvalT, AlbanyTraits>(*p));
@@ -2370,7 +2369,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     //Output
     p->set<std::string>("Residual Name", "Transport Residual");
-    p->set<Teuchos::RCP<DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
     ev = Teuchos::rcp(
         new LCM::SurfaceHDiffusionDefResidual<EvalT, AlbanyTraits>(*p, dl_));
@@ -2383,28 +2382,28 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     //Input
     p->set<std::string>("Weighted BF Name", "wBF");
-    p->set<Teuchos::RCP<DataLayout> >
+    p->set<Teuchos::RCP<PHX::DataLayout> >
     ("Node QP Scalar Data Layout", dl_->node_qp_scalar);
 
     p->set<std::string>("Weighted Gradient BF Name", "wGrad BF");
-    p->set<Teuchos::RCP<DataLayout> >
+    p->set<Teuchos::RCP<PHX::DataLayout> >
     ("Node QP Vector Data Layout", dl_->node_qp_vector);
 
     p->set<bool>("Have Source", false);
     p->set<std::string>("Source Name", "Source");
 
     p->set<std::string>("Deformation Gradient Name", defgrad);
-    p->set<Teuchos::RCP<DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
 
     p->set<std::string>("QP Variable Name", hydroStress);
-    p->set<Teuchos::RCP<DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout", dl_->qp_scalar);
 
     p->set<std::string>("Stress Name", cauchy);
-    p->set<Teuchos::RCP<DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("QP Tensor Data Layout", dl_->qp_tensor);
 
     //Output
     p->set<std::string>("Residual Name", "HydroStress Residual");
-    p->set<Teuchos::RCP<DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
     ev = Teuchos::rcp(new LCM::ScalarL2ProjectionResidual<EvalT, AlbanyTraits>(*p));
     fm0.template registerEvaluator<EvalT>(ev);
@@ -2432,7 +2431,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
     //Output
     p->set<std::string>("Residual Name", "HydroStress Residual");
-    p->set<Teuchos::RCP<DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
+    p->set<Teuchos::RCP<PHX::DataLayout> >("Node Scalar Data Layout", dl_->node_scalar);
 
     ev = Teuchos::rcp(
         new LCM::SurfaceL2ProjectionResidual<EvalT, AlbanyTraits>(*p, dl_));
