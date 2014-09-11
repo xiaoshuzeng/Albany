@@ -2248,19 +2248,19 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       // Rather than combine lists, we choose to invoke multiple parameter
       // lists and stuff them separately into p.
       // All lists need to be reflected in HeliumODEs_Def.hpp
-      Teuchos::ParameterList& param_list_1 = material_db_->
+      Teuchos::ParameterList& transport_param = material_db_->
           getElementBlockSublist(eb_name, matName).sublist(
           "Transport Coefficients");
-      Teuchos::ParameterList& param_list_2 = material_db_->
+      Teuchos::ParameterList& tritium_param = material_db_->
           getElementBlockSublist(eb_name, matName).sublist(
           "Tritium Coefficients");
-      Teuchos::ParameterList& param_list_3 = material_db_->
+      Teuchos::ParameterList& molar_param = material_db_->
           getElementBlockSublist(eb_name, matName).sublist(
           "Molar Volume");
 
-      p->set<Teuchos::ParameterList*>("Transport Parameters", &param_list_1);
-      p->set<Teuchos::ParameterList*>("Tritium Parameters", &param_list_2);
-      p->set<Teuchos::ParameterList*>("Molar Volume", &param_list_3);
+      p->set<Teuchos::ParameterList*>("Transport Parameters", &transport_param);
+      p->set<Teuchos::ParameterList*>("Tritium Parameters", &tritium_param);
+      p->set<Teuchos::ParameterList*>("Molar Volume", &molar_param);
 
       //Input
       p->set<std::string
