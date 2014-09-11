@@ -63,7 +63,7 @@ int main(int ac, char* av[])
     topology(input_file,output_file);
 
   stk::mesh::BulkData&
-    bulkData = *(topology.getBulkData());
+    bulkData = *(topology.get_bulk_data());
 
   // Node rank should be 0 and element rank should be equal to the dimension of the
   // system (e.g. 2 for 2D meshes and 3 for 3D meshes)
@@ -115,7 +115,7 @@ int main(int ac, char* av[])
   //   Redefine connectivity and coordinate arrays with updated values.
   //   Mesh must only have relations between elements and nodes.
   Teuchos::RCP<Albany::AbstractDiscretization> discretization_ptr =
-    topology.getDiscretization();
+    topology.get_discretization();
   Albany::STKDiscretization & stk_discretization =
     static_cast<Albany::STKDiscretization &>(*discretization_ptr);
 

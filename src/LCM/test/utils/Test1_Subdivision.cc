@@ -76,7 +76,7 @@ int main(int ac, char* av[])
   std::cout << "***********************" << std::endl;
   std::cout << "Before mesh subdivision" << std::endl;
   std::cout << "***********************" << std::endl;
-  LCM::display_connectivity(*topology.getBulkData(), stk::topology::ELEMENT_RANK);
+  LCM::display_connectivity(*topology.get_bulk_data(), stk::topology::ELEMENT_RANK);
 
   //Request the number of entities of the input mesh
   std::vector<int> vector_initial_entities = return_number_entities(topology);
@@ -95,7 +95,7 @@ int main(int ac, char* av[])
   std::cout << "*************************" << std::endl;
   //Request the number of entities of the output mesh after subdivision
   std::vector<int> vector_final_entities = return_number_entities(topology);
-  LCM::display_connectivity(*topology.getBulkData(), stk::topology::ELEMENT_RANK);
+  LCM::display_connectivity(*topology.get_bulk_data(), stk::topology::ELEMENT_RANK);
 
   // Checking that the final mesh after subdivision is correct
   std::cout << "*************************************" << std::endl;
@@ -118,7 +118,7 @@ return_number_entities(LCM::Topology & topology_){
 	//Vector with output info
 	std::vector<int> output_vector;
 	//Push back number of nodes
-	stk::mesh::BulkData* bulkData_ = topology_.getBulkData();
+	stk::mesh::BulkData* bulkData_ = topology_.get_bulk_data();
 	std::vector<stk::mesh::Entity> initial_entities_D0 = topology_.getEntitiesByRank(
           *(bulkData_), stk::topology::NODE_RANK);
 	output_vector.push_back(initial_entities_D0.size());

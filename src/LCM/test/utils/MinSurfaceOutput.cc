@@ -135,7 +135,7 @@ int main(int ac, char* av[]){
 		//Get the identifiers of the entities above
 		for (I_nodes = temp.begin(); I_nodes != temp.end(); I_nodes++)
 		{
-                    temp2.push_back(topology.getBulkData()->identifier(*I_nodes));
+                    temp2.push_back(topology.get_bulk_data()->identifier(*I_nodes));
 		}
 		boundaryNodes_.push_back(temp2); //Connectivity matrix
 	}

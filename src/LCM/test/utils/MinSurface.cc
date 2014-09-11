@@ -73,7 +73,7 @@ int main(int ac, char* av[]){
     //-----------------------------------------------------------------------------------------
 	//GET THE 1D BUNDARY FROM THE INPUT MESH USING dijkstra_shortest_paths
 	//-----------------------------------------------------------------------------------------
-	stk::mesh::BulkData* bulkData_ = topology.getBulkData();
+	stk::mesh::BulkData* bulkData_ = topology.get_bulk_data();
 	std::vector<stk::mesh::Entity> MeshNodes = topology.getEntitiesByRank(
 			*(bulkData_), 0);
 

@@ -47,7 +47,7 @@ std::vector<stk::mesh::Entity> Topology::getClosestNodes(
   double minDA, minDB, minDC;
 
   std::vector<stk::mesh::Entity> entities_D0 = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::NODE_RANK); // get all the nodes
 
   // iterator for the nodes
@@ -107,7 +107,7 @@ std::vector<stk::mesh::Entity> Topology::getClosestNodesOnSurface(
   // Obtain all the nodes that lie over the surface
   // Obtain all the faces of the mesh
   std::vector<stk::mesh::Entity> MeshFaces = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::FACE_RANK);
 
   // Find the faces (Entities of rank 2) that build the boundary of
@@ -448,7 +448,7 @@ double Topology::getDistanceBetweenNodes(
 std::vector<double> Topology::getCoordinatesOfMaxAndMin()
 {
   std::vector<stk::mesh::Entity> entities_D0 = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::NODE_RANK);	// get all the nodes
 
   // iterator for the nodes
@@ -522,7 +522,7 @@ std::vector<stk::mesh::Entity> Topology::MeshEdgesShortestPath()
 
   //Obtain all the faces of the mesh
   std::vector<stk::mesh::Entity> MeshFaces = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::FACE_RANK);
 
   //Find the faces (Entities of rank 2) that build the boundary of the
@@ -596,8 +596,8 @@ std::vector<std::vector<int> > Topology::shortestpathOnBoundaryFaces(
     Weight weight(
         getDistanceBetweenNodes(EdgeBoundaryNodes[0], EdgeBoundaryNodes[1]));
     boost::add_edge(
-        getBulkData()->identifier(EdgeBoundaryNodes[0]) - 1,
-        getBulkData()->identifier(EdgeBoundaryNodes[1]) - 1,
+        get_bulk_data()->identifier(EdgeBoundaryNodes[0]) - 1,
+        get_bulk_data()->identifier(EdgeBoundaryNodes[1]) - 1,
         weight,
         g);
   }
@@ -619,8 +619,8 @@ std::vector<std::vector<int> > Topology::shortestpathOnBoundaryFaces(
   // Compute the  shortest path between nodes[0] and nodes[1]
 
   //Source from where the distance and path are calculated
-  Vertex sourceVertex_0 = getBulkData()->identifier(nodes[1]) - 1;
-  Vertex goalVertex_0 = getBulkData()->identifier(nodes[0]) - 1;
+  Vertex sourceVertex_0 = get_bulk_data()->identifier(nodes[1]) - 1;
+  Vertex goalVertex_0 = get_bulk_data()->identifier(nodes[0]) - 1;
   boost::dijkstra_shortest_paths(
       g,
       sourceVertex_0,
@@ -652,8 +652,8 @@ std::vector<std::vector<int> > Topology::shortestpathOnBoundaryFaces(
 
   //Compute the  shortest path between nodes[1] and nodes[2]
   //Source from where the distance and path are calculated
-  Vertex sourceVertex_1 = getBulkData()->identifier(nodes[2]) - 1;
-  Vertex goalVertex_1 = getBulkData()->identifier(nodes[1]) - 1;
+  Vertex sourceVertex_1 = get_bulk_data()->identifier(nodes[2]) - 1;
+  Vertex goalVertex_1 = get_bulk_data()->identifier(nodes[1]) - 1;
   boost::dijkstra_shortest_paths(
       g,
       sourceVertex_1,
@@ -683,8 +683,8 @@ std::vector<std::vector<int> > Topology::shortestpathOnBoundaryFaces(
 
   //Compute the  shortest path between nodes[2] and nodes[0]
   //Source from where the distance and path are calculated
-  Vertex sourceVertex_2 = getBulkData()->identifier(nodes[0]) - 1;
-  Vertex goalVertex_2 = getBulkData()->identifier(nodes[2]) - 1;
+  Vertex sourceVertex_2 = get_bulk_data()->identifier(nodes[0]) - 1;
+  Vertex goalVertex_2 = get_bulk_data()->identifier(nodes[2]) - 1;
   boost::dijkstra_shortest_paths(
       g,
       sourceVertex_2,
@@ -753,7 +753,7 @@ std::vector<std::vector<int> > Topology::shortestpath(
 
   //Obtain all the faces of the mesh
   std::vector<stk::mesh::Entity> MeshFaces = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::FACE_RANK);
 
   //Find the faces (Entities of rank 2) that build the boundary of the
@@ -797,8 +797,8 @@ std::vector<std::vector<int> > Topology::shortestpath(
     Weight weight(
         getDistanceBetweenNodes(EdgeBoundaryNodes[0], EdgeBoundaryNodes[1]));
     boost::add_edge(
-        getBulkData()->identifier(EdgeBoundaryNodes[0]) - 1,
-        getBulkData()->identifier(EdgeBoundaryNodes[1]) - 1,
+        get_bulk_data()->identifier(EdgeBoundaryNodes[0]) - 1,
+        get_bulk_data()->identifier(EdgeBoundaryNodes[1]) - 1,
         weight,
         g); //
   }
@@ -820,8 +820,8 @@ std::vector<std::vector<int> > Topology::shortestpath(
   // Compute the  shortest path between nodes[0] and nodes[1]
 
   //Source from where the distance and path are calculated
-  Vertex sourceVertex_0 = getBulkData()->identifier(nodes[1]) - 1;
-  Vertex goalVertex_0 = getBulkData()->identifier(nodes[0]) - 1;
+  Vertex sourceVertex_0 = get_bulk_data()->identifier(nodes[1]) - 1;
+  Vertex goalVertex_0 = get_bulk_data()->identifier(nodes[0]) - 1;
   boost::dijkstra_shortest_paths(
       g,
       sourceVertex_0,
@@ -853,8 +853,8 @@ std::vector<std::vector<int> > Topology::shortestpath(
 
   //Compute the  shortest path between nodes[1] and nodes[2]
   //Source from where the distance and path are calculated
-  Vertex sourceVertex_1 = getBulkData()->identifier(nodes[2]) - 1;
-  Vertex goalVertex_1 = getBulkData()->identifier(nodes[1]) - 1;
+  Vertex sourceVertex_1 = get_bulk_data()->identifier(nodes[2]) - 1;
+  Vertex goalVertex_1 = get_bulk_data()->identifier(nodes[1]) - 1;
   boost::dijkstra_shortest_paths(
       g,
       sourceVertex_1,
@@ -884,8 +884,8 @@ std::vector<std::vector<int> > Topology::shortestpath(
 
   //Compute the  shortest path between nodes[2] and nodes[0]
   //Source from where the distance and path are calculated
-  Vertex sourceVertex_2 = getBulkData()->identifier(nodes[0]) - 1;
-  Vertex goalVertex_2 = getBulkData()->identifier(nodes[2]) - 1;
+  Vertex sourceVertex_2 = get_bulk_data()->identifier(nodes[0]) - 1;
+  Vertex goalVertex_2 = get_bulk_data()->identifier(nodes[2]) - 1;
   boost::dijkstra_shortest_paths(
       g,
       sourceVertex_2,
@@ -934,7 +934,7 @@ std::vector<std::vector<int> > Topology::edgesDirections()
 {
   //Get all of the edges
   std::vector<stk::mesh::Entity> setOfEdges = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::EDGE_RANK);
 
   //Create a map that assigns new numbering to the Edges
@@ -959,8 +959,8 @@ std::vector<std::vector<int> > Topology::edgesDirections()
     std::vector<stk::mesh::Entity> connectedNodes =
         getDirectlyConnectedEntities(mapIter->first, stk::topology::NODE_RANK);
     std::vector<int> tempInt;
-    tempInt.push_back(getBulkData()->identifier(connectedNodes[0]));
-    tempInt.push_back(getBulkData()->identifier(connectedNodes[1]));
+    tempInt.push_back(get_bulk_data()->identifier(connectedNodes[0]));
+    tempInt.push_back(get_bulk_data()->identifier(connectedNodes[1]));
     edgesDirec[index] = tempInt;
   }
 
@@ -976,7 +976,7 @@ std::vector<std::vector<int> > Topology::edgesDirectionsOuterSurface()
 
   //Obtain all the faces of the mesh
   std::vector<stk::mesh::Entity> MeshFaces = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::FACE_RANK);
 
   //Find the faces (Entities of rank 2) that build the boundary of the
@@ -1033,8 +1033,8 @@ std::vector<std::vector<int> > Topology::edgesDirectionsOuterSurface()
     std::vector<stk::mesh::Entity> connectedNodes =
         getDirectlyConnectedEntities(mapIter->first, stk::topology::NODE_RANK);
     std::vector<int> tempInt;
-    tempInt.push_back(getBulkData()->identifier(connectedNodes[0]));
-    tempInt.push_back(getBulkData()->identifier(connectedNodes[1]));
+    tempInt.push_back(get_bulk_data()->identifier(connectedNodes[0]));
+    tempInt.push_back(get_bulk_data()->identifier(connectedNodes[1]));
     edgesDirec[index] = tempInt;
   }
 
@@ -1049,7 +1049,7 @@ std::vector<std::vector<int> > Topology::facesDirections()
 {
   //Get the faces
   std::vector<stk::mesh::Entity> setOfFaces = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::FACE_RANK);
 
   //Make a new map, mapping the Entities of Rank 2(faces) to a counter
@@ -1076,10 +1076,10 @@ std::vector<std::vector<int> > Topology::facesDirections()
         mapIter->first,
         stk::topology::NODE_RANK);
     std::vector<int> temp;
-    temp.push_back(getBulkData()->identifier(edgeBoundaryNodes[0]));
-    temp.push_back(getBulkData()->identifier(edgeBoundaryNodes[1]));
-    temp.push_back(getBulkData()->identifier(edgeBoundaryNodes[2]));
-    temp.push_back(getBulkData()->identifier(edgeBoundaryNodes[0]));
+    temp.push_back(get_bulk_data()->identifier(edgeBoundaryNodes[0]));
+    temp.push_back(get_bulk_data()->identifier(edgeBoundaryNodes[1]));
+    temp.push_back(get_bulk_data()->identifier(edgeBoundaryNodes[2]));
+    temp.push_back(get_bulk_data()->identifier(edgeBoundaryNodes[0]));
     facesDirec[index] = temp;
   }
 
@@ -1094,7 +1094,7 @@ std::vector<std::vector<int> > Topology::facesDirections()
 std::vector<double> Topology::facesAreas()
 {
   std::vector<stk::mesh::Entity> setOfFaces = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::FACE_RANK);
 
   //Create the map
@@ -1146,7 +1146,7 @@ std::vector<std::vector<int> > Topology::boundaryOperator()
   std::vector<std::vector<int> > edgesDirec = edgesDirections();
   std::vector<std::vector<int> > facesDirec = facesDirections();
   std::vector<stk::mesh::Entity> meshFaces = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::FACE_RANK);
   std::vector<std::vector<int> > boundaryOp;
 
@@ -1219,7 +1219,7 @@ std::vector<std::vector<double> > Topology::outputForMpsFile()
   std::vector<std::vector<int> > edgesDirec = edgesDirections();
   std::vector<std::vector<int> > facesDirec = facesDirections();
   std::vector<stk::mesh::Entity> meshFaces = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::FACE_RANK);
   std::vector<std::vector<double> > matrixForMpsFile;
 
@@ -1390,7 +1390,7 @@ std::vector<stk::mesh::Entity> Topology::MinimumSurfaceFaces(
 {
   //Obtain the faces
   std::vector<stk::mesh::Entity> setOfFaces = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::FACE_RANK);
 
   //Define the map with the entities and their identifiers
@@ -1447,7 +1447,7 @@ std::vector<double> Topology::findCoordinates(unsigned int nodeIdentifier)
 {
 
   std::vector<stk::mesh::Entity> MeshNodes = getEntitiesByRank(
-      *(getBulkData()),
+      *(get_bulk_data()),
       stk::topology::NODE_RANK); //Get all the nodes
   //of the mesh
   std::vector<stk::mesh::Entity>::const_iterator Ientities_D0;
@@ -1455,7 +1455,7 @@ std::vector<double> Topology::findCoordinates(unsigned int nodeIdentifier)
   std::vector<double> coordinates_;
   for (Ientities_D0 = MeshNodes.begin(); Ientities_D0 != MeshNodes.end();
       Ientities_D0++) {
-    if (getBulkData()->identifier(*Ientities_D0) == nodeIdentifier) {
+    if (get_bulk_data()->identifier(*Ientities_D0) == nodeIdentifier) {
 
       double * coordinate = getPointerOfCoordinates(*Ientities_D0);
       double x = coordinate[0];

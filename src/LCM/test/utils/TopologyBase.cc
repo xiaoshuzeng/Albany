@@ -92,7 +92,7 @@ int main(int ac, char* av[])
   topology.outputBoundary(boundary_filename);
 
   Teuchos::RCP<Albany::AbstractDiscretization>
-  discretization_ptr = topology.getDiscretization();
+  discretization_ptr = topology.get_discretization();
 
   Albany::STKDiscretization &
   stk_discretization =

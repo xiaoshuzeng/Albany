@@ -37,7 +37,7 @@ public:
       topology_(topology),
       bulk_block_name_(bulk_block_name),
       interface_block_name_(interface_block_name),
-      stk_discretization_(*(topology.getSTKDiscretization())),
+      stk_discretization_(*(topology.get_stk_discretization())),
       stk_mesh_struct_(*(stk_discretization_.getSTKMeshStruct())),
       bulk_data_(*(stk_mesh_struct_.bulkData)),
       meta_data_(*(stk_mesh_struct_.metaData)),

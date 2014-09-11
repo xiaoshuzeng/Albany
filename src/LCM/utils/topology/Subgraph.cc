@@ -119,61 +119,61 @@ Subgraph::getTopology()
 size_t const
 Subgraph::getSpaceDimension()
 {
-  return getTopology().getSpaceDimension();
+  return getTopology().get_space_dimension();
 }
 
 Teuchos::RCP<Albany::AbstractSTKMeshStruct> &
 Subgraph::getSTKMeshStruct()
 {
-  return getTopology().getSTKMeshStruct();
+  return getTopology().get_stk_mesh_struct();
 }
 
 stk::mesh::BulkData *
 Subgraph::getBulkData()
 {
-  return getTopology().getBulkData();
+  return getTopology().get_bulk_data();
 }
 
 stk::mesh::MetaData *
 Subgraph::getMetaData()
 {
-  return getTopology().getMetaData();
+  return getTopology().get_meta_data();
 }
 
 stk::mesh::EntityRank const
 Subgraph::getBoundaryRank()
 {
-  return getTopology().getBoundaryRank();
+  return getTopology().get_boundary_rank();
 }
 
 IntScalarFieldType &
 Subgraph::getFractureState(stk::mesh::EntityRank rank)
 {
-  return getTopology().getFractureState(rank);
+  return getTopology().get_fracture_state(rank);
 }
 
 void
 Subgraph::setFractureState(stk::mesh::Entity e, FractureState const fs)
 {
-  getTopology().setFractureState(e, fs);
+  getTopology().set_fracture_state(e, fs);
 }
 
 FractureState
 Subgraph::getFractureState(stk::mesh::Entity e)
 {
-  return getTopology().getFractureState(e);
+  return getTopology().get_fracture_state(e);
 }
 
 bool
 Subgraph::isOpen(stk::mesh::Entity e)
 {
-  return getTopology().isOpen(e);
+  return getTopology().is_open(e);
 }
 
 bool
 Subgraph::isInternalAndOpen(stk::mesh::Entity e)
 {
-  return getTopology().isInternalAndOpen(e);
+  return getTopology().is_internal_and_open(e);
 }
 
 //
