@@ -183,9 +183,6 @@ public:
   /// boundary entity may be a valid candidate in another step. If only 1
   /// in edge: Return.
   ///
-  /// stk::mesh::Entity must have satisfied the fracture criterion and be labeled open
-  /// in map is_open. If not open: Return.
-  ///
   Vertex
   cloneBoundaryEntity(Vertex vertex);
 

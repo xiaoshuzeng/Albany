@@ -994,8 +994,7 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
           get_bulk_data()->entity_rank(global_source),
           get_bulk_data()->identifier(global_target),
           get_bulk_data()->entity_rank(global_target),
-          edge_id
-          );
+          edge_id);
 
     }
 

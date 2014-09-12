@@ -68,14 +68,13 @@ int main(int ac, char* av[])
 
   topology.setEntitiesOpen();
 
+  topology.set_output_type(LCM::Topology::UNIDIRECTIONAL_MULTILEVEL);
+
 #if defined(DEBUG_LCM_TOPOLOGY)
   std::string
   gviz_filename = LCM::parallelize_string("before") + ".dot";
 
-  LCM::Topology::OutputType const
-  type = LCM::Topology::UNIDIRECTIONAL_UNILEVEL;
-
-  topology.outputToGraphviz(gviz_filename, type);
+  topology.outputToGraphviz(gviz_filename);
 #endif
   std::string
   boundary_filename = LCM::parallelize_string("before") + ".vtk";
@@ -86,7 +85,7 @@ int main(int ac, char* av[])
 
 #if defined(DEBUG_LCM_TOPOLOGY)
   gviz_filename = LCM::parallelize_string("after") + ".dot";
-  topology.outputToGraphviz(gviz_filename, type);
+  topology.outputToGraphviz(gviz_filename);
 #endif
   boundary_filename = LCM::parallelize_string("after") + ".vtk";
   topology.outputBoundary(boundary_filename);

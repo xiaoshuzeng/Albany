@@ -19,7 +19,8 @@ namespace LCM {
 Topology::Topology() :
     discretization_(Teuchos::null),
     stk_mesh_struct_(Teuchos::null),
-    fracture_criterion_(Teuchos::null)
+    fracture_criterion_(Teuchos::null),
+    output_type_(UNIDIRECTIONAL_UNILEVEL)
 {
   return;
 }
@@ -32,7 +33,8 @@ Topology::Topology(
     std::string const & output_file) :
     discretization_(Teuchos::null),
     stk_mesh_struct_(Teuchos::null),
-    fracture_criterion_(Teuchos::null)
+    fracture_criterion_(Teuchos::null),
+    output_type_(UNIDIRECTIONAL_UNILEVEL)
 {
   Teuchos::RCP<Teuchos::ParameterList>
   params = Teuchos::rcp(new Teuchos::ParameterList("params"));
@@ -136,7 +138,8 @@ Topology::
 Topology(Teuchos::RCP<Albany::AbstractDiscretization> & discretization) :
     discretization_(Teuchos::null),
     stk_mesh_struct_(Teuchos::null),
-    fracture_criterion_(Teuchos::null)
+    fracture_criterion_(Teuchos::null),
+    output_type_(UNIDIRECTIONAL_UNILEVEL)
 {
   set_discretization(discretization);
 
@@ -724,7 +727,8 @@ Topology::createStar(
   assert(get_meta_data()->spatial_dimension() == 3);
 
   stk::mesh::EntityRank const
-  one_up = static_cast<stk::mesh::EntityRank>(get_bulk_data()->entity_rank(entity)
+  one_up = static_cast<stk::mesh::EntityRank>(get_bulk_data()->entity_rank(
+      entity)
       + 1);
 
   stk::mesh::Entity const *
@@ -821,7 +825,8 @@ Topology::splitOpenFaces()
 
       bool const
       is_local_and_open_segment =
-          is_local_entity(segment) == true && get_fracture_state(segment) == OPEN;
+          is_local_entity(segment) == true
+              && get_fracture_state(segment) == OPEN;
 
       if (is_local_and_open_segment == true) {
         open_segments.push_back(segment);
@@ -1188,13 +1193,10 @@ Topology::setEntitiesOpen()
 
 //
 // Output the graph associated with the mesh to graphviz .dot
-// file for visualization purposes. No need for entity_open map
-// for this version
+// file for visualization purposes.
 //
 void
-Topology::outputToGraphviz(
-    std::string const & output_filename,
-    OutputType const output_type)
+Topology::outputToGraphviz(std::string const & output_filename)
 {
   // Open output file
   std::ofstream
@@ -1250,7 +1252,9 @@ Topology::outputToGraphviz(
 
         unsigned const
         num_valid_conn =
-            get_bulk_data()->count_valid_connectivity(source_entity, target_rank);
+            get_bulk_data()->count_valid_connectivity(
+                source_entity,
+                target_rank);
 
         if (num_valid_conn > 0) {
           stk::mesh::Entity const *
@@ -1270,6 +1274,9 @@ Topology::outputToGraphviz(
 
             bool
             is_valid_target_rank = false;
+
+            OutputType const
+            output_type = get_output_type();
 
             switch (output_type) {
 

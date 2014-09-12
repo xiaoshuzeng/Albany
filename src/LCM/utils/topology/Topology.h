@@ -67,9 +67,7 @@ public:
   };
 
   void
-  outputToGraphviz(
-      std::string const & output_filename,
-      OutputType const output_type = UNIDIRECTIONAL_UNILEVEL);
+  outputToGraphviz(std::string const & output_filename);
 
   ///
   /// \brief Initializes the default stk mesh object needed by class.
@@ -773,6 +771,18 @@ public:
     return is_internal(e) == true && is_open(e) == true;
   }
 
+  void
+  set_output_type(OutputType const ot)
+  {
+    output_type_ = ot;
+  }
+
+  OutputType
+  get_output_type()
+  {
+    return output_type_;
+  }
+
 private:
   ///
   /// \brief Create Albany discretization
@@ -817,6 +827,9 @@ private:
   /// Pointer to failure criterion object
   Teuchos::RCP<AbstractFractureCriterion>
   fracture_criterion_;
+
+  OutputType
+  output_type_;
 
 private:
   ///
