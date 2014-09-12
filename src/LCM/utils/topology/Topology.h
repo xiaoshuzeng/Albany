@@ -537,24 +537,6 @@ public:
   findCoordinates(unsigned int nodeIdentifier);
 
   ///
-  /// \brief Divide former mesh segments by half
-  ///
-  void
-  divideSegmentsHalf();
-
-  void
-  addCentroid();
-
-  void
-  connectCentroid();
-
-  void
-  addNewFaces();
-
-  void
-  connectNewFaces();
-
-  ///
   /// Check fracture criterion
   ///
   bool
