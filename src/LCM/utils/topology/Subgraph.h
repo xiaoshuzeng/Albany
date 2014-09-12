@@ -258,46 +258,46 @@ public:
   /// Accessors and mutators
   ///
   Topology &
-  getTopology();
+  get_topology();
 
   size_t const
-  getSpaceDimension();
+  get_space_dimension();
 
   Teuchos::RCP<Albany::AbstractSTKMeshStruct> &
-  getSTKMeshStruct();
+  get_stk_mesh_struct();
 
   stk::mesh::BulkData *
-  getBulkData();
+  get_bulk_data();
 
   stk::mesh::MetaData *
-  getMetaData();
+  get_meta_data();
 
   stk::mesh::EntityRank const
-  getBoundaryRank();
+  get_boundary_rank();
 
   IntScalarFieldType &
-  getFractureState(stk::mesh::EntityRank rank);
+  get_fracture_state_field(stk::mesh::EntityRank rank);
 
   void
-  setFractureState(stk::mesh::Entity e, FractureState const fs);
+  set_fracture_state(stk::mesh::Entity e, FractureState const fs);
 
   FractureState
-  getFractureState(stk::mesh::Entity e);
+  get_fracture_state(stk::mesh::Entity e);
 
   bool
-  isOpen(stk::mesh::Entity e);
+  is_open(stk::mesh::Entity e);
 
   bool
-  isInternalAndOpen(stk::mesh::Entity e);
+  is_internal_and_open(stk::mesh::Entity e);
 
   bool
-  isInternal(stk::mesh::Entity e)
+  is_internal(stk::mesh::Entity e)
   {
 
-    assert(getBulkData()->entity_rank(e) == getBoundaryRank());
+    assert(get_bulk_data()->entity_rank(e) == get_boundary_rank());
 
     Vertex
-    vertex = globalToLocal(getBulkData()->entity_key(e));
+    vertex = globalToLocal(get_bulk_data()->entity_key(e));
 
     boost::graph_traits<Graph>::degree_size_type
     number_in_edges = boost::in_degree(vertex, *this);

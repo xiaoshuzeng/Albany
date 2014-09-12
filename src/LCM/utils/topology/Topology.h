@@ -644,7 +644,7 @@ public:
   }
 
   IntScalarFieldType &
-  get_fracture_state(stk::mesh::EntityRank rank)
+  get_fracture_state_field(stk::mesh::EntityRank rank)
   {
     return *(stk_mesh_struct_->getFieldContainer()->getFractureState(rank));
   }
@@ -727,7 +727,7 @@ public:
   {
     stk::mesh::EntityRank const rank = get_bulk_data()->entity_rank(e);
     if (rank < stk::topology::ELEMENT_RANK) {
-      *(stk::mesh::field_data(get_fracture_state(rank), e)) =
+      *(stk::mesh::field_data(get_fracture_state_field(rank), e)) =
           static_cast<int>(fs);
     }
   }
@@ -743,7 +743,7 @@ public:
     rank >= stk::topology::ELEMENT_RANK ?
         CLOSED :
         static_cast<FractureState>(*(stk::mesh::field_data(
-            get_fracture_state(rank),
+            get_fracture_state_field(rank),
             e)));
   }
 
