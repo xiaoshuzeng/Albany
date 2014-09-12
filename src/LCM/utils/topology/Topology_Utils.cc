@@ -6,8 +6,6 @@
 
 #include "Topology_Utils.h"
 
-#define DEBUG_LCM_TOPOLOGY
-
 namespace LCM {
 
 //

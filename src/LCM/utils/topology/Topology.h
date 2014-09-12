@@ -436,7 +436,7 @@ public:
   ///        on the outer surface of the mesh
   ///
   std::vector<stk::mesh::Entity>
-  MeshEdgesShortestPath();
+  meshEdgesShortestPath();
 
   ///
   /// \brief Returns the shortest path over the boundary faces given
@@ -519,13 +519,13 @@ public:
   ///        solver
   ///
   std::vector<stk::mesh::Entity>
-  MinimumSurfaceFaces(std::vector<int> VectorFromLPSolver);
+  minimumSurfaceFaces(std::vector<int> VectorFromLPSolver);
 
   ///
   /// \brief Returns the number of times an entity is repeated in a vector
   ///
   int
-  NumberOfRepetitions(
+  numberOfRepetitions(
       std::vector<stk::mesh::Entity> & entities,
       stk::mesh::Entity entity);
 
@@ -535,12 +535,6 @@ public:
   ///
   std::vector<double>
   findCoordinates(unsigned int nodeIdentifier);
-
-  ///
-  /// \brief Practice creating the barycentric subdivision
-  ///
-  void
-  barycentricSubdivisionAlt();
 
   ///
   /// \brief Divide former mesh segments by half

@@ -266,7 +266,8 @@ Topology::getBoundaryEntities(const stk::mesh::Entity entity,
     stk::mesh::EntityRank entity_rank)
 {
 
-  stk::mesh::EntityRank given_entity_rank = get_bulk_data()->entity_rank(entity);
+  stk::mesh::EntityRank given_entity_rank = get_bulk_data()->entity_rank(
+      entity);
   //Get entities of  "given_entity_rank -1"
   std::vector<std::vector<stk::mesh::Entity> > boundary_entities(
       given_entity_rank + 1);

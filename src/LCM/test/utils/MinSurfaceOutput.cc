@@ -105,7 +105,7 @@ int main(int ac, char* av[]){
 
 
 	//Call the function "MinimumSurfaceFaces" that returns the entities associated with the solution given by the solver
-	std::vector<stk::mesh::Entity> EntitiesMinSurface = topology.MinimumSurfaceFaces(resultsVector);
+	std::vector<stk::mesh::Entity> EntitiesMinSurface = topology.minimumSurfaceFaces(resultsVector);
 
 
     //Debug: return the number of repeated entities if there are any
@@ -113,7 +113,7 @@ int main(int ac, char* av[]){
 	std::vector<stk::mesh::Entity>::const_iterator I_Entities;
 	for (I_Entities = EntitiesMinSurface.begin();I_Entities != EntitiesMinSurface.end(); I_Entities++)
 	{
-       	if (topology.NumberOfRepetitions(EntitiesMinSurface,*I_Entities) != 1)
+       	if (topology.numberOfRepetitions(EntitiesMinSurface,*I_Entities) != 1)
 		{
 			cout <<"Warning repeated entities" <<*I_Entities <<endl;
 		}

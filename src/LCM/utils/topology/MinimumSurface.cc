@@ -517,7 +517,7 @@ std::vector<double> Topology::getCoordinatesOfMaxAndMin()
 // \brief Returns the edges necessary to compute the shortest path on
 //        the outer surface of the mesh
 //
-std::vector<stk::mesh::Entity> Topology::MeshEdgesShortestPath()
+std::vector<stk::mesh::Entity> Topology::meshEdgesShortestPath()
 {
 
   //Obtain all the faces of the mesh
@@ -581,8 +581,11 @@ std::vector<std::vector<int> > Topology::shortestpathOnBoundaryFaces(
   typedef boost::property_map<Graph, boost::vertex_index_t>::type IndexMap;
   typedef boost::property_map<Graph, boost::vertex_name_t>::type NameMap;
 
-  typedef boost::iterator_property_map<Vertex*, IndexMap, Vertex, Vertex&> PredecessorMap;
-  typedef boost::iterator_property_map<Weight*, IndexMap, Weight, Weight&> DistanceMap;
+  typedef boost::iterator_property_map<Vertex*, IndexMap, Vertex, Vertex&>
+  PredecessorMap;
+
+  typedef boost::iterator_property_map<Weight*, IndexMap, Weight, Weight&>
+  DistanceMap;
 
   //Define the input graph
   Graph g;
@@ -745,8 +748,11 @@ std::vector<std::vector<int> > Topology::shortestpath(
   typedef boost::property_map<Graph, boost::vertex_index_t>::type IndexMap;
   typedef boost::property_map<Graph, boost::vertex_name_t>::type NameMap;
 
-  typedef boost::iterator_property_map<Vertex*, IndexMap, Vertex, Vertex&> PredecessorMap;
-  typedef boost::iterator_property_map<Weight*, IndexMap, Weight, Weight&> DistanceMap;
+  typedef boost::iterator_property_map<Vertex*, IndexMap, Vertex, Vertex&>
+  PredecessorMap;
+
+  typedef boost::iterator_property_map<Weight*, IndexMap, Weight, Weight&>
+  DistanceMap;
 
   //Define the input graph
   Graph g;
@@ -1385,7 +1391,7 @@ std::vector<std::vector<int> > Topology::boundaryVectorOuterSurface(
 //        minimum surface.  It takes as an input the resulting vector
 //        taken from the solution of the linear programming solver
 //
-std::vector<stk::mesh::Entity> Topology::MinimumSurfaceFaces(
+std::vector<stk::mesh::Entity> Topology::minimumSurfaceFaces(
     std::vector<int> VectorFromLPSolver)
 {
   //Obtain the faces
@@ -1423,7 +1429,7 @@ std::vector<stk::mesh::Entity> Topology::MinimumSurfaceFaces(
 //----------------------------------------------------------------------------
 // \brief Returns the number of times an entity is repeated in a vector
 //
-int Topology::NumberOfRepetitions(
+int Topology::numberOfRepetitions(
     std::vector<stk::mesh::Entity> & entities,
     stk::mesh::Entity entity)
 {
