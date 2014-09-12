@@ -57,61 +57,61 @@ public:
   }
 
   Topology &
-  getTopology()
+  get_topology()
   {
     return topology_;
   }
 
   std::string const &
-  getBulkBlockName()
+  get_bulk_block_name()
   {
     return bulk_block_name_;
   }
 
   std::string const &
-  getInterfaceBlockName()
+  get_interface_block_name()
   {
     return interface_block_name_;
   }
 
   Albany::STKDiscretization &
-  getSTKDiscretization()
+  get_stk_discretization()
   {
     return stk_discretization_;
   }
 
   Albany::AbstractSTKMeshStruct const &
-  getAbstractSTKMeshStruct()
+  get_stk_mesh_struct()
   {
     return stk_mesh_struct_;
   }
 
   stk::mesh::BulkData const &
-  getBulkData()
+  get_bulk_data()
   {
     return bulk_data_;
   }
 
   stk::mesh::MetaData const &
-  getMetaData()
+  get_meta_data()
   {
     return meta_data_;
   }
 
   Intrepid::Index
-  getDimension()
+  get_dimension()
   {
     return dimension_;
   }
 
   stk::mesh::Part &
-  getBulkPart()
+  get_bulk_part()
   {
     return bulk_part_;
   }
 
   stk::mesh::Part &
-  getInterfacePart()
+  get_interface_part()
   {
     return interface_part_;
   }

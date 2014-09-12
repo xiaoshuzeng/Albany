@@ -1049,7 +1049,7 @@ Topology::splitOpenFaces()
   interface_rank = stk::topology::ELEMENT_RANK;
 
   stk::mesh::Part &
-  interface_part = fracture_criterion_->getInterfacePart();
+  interface_part = fracture_criterion_->get_interface_part();
 
   stk::mesh::PartVector
   interface_parts;
@@ -1378,13 +1378,13 @@ Topology::getNumberEntitiesByRank(
 stk::mesh::Part &
 Topology::get_fracture_bulk_part()
 {
-  return fracture_criterion_->getBulkPart();
+  return fracture_criterion_->get_bulk_part();
 }
 
 stk::mesh::Part &
 Topology::get_fracture_interface_part()
 {
-  return fracture_criterion_->getInterfacePart();
+  return fracture_criterion_->get_interface_part();
 }
 
 } // namespace LCM

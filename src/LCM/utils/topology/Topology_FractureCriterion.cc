@@ -18,7 +18,7 @@ FractureCriterionTraction::FractureCriterionTraction(
     double const beta) :
     AbstractFractureCriterion(topology, bulk_block_name, interface_block_name),
     stress_field_(
-        *(getMetaData().get_field<TensorFieldType>(
+        *(get_meta_data().get_field<TensorFieldType>(
             stk::topology::NODE_RANK,
             stress_name))),
     critical_traction_(critical_traction),
@@ -67,24 +67,24 @@ FractureCriterionTraction::check(
 
   bool const
   is_embedded =
-      bucket_0.member(getBulkPart()) && bucket_1.member(getBulkPart());
+      bucket_0.member(get_bulk_part()) && bucket_1.member(get_bulk_part());
 
   if (is_embedded == false) return false;
 
   // Now traction check
   stk::mesh::EntityVector
-  nodes = getTopology().getBoundaryEntityNodes(interface);
+  nodes = get_topology().getBoundaryEntityNodes(interface);
 
   EntityVectorIndex const
   number_nodes = nodes.size();
 
   Intrepid::Tensor<double>
-  stress(getDimension(), Intrepid::ZEROS);
+  stress(get_dimension(), Intrepid::ZEROS);
 
   Intrepid::Tensor<double>
   nodal_stresses(number_nodes);
 
-  nodal_stresses.set_dimension(getDimension());
+  nodal_stresses.set_dimension(get_dimension());
 
   // The traction is evaluated at centroid of face, so a simple
   // average yields the value.
@@ -137,10 +137,10 @@ void
 FractureCriterionTraction::computeNormals()
 {
   stk::mesh::Selector
-  local_selector = getMetaData().locally_owned_part();
+  local_selector = get_meta_data().locally_owned_part();
 
   std::vector<stk::mesh::Bucket*> const &
-  node_buckets = getBulkData().buckets(stk::topology::NODE_RANK);
+  node_buckets = get_bulk_data().buckets(stk::topology::NODE_RANK);
 
   stk::mesh::EntityVector
   nodes;
@@ -154,20 +154,20 @@ FractureCriterionTraction::computeNormals()
   coordinates(number_nodes);
 
   Teuchos::ArrayRCP<double> &
-  node_coordinates = getSTKDiscretization().getCoordinates();
+  node_coordinates = get_stk_discretization().getCoordinates();
 
   for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
 
     double const * const
-    pointer_coordinates = &(node_coordinates[getDimension() * i]);
+    pointer_coordinates = &(node_coordinates[get_dimension() * i]);
 
-    coordinates[i].set_dimension(getDimension());
+    coordinates[i].set_dimension(get_dimension());
     coordinates[i].fill(pointer_coordinates);
 
   }
 
   std::vector<stk::mesh::Bucket*> const &
-  face_buckets = bulk_data_.buckets(getMetaData().side_rank());
+  face_buckets = bulk_data_.buckets(get_meta_data().side_rank());
 
   stk::mesh::EntityVector
   faces;
@@ -185,20 +185,20 @@ FractureCriterionTraction::computeNormals()
     face = faces[i];
 
     stk::mesh::EntityVector
-    nodes = getTopology().getBoundaryEntityNodes(face);
+    nodes = get_topology().getBoundaryEntityNodes(face);
 
     Intrepid::Vector<double> &
     normal = normals_[i];
 
-    normal.set_dimension(getDimension());
+    normal.set_dimension(get_dimension());
 
     // Depending on the dimension is how the normal is computed.
     // TODO: generalize this for all topologies.
-    switch (getDimension()) {
+    switch (get_dimension()) {
 
     default:
       std::cerr << "ERROR: " << __PRETTY_FUNCTION__ << '\n';
-      std::cerr << "Wrong dimension: " << getDimension() << '\n';
+      std::cerr << "Wrong dimension: " << get_dimension() << '\n';
       exit(1);
       break;
 
@@ -208,7 +208,7 @@ FractureCriterionTraction::computeNormals()
         gid0 = bulk_data_.identifier(nodes[0]) - 1;
 
         Intrepid::Index const
-        lid0 = getSTKDiscretization().getNodeMap()->LID(gid0);
+        lid0 = get_stk_discretization().getNodeMap()->LID(gid0);
 
         assert(lid0 < number_nodes);
 
@@ -216,7 +216,7 @@ FractureCriterionTraction::computeNormals()
         gid1 = bulk_data_.identifier(nodes[1]) - 1;
 
         Intrepid::Index const
-        lid1 = getSTKDiscretization().getNodeMap()->LID(gid1);
+        lid1 = get_stk_discretization().getNodeMap()->LID(gid1);
 
         assert(lid1 < number_nodes);
 
@@ -236,7 +236,7 @@ FractureCriterionTraction::computeNormals()
         gid0 = bulk_data_.identifier(nodes[0]) - 1;
 
         Intrepid::Index const
-        lid0 = getSTKDiscretization().getNodeMap()->LID(gid0);
+        lid0 = get_stk_discretization().getNodeMap()->LID(gid0);
 
         assert(lid0 < number_nodes);
 
@@ -244,7 +244,7 @@ FractureCriterionTraction::computeNormals()
         gid1 = bulk_data_.identifier(nodes[1]) - 1;
 
         Intrepid::Index const
-        lid1 = getSTKDiscretization().getNodeMap()->LID(gid1);
+        lid1 = get_stk_discretization().getNodeMap()->LID(gid1);
 
         assert(lid1 < number_nodes);
 
@@ -252,7 +252,7 @@ FractureCriterionTraction::computeNormals()
         gid2 = bulk_data_.identifier(nodes[2]) - 1;
 
         Intrepid::Index const
-        lid2 = getSTKDiscretization().getNodeMap()->LID(gid2);
+        lid2 = get_stk_discretization().getNodeMap()->LID(gid2);
 
         assert(lid2 < number_nodes);
 
