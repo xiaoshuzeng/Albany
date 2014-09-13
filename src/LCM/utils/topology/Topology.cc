@@ -226,7 +226,7 @@ void Topology::graphInitialization()
 //
 void Topology::removeNodeRelations()
 {
-  // Create the nodesorary connectivity array
+  // Create the temporary connectivity array
   stk::mesh::EntityVector
   elements;
 
@@ -300,7 +300,7 @@ void Topology::removeMultiLevelRelations()
         num_relations = get_bulk_data()->num_connectivity(entity, target_rank);
 
         stk::mesh::ConnectivityOrdinal const *
-        ords = get_bulk_data()->begin_ordinals(entity, target_rank);
+        ordinals = get_bulk_data()->begin_ordinals(entity, target_rank);
 
         // Collect relations to delete
         for (size_t r = 0; r < num_relations; ++r) {
@@ -317,7 +317,7 @@ void Topology::removeMultiLevelRelations()
 
           if (is_valid_relation == false) {
             far_entities.push_back(relations[r]);
-            multilevel_relation_ids.push_back(ords[r]);
+            multilevel_relation_ids.push_back(ordinals[r]);
           }
 
         }
@@ -724,12 +724,13 @@ Topology::createStar(
 {
   subgraph_entities.insert(get_bulk_data()->entity_key(entity));
 
-  assert(get_meta_data()->spatial_dimension() == 3);
+  assert(get_space_dimension() == 3);
 
   stk::mesh::EntityRank const
-  one_up = static_cast<stk::mesh::EntityRank>(get_bulk_data()->entity_rank(
-      entity)
-      + 1);
+  rank = get_bulk_data()->entity_rank(entity);
+
+  stk::mesh::EntityRank const
+  one_up = static_cast<stk::mesh::EntityRank>(rank + 1);
 
   stk::mesh::Entity const *
   relations = get_bulk_data()->begin(entity, one_up);
@@ -785,10 +786,10 @@ Topology::splitOpenFaces()
   stk::mesh::BulkData &
   bulk_data = *get_bulk_data();
 
-  stk::mesh::get_selected_entities(
-      local_bulk,
-      bulk_data.buckets(stk::topology::NODE_RANK),
-      points);
+  stk::mesh::BucketVector const &
+  point_buckets = bulk_data.buckets(stk::topology::NODE_RANK);
+
+  stk::mesh::get_selected_entities(local_bulk, point_buckets, points);
 
   // Collect open points
   for (stk::mesh::EntityVector::iterator i = points.begin(); i != points.end();
@@ -811,22 +812,30 @@ Topology::splitOpenFaces()
     stk::mesh::Entity
     point = *i;
 
-    stk::mesh::Entity const* relations = get_bulk_data()->begin_edges(point);
-    size_t const num_relations = get_bulk_data()->num_edges(point);
+    stk::mesh::Entity const *
+    segment_relations = get_bulk_data()->begin_edges(point);
+
+    size_t const
+    num_segments = get_bulk_data()->num_edges(point);
 
     stk::mesh::EntityVector
     open_segments;
 
     // Collect open segments.
-    for (size_t j = 0; j < num_relations; ++j) {
+    for (size_t j = 0; j < num_segments; ++j) {
 
       stk::mesh::Entity
-      segment = relations[j];
+      segment = segment_relations[j];
+
+      bool const
+      is_local_segment = is_local_entity(segment) == true;
+
+      bool const
+      is_open_segment = get_fracture_state(segment) == OPEN;
 
       bool const
       is_local_and_open_segment =
-          is_local_entity(segment) == true
-              && get_fracture_state(segment) == OPEN;
+          is_local_segment == true && is_open_segment == true;
 
       if (is_local_and_open_segment == true) {
         open_segments.push_back(segment);
@@ -852,28 +861,28 @@ Topology::splitOpenFaces()
 
       // Create star of segment
       std::set<stk::mesh::EntityKey>
-      subgraph_entities;
+      star_entities;
 
       std::set<stkEdge, EdgeLessThan>
-      subgraph_edges;
+      star_edges;
 
-      createStar(segment, subgraph_entities, subgraph_edges);
+      createStar(segment, star_entities, star_edges);
 
       // Iterators
       std::set<stk::mesh::EntityKey>::iterator
-      first_entity = subgraph_entities.begin();
+      first_entity = star_entities.begin();
 
       std::set<stk::mesh::EntityKey>::iterator
-      last_entity = subgraph_entities.end();
+      last_entity = star_entities.end();
 
       std::set<stkEdge>::iterator
-      first_edge = subgraph_edges.begin();
+      first_edge = star_edges.begin();
 
       std::set<stkEdge>::iterator
-      last_edge = subgraph_edges.end();
+      last_edge = star_edges.end();
 
       Subgraph
-      subgraph(*this, first_entity, last_entity, first_edge, last_edge);
+      segment_star(*this, first_entity, last_entity, first_edge, last_edge);
 
 #if defined(DEBUG_LCM_TOPOLOGY)
       {
@@ -881,7 +890,7 @@ Topology::splitOpenFaces()
         file_name =
             "graph-pre-clone-" + entity_string(bulk_data, segment) + ".dot";
         outputToGraphviz(file_name);
-        subgraph.outputToGraphviz("sub" + file_name);
+        segment_star.outputToGraphviz("sub" + file_name);
       }
 #endif // DEBUG_LCM_TOPOLOGY
 
@@ -890,19 +899,24 @@ Topology::splitOpenFaces()
       face_relations = get_bulk_data()->begin_faces(segment);
 
       size_t const
-      num_face_relations = get_bulk_data()->num_faces(segment);
+      num_faces = get_bulk_data()->num_faces(segment);
 
       stk::mesh::EntityVector
       open_faces;
 
-      for (size_t k = 0; k < num_face_relations; ++k) {
+      for (size_t k = 0; k < num_faces; ++k) {
 
         stk::mesh::Entity
         face = face_relations[k];
 
         bool const
-        is_local_and_open_face =
-            is_local_entity(face) == true && is_internal_and_open(face) == true;
+        is_local_face = is_local_entity(face);
+
+        bool const
+        is_open_face = is_internal_and_open(face) == true;
+
+        bool const
+        is_local_and_open_face = is_local_face == true && is_open_face == true;
 
         if (is_local_and_open_face == true) {
           open_faces.push_back(face);
@@ -916,14 +930,17 @@ Topology::splitOpenFaces()
         stk::mesh::Entity
         face = *k;
 
-        Vertex
-        face_vertex = subgraph.globalToLocal(get_bulk_data()->entity_key(face));
+        stk::mesh::EntityKey const
+        face_key = get_bulk_data()->entity_key(face);
 
         Vertex
-        new_face_vertex = subgraph.cloneBoundaryEntity(face_vertex);
+        face_vertex = segment_star.globalToLocal(face_key);
+
+        Vertex
+        new_face_vertex = segment_star.cloneBoundaryEntity(face_vertex);
 
         stk::mesh::EntityKey
-        new_face_key = subgraph.localToGlobal(new_face_vertex);
+        new_face_key = segment_star.localToGlobal(new_face_vertex);
 
         stk::mesh::Entity
         new_face = bulk_data.get_entity(new_face_key);
@@ -933,15 +950,17 @@ Topology::splitOpenFaces()
         set_fracture_state(new_face, CLOSED);
 
         EntityPair
-        ff = std::make_pair(face, new_face);
+        face_pair = std::make_pair(face, new_face);
 
-        fractured_faces.insert(ff);
+        fractured_faces.insert(face_pair);
       }
 
       // Split the articulation point (current segment)
+      stk::mesh::EntityKey const
+      segment_key = get_bulk_data()->entity_key(segment);
+
       Vertex
-      segment_vertex =
-          subgraph.globalToLocal(get_bulk_data()->entity_key(segment));
+      segment_vertex = segment_star.globalToLocal(segment_key);
 
 #if defined(DEBUG_LCM_TOPOLOGY)
       {
@@ -950,11 +969,11 @@ Topology::splitOpenFaces()
             "graph-pre-split-" + entity_string(bulk_data, segment) + ".dot";
 
         outputToGraphviz(file_name);
-        subgraph.outputToGraphviz("sub" + file_name);
+        segment_star.outputToGraphviz("sub" + file_name);
       }
 #endif // DEBUG_LCM_TOPOLOGY
 
-      subgraph.splitArticulationPoint(segment_vertex);
+      segment_star.splitArticulation(segment_vertex);
 
       // Reset segment fracture state
       set_fracture_state(segment, CLOSED);
@@ -965,7 +984,7 @@ Topology::splitOpenFaces()
         file_name =
             "graph-post-split-" + entity_string(bulk_data, segment) + ".dot";
         outputToGraphviz(file_name);
-        subgraph.outputToGraphviz("sub" + file_name);
+        segment_star.outputToGraphviz("sub" + file_name);
       }
 #endif // DEBUG_LCM_TOPOLOGY
     }
@@ -974,31 +993,34 @@ Topology::splitOpenFaces()
     // Split the node articulation point
     // Create star of node
     std::set<stk::mesh::EntityKey>
-    subgraph_entities;
+    star_entities;
 
     std::set<stkEdge, EdgeLessThan>
-    subgraph_edges;
+    star_edges;
 
-    createStar(point, subgraph_entities, subgraph_edges);
+    createStar(point, star_entities, star_edges);
 
     // Iterators
     std::set<stk::mesh::EntityKey>::iterator
-    first_entity = subgraph_entities.begin();
+    first_entity = star_entities.begin();
 
     std::set<stk::mesh::EntityKey>::iterator
-    last_entity = subgraph_entities.end();
+    last_entity = star_entities.end();
 
     std::set<stkEdge>::iterator
-    first_edge = subgraph_edges.begin();
+    first_edge = star_edges.begin();
 
     std::set<stkEdge>::iterator
-    last_edge = subgraph_edges.end();
+    last_edge = star_edges.end();
 
     Subgraph
-    subgraph(*this, first_entity, last_entity, first_edge, last_edge);
+    point_star(*this, first_entity, last_entity, first_edge, last_edge);
+
+    stk::mesh::EntityKey const
+    point_key = get_bulk_data()->entity_key(point);
 
     Vertex
-    node = subgraph.globalToLocal(get_bulk_data()->entity_key(point));
+    point_vertex = point_star.globalToLocal(point_key);
 
 #if defined(DEBUG_LCM_TOPOLOGY)
     {
@@ -1007,12 +1029,12 @@ Topology::splitOpenFaces()
           "graph-pre-split-" + entity_string(bulk_data, point) + ".dot";
 
       outputToGraphviz(file_name);
-      subgraph.outputToGraphviz("sub" + file_name);
+      point_star.outputToGraphviz("sub" + file_name);
     }
 #endif // DEBUG_LCM_TOPOLOGY
 
     ElementNodeMap
-    new_connectivity = subgraph.splitArticulationPoint(node);
+    new_connectivity = point_star.splitArticulation(point_vertex);
 
     // Reset fracture state of point
     set_fracture_state(point, CLOSED);
@@ -1024,7 +1046,7 @@ Topology::splitOpenFaces()
           "graph-post-split-" + entity_string(bulk_data, point) + ".dot";
 
       outputToGraphviz(file_name);
-      subgraph.outputToGraphviz("sub" + file_name);
+      point_star.outputToGraphviz("sub" + file_name);
     }
 #endif // DEBUG_LCM_TOPOLOGY
 

@@ -608,7 +608,7 @@ public:
   size_t const
   get_space_dimension()
   {
-    return static_cast<size_t>(get_stk_mesh_struct()->numDim);
+    return static_cast<size_t>(get_meta_data()->spatial_dimension());
   }
 
   stk::mesh::EntityRank const

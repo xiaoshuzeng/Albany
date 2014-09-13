@@ -215,7 +215,7 @@ public:
   /// change, do not add to the map.
   ///
   std::map<stk::mesh::Entity, stk::mesh::Entity>
-  splitArticulationPoint(Vertex vertex);
+  splitArticulation(Vertex vertex);
 
   ///
   /// \brief Clone all out edges of a vertex to a new vertex.

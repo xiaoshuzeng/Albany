@@ -42,16 +42,16 @@ FractureCriterionTraction::check(
 {
   // Check the adjacent bulk elements. Proceed only
   // if both elements belong to the bulk part.
-  stk::mesh::Entity const *
-  relations_up = bulk_data.begin(
-      interface,
-      (stk::mesh::EntityRank) (bulk_data.entity_rank(interface) + 1)
-      );
+  stk::mesh::EntityRank const
+  rank = bulk_data.entity_rank(interface);
 
-  assert(bulk_data.num_connectivity(
-      interface,
-      (stk::mesh::EntityRank )(bulk_data.entity_rank(interface) + 1)
-      ) == 2);
+  stk::mesh::EntityRank const
+  rank_up = static_cast<stk::mesh::EntityRank>(rank + 1);
+
+  stk::mesh::Entity const *
+  relations_up = bulk_data.begin(interface, rank_up);
+
+  assert(bulk_data.num_connectivity(interface, rank_up) == 2);
 
   stk::mesh::Entity
   element_0 = relations_up[0];

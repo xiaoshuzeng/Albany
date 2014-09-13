@@ -671,7 +671,7 @@ Subgraph::updateElementNodeConnectivity(
 // Splits an articulation point.
 //
 std::map<stk::mesh::Entity, stk::mesh::Entity>
-Subgraph::splitArticulationPoint(Vertex vertex)
+Subgraph::splitArticulation(Vertex vertex)
 {
   stk::mesh::EntityRank
   vertex_rank = Subgraph::getVertexRank(vertex);
