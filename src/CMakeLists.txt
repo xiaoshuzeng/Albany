@@ -186,15 +186,8 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_ThermalConductivity.cpp
   evaluators/PHAL_NSMaterialProperty.cpp
   evaluators/PHAL_Absorption.cpp
-  evaluators/PHAL_GatherSHeight.cpp
-  evaluators/PHAL_GatherTemperature.cpp
-  evaluators/PHAL_GatherBasalFriction.cpp
-  evaluators/PHAL_GatherThickness.cpp
-  evaluators/PHAL_GatherFlowFactor.cpp
   evaluators/Adapt_ElementSizeField.cpp
   evaluators/PHAL_SaveNodalField.cpp
-  evaluators/PHAL_GatherSurfaceVelocity.cpp
-  evaluators/PHAL_GatherVelocityRMS.cpp
   evaluators/PHAL_GatherScalarNodalParameter.cpp
   )
 SET(PDE_SRCS ${PDE_SRCS}
@@ -297,24 +290,10 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_NSMaterialProperty_Def.hpp
   evaluators/PHAL_Absorption.hpp
   evaluators/PHAL_Absorption_Def.hpp
-  evaluators/PHAL_GatherSHeight.hpp
-  evaluators/PHAL_GatherSHeight_Def.hpp
-  evaluators/PHAL_GatherTemperature.hpp
-  evaluators/PHAL_GatherTemperature_Def.hpp
-  evaluators/PHAL_GatherBasalFriction.hpp
-  evaluators/PHAL_GatherBasalFriction_Def.hpp
-  evaluators/PHAL_GatherThickness.hpp
-  evaluators/PHAL_GatherThickness_Def.hpp
-  evaluators/PHAL_GatherFlowFactor.hpp
-  evaluators/PHAL_GatherFlowFactor_Def.hpp
   evaluators/Adapt_ElementSizeField.hpp
   evaluators/Adapt_ElementSizeField_Def.hpp
   evaluators/PHAL_SaveNodalField.hpp
   evaluators/PHAL_SaveNodalField_Def.hpp
-  evaluators/PHAL_GatherSurfaceVelocity.hpp
-  evaluators/PHAL_GatherSurfaceVelocity_Def.hpp
-  evaluators/PHAL_GatherVelocityRMS.hpp
-  evaluators/PHAL_GatherVelocityRMS_Def.hpp
   evaluators/PHAL_GatherScalarNodalParameter.hpp
   evaluators/PHAL_GatherScalarNodalParameter_Def.hpp
   )
@@ -533,10 +512,23 @@ include_directories (${Trilinos_INCLUDE_DIRS}
                      ./QCAD/problems
                      ./QCAD/evaluators
                      ./QCAD/responses
+                     ./ATO
+                     ./ATO/problems
+                     ./ATO/evaluators
+                     ./ATO/utils
                     )
 
 link_directories (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS}
   ${FMDB_LIBRARY_DIR})
+
+IF ( NLOPT )
+  include_directories (${NLOPT_INCLUDE_DIR})
+  link_directories (${NLOPT_LIBRARY_DIR})
+  set(NLOPT_LIB nlopt)
+ELSE()
+  set(NLOPT_LIB )
+ENDIF()
+
 
 # LAME
 IF(ALBANY_LAME)
@@ -651,6 +643,7 @@ set(ALL_LIBRARIES
   ${ALB_TRILINOS_LIBS}
   ${ALB_CUBIT_LIBS}
   ${LAME_LIB}
+  ${NLOPT_LIB}
   ${LAMENT_LIB}
   ${Peridigm_LIBRARIES}
   ${SCOREC_LIB}
@@ -683,7 +676,11 @@ ENDIF()
 IF (ALBANY_FELIX)
   add_subdirectory(FELIX)
   SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} FELIX)
-  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} mpasInterface)
+  
+  IF (ENABLE_MPAS_INTERFACE)
+    SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} mpasInterface)
+  ENDIF()
+  
   IF (ENABLE_CISM_INTERFACE)
     SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} cismInterface)
   ENDIF()
@@ -705,6 +702,12 @@ IF(ALBANY_CATALYST)
   SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} albanyCatalyst)
 endif()
 
+IF (ALBANY_ATO)
+  SET(ALBANY_LCM ON)
+  add_subdirectory(ATO)
+  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ATO)
+ENDIF()
+
 IF (ALBANY_LCM)
   add_subdirectory(LCM)
 
@@ -717,7 +720,10 @@ IF (ALBANY_LCM)
   ENDIF()
 ENDIF()
 
-
+# Can remove this once rebalance is in Trilnos again
+IF(ALBANY_STK_REBALANCE)
+  SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} albanySTKRebalance)
+endif()
 
 # Repeat libraries twice to catch circular dependencies
 SET(ALBANY_LIBRARIES ${ALBANY_LIBRARIES} ${ALBANY_LIBRARIES})

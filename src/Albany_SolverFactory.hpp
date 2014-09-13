@@ -55,18 +55,24 @@ namespace Albany {
       Teuchos::RCP<Application>& albanyApp,
       const Teuchos::RCP<const Epetra_Comm>& appComm,
       const Teuchos::RCP<const Epetra_Comm>& solverComm,
-      const Teuchos::RCP<const Epetra_Vector>& initial_guess  = Teuchos::null);
+      const Teuchos::RCP<const Epetra_Vector>& initial_guess  = Teuchos::null,
+      bool createAlbanyApp = true);
 
     Teuchos::RCP<Thyra::ModelEvaluator<double> > createThyraSolverAndGetAlbanyApp(
       Teuchos::RCP<Application>& albanyApp,
       const Teuchos::RCP<const Epetra_Comm>& appComm,
       const Teuchos::RCP<const Epetra_Comm>& solverComm,
-      const Teuchos::RCP<const Epetra_Vector>& initial_guess  = Teuchos::null);
+      const Teuchos::RCP<const Epetra_Vector>& initial_guess  = Teuchos::null,
+      bool createAlbanyApp = true);
 
     Teuchos::RCP<EpetraExt::ModelEvaluator> createAlbanyAppAndModel(
       Teuchos::RCP<Application>& albanyApp,
       const Teuchos::RCP<const Epetra_Comm>& appComm,
       const Teuchos::RCP<const Epetra_Vector>& initial_guess  = Teuchos::null);
+
+    Teuchos::RCP<EpetraExt::ModelEvaluator> createModel(
+      const Teuchos::RCP<Application>& albanyApp,
+      const Teuchos::RCP<const Epetra_Comm>& appComm);
 
     Teuchos::ParameterList& getAnalysisParameters() const
       { return appParams->sublist("Piro").sublist("Analysis"); }

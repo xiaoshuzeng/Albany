@@ -106,13 +106,6 @@ class AbstractDiscretization {
     //! Retrieve coodinate ptr_field (ws, el, node)
     virtual Teuchos::ArrayRCP<double>&  getCoordinates() const = 0;
     virtual const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type& getCoords() const = 0;
-    virtual const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type& getSurfaceHeight() const = 0;
-    virtual const WorksetArray<Teuchos::ArrayRCP<double> >::type& getTemperature() const = 0;
-    virtual const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type& getBasalFriction() const = 0;
-    virtual const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type& getThickness() const = 0;
-    virtual const WorksetArray<Teuchos::ArrayRCP<double> >::type& getFlowFactor() const = 0;
-    virtual const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type& getSurfaceVelocity() const = 0;
-    virtual const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type& getVelocityRMS() const = 0;
     virtual const WorksetArray<Teuchos::ArrayRCP<double> >::type& getSphereVolume() const = 0;
 
     //! Print the coords for mesh debugging
@@ -149,13 +142,17 @@ class AbstractDiscretization {
     //! Get number of total DOFs per node
     virtual int getNumEq() const = 0;
 
-    virtual void setSolutionField(const Epetra_Vector& soln){};
+    //! Set the solution field
+    virtual void setSolutionField(const Epetra_Vector& soln) = 0;
 
     //! Set the residual field for output
     virtual void setResidualField(const Epetra_Vector& residual) = 0;
 
     //! Write the solution to the output file
     virtual void writeSolution(const Epetra_Vector& solution, const double time, const bool overlapped = false) = 0;
+
+    //! update the mesh
+    virtual void updateMesh(bool shouldTransferIPData = false) = 0;
 
 
   private:

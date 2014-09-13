@@ -29,7 +29,10 @@ XZHydrostatic_Pressure(const Teuchos::ParameterList& p,
   numLevels( dl->node_scalar_level    ->dimension(2))
 {
 
-  Teuchos::ParameterList* xzhydrostatic_params = p.get<Teuchos::ParameterList*>("XZHydrostatic Problem");
+  Teuchos::ParameterList* xzhydrostatic_params =
+    p.isParameter("XZHydrostatic Problem") ? 
+      p.get<Teuchos::ParameterList*>("XZHydrostatic Problem"):
+      p.get<Teuchos::ParameterList*>("Hydrostatic Problem");
 
   this->addDependentField(Ps);
 
@@ -61,10 +64,9 @@ evaluateFields(typename Traits::EvalData workset)
       for (int level=0; level < numLevels; ++level) {
         Pressure(cell,node,level) = E.A(level)*E.p0() + E.B(level)*Ps(cell,node);
       }
-
       for (int level=0; level < numLevels; ++level) {
-        const ScalarT pp   = level<numLevels-1 ? 0.5*( Pressure(cell,node,level) + Pressure(cell,node,level+1) ) : Ps(cell,node);
         const ScalarT pm   = level             ? 0.5*( Pressure(cell,node,level) + Pressure(cell,node,level-1) ) : E.ptop();
+        const ScalarT pp   = level<numLevels-1 ? 0.5*( Pressure(cell,node,level) + Pressure(cell,node,level+1) ) : Ps(cell,node);
         Pi(cell,node,level) = (pp - pm) /E.delta(level);
       }
     }

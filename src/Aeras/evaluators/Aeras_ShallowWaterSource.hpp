@@ -39,11 +39,13 @@ public:
   void evaluateFields(typename Traits::EvalData d);
   
   ScalarT& getValue(const std::string &n); 
-
-
-private:
  
   typedef typename EvalT::MeshScalarT MeshScalarT;
+
+private:
+
+          
+  void get_coriolis(std::size_t cell, Intrepid::FieldContainer<ScalarT>  & coriolis);
 
   // Input:
   PHX::MDField<MeshScalarT,Cell,QuadPoint, Dim> sphere_coord;
@@ -52,10 +54,38 @@ private:
   SOURCETYPE sourceType;
 
   // Output:
-  PHX::MDField<ScalarT,Cell,QuadPoint> source;
+  PHX::MDField<ScalarT,Cell,QuadPoint,VecDim> source;
 
-  std::size_t numQPs, numDims, numNodes, vecDim;
+  std::size_t numQPs, numDims, numNodes, vecDim, spatialDim;
+          
+  ScalarT gravity; // gravity parameter -- Sacado-ized for sensitivities
+  ScalarT Omega;   //rotation of earth  -- Sacado-ized for sensitivities
+
+          
+  ScalarT earthRadius; //Earth radius
+
+  ScalarT myPi; // a local copy of pi
+       
+  ///// SW TC4 parameters and routines
+  ScalarT SU0;
+  ScalarT PHI0;
+  ScalarT RLON0;
+  ScalarT RLAT0;
+          
+  ScalarT ALFA; //spelling is correct
+  ScalarT SIGMA;
+  ScalarT NPWR;
+          
+  ScalarT dbubf(const ScalarT lat);
+  ScalarT bubfnc(const ScalarT lat);
+  ScalarT d2bubf(const ScalarT lat);
+          
+          
 };
+  
+  
+
+  
 
 }
 

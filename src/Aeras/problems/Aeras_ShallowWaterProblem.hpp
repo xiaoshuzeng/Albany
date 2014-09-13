@@ -16,6 +16,8 @@
 #include "PHAL_Workset.hpp"
 #include "PHAL_Dimension.hpp"
 
+#include "Aeras_Layouts.hpp"
+
 namespace Aeras {
 
   /*!
@@ -78,7 +80,7 @@ namespace Aeras {
   protected:
     int spatialDim; // 3 for shells
     int modelDim;   // 2 for shells
-    Teuchos::RCP<Albany::Layouts> dl;
+    Teuchos::RCP<Aeras::Layouts> dl;
 
   };
 
@@ -149,7 +151,7 @@ Aeras::ShallowWaterProblem::constructEvaluators(
        << ", Model Dim= "  << modelDim 
        << ", vecDim= "   << vecDim << std::endl;
   
-   dl = rcp(new Albany::Layouts(worksetSize,numVertices,numNodes,numQPts, modelDim, vecDim));
+   dl = rcp(new Aeras::Layouts(worksetSize,numVertices,numNodes,numQPts, modelDim, vecDim, 0));
    Albany::EvaluatorUtils<EvalT, PHAL::AlbanyTraits> evalUtils(dl);
 
    // Temporary variable used numerous times below
@@ -221,6 +223,8 @@ Aeras::ShallowWaterProblem::constructEvaluators(
     p->set<string>("Weighted BF Name", "wBF");
     p->set<string>("Gradient BF Name",          "Grad BF");
     p->set<string>("Weighted Gradient BF Name", "wGrad BF");
+    p->set<string>("Gradient Gradient BF Name",  "GradGrad BF");
+    p->set<string>("Weighted Gradient Gradient BF Name",  "wGradGrad BF");
     p->set<string>("Jacobian Det Name",          "Jacobian Det");
     p->set<string>("Jacobian Name",          "Jacobian");
     p->set<string>("Jacobian Inv Name",          "Jacobian Inv");

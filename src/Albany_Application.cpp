@@ -47,15 +47,35 @@ int countRes; //counter which counts instances of residual (for debug output)
 Albany::Application::
 Application(const RCP<const Epetra_Comm>& comm_,
             const RCP<Teuchos::ParameterList>& params,
-            const RCP<const Epetra_Vector>& initial_guess) :
+            const Teuchos::RCP<const Epetra_Vector>& initial_guess) :
   comm(comm_),
   out(Teuchos::VerboseObjectBase::getDefaultOStream()),
   physicsBasedPreconditioner(false),
   shapeParamsHaveBeenReset(false),
   morphFromInit(true), perturbBetaForDirichlets(0.0),
   phxGraphVisDetail(0),
-  stateGraphVisDetail(0)
-{
+  stateGraphVisDetail(0) {
+  initialSetUp(params);
+  createMeshSpecs();
+  buildProblem();
+  createDiscretization();
+  finalSetUp(params,initial_guess);
+}
+
+
+Albany::Application::
+Application(const RCP<const Epetra_Comm>& comm_) :
+    comm(comm_),
+    out(Teuchos::VerboseObjectBase::getDefaultOStream()),
+    physicsBasedPreconditioner(false),
+    shapeParamsHaveBeenReset(false),
+    morphFromInit(true), perturbBetaForDirichlets(0.0),
+    phxGraphVisDetail(0),
+    stateGraphVisDetail(0) {
+};
+
+
+void Albany::Application::initialSetUp(const RCP<Teuchos::ParameterList>& params) {
   // Create parameter libraries
   paramLib = rcp(new ParamLib);
   distParamLib = rcp(new DistParamLib);
@@ -96,8 +116,7 @@ Application(const RCP<const Epetra_Comm>& comm_,
 #endif
 
   // Create problem object
-  RCP<Teuchos::ParameterList> problemParams =
-    Teuchos::sublist(params, "Problem", true);
+  problemParams = Teuchos::sublist(params, "Problem", true);
   Albany::ProblemFactory problemFactory(problemParams, paramLib, comm);
   problem = problemFactory.create();
 
@@ -169,17 +188,26 @@ Application(const RCP<const Epetra_Comm>& comm_,
      countRes = 0; //initiate counter that counts instances of Jacobian matrix to 0
 
   // Create discretization object
-
-  Albany::DiscretizationFactory discFactory(params, comm);
+  discFactory = rcp(new Albany::DiscretizationFactory(params, comm));
 
 #ifdef ALBANY_CUTR
-  discFactory.setMeshMover(meshMover);
+  discFactory->setMeshMover(meshMover);
 #endif
 
-  // Get mesh specification object: worksetSize, cell topology, etc
-  ArrayRCP<RCP<Albany::MeshSpecsStruct> > meshSpecs =
-    discFactory.createMeshSpecs();
+ }
 
+void Albany::Application::createMeshSpecs() {
+  // Get mesh specification object: worksetSize, cell topology, etc
+  meshSpecs = discFactory->createMeshSpecs();
+}
+
+void Albany::Application::createMeshSpecs(Teuchos::RCP<Albany::AbstractMeshStruct> mesh) {
+  // Get mesh specification object: worksetSize, cell topology, etc
+  meshSpecs = discFactory->createMeshSpecs(mesh);
+}
+
+
+void Albany::Application::buildProblem()   {
   problem->buildProblem(meshSpecs, stateMgr);
 
   // Construct responses
@@ -218,16 +246,28 @@ Application(const RCP<const Epetra_Comm>& comm_,
     sfm[ps]->postRegistrationSetup("");
   }
 
-  // Create the full mesh
   neq = problem->numEquations();
-  disc = discFactory.createDiscretization(neq, stateMgr.getStateInfoStruct(),
+
+}
+
+void Albany::Application::createDiscretization() {
+  // Create the full mesh
+  disc = discFactory->createDiscretization(neq, stateMgr.getStateInfoStruct(),
                                           problem->getFieldRequirements(),
                                           problem->getNullSpace());
+}
+
+void Albany::Application::finalSetUp(const Teuchos::RCP<Teuchos::ParameterList>& params,
+    const Teuchos::RCP<const Epetra_Vector>& initial_guess) {
+
+
 
   solMgr = rcp(new AAdapt::AdaptiveSolutionManager(params, disc, initial_guess));
 
-  // Now that space is allocated in STK for state fields, initialize states
-  stateMgr.setStateArrays(disc);
+  // Now that space is allocated in STK for state fields, initialize states.
+  // If the states have been already allocated, skip this.
+  if(!stateMgr.areStateVarsAllocated())
+    stateMgr.setStateArrays(disc);
 
   // Now setup response functions (see note above)
   for (int i=0; i<responses.size(); i++)
@@ -458,8 +498,6 @@ computeGlobalResidual(const double current_time,
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -606,8 +644,6 @@ computeGlobalJacobian(const double alpha,
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -794,8 +830,6 @@ computeGlobalTangent(const double alpha,
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //       sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -1102,8 +1136,6 @@ applyGlobalDistParamDeriv(const double current_time,
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -1326,8 +1358,6 @@ computeGlobalSGResidual(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -1476,8 +1506,6 @@ computeGlobalSGJacobian(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -1668,8 +1696,6 @@ computeGlobalSGTangent(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -2007,8 +2033,6 @@ computeGlobalMPResidual(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -2156,8 +2180,6 @@ computeGlobalMPJacobian(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -2341,8 +2363,6 @@ computeGlobalMPTangent(
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //      sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 
@@ -2673,8 +2693,6 @@ evaluateStateFieldManager(const double current_time,
         wsElNodeEqID = disc->getWsElNodeEqID();
   const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
         coords = disc->getCoords();
-  //const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> > >::type&
-  //     sHeight = disc->getSurfaceHeight();
   const WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
   const WorksetArray<int>::type& wsPhysIndex = disc->getWsPhysIndex();
 

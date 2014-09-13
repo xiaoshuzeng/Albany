@@ -58,7 +58,7 @@ int main(int ac, char* av[])
   // Read the mesh
   //
   Teuchos::GlobalMPISession
-  mpiSession(&ac,&av);
+  mpiSession(&ac, &av);
 
   LCM::Topology
   topology(input_file, output_file);
@@ -68,14 +68,13 @@ int main(int ac, char* av[])
 
   topology.setEntitiesOpen();
 
-#if defined(LCM_GRAPHVIZ)
+  topology.set_output_type(LCM::Topology::UNIDIRECTIONAL_UNILEVEL);
+
+#if defined(DEBUG_LCM_TOPOLOGY)
   std::string
   gviz_filename = LCM::parallelize_string("before") + ".dot";
 
-  LCM::Topology::OutputType const
-  type = LCM::Topology::UNIDIRECTIONAL_UNILEVEL;
-
-  topology.outputToGraphviz(gviz_filename, type);
+  topology.outputToGraphviz(gviz_filename);
 #endif
   std::string
   boundary_filename = LCM::parallelize_string("before") + ".vtk";
@@ -84,15 +83,15 @@ int main(int ac, char* av[])
 
   topology.splitOpenFaces();
 
-#if defined(LCM_GRAPHVIZ)
+#if defined(DEBUG_LCM_TOPOLOGY)
   gviz_filename = LCM::parallelize_string("after") + ".dot";
-  topology.outputToGraphviz(gviz_filename, type);
+  topology.outputToGraphviz(gviz_filename);
 #endif
   boundary_filename = LCM::parallelize_string("after") + ".vtk";
   topology.outputBoundary(boundary_filename);
 
   Teuchos::RCP<Albany::AbstractDiscretization>
-  discretization_ptr = topology.getDiscretization();
+  discretization_ptr = topology.get_discretization();
 
   Albany::STKDiscretization &
   stk_discretization =
