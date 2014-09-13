@@ -192,9 +192,9 @@ computeState(typename Traits::EvalData workset,
       Fe = F * Intrepid::inverse(Fpn);
       Cpinv = Intrepid::inverse(Fpn) * Intrepid::transpose(Intrepid::inverse(Fpn));
       be = F * Cpinv * Intrepid::transpose(F);
-      Je = std::sqrt( Intrepid::det(be));
+      ScalarT Je = std::sqrt( Intrepid::det(be));
       s = mu * Intrepid::dev(be);
-      p = 0.5 * bulk * (Je(cell, pt) * Je(cell,pt) - 1.);
+      p = 0.5 * bulk * (Je * Je - 1.);
       tau = p * I + s;
       
       // pull back the Kirchhoff stress to the intermediate configuration
