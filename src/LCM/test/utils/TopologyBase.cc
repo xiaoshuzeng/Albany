@@ -68,7 +68,7 @@ int main(int ac, char* av[])
 
   topology.setEntitiesOpen();
 
-  topology.set_output_type(LCM::Topology::UNIDIRECTIONAL_MULTILEVEL);
+  topology.set_output_type(LCM::Topology::UNIDIRECTIONAL_UNILEVEL);
 
 #if defined(DEBUG_LCM_TOPOLOGY)
   std::string

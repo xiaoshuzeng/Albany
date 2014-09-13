@@ -733,10 +733,10 @@ Subgraph::splitArticulation(Vertex vertex)
       new_vertex = new_vertices[component_number];
 
       stk::mesh::Entity
-      new_node = get_bulk_data()->get_entity(localToGlobal(new_vertex));
+      new_point = get_bulk_data()->get_entity(localToGlobal(new_vertex));
 
       std::pair<stk::mesh::Entity, stk::mesh::Entity>
-      nc = std::make_pair(element, new_node);
+      nc = std::make_pair(element, new_point);
 
       new_connectivity.insert(nc);
     }
