@@ -63,7 +63,7 @@ int main(int ac, char* av[])
     topology(input_file,output_file);
 
   stk::mesh::BulkData&
-    bulkData = *(topology.getBulkData());
+    bulkData = *(topology.get_bulk_data());
 
   // Node rank should be 0 and element rank should be equal to the dimension of the
   // system (e.g. 2 for 2D meshes and 3 for 3D meshes)
@@ -78,7 +78,7 @@ int main(int ac, char* av[])
   // Will fully separate the elements in the mesh by replacing element nodes
   // Get a vector containing the element set of the mesh.
   std::vector<stk::mesh::Entity> element_lst;
-  stk::mesh::get_entities(bulkData, LCM::ELEMENT_RANK, element_lst);
+  stk::mesh::get_entities(bulkData, stk::topology::ELEMENT_RANK, element_lst);
 
   // Modifies mesh for graph algorithm
   // Function must be called each time before there are changes to the mesh
@@ -115,7 +115,7 @@ int main(int ac, char* av[])
   //   Redefine connectivity and coordinate arrays with updated values.
   //   Mesh must only have relations between elements and nodes.
   Teuchos::RCP<Albany::AbstractDiscretization> discretization_ptr =
-    topology.getDiscretization();
+    topology.get_discretization();
   Albany::STKDiscretization & stk_discretization =
     static_cast<Albany::STKDiscretization &>(*discretization_ptr);
 
@@ -130,7 +130,7 @@ int main(int ac, char* av[])
   Epetra_Vector displacement = Epetra_Vector(*(dof_map),true);
 
   // Add displacement to nodes
-  stk::mesh::get_entities(bulkData, LCM::ELEMENT_RANK, element_lst);
+  stk::mesh::get_entities(bulkData, stk::topology::ELEMENT_RANK, element_lst);
 
   // displacement scale factor
   double alpha = 0.5;

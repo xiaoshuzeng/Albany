@@ -429,7 +429,7 @@ void Albany::GenericSTKMeshStruct::computeAddlConnectivity()
   std::string& method = adaptParams->get("Method", "");
 
   // Mesh fracture requires full mesh connectivity, created here
-  if(method == "Topmod" || method == "Random"){
+  if(method == "Random"){
 
     stk::mesh::PartVector add_parts;
     stk::mesh::create_adjacent_entities(*bulkData, add_parts);

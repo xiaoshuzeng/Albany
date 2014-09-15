@@ -50,10 +50,10 @@ namespace LCM {
     typedef typename EvalT::MeshScalarT MeshScalarT;
 
     ///
-    /// Input: totalConcentration - addition of lattice and trapped
+    /// Input: total_concentration - addition of lattice and trapped
     ///        concentration
     ///
-    PHX::MDField<ScalarT,Cell,QuadPoint> totalConcentration_;
+    PHX::MDField<ScalarT,Cell,QuadPoint> total_concentration_;
 
     ///
     /// Input: time step
@@ -63,7 +63,7 @@ namespace LCM {
     ///
     /// Input: temperature dependent diffusion coefficient
     ///
-    PHX::MDField<ScalarT,Cell,QuadPoint> diffusionCoefficient_;
+    PHX::MDField<ScalarT,Cell,QuadPoint> diffusion_coefficient_;
 
     ///
     /// Input: spatial dimension and number of integration points
@@ -73,27 +73,27 @@ namespace LCM {
 
     ///
     /// Output
-    /// (1) He concentration
+    /// (1) Helium concentration
     /// (2) Total bubble density
     /// (3) Bubble volume fracture
     ///
-    PHX::MDField<ScalarT,Cell,QuadPoint,Dim,Dim> HeConcentration_;
-    PHX::MDField<ScalarT,Cell,QuadPoint,Dim,Dim> totalBubbleDensity_;
-    PHX::MDField<ScalarT,Cell,QuadPoint,Dim,Dim> bubbleVolumeFraction_;
+    PHX::MDField<ScalarT,Cell,QuadPoint,Dim,Dim> he_concentration_;
+    PHX::MDField<ScalarT,Cell,QuadPoint,Dim,Dim> total_bubble_density_;
+    PHX::MDField<ScalarT,Cell,QuadPoint,Dim,Dim> bubble_volume_fraction_;
 
     ///
     /// Constants
     ///
-    RealType avogadrosNum_, omega_, TDecayConstant_, HeRadius_, eta_;
+    RealType avogadros_num_, omega_, t_decay_constant_, he_radius_, eta_;
 
     /// 
     /// Scalar names for obtaining state old
     ///
 
-    std::string totalConcentration_name_;
-    std::string HeConcentration_name_;
-    std::string totalBubbleDensity_name_;
-    std::string bubbleVolumeFraction_name_;
+    std::string total_concentration_name_;
+    std::string he_concentration_name_;
+    std::string total_bubble_density_name_;
+    std::string bubble_volume_fraction_name_;
 
   };
 }

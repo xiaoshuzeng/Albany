@@ -75,7 +75,7 @@ AAdapt::TopologyMod::TopologyMod(
             beta)
   );
 
-  topology_->setFractureCriterion(fracture_criterion_);
+  topology_->set_fracture_criterion(fracture_criterion_);
 }
 
 //

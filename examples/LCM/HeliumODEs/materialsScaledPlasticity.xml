@@ -41,8 +41,9 @@
         <!-- Tritium Decay Parameters -->
         <ParameterList name="Tritium Coefficients">
           <Parameter name="Tritium Decay Constant" type="double" value="1.79e-9"/>
-          <Parameter name="Helium Radius" type="double" value="2.5e-4"/>
+          <Parameter name="He Radius" type="double" value="2.5e-4"/>
           <Parameter name="Atoms Per Cluster" type="double" value="10"/>
+          <Parameter name="Evaluate HeliumODEs" type="bool" value="true"/>
         </ParameterList>
         <ParameterList name="Molar Volume">
          <Parameter name="Type" type="string" value="Constant"/>

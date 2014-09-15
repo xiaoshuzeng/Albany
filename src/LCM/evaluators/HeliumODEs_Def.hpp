@@ -16,39 +16,45 @@ template<typename EvalT, typename Traits>
 HeliumODEs<EvalT, Traits>::
 HeliumODEs(Teuchos::ParameterList& p,
     const Teuchos::RCP<Albany::Layouts>& dl) :
-      totalConcentration_(p.get < std::string > ("Total Concentration Name"),
+      total_concentration_(p.get < std::string > ("Total Concentration Name"),
           dl->qp_scalar),
       delta_time_(p.get < std::string > ("Delta Time Name"),
           dl->workset_scalar),
-      diffusionCoefficient_(p.get < std::string > ("Diffusion Coefficient Name"),
+      diffusion_coefficient_(p.get < std::string > ("Diffusion Coefficient Name"),
                         dl->qp_scalar),
-      HeConcentration_(p.get < std::string > ("Helium Concentration Name"),
+      he_concentration_(p.get < std::string > ("He Concentration Name"),
               dl->qp_scalar),
-      totalBubbleDensity_(p.get < std::string > ("Total Bubble Density Name"),
+      total_bubble_density_(p.get < std::string > ("Total Bubble Density Name"),
           dl->qp_scalar),
-      bubbleVolumeFraction_(
+      bubble_volume_fraction_(
           p.get < std::string > ("Bubble Volume Fraction Name"),
           dl->qp_scalar)
 {
-  // get the material parameter list
-  Teuchos::ParameterList* mat_params =
-      p.get<Teuchos::ParameterList*>("Material Parameters");
+  // get the material parameter lists
+  // these are separate lists as defined in the Mechanics Problem
+  // future work may consolidate into a single Material Parameters list
+  Teuchos::ParameterList* mat_params_1 =
+      p.get<Teuchos::ParameterList*>("Transport Parameters");
+  Teuchos::ParameterList* mat_params_2 =
+        p.get<Teuchos::ParameterList*>("Tritium Parameters");
+  Teuchos::ParameterList* mat_params_3 =
+        p.get<Teuchos::ParameterList*>("Molar Volume");
 
-  avogadrosNum_ = mat_params->get<RealType>("Avogadro's Number");
-  omega_ = mat_params->get<RealType>("Molar Volume");
-  TDecayConstant_ = mat_params->get<RealType>("Tritium Decay Constant");
-  HeRadius_ = mat_params->get<RealType>("Helium Radius");
-  eta_ = mat_params->get<RealType>("Atoms Per Cluster");
+  avogadros_num_ = mat_params_1->get<RealType>("Avogadro's Number");
+  t_decay_constant_ = mat_params_2->get<RealType>("Tritium Decay Constant");
+  he_radius_ = mat_params_2->get<RealType>("Helium Radius");
+  eta_ = mat_params_2->get<RealType>("Atoms Per Cluster");
+  omega_ = mat_params_3->get<RealType>("Molar Volume");
 
   // add dependent fields
-  this->addDependentField(totalConcentration_);
-  this->addDependentField(diffusionCoefficient_);
+  this->addDependentField(total_concentration_);
+  this->addDependentField(diffusion_coefficient_);
   this->addDependentField(delta_time_);
 
   // add evaluated fields
-  this->addEvaluatedField(HeConcentration_);
-  this->addEvaluatedField(totalBubbleDensity_);
-  this->addEvaluatedField(bubbleVolumeFraction_);
+  this->addEvaluatedField(he_concentration_);
+  this->addEvaluatedField(total_bubble_density_);
+  this->addEvaluatedField(bubble_volume_fraction_);
 
   this->setName(
       "Helium ODEs" + PHX::TypeString < EvalT > ::value);
@@ -57,10 +63,10 @@ HeliumODEs(Teuchos::ParameterList& p,
   num_pts_ = dims[1];
   num_dims_ = dims[2];
 
-  totalConcentration_name_ = p.get<std::string>("Total Concentration Name")+"_old";
-  HeConcentration_name_ = p.get<std::string>("Helium Concentration Name")+"_old";
-  totalBubbleDensity_name_ = p.get<std::string>("Total Bubble Density Name")+"_old";
-  bubbleVolumeFraction_name_ = p.get<std::string>("Bubble Volume Fraction Name")+"_old";
+  total_concentration_name_ = p.get<std::string>("Total Concentration Name")+"_old";
+  he_concentration_name_ = p.get<std::string>("He Concentration Name")+"_old";
+  total_bubble_density_name_ = p.get<std::string>("Total Bubble Density Name")+"_old";
+  bubble_volume_fraction_name_ = p.get<std::string>("Bubble Volume Fraction Name")+"_old";
 
 }
 
@@ -70,12 +76,12 @@ void HeliumODEs<EvalT, Traits>::
 postRegistrationSetup(typename Traits::SetupData d,
     PHX::FieldManager<Traits>& fm)
 {
-  this->utils.setFieldData(totalConcentration_, fm);
+  this->utils.setFieldData(total_concentration_, fm);
   this->utils.setFieldData(delta_time_, fm);
-  this->utils.setFieldData(diffusionCoefficient_, fm);
-  this->utils.setFieldData(HeConcentration_, fm);
-  this->utils.setFieldData(totalBubbleDensity_, fm);
-  this->utils.setFieldData(bubbleVolumeFraction_, fm);
+  this->utils.setFieldData(diffusion_coefficient_, fm);
+  this->utils.setFieldData(he_concentration_, fm);
+  this->utils.setFieldData(total_bubble_density_, fm);
+  this->utils.setFieldData(bubble_volume_fraction_, fm);
   
 }
 
@@ -86,14 +92,14 @@ evaluateFields(typename Traits::EvalData workset)
 {
 
  // Declaring temporary variables for time integration at (cell,pt) following Schaldach & Wolfer
-   ScalarT dt, dtExplicit;
-   ScalarT N1old, Nbold, Sbold, N1new, Nbnew, Sbnew;
-   ScalarT N1exp, Nbexp, Sbexp;
-   ScalarT D, Gold, Gnew;
+   ScalarT dt, dt_explicit;
+   ScalarT n1_old, nb_old, sb_old, n1, nb, sb;
+   ScalarT n1_exp, nb_exp, sb_exp;
+   ScalarT d, g_old, g;
  // Declaring tangent, residual, norms, and increment for N-R
    Intrepid::Tensor<ScalarT> tangent(3);
    Intrepid::Vector<ScalarT> residual(3);
-   ScalarT normResidual, normResidualGoal;
+   ScalarT norm_residual, norm_residual_goal;
    Intrepid::Vector<ScalarT> increment(3);
 	
  // constants for computations
@@ -101,30 +107,30 @@ evaluateFields(typename Traits::EvalData workset)
   const double onethrd = 1.0/3.0;
   const double twothrd = 2.0/3.0;
   const double tolerance = 1.0e-12;
-  const int explicitSubIncrements = 5;
+  const int explicit_sub_increments = 5;
 // const int maxIterations = 20; //FIXME: Include a maximum number of iterations
   
   // state old
-  Albany::MDArray totalConcentration_old = (*workset.stateArrayPtr)[totalConcentration_name_]; 
-  Albany::MDArray HeConcentration_old = (*workset.stateArrayPtr)[HeConcentration_name_]; 
-  Albany::MDArray totalBubbleDensity_old = (*workset.stateArrayPtr)[totalBubbleDensity_name_]; 
-  Albany::MDArray bubbleVolumeFraction_old = (*workset.stateArrayPtr)[bubbleVolumeFraction_name_]; 
+  Albany::MDArray total_concentration_old = (*workset.stateArrayPtr)[total_concentration_name_];
+  Albany::MDArray he_concentration_old = (*workset.stateArrayPtr)[he_concentration_name_];
+  Albany::MDArray total_bubble_density_old = (*workset.stateArrayPtr)[total_bubble_density_name_];
+  Albany::MDArray bubble_volume_fraction_old = (*workset.stateArrayPtr)[bubble_volume_fraction_name_];
  
   // state new
-  //   HeConcentration_ - He concentration at t + deltat
-  //   totalBubbleDensity - total bubble density at t + delta t
-  //   bubbleVolumeFraction - bubble volume fraction at t + delta t
-  //   totalConcentration_ - total concentration of tritium at t + delta t
+  //   he_concentration_ - He concentration at t + deltat
+  //   total_bubble_density - total bubble density at t + delta t
+  //   bubble_volume_fraction - bubble volume fraction at t + delta t
+  //   total_concentration_ - total concentration of tritium at t + delta t
   
   // fields required for computation
-  //   diffusionCoefficient_ - current diffusivity (varies with temperature)
+  //   diffusion_coefficient_ - current diffusivity (varies with temperature)
   //   delta_time_ - time step 
   
   // input properties
-  //   avogadrosNum_ - Avogadro's Number
+  //   avogadros_num_ - Avogadro's Number
   //   omega_ - molar volume
-  //   TDecayConstant_ - radioactive decay constant for tritium
-  //   HeRadius_ - radius of He atom
+  //   t_decay_constant_ - radioactive decay constant for tritium
+  //   he_radius_ - radius of He atom
   //   eta_ - atoms per cluster (not variable)
   
   // time step
@@ -137,100 +143,100 @@ evaluateFields(typename Traits::EvalData workset)
 	  for (std::size_t pt = 0; pt < num_pts_; ++pt) {
 		  
 		  // temporary variables
-		  N1old = HeConcentration_old(cell,pt);
-		  Nbold = totalBubbleDensity_old(cell,pt);
-		  Sbold = bubbleVolumeFraction_old(cell,pt);
-		  N1new = N1old;
-		  Nbnew = Nbold;
-		  Sbnew = Sbold;
-		  D = diffusionCoefficient_(cell,pt);
+		  n1_old = he_concentration_old(cell,pt);
+		  nb_old = total_bubble_density_old(cell,pt);
+		  sb_old = bubble_volume_fraction_old(cell,pt);
+		  n1 = n1_old;
+		  nb = nb_old;
+		  sb = sb_old;
+		  d = diffusion_coefficient_(cell,pt);
 		  
 		  // determine if any tritium exists - note that concentration is in mol (not atoms)
 		  // if no tritium exists, no need to solve the ODEs
-		  if (totalConcentration_(cell,pt) > tolerance) {
+		  if (total_concentration_(cell,pt) > tolerance) {
 			  
 			  // source terms for helium bubble generation
-			  Gold = avogadrosNum_*TDecayConstant_*totalConcentration_old(cell,pt);
-			  Gnew = avogadrosNum_*TDecayConstant_*totalConcentration_(cell,pt);
+			  g_old = avogadros_num_*t_decay_constant_*total_concentration_old(cell,pt);
+			  g = avogadros_num_*t_decay_constant_*total_concentration_(cell,pt);
 			  
 			  // check if old bubble density is small
-			  // if small, use an explict guess to avoid issues with 1/Nbnew and 1/Sbnew in tangent
+			  // if small, use an explict guess to avoid issues with 1/nb and 1/sb in tangent
 			  
-			  if (Nbold < tolerance) {
+			  if (nb_old < tolerance) {
 				  
 				  // explicit time integration for predictor
-				  // Note that two or more steps are required to obtain a finite Nbnew if the
-				  // totalConcentration_old is zero.
-				  dtExplicit = dt/explicitSubIncrements;
-				  N1exp = N1old;
-				  Nbexp = Nbold;
-				  Sbexp = Sbold;
+				  // Note that two or more steps are required to obtain a finite nb if the
+				  // total_concentration_old is zero.
+				  dt_explicit = dt/explicit_sub_increments;
+				  n1_exp = n1_old;
+				  nb_exp = nb_old;
+				  sb_exp = sb_old;
 				  
-				  for (int subIncrement = 0; subIncrement < explicitSubIncrements; subIncrement++) {
-					  N1new = N1exp + dtExplicit*(Gold - 32.*pi*HeRadius_*D*N1exp*N1exp - 
-							  4.0*pi*D*N1exp*pow(3.0/4.0/pi,onethrd)*pow(Sbexp,onethrd)*
-							  pow(Nbexp,twothrd));
-					  Nbnew = Nbexp + dtExplicit*(16.0*pi*HeRadius_*D*N1exp*N1exp);
-					  Sbnew = Sbexp + omega_/eta_*dtExplicit*(32.*pi*HeRadius_*D*N1exp*N1exp + 
-							  4.0*pi*D*N1exp*pow(3.0/4.0/pi,onethrd)*pow(Sbexp,onethrd)*
-							  pow(Nbexp,twothrd));
-					  N1exp = N1new;
-					  Nbexp = Nbnew;
-					  Sbexp = Sbnew;
+				  for (int sub_increment = 0; sub_increment < explicit_sub_increments; sub_increment++) {
+					  n1 = n1_exp + dt_explicit*(g_old - 32.*pi*he_radius_*d*n1_exp*n1_exp -
+							  4.0*pi*d*n1_exp*pow(3.0/4.0/pi,onethrd)*pow(sb_exp,onethrd)*
+							  pow(nb_exp,twothrd));
+					  nb = nb_exp + dt_explicit*(16.0*pi*he_radius_*d*n1_exp*n1_exp);
+					  sb = sb_exp + omega_/eta_*dt_explicit*(32.*pi*he_radius_*d*n1_exp*n1_exp +
+							  4.0*pi*d*n1_exp*pow(3.0/4.0/pi,onethrd)*pow(sb_exp,onethrd)*
+							  pow(nb_exp,twothrd));
+					  n1_exp = n1;
+					  nb_exp = nb;
+					  sb_exp = sb;
 				  }   
 			  }
 			  
 			  // calculate initial residual for a relative tolerance
-			  residual(0) = N1new - N1old - dt*(Gnew - 32.*pi*HeRadius_*D*N1new*N1new -
-					  4.0*pi*D*N1new*pow(3.0/4.0/pi,onethrd)*pow(Sbnew,onethrd)*pow(Nbnew,twothrd));
-			  residual(1) = Nbnew - Nbold - dt*(16.0*pi*HeRadius_*D*N1new*N1new);
-			  residual(2) = Sbnew - Sbold - omega_/eta_*dt*(32.*pi*HeRadius_*D*N1new*N1new + 
-					  4.0*pi*D*N1new*pow(3.0/4.0/pi,onethrd)*pow(Sbnew,onethrd)*pow(Nbnew,twothrd));
-		      normResidual = Intrepid::norm(residual);
-		      normResidualGoal = tolerance*normResidual;
+			  residual(0) = n1 - n1_old - dt*(g - 32.*pi*he_radius_*d*n1*n1 -
+					  4.0*pi*d*n1*pow(3.0/4.0/pi,onethrd)*pow(sb,onethrd)*pow(nb,twothrd));
+			  residual(1) = nb - nb_old - dt*(16.0*pi*he_radius_*d*n1*n1);
+			  residual(2) = sb - sb_old - omega_/eta_*dt*(32.*pi*he_radius_*d*n1*n1 +
+					  4.0*pi*d*n1*pow(3.0/4.0/pi,onethrd)*pow(sb,onethrd)*pow(nb,twothrd));
+		      norm_residual = Intrepid::norm(residual);
+		      norm_residual_goal = tolerance*norm_residual;
 			  
 		      // N-R loop for implicit time integration
-		      while (normResidual > normResidualGoal) {
+		      while (norm_residual > norm_residual_goal) {
 		    	  
 		    	  // calculate tangent
-		    	  tangent(0,0) = 1.0 + 2.0*dt*D*(32.0*N1new*pi*HeRadius_ + pow(6.0,onethrd)*
-		    			  pow(Nbnew,twothrd)*pow(pi,twothrd)*pow(Sbnew,onethrd));
-		    	  tangent(0,1) = 4.0*pow(2.0,onethrd)*dt*D*N1new*pow(pi,twothrd)*
-		    			  pow(Sbnew,onethrd)/pow(3.0,twothrd)/pow(Nbnew,onethrd);
-		    	  tangent(0,2) = 2.0*pow(2.0,onethrd)*dt*D*N1new*pow(Nbnew,twothrd)*
-		    			  pow(pi/3.0,twothrd)/pow(Sbnew,twothrd);
-		    	  tangent(1,0) = -32.0*dt*D*N1new*pi*HeRadius_; 
+		    	  tangent(0,0) = 1.0 + 2.0*dt*d*(32.0*n1*pi*he_radius_ + pow(6.0,onethrd)*
+		    			  pow(nb,twothrd)*pow(pi,twothrd)*pow(sb,onethrd));
+		    	  tangent(0,1) = 4.0*pow(2.0,onethrd)*dt*d*n1*pow(pi,twothrd)*
+		    			  pow(sb,onethrd)/pow(3.0,twothrd)/pow(nb,onethrd);
+		    	  tangent(0,2) = 2.0*pow(2.0,onethrd)*dt*d*n1*pow(nb,twothrd)*
+		    			  pow(pi/3.0,twothrd)/pow(sb,twothrd);
+		    	  tangent(1,0) = -32.0*dt*d*n1*pi*he_radius_;
 		    	  tangent(1,1) = 1.0;
 		    	  tangent(1,2) = 0.0;
-		    	  tangent(2,0) = -2.0*dt*D*omega_*(32*N1new*pi*HeRadius_ + pow(6.0,onethrd)*
-		    			  pow(Nbnew,twothrd)*pow(pi,onethrd)*pow(Sbnew,onethrd))/eta_;
-		    	  tangent(2,1) = -4.0*pow(2.0,onethrd)*pow(2,onethrd)*dt*D*N1new*omega_*
-		    			  pow(pi,twothrd)*pow(Sbnew,onethrd)/pow(3,twothrd)/eta_/pow(Nbnew,onethrd);
-		    	  tangent(2,2) = 1.0 - 2.0*pow(2.0,onethrd)*dt*D*N1new*pow(Nbnew,twothrd)*
-		    			  omega_*pow(pi/3.0,twothrd)/eta_/pow(Sbnew,twothrd);
+		    	  tangent(2,0) = -2.0*dt*d*omega_*(32*n1*pi*he_radius_ + pow(6.0,onethrd)*
+		    			  pow(nb,twothrd)*pow(pi,onethrd)*pow(sb,onethrd))/eta_;
+		    	  tangent(2,1) = -4.0*pow(2.0,onethrd)*pow(2,onethrd)*dt*d*n1*omega_*
+		    			  pow(pi,twothrd)*pow(sb,onethrd)/pow(3,twothrd)/eta_/pow(nb,onethrd);
+		    	  tangent(2,2) = 1.0 - 2.0*pow(2.0,onethrd)*dt*d*n1*pow(nb,twothrd)*
+		    			  omega_*pow(pi/3.0,twothrd)/eta_/pow(sb,twothrd);
 		    	  
 		    	  // find increment
 		    	  increment = -Intrepid::inverse(tangent)*residual;
 		    	  
 		    	  // update quantities
-		    	  N1new = N1new + increment(0);
-		    	  Nbnew = Nbnew + increment(1);
-		    	  Sbnew = Sbnew + increment(2);
+		    	  n1 = n1 + increment(0);
+		    	  nb = nb + increment(1);
+		    	  sb = sb + increment(2);
 		    	  
 		    	  // find new residual and norm
-		    	  residual(0) = N1new - N1old - dt*(Gnew - 32.*pi*HeRadius_*D*N1new*N1new - 
-		    			  4.0*pi*D*N1new*pow(3.0/4.0/pi,onethrd)*pow(Sbnew,onethrd)*pow(Nbnew,twothrd));
-		    	  residual(1) = Nbnew - Nbold - dt*(16.0*pi*HeRadius_*D*N1new*N1new);
-		    	  residual(2) = Sbnew - Sbold - omega_/eta_*dt*(32.*pi*HeRadius_*D*N1new*N1new + 
-		    			  4.0*pi*D*N1new*pow(3.0/4.0/pi,onethrd)*pow(Sbnew,onethrd)*pow(Nbnew,twothrd));
-		    	  normResidual = Intrepid::norm(residual);
+		    	  residual(0) = n1 - n1_old - dt*(g - 32.*pi*he_radius_*d*n1*n1 -
+		    			  4.0*pi*d*n1*pow(3.0/4.0/pi,onethrd)*pow(sb,onethrd)*pow(nb,twothrd));
+		    	  residual(1) = nb - nb_old - dt*(16.0*pi*he_radius_*d*n1*n1);
+		    	  residual(2) = sb - sb_old - omega_/eta_*dt*(32.*pi*he_radius_*d*n1*n1 +
+		    			  4.0*pi*d*n1*pow(3.0/4.0/pi,onethrd)*pow(sb,onethrd)*pow(nb,twothrd));
+		    	  norm_residual = Intrepid::norm(residual);
 		      } 
 		  }
 		  
 		  // Update global fields
-		  HeConcentration_(cell,pt) = N1new;
-		  totalBubbleDensity_(cell,pt) = Nbnew;
-		  bubbleVolumeFraction_(cell,pt) = Sbnew;
+		  he_concentration_(cell,pt) = n1;
+		  total_bubble_density_(cell,pt) = nb;
+		  bubble_volume_fraction_(cell,pt) = sb;
 	  }
   }  
   

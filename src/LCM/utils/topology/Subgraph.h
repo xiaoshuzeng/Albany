@@ -37,8 +37,8 @@ public:
   ///
   Subgraph(
       Topology & topology,
-      std::set<EntityKey>::iterator first_vertex,
-      std::set<EntityKey>::iterator last_vertex,
+      std::set<stk::mesh::EntityKey>::iterator first_vertex,
+      std::set<stk::mesh::EntityKey>::iterator last_vertex,
       std::set<stkEdge>::iterator first_edge,
       std::set<stkEdge>::iterator last_edge);
 
@@ -51,7 +51,7 @@ public:
   ///Return the global entity key (in the stk mesh) given a local
   ///subgraph vertex (in the boost subgraph).
   ///
-  EntityKey
+  stk::mesh::EntityKey
   localToGlobal(Vertex local_vertex);
 
   ///
@@ -64,7 +64,7 @@ public:
   ///  stk mesh).
   ///
   Vertex
-  globalToLocal(EntityKey global_vertex_key);
+  globalToLocal(stk::mesh::EntityKey global_vertex_key);
 
   ///
   ///\brief Add a vertex in the subgraph.
@@ -183,9 +183,6 @@ public:
   /// boundary entity may be a valid candidate in another step. If only 1
   /// in edge: Return.
   ///
-  /// Entity must have satisfied the fracture criterion and be labeled open
-  /// in map is_open. If not open: Return.
-  ///
   Vertex
   cloneBoundaryEntity(Vertex vertex);
 
@@ -195,7 +192,7 @@ public:
   /// was replaced by a new point.
   ///
   void
-  updateElementNodeConnectivity(Entity point, ElementNodeMap & map);
+  updateElementNodeConnectivity(stk::mesh::Entity point, ElementNodeMap & map);
 
   ///
   /// \brief Splits an articulation point.
@@ -217,8 +214,8 @@ public:
   /// the new node. If the nodal connectivity of an element does not
   /// change, do not add to the map.
   ///
-  std::map<Entity, Entity>
-  splitArticulationPoint(Vertex vertex);
+  std::map<stk::mesh::Entity, stk::mesh::Entity>
+  splitArticulation(Vertex vertex);
 
   ///
   /// \brief Clone all out edges of a vertex to a new vertex.
@@ -258,46 +255,46 @@ public:
   /// Accessors and mutators
   ///
   Topology &
-  getTopology();
+  get_topology();
 
   size_t const
-  getSpaceDimension();
+  get_space_dimension();
 
-  RCP<Albany::AbstractSTKMeshStruct> &
-  getSTKMeshStruct();
+  Teuchos::RCP<Albany::AbstractSTKMeshStruct> &
+  get_stk_mesh_struct();
 
   stk::mesh::BulkData *
-  getBulkData();
+  get_bulk_data();
 
   stk::mesh::MetaData *
-  getMetaData();
-
+  get_meta_data();
 
   stk::mesh::EntityRank const
-  getBoundaryRank();
+  get_boundary_rank();
 
   IntScalarFieldType &
-  getFractureState(stk::mesh::EntityRank rank);
+  get_fracture_state_field(stk::mesh::EntityRank rank);
 
   void
-  setFractureState(Entity e, FractureState const fs);
+  set_fracture_state(stk::mesh::Entity e, FractureState const fs);
 
   FractureState
-  getFractureState(Entity e);
+  get_fracture_state(stk::mesh::Entity e);
 
   bool
-  isOpen(Entity e);
+  is_open(stk::mesh::Entity e);
 
   bool
-  isInternalAndOpen(Entity e);
+  is_internal_and_open(stk::mesh::Entity e);
 
   bool
-  isInternal(Entity e) {
+  is_internal(stk::mesh::Entity e)
+  {
 
-    assert(getBulkData()->entity_rank(e) == getBoundaryRank());
+    assert(get_bulk_data()->entity_rank(e) == get_boundary_rank());
 
     Vertex
-    vertex = globalToLocal(getBulkData()->entity_key(e));
+    vertex = globalToLocal(get_bulk_data()->entity_key(e));
 
     boost::graph_traits<Graph>::degree_size_type
     number_in_edges = boost::in_degree(vertex, *this);
@@ -326,12 +323,12 @@ private:
   ///
   /// map local vertex -> global entity key
   ///
-  std::map<Vertex, EntityKey> local_global_vertex_map_;
+  std::map<Vertex, stk::mesh::EntityKey> local_global_vertex_map_;
 
   ///
   /// map global entity key -> local vertex
   ///
-  std::map<EntityKey, Vertex> global_local_vertex_map_;
+  std::map<stk::mesh::EntityKey, Vertex> global_local_vertex_map_;
 };
 // class Subgraph
 
