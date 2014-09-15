@@ -109,19 +109,6 @@ Topology::Topology(
   // Set the bulk topology
   set_cell_popology(bulk_cell_topology);
 
-  // Fracture the mesh randomly
-  // Probability that fracture_criterion will return true.
-  double const
-  probability = 1.0;
-
-  set_fracture_criterion(
-      Teuchos::rcp(new FractureCriterionRandom(
-          *this,
-          bulk_part_name,
-          interface_part_name,
-          probability))
-          );
-
   // Create the full mesh representation. This must be done prior to
   // the adaptation query. We are reading the mesh from a file so do
   // it here.
@@ -142,19 +129,6 @@ Topology(Teuchos::RCP<Albany::AbstractDiscretization> & discretization) :
     output_type_(UNIDIRECTIONAL_UNILEVEL)
 {
   set_discretization(discretization);
-
-  // Fracture the mesh randomly
-  // Probability that fracture_criterion will return true.
-  double const
-  probability = 0.1;
-
-  set_fracture_criterion(
-      Teuchos::rcp(new FractureCriterionRandom(
-          *this,
-          "bulk",
-          "interface",
-          probability))
-          );
 
   return;
 }

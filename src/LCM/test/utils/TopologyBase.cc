@@ -8,6 +8,7 @@
 // Test of topology manipulation.
 //
 #include "topology/Topology.h"
+#include "topology/Topology_FractureCriterion.h"
 #include "topology/Topology_Utils.h"
 
 int main(int ac, char* av[])
@@ -36,6 +37,40 @@ int main(int ac, char* av[])
       "Output File Name"
   );
 
+  int const
+  num_criteria = 3;
+
+  LCM::fracture::Criterion const
+  criteria_values[] = {
+      LCM::fracture::ONE,
+      LCM::fracture::RANDOM,
+      LCM::fracture::TRACTION};
+
+  char const *
+  criteria_names[] = {
+      "one",
+      "random",
+      "traction"};
+
+  LCM::fracture::Criterion
+  fracture_criterion = LCM::fracture::RANDOM;
+
+  command_line_processor.setOption(
+      "fracture-criterion",
+      &fracture_criterion,
+      num_criteria,
+      criteria_values,
+      criteria_names,
+      "Fracture Criterion");
+
+  double
+  probability = 1.0;
+
+  command_line_processor.setOption(
+      "probability",
+      &probability,
+      "Probability");
+
   // Throw a warning and not error for unrecognized options
   command_line_processor.recogniseAllOptions(true);
 
@@ -62,6 +97,48 @@ int main(int ac, char* av[])
 
   LCM::Topology
   topology(input_file, output_file);
+
+  Teuchos::RCP<LCM::AbstractFractureCriterion>
+  abstract_fracture_criterion;
+
+  std::string const
+  bulk_part_name = "bulk";
+
+  std::string const
+  interface_part_name = "interface";
+
+  switch (fracture_criterion) {
+
+  default:
+    std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
+    std::cerr << '\n';
+    std::cerr << "Unknown or unsupported fracture criterion: ";
+    std::cerr << fracture_criterion;
+    std::cerr << '\n';
+    exit(1);
+    break;
+
+  case LCM::fracture::ONE:
+    abstract_fracture_criterion =
+        Teuchos::rcp(new LCM::FractureCriterionRandom(
+                  topology,
+                  bulk_part_name,
+                  interface_part_name,
+                  probability));
+    break;
+
+  case LCM::fracture::RANDOM:
+    abstract_fracture_criterion =
+        Teuchos::rcp(new LCM::FractureCriterionOnce(
+                  topology,
+                  bulk_part_name,
+                  interface_part_name,
+                  probability));
+    break;
+
+  }
+
+  topology.set_fracture_criterion(abstract_fracture_criterion);
 
   //topology.createBoundary();
   //topology.outputBoundary();

@@ -24,6 +24,19 @@
 namespace LCM {
 
 ///
+/// Useful to distinguish among different partitioning schemes.
+///
+namespace fracture {
+
+  enum Criterion {
+    UNKNOWN,
+    ONE,
+    RANDOM,
+    TRACTION};
+
+}
+
+///
 /// Base class for fracture criteria
 ///
 class AbstractFractureCriterion {
@@ -179,12 +192,16 @@ public:
   bool
   check(stk::mesh::BulkData & bulk_data, stk::mesh::Entity interface)
   {
-    stk::mesh::EntityRank const rank = bulk_data.entity_rank(interface);
+    stk::mesh::EntityRank const
+    rank = bulk_data.entity_rank(interface);
 
-    assert(
-        bulk_data.num_connectivity(
-            interface,
-            (stk::mesh::EntityRank )(rank + 1)) == 2);
+    stk::mesh::EntityRank const
+    rank_up = static_cast<stk::mesh::EntityRank>(rank + 1);
+
+    size_t const
+    num_connected = bulk_data.num_connectivity(interface, rank_up);
+
+    assert(num_connected == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
@@ -226,13 +243,18 @@ public:
   }
 
   bool
-  check(stk::mesh::BulkData& mesh, stk::mesh::Entity interface)
+  check(stk::mesh::BulkData & bulk_data, stk::mesh::Entity interface)
   {
-    stk::mesh::EntityRank const rank = mesh.entity_rank(interface);
+    stk::mesh::EntityRank const
+    rank = bulk_data.entity_rank(interface);
 
-    assert(
-        mesh.num_connectivity(interface, (stk::mesh::EntityRank )(rank + 1))
-            == 2);
+    stk::mesh::EntityRank const
+    rank_up = static_cast<stk::mesh::EntityRank>(rank + 1);
+
+    size_t const
+    num_connected = bulk_data.num_connectivity(interface, rank_up);
+
+    assert(num_connected == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
