@@ -174,14 +174,17 @@ Subgraph::is_internal_and_open(stk::mesh::Entity e)
 // Map a vertex in the subgraph to a entity in the stk mesh.
 //
 stk::mesh::Entity
-Subgraph::entityFromVertex(Vertex local_vertex)
+Subgraph::entityFromVertex(Vertex vertex)
 {
-  std::map<Vertex, stk::mesh::Entity>::const_iterator
-  vertex_map_iterator = vertex_entity_map_.find(local_vertex);
+  VertexEntityMap::const_iterator
+  vertex_entity_map_iterator = vertex_entity_map_.find(vertex);
 
-  assert(vertex_map_iterator != vertex_entity_map_.end());
+  assert(vertex_entity_map_iterator != vertex_entity_map_.end());
 
-  return (*vertex_map_iterator).second;
+  stk::mesh::Entity
+  entity = (*vertex_entity_map_iterator).second;
+
+  return entity;
 }
 
 //
@@ -190,12 +193,15 @@ Subgraph::entityFromVertex(Vertex local_vertex)
 Vertex
 Subgraph::vertexFromEntity(stk::mesh::Entity entity)
 {
-  std::map<stk::mesh::Entity, Vertex>::const_iterator
-  vertex_map_iterator = entity_vertex_map_.find(entity);
+  EntityVertexMap::const_iterator
+  entity_vertex_map_iterator = entity_vertex_map_.find(entity);
 
-  assert(vertex_map_iterator != entity_vertex_map_.end());
+  assert(entity_vertex_map_iterator != entity_vertex_map_.end());
 
-  return (*vertex_map_iterator).second;
+  Vertex
+  vertex = (*entity_vertex_map_iterator).second;
+
+  return vertex;
 }
 
 //

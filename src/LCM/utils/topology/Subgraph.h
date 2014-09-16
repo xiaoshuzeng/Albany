@@ -304,6 +304,12 @@ public:
     return number_in_edges == 2;
   }
 
+  ///
+  /// Auxiliary types
+  ///
+  typedef std::map<Vertex, stk::mesh::Entity> VertexEntityMap;
+  typedef std::map<stk::mesh::Entity, Vertex> EntityVertexMap;
+
 private:
 
   //! Private to prohibit copying
@@ -323,13 +329,13 @@ private:
   ///
   /// map local vertex -> global entity
   ///
-  std::map<Vertex, stk::mesh::Entity>
+  VertexEntityMap
   vertex_entity_map_;
 
   ///
   /// map global entity -> local vertex
   ///
-  std::map<stk::mesh::Entity, Vertex>
+  EntityVertexMap
   entity_vertex_map_;
 };
 // class Subgraph
