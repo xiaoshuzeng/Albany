@@ -109,19 +109,6 @@ Topology::Topology(
   // Set the bulk topology
   set_cell_popology(bulk_cell_topology);
 
-  // Fracture the mesh randomly
-  // Probability that fracture_criterion will return true.
-  double const
-  probability = 1.0;
-
-  set_fracture_criterion(
-      Teuchos::rcp(new FractureCriterionRandom(
-          *this,
-          bulk_part_name,
-          interface_part_name,
-          probability))
-          );
-
   // Create the full mesh representation. This must be done prior to
   // the adaptation query. We are reading the mesh from a file so do
   // it here.
@@ -142,19 +129,6 @@ Topology(Teuchos::RCP<Albany::AbstractDiscretization> & discretization) :
     output_type_(UNIDIRECTIONAL_UNILEVEL)
 {
   set_discretization(discretization);
-
-  // Fracture the mesh randomly
-  // Probability that fracture_criterion will return true.
-  double const
-  probability = 0.1;
-
-  set_fracture_criterion(
-      Teuchos::rcp(new FractureCriterionRandom(
-          *this,
-          "bulk",
-          "interface",
-          probability))
-          );
 
   return;
 }
@@ -719,10 +693,10 @@ Topology::createSurfaceElementConnectivity(
 void
 Topology::createStar(
     stk::mesh::Entity entity,
-    std::set<stk::mesh::EntityKey> & subgraph_entities,
+    std::set<stk::mesh::Entity> & subgraph_entities,
     std::set<stkEdge, EdgeLessThan> & subgraph_edges)
 {
-  subgraph_entities.insert(get_bulk_data()->entity_key(entity));
+  subgraph_entities.insert(entity);
 
   assert(get_space_dimension() == 3);
 
@@ -751,8 +725,8 @@ Topology::createStar(
     stkEdge
     edge;
 
-    edge.source = get_bulk_data()->entity_key(source);
-    edge.target = get_bulk_data()->entity_key(entity);
+    edge.source = source;
+    edge.target = entity;
     edge.local_id = ords[i];
 
     subgraph_edges.insert(edge);
@@ -860,7 +834,7 @@ Topology::splitOpenFaces()
       segment = *j;
 
       // Create star of segment
-      std::set<stk::mesh::EntityKey>
+      std::set<stk::mesh::Entity>
       star_entities;
 
       std::set<stkEdge, EdgeLessThan>
@@ -869,10 +843,10 @@ Topology::splitOpenFaces()
       createStar(segment, star_entities, star_edges);
 
       // Iterators
-      std::set<stk::mesh::EntityKey>::iterator
+      std::set<stk::mesh::Entity>::iterator
       first_entity = star_entities.begin();
 
-      std::set<stk::mesh::EntityKey>::iterator
+      std::set<stk::mesh::Entity>::iterator
       last_entity = star_entities.end();
 
       std::set<stkEdge>::iterator
@@ -930,20 +904,14 @@ Topology::splitOpenFaces()
         stk::mesh::Entity
         face = *k;
 
-        stk::mesh::EntityKey const
-        face_key = get_bulk_data()->entity_key(face);
-
         Vertex
-        face_vertex = segment_star.globalToLocal(face_key);
+        face_vertex = segment_star.globalToLocal(face);
 
         Vertex
         new_face_vertex = segment_star.cloneBoundaryEntity(face_vertex);
 
-        stk::mesh::EntityKey
-        new_face_key = segment_star.localToGlobal(new_face_vertex);
-
         stk::mesh::Entity
-        new_face = bulk_data.get_entity(new_face_key);
+        new_face = segment_star.localToGlobal(new_face_vertex);
 
         // Reset fracture state for both old and new faces
         set_fracture_state(face, CLOSED);
@@ -956,11 +924,8 @@ Topology::splitOpenFaces()
       }
 
       // Split the articulation point (current segment)
-      stk::mesh::EntityKey const
-      segment_key = get_bulk_data()->entity_key(segment);
-
       Vertex
-      segment_vertex = segment_star.globalToLocal(segment_key);
+      segment_vertex = segment_star.globalToLocal(segment);
 
 #if defined(DEBUG_LCM_TOPOLOGY)
       {
@@ -992,7 +957,7 @@ Topology::splitOpenFaces()
     // All open faces and segments have been dealt with.
     // Split the node articulation point
     // Create star of node
-    std::set<stk::mesh::EntityKey>
+    std::set<stk::mesh::Entity>
     star_entities;
 
     std::set<stkEdge, EdgeLessThan>
@@ -1001,10 +966,10 @@ Topology::splitOpenFaces()
     createStar(point, star_entities, star_edges);
 
     // Iterators
-    std::set<stk::mesh::EntityKey>::iterator
+    std::set<stk::mesh::Entity>::iterator
     first_entity = star_entities.begin();
 
-    std::set<stk::mesh::EntityKey>::iterator
+    std::set<stk::mesh::Entity>::iterator
     last_entity = star_entities.end();
 
     std::set<stkEdge>::iterator
@@ -1016,11 +981,8 @@ Topology::splitOpenFaces()
     Subgraph
     point_star(*this, first_entity, last_entity, first_edge, last_edge);
 
-    stk::mesh::EntityKey const
-    point_key = get_bulk_data()->entity_key(point);
-
     Vertex
-    point_vertex = point_star.globalToLocal(point_key);
+    point_vertex = point_star.globalToLocal(point);
 
 #if defined(DEBUG_LCM_TOPOLOGY)
     {

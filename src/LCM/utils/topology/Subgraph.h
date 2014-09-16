@@ -37,8 +37,8 @@ public:
   ///
   Subgraph(
       Topology & topology,
-      std::set<stk::mesh::EntityKey>::iterator first_vertex,
-      std::set<stk::mesh::EntityKey>::iterator last_vertex,
+      std::set<stk::mesh::Entity>::iterator first_vertex,
+      std::set<stk::mesh::Entity>::iterator last_vertex,
       std::set<stkEdge>::iterator first_edge,
       std::set<stkEdge>::iterator last_edge);
 
@@ -46,25 +46,25 @@ public:
   ///\brief Map a vertex in the subgraph to a entity in the stk mesh.
   ///
   ///\param[in] Vertex in the subgraph
-  ///\return Global entity key for the stk mesh
+  ///\return Global entity for the stk mesh
   ///
-  ///Return the global entity key (in the stk mesh) given a local
+  ///Return the global entity (in the stk mesh) given a local
   ///subgraph vertex (in the boost subgraph).
   ///
-  stk::mesh::EntityKey
+  stk::mesh::Entity
   localToGlobal(Vertex local_vertex);
 
   ///
   ///\brief Map a entity in the stk mesh to a vertex in the subgraph.
   ///
-  ///\param[in] Global entity key for the stk mesh
+  ///\param[in] Global entity for the stk mesh
   ///\return Vertex in the subgraph
   ///
-  ///Return local vertex (in the boost graph) given global entity key (in the
+  ///Return local vertex (in the boost graph) given global entity (in the
   ///  stk mesh).
   ///
   Vertex
-  globalToLocal(stk::mesh::EntityKey global_vertex_key);
+  globalToLocal(stk::mesh::Entity global_vertex);
 
   ///
   ///\brief Add a vertex in the subgraph.
@@ -294,7 +294,7 @@ public:
     assert(get_bulk_data()->entity_rank(e) == get_boundary_rank());
 
     Vertex
-    vertex = globalToLocal(get_bulk_data()->entity_key(e));
+    vertex = globalToLocal(e);
 
     boost::graph_traits<Graph>::degree_size_type
     number_in_edges = boost::in_degree(vertex, *this);
@@ -321,14 +321,14 @@ private:
   topology_;
 
   ///
-  /// map local vertex -> global entity key
+  /// map local vertex -> global entity
   ///
-  std::map<Vertex, stk::mesh::EntityKey> local_global_vertex_map_;
+  std::map<Vertex, stk::mesh::Entity> local_global_vertex_map_;
 
   ///
-  /// map global entity key -> local vertex
+  /// map global entity -> local vertex
   ///
-  std::map<stk::mesh::EntityKey, Vertex> global_local_vertex_map_;
+  std::map<stk::mesh::Entity, Vertex> global_local_vertex_map_;
 };
 // class Subgraph
 

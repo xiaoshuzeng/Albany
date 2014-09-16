@@ -203,26 +203,26 @@ entity_label(stk::mesh::EntityRank const rank)
     exit(1);
     break;
   case stk::topology::NODE_RANK:
-    oss << "Point";
+    oss << "point";
     break;
   case stk::topology::EDGE_RANK:
-    oss << "Segment";
+    oss << "segment";
     break;
   case stk::topology::FACE_RANK:
-    oss << "Polygon";
+    oss << "polygon";
     break;
   case stk::topology::ELEMENT_RANK:
-    oss << "Polyhedron";
+    oss << "polyhedron";
     break;
 #if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
     case 4:
-    oss << "Polychoron";
+    oss << "polychoron";
     break;
     case 5:
-    oss << "Polyteron";
+    oss << "polyteron";
     break;
     case 6:
-    oss << "Polypeton";
+    oss << "polypeton";
     break;
 #endif // LCM_TOPOLOGY_HIGH_DIMENSIONS
   }
