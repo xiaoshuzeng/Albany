@@ -356,7 +356,7 @@ public:
   /// \brief Returns a pointer with the coordinates of a given entity
   ///
   double*
-  getPointerOfCoordinates(stk::mesh::Entity entity);
+  getEntityCoordinates(stk::mesh::Entity entity);
 
   ///
   /// \brief Returns a vector with the corresponding former boundary
@@ -784,9 +784,6 @@ private:
 
   std::vector<stk::mesh::EntityVector>
   connectivity_;
-
-  std::map<int, int>
-  element_global_to_local_ids_;
 
   std::set<EntityPair>
   fractured_faces_;

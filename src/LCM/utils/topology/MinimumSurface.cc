@@ -220,7 +220,7 @@ double Topology::getDistanceNodeAndPoint(
 {
 
   // Declare x, y, and z coordinates of the node
-  double * entity_coordinates_xyz = getPointerOfCoordinates(node);
+  double * entity_coordinates_xyz = getEntityCoordinates(node);
   double x_Node = entity_coordinates_xyz[0];
   double y_Node = entity_coordinates_xyz[1];
   double z_Node = entity_coordinates_xyz[2];
@@ -423,13 +423,13 @@ double Topology::getDistanceBetweenNodes(
     stk::mesh::Entity node2)
 {
   // Declares the x,y,and z coordinates for the first node
-  double * coordinate1 = getPointerOfCoordinates(node1);
+  double * coordinate1 = getEntityCoordinates(node1);
   double x1 = coordinate1[0];
   double y1 = coordinate1[1];
   double z1 = coordinate1[2];
 
   // Declares the x,y,and z coordinates for the first node
-  double * coordinate2 = getPointerOfCoordinates(node2);
+  double * coordinate2 = getEntityCoordinates(node2);
   double x2 = coordinate2[0];
   double y2 = coordinate2[1];
   double z2 = coordinate2[2];
@@ -455,7 +455,7 @@ std::vector<double> Topology::getCoordinatesOfMaxAndMin()
   std::vector<stk::mesh::Entity>::const_iterator i_entities_d0;
 
   // Get the coordinates of the first node
-  double * entity_coordinates_xyz = getPointerOfCoordinates(entities_D0[0]);
+  double * entity_coordinates_xyz = getEntityCoordinates(entities_D0[0]);
   double x_coordinate = entity_coordinates_xyz[0];
   double y_coordinate = entity_coordinates_xyz[1];
   double z_coordinate = entity_coordinates_xyz[2];
@@ -476,7 +476,7 @@ std::vector<double> Topology::getCoordinatesOfMaxAndMin()
   for (i_entities_d0 = entities_D0.begin(); i_entities_d0 != entities_D0.end();
       ++i_entities_d0) {
     // Get the coordinates of the ith node
-    double * entity_coordinates_xyz = getPointerOfCoordinates(*i_entities_d0);
+    double * entity_coordinates_xyz = getEntityCoordinates(*i_entities_d0);
     double x_coordinate = entity_coordinates_xyz[0];
     double y_coordinate = entity_coordinates_xyz[1];
     double z_coordinate = entity_coordinates_xyz[2];
@@ -1463,7 +1463,7 @@ std::vector<double> Topology::findCoordinates(unsigned int nodeIdentifier)
       Ientities_D0++) {
     if (get_bulk_data()->identifier(*Ientities_D0) == nodeIdentifier) {
 
-      double * coordinate = getPointerOfCoordinates(*Ientities_D0);
+      double * coordinate = getEntityCoordinates(*Ientities_D0);
       double x = coordinate[0];
       double y = coordinate[1];
       double z = coordinate[2];

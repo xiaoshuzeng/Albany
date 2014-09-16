@@ -489,7 +489,7 @@ Topology::findAdjacentSegmentsFromFace(
 // \brief Returns a pointer with the coordinates of a given entity
 //
 double*
-Topology::getPointerOfCoordinates(stk::mesh::Entity entity)
+Topology::getEntityCoordinates(stk::mesh::Entity entity)
 {
 
   Teuchos::RCP<Albany::AbstractDiscretization> discretization_ptr =
@@ -553,7 +553,7 @@ Topology::computeBarycentricCoordinates(
   for (iterator_entities = entities.begin();
       iterator_entities != entities.end();
       ++iterator_entities) {
-    vector_pointers.push_back(getPointerOfCoordinates(*iterator_entities));
+    vector_pointers.push_back(getEntityCoordinates(*iterator_entities));
   }
 
   //Pointer with coordinates without average
@@ -565,7 +565,7 @@ Topology::computeBarycentricCoordinates(
   }
 
   //Pointer with the barycenter coordinates
-  double* barycenter_coordinates = getPointerOfCoordinates(barycenter);
+  double* barycenter_coordinates = getEntityCoordinates(barycenter);
   barycenter_coordinates[0] = coordinates_[0] / (1.0 * entities.size());
   barycenter_coordinates[1] = coordinates_[1] / (1.0 * entities.size());
   barycenter_coordinates[2] = coordinates_[2] / (1.0 * entities.size());
@@ -1268,7 +1268,7 @@ void Topology::barycentricSubdivision()
         stk::topology::NODE_RANK);
     for (iterator_entities = entities.begin();
         iterator_entities != entities.end(); ++iterator_entities) {
-      vector_pointers.push_back(getPointerOfCoordinates(*iterator_entities));
+      vector_pointers.push_back(getEntityCoordinates(*iterator_entities));
     }
     std::vector<std::vector<double> > coordinates;
     unsigned int n_coords = vector_pointers.size();
