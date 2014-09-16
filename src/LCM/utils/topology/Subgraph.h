@@ -37,8 +37,8 @@ public:
   ///
   Subgraph(
       Topology & topology,
-      std::set<stk::mesh::Entity>::iterator first_vertex,
-      std::set<stk::mesh::Entity>::iterator last_vertex,
+      std::set<stk::mesh::Entity>::iterator first_entity,
+      std::set<stk::mesh::Entity>::iterator last_entity,
       std::set<STKEdge>::iterator first_edge,
       std::set<STKEdge>::iterator last_edge);
 
@@ -52,7 +52,7 @@ public:
   ///subgraph vertex (in the boost subgraph).
   ///
   stk::mesh::Entity
-  localToGlobal(Vertex local_vertex);
+  vertexToEntity(Vertex vertex);
 
   ///
   ///\brief Map a entity in the stk mesh to a vertex in the subgraph.
@@ -64,7 +64,7 @@ public:
   ///  stk mesh).
   ///
   Vertex
-  globalToLocal(stk::mesh::Entity global_vertex);
+  entityToVertex(stk::mesh::Entity entity);
 
   ///
   ///\brief Add a vertex in the subgraph.
@@ -110,8 +110,8 @@ public:
   std::pair<Edge, bool>
   addEdge(
       EdgeId const edge_id,
-      Vertex const local_source_vertex,
-      Vertex const local_target_vertex);
+      Vertex const source_vertex,
+      Vertex const target_vertex);
 
   ///
   /// \brief Remove edge from graph
@@ -124,8 +124,8 @@ public:
   ///
   void
   removeEdge(
-      Vertex const & local_source_vertex,
-      Vertex const & local_target_vertex);
+      Vertex const & source_vertex,
+      Vertex const & target_vertex);
 
   ///
   /// \param[in] Vertex in subgraph
@@ -164,7 +164,7 @@ public:
   ///
   void
   testArticulationPoint(
-      Vertex const input_vertex,
+      Vertex const vertex,
       size_t & number_components,
       ComponentMap & component_map);
 
@@ -184,7 +184,7 @@ public:
   /// in edge: Return.
   ///
   Vertex
-  cloneBoundaryEntity(Vertex vertex);
+  cloneBoundaryVertex(Vertex vertex);
 
   ///
   /// Restore element to node connectivity needed by STK.
@@ -294,7 +294,7 @@ public:
     assert(get_bulk_data()->entity_rank(e) == get_boundary_rank());
 
     Vertex
-    vertex = globalToLocal(e);
+    vertex = entityToVertex(e);
 
     boost::graph_traits<Graph>::degree_size_type
     number_in_edges = boost::in_degree(vertex, *this);
@@ -323,12 +323,14 @@ private:
   ///
   /// map local vertex -> global entity
   ///
-  std::map<Vertex, stk::mesh::Entity> local_global_vertex_map_;
+  std::map<Vertex, stk::mesh::Entity>
+  vertex_entity_map_;
 
   ///
   /// map global entity -> local vertex
   ///
-  std::map<stk::mesh::Entity, Vertex> global_local_vertex_map_;
+  std::map<stk::mesh::Entity, Vertex>
+  entity_vertex_map_;
 };
 // class Subgraph
 
