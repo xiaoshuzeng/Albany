@@ -419,7 +419,7 @@ writeGraphviz(std::string const & output_filename, UGraph const & graph)
 //
 void
 Subgraph::testArticulationPoint(
-    Vertex const input_vertex,
+    Vertex const articulation_vertex,
     size_t & number_components,
     ComponentMap & component_map)
 {
@@ -449,7 +449,7 @@ Subgraph::testArticulationPoint(
 
     // If this is the vertex that is subjected to the articulation point test
     // skip it.
-    if (vertex == input_vertex) continue;
+    if (vertex == articulation_vertex) continue;
 
     UVertex
     uvertex = boost::add_vertex(graph);
@@ -473,7 +473,7 @@ Subgraph::testArticulationPoint(
 
     // If this is the vertex that is subjected to the articulation point test
     // skip it.
-    if (source == input_vertex) continue;
+    if (source == articulation_vertex) continue;
 
     std::map<Vertex, UVertex>::const_iterator
     source_map_iterator = sub_u_vertex_map.find(source);
@@ -499,7 +499,7 @@ Subgraph::testArticulationPoint(
 
       // If this is the vertex that is subjected to the articulation point test
       // skip it.
-      if (target == input_vertex) continue;
+      if (target == articulation_vertex) continue;
 
       std::map<Vertex, UVertex>::const_iterator
       target_map_iterator = sub_u_vertex_map.find(target);
@@ -513,7 +513,18 @@ Subgraph::testArticulationPoint(
   }
 
 #if defined(DEBUG_LCM_TOPOLOGY)
-  writeGraphviz("undirected.dot", graph);
+  {
+    stk::mesh::Entity
+    entity = entityFromVertex(articulation_vertex);
+
+    stk::mesh::BulkData &
+    bulk_data = *get_bulk_data();
+
+    std::string
+    file_name = "undirected-" + entity_string(bulk_data, entity) + ".dot";
+
+    writeGraphviz(file_name, graph);
+  }
 #endif // DEBUG_LCM_TOPOLOGY
 
   std::vector<size_t>
@@ -540,7 +551,7 @@ Subgraph::testArticulationPoint(
 }
 
 //
-// Clones a boundary entity from the subgraph and separates the in-edges
+// Clones a boundary vertex from the subgraph and separates the in-edges
 // of the entity.
 //
 Vertex
@@ -827,8 +838,10 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
   assert(get_meta_data()->spatial_dimension() == 3);
 
   stk::mesh::EntityRank const
-  one_down =
-      (stk::mesh::EntityRank) (get_bulk_data()->entity_rank(old_entity) - 1);
+  rank = get_bulk_data()->entity_rank(old_entity);
+
+  stk::mesh::EntityRank const
+  one_down = static_cast<stk::mesh::EntityRank>(rank - 1);
 
   stk::mesh::Entity const *
   old_relations = get_bulk_data()->begin(old_entity, one_down);

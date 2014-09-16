@@ -164,7 +164,7 @@ public:
   ///
   void
   testArticulationPoint(
-      Vertex const vertex,
+      Vertex const articulation_vertex,
       size_t & number_components,
       ComponentMap & component_map);
 
