@@ -459,7 +459,7 @@ Subgraph::testArticulationPoint(
   VertexIterator
   vertex_end;
 
-  boost::tie(vertex_begin, vertex_end) = vertices(*this);
+  boost::tie(vertex_begin, vertex_end) = boost::vertices(*this);
 
   // First add the vertices to the graph
   for (VertexIterator i = vertex_begin; i != vertex_end; ++i) {
@@ -467,6 +467,8 @@ Subgraph::testArticulationPoint(
     Vertex
     vertex = *i;
 
+    // If this is the vertex that is subjected to the articulation point test
+    // skip it.
     if (vertex == input_vertex) continue;
 
     UVertex
@@ -489,6 +491,8 @@ Subgraph::testArticulationPoint(
     Vertex
     source = *i;
 
+    // If this is the vertex that is subjected to the articulation point test
+    // skip it.
     if (source == input_vertex) continue;
 
     std::map<Vertex, UVertex>::const_iterator
@@ -513,6 +517,8 @@ Subgraph::testArticulationPoint(
       Vertex
       target = boost::target(edge, *this);
 
+      // If this is the vertex that is subjected to the articulation point test
+      // skip it.
       if (target == input_vertex) continue;
 
       std::map<Vertex, UVertex>::const_iterator
