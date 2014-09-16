@@ -224,30 +224,30 @@ Subgraph::addVertex(stk::mesh::EntityRank vertex_rank)
   get_bulk_data()->generate_new_entities(requests, new_entities);
 
   stk::mesh::Entity
-  global_vertex = new_entities[0];
+  entity = new_entities[0];
 
   // Add the vertex to the subgraph
   Vertex
-  local_vertex = boost::add_vertex(*this);
+  vertex = boost::add_vertex(*this);
 
   // Update maps
   std::pair<Vertex, stk::mesh::Entity>
-  local_to_global = std::make_pair(local_vertex, global_vertex);
+  vertex_entity_pair = std::make_pair(vertex, entity);
 
   std::pair<stk::mesh::Entity, Vertex>
-  global_to_local = std::make_pair(global_vertex, local_vertex);
+  entity_vertex_pair = std::make_pair(entity, vertex);
 
-  vertex_entity_map_.insert(local_to_global);
+  vertex_entity_map_.insert(vertex_entity_pair);
 
-  entity_vertex_map_.insert(global_to_local);
+  entity_vertex_map_.insert(entity_vertex_pair);
 
   // store entity rank to the vertex property
   VertexNamePropertyMap
   vertex_property_map = boost::get(VertexName(), *this);
 
-  boost::put(vertex_property_map, local_vertex, vertex_rank);
+  boost::put(vertex_property_map, vertex, vertex_rank);
 
-  return local_vertex;
+  return vertex;
 }
 
 //
@@ -274,7 +274,7 @@ Subgraph::removeVertex(Vertex const vertex)
   // remove the entity from stk mesh
   bool const
   deleted = get_bulk_data()->destroy_entity(entity);
-  assert(deleted);
+  assert(deleted == true);
 
   return;
 }
