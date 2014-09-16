@@ -694,7 +694,7 @@ void
 Topology::createStar(
     stk::mesh::Entity entity,
     std::set<stk::mesh::Entity> & subgraph_entities,
-    std::set<stkEdge, EdgeLessThan> & subgraph_edges)
+    std::set<STKEdge, EdgeLessThan> & subgraph_edges)
 {
   subgraph_entities.insert(entity);
 
@@ -722,7 +722,7 @@ Topology::createStar(
 
     if (is_interface_cell(source) == true) continue;
 
-    stkEdge
+    STKEdge
     edge;
 
     edge.source = source;
@@ -837,7 +837,7 @@ Topology::splitOpenFaces()
       std::set<stk::mesh::Entity>
       star_entities;
 
-      std::set<stkEdge, EdgeLessThan>
+      std::set<STKEdge, EdgeLessThan>
       star_edges;
 
       createStar(segment, star_entities, star_edges);
@@ -849,10 +849,10 @@ Topology::splitOpenFaces()
       std::set<stk::mesh::Entity>::iterator
       last_entity = star_entities.end();
 
-      std::set<stkEdge>::iterator
+      std::set<STKEdge>::iterator
       first_edge = star_edges.begin();
 
-      std::set<stkEdge>::iterator
+      std::set<STKEdge>::iterator
       last_edge = star_edges.end();
 
       Subgraph
@@ -960,7 +960,7 @@ Topology::splitOpenFaces()
     std::set<stk::mesh::Entity>
     star_entities;
 
-    std::set<stkEdge, EdgeLessThan>
+    std::set<STKEdge, EdgeLessThan>
     star_edges;
 
     createStar(point, star_entities, star_edges);
@@ -972,10 +972,10 @@ Topology::splitOpenFaces()
     std::set<stk::mesh::Entity>::iterator
     last_entity = star_entities.end();
 
-    std::set<stkEdge>::iterator
+    std::set<STKEdge>::iterator
     first_edge = star_edges.begin();
 
-    std::set<stkEdge>::iterator
+    std::set<STKEdge>::iterator
     last_edge = star_edges.end();
 
     Subgraph

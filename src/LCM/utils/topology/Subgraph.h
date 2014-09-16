@@ -39,8 +39,8 @@ public:
       Topology & topology,
       std::set<stk::mesh::Entity>::iterator first_vertex,
       std::set<stk::mesh::Entity>::iterator last_vertex,
-      std::set<stkEdge>::iterator first_edge,
-      std::set<stkEdge>::iterator last_edge);
+      std::set<STKEdge>::iterator first_edge,
+      std::set<STKEdge>::iterator last_edge);
 
   ///
   ///\brief Map a vertex in the subgraph to a entity in the stk mesh.

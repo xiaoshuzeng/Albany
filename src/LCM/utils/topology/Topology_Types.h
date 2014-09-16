@@ -113,7 +113,7 @@ enum VTKCellType
 ///
 /// Used to create edges from the stk mesh object in a boost graph
 ///
-struct stkEdge
+struct STKEdge
 {
   stk::mesh::Entity source;
   stk::mesh::Entity target;
@@ -125,7 +125,7 @@ struct stkEdge
 ///
 struct EdgeLessThan
 {
-  bool operator()(stkEdge const & a, stkEdge const & b) const
+  bool operator()(STKEdge const & a, STKEdge const & b) const
   {
     if (a.source < b.source) return true;
 

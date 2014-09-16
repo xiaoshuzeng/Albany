@@ -187,7 +187,7 @@ public:
   createStar(
       stk::mesh::Entity entity,
       std::set<stk::mesh::Entity> & subgraph_entities,
-      std::set<stkEdge, EdgeLessThan> & subgraph_edges);
+      std::set<STKEdge, EdgeLessThan> & subgraph_edges);
 
   ///
   /// \brief Fractures all open boundary entities of the mesh.

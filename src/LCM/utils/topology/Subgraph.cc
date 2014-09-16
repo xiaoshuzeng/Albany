@@ -16,8 +16,8 @@ Subgraph::Subgraph(
     Topology & topology,
     std::set<stk::mesh::Entity>::iterator first_entity,
     std::set<stk::mesh::Entity>::iterator last_entity,
-    std::set<stkEdge>::iterator first_edge,
-    std::set<stkEdge>::iterator last_edge) :
+    std::set<STKEdge>::iterator first_edge,
+    std::set<STKEdge>::iterator last_edge) :
     topology_(topology)
 {
   // Insert vertices and create the vertex map
@@ -55,12 +55,12 @@ Subgraph::Subgraph(
   }
 
   // Add edges to the subgraph
-  for (std::set<stkEdge>::iterator edge_iterator = first_edge;
+  for (std::set<STKEdge>::iterator edge_iterator = first_edge;
       edge_iterator != last_edge;
       ++edge_iterator) {
 
     // Get the edge
-    stkEdge
+    STKEdge
     global_edge = *edge_iterator;
 
     // Get global source and target vertices
