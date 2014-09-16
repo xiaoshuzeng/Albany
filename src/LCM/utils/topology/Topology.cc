@@ -186,7 +186,6 @@ void Topology::graphInitialization()
 
   get_bulk_data()->modification_begin();
 
-  removeMultiLevelRelations();
   initializeFractureState();
 
   get_bulk_data()->modification_end();
