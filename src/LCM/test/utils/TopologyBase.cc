@@ -71,6 +71,34 @@ int main(int ac, char* av[])
       &probability,
       "Probability");
 
+  int const
+  num_styles = 4;
+
+  LCM::Topology::OutputType const
+  style_values[] = {
+      LCM::Topology::UNIDIRECTIONAL_UNILEVEL,
+      LCM::Topology::UNIDIRECTIONAL_MULTILEVEL,
+      LCM::Topology::BIDIRECTIONAL_UNILEVEL,
+      LCM::Topology::BIDIRECTIONAL_MULTILEVEL};
+
+  char const *
+  style_names[] = {
+      "UU",
+      "UM",
+      "BU",
+      "BM"};
+
+  LCM::Topology::OutputType
+  plot_style = LCM::Topology::UNIDIRECTIONAL_UNILEVEL;
+
+  command_line_processor.setOption(
+      "plot-style",
+      &plot_style,
+      num_styles,
+      style_values,
+      style_names,
+      "Plot Style");
+
   // Throw a warning and not error for unrecognized options
   command_line_processor.recogniseAllOptions(true);
 
@@ -145,7 +173,7 @@ int main(int ac, char* av[])
 
   topology.setEntitiesOpen();
 
-  topology.set_output_type(LCM::Topology::UNIDIRECTIONAL_UNILEVEL);
+  topology.set_output_type(plot_style);
 
 #if defined(DEBUG_LCM_TOPOLOGY)
   std::string
