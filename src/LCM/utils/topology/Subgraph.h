@@ -124,8 +124,8 @@ public:
   ///
   void
   removeEdge(
-      Vertex const & source_vertex,
-      Vertex const & target_vertex);
+      Vertex const source_vertex,
+      Vertex const target_vertex);
 
   ///
   /// \param[in] Vertex in subgraph

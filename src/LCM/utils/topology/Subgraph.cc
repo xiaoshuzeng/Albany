@@ -274,6 +274,7 @@ Subgraph::removeVertex(Vertex const vertex)
   // remove the entity from stk mesh
   bool const
   deleted = get_bulk_data()->destroy_entity(entity);
+
   assert(deleted == true);
 
   return;
@@ -285,38 +286,36 @@ Subgraph::removeVertex(Vertex const vertex)
 std::pair<Edge, bool>
 Subgraph::addEdge(
     EdgeId const edge_id,
-    Vertex const local_source_vertex,
-    Vertex const local_target_vertex)
+    Vertex const source_vertex,
+    Vertex const target_vertex)
 {
   // get global entities
   stk::mesh::Entity
-  global_source_vertex = entityFromVertex(local_source_vertex);
+  source_entity = entityFromVertex(source_vertex);
 
   stk::mesh::Entity
-  global_target_vertex = entityFromVertex(local_target_vertex);
+  target_entity = entityFromVertex(target_vertex);
 
-  assert(get_bulk_data()->entity_rank(global_source_vertex) -
-      get_bulk_data()->entity_rank(global_target_vertex) == 1);
+  assert(get_bulk_data()->entity_rank(source_entity) -
+      get_bulk_data()->entity_rank(target_entity) == 1);
 
   // Add edge to local graph
   std::pair<Edge, bool>
-  local_edge = boost::add_edge(local_source_vertex, local_target_vertex, *this);
+  graph_edge = boost::add_edge(source_vertex, target_vertex, *this);
 
-  if (local_edge.second == false) return local_edge;
+  // If edge exists in graph, skip adding it to STK.
+  if (graph_edge.second == false) return graph_edge;
 
   // Add edge to stk mesh
-  get_bulk_data()->declare_relation(
-      global_source_vertex,
-      global_target_vertex,
-      edge_id);
+  get_bulk_data()->declare_relation(source_entity, target_entity, edge_id);
 
   // Add edge id to edge property
   EdgeNamePropertyMap
   edge_property_map = boost::get(EdgeName(), *this);
 
-  boost::put(edge_property_map, local_edge.first, edge_id);
+  boost::put(edge_property_map, graph_edge.first, edge_id);
 
-  return local_edge;
+  return graph_edge;
 }
 
 //
@@ -324,38 +323,35 @@ Subgraph::addEdge(
 //
 void
 Subgraph::removeEdge(
-    Vertex const & local_source_vertex,
-    Vertex const & local_target_vertex)
+    Vertex const source_vertex,
+    Vertex const target_vertex)
 {
   // Get the local id of the edge in the subgraph
   Edge
   edge;
 
   bool
-  inserted;
+  inserted = false;
 
   boost::tie(edge, inserted) =
-      boost::edge(local_source_vertex, local_target_vertex, *this);
+      boost::edge(source_vertex, target_vertex, *this);
 
-  assert(inserted);
+  assert(inserted == true);
 
   EdgeId
   edge_id = getEdgeId(edge);
 
   // remove local edge
-  boost::remove_edge(local_source_vertex, local_target_vertex, *this);
+  boost::remove_edge(source_vertex, target_vertex, *this);
 
   // remove relation from stk mesh
   stk::mesh::Entity
-  global_source_vertex = entityFromVertex(local_source_vertex);
+  source_entity = entityFromVertex(source_vertex);
 
   stk::mesh::Entity
-  global_target_vertex = entityFromVertex(local_target_vertex);
+  target_entity = entityFromVertex(target_vertex);
 
-  get_bulk_data()->destroy_relation(
-      global_source_vertex,
-      global_target_vertex,
-      edge_id);
+  get_bulk_data()->destroy_relation(source_entity, target_entity, edge_id);
 
   return;
 }
