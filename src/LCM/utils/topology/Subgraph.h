@@ -166,7 +166,7 @@ public:
   testArticulationPoint(
       Vertex const articulation_vertex,
       size_t & number_components,
-      ComponentMap & component_map);
+      VertexComponentMap & vertex_component_map);
 
   ///
   /// \brief Clones a boundary entity from the subgraph and separates
@@ -192,7 +192,7 @@ public:
   /// was replaced by a new point.
   ///
   void
-  updateElementNodeConnectivity(stk::mesh::Entity point, ElementNodeMap & map);
+  updateEntityPointConnectivity(stk::mesh::Entity point, EntityEntityMap & map);
 
   ///
   /// \brief Splits an articulation point.

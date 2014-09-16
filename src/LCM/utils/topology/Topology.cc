@@ -995,7 +995,7 @@ Topology::splitOpenFaces()
     }
 #endif // DEBUG_LCM_TOPOLOGY
 
-    ElementNodeMap
+    EntityEntityMap
     new_connectivity = point_star.splitArticulation(point_vertex);
 
     // Reset fracture state of point
@@ -1013,7 +1013,7 @@ Topology::splitOpenFaces()
 #endif // DEBUG_LCM_TOPOLOGY
 
     // Update the connectivity
-    for (ElementNodeMap::iterator j = new_connectivity.begin();
+    for (EntityEntityMap::iterator j = new_connectivity.begin();
         j != new_connectivity.end(); ++j) {
 
       stk::mesh::Entity

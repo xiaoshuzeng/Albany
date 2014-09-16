@@ -86,8 +86,8 @@ TensorFieldType;
 
 // Specific to topological manipulation
 typedef std::pair<stk::mesh::Entity, stk::mesh::Entity> EntityPair;
-typedef std::map<Vertex, size_t> ComponentMap;
-typedef std::map<stk::mesh::Entity, stk::mesh::Entity> ElementNodeMap;
+typedef std::map<Vertex, size_t> VertexComponentMap;
+typedef std::map<stk::mesh::Entity, stk::mesh::Entity> EntityEntityMap;
 
 enum FractureState
 {

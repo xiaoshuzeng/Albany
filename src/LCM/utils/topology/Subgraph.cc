@@ -421,7 +421,7 @@ void
 Subgraph::testArticulationPoint(
     Vertex const articulation_vertex,
     size_t & number_components,
-    ComponentMap & component_map)
+    VertexComponentMap & vertex_component_map)
 {
   // Map to and from undirected graph and subgraph
   std::map<UVertex, Vertex>
@@ -544,7 +544,7 @@ Subgraph::testArticulationPoint(
     std::pair<Vertex, size_t>
     component = std::make_pair(vertex, components[u_vertex]);
 
-    component_map.insert(component);
+    vertex_component_map.insert(component);
   }
 
   return;
@@ -621,11 +621,11 @@ Subgraph::cloneBoundaryVertex(Vertex vertex)
 // Restore element to node connectivity needed by STK.
 //
 void
-Subgraph::updateElementNodeConnectivity(
+Subgraph::updateEntityPointConnectivity(
     stk::mesh::Entity point,
-    ElementNodeMap & map)
+    EntityEntityMap & map)
 {
-  for (ElementNodeMap::iterator i = map.begin(); i != map.end(); ++i) {
+  for (EntityEntityMap::iterator i = map.begin(); i != map.end(); ++i) {
     stk::mesh::Entity
     element = i->first;
 
@@ -676,7 +676,7 @@ Subgraph::splitArticulation(Vertex vertex)
   size_t
   number_components;
 
-  ComponentMap
+  VertexComponentMap
   components;
 
   testArticulationPoint(vertex, number_components, components);
@@ -701,13 +701,13 @@ Subgraph::splitArticulation(Vertex vertex)
     new_vertices[i] = new_vertex;
   }
 
-  // Create a map of elements to new node numbers
+  // Create a map of entities to new node numbers
   // only if the input vertex is a node
   if (vertex_rank == stk::topology::NODE_RANK) {
     stk::mesh::Entity
     point = entityFromVertex(vertex);
 
-    for (ComponentMap::iterator i = components.begin();
+    for (VertexComponentMap::iterator i = components.begin();
         i != components.end(); ++i) {
 
       Vertex
@@ -719,7 +719,10 @@ Subgraph::splitArticulation(Vertex vertex)
       stk::mesh::EntityRank
       current_rank = getVertexRank(current_vertex);
 
-      if (current_rank != stk::topology::ELEMENT_RANK) continue;
+      bool const
+      is_edge_or_lower = current_rank <= stk::topology::EDGE_RANK;
+
+      if (is_edge_or_lower == true) continue;
 
       if (component_number == number_components - 1) continue;
 
@@ -738,7 +741,7 @@ Subgraph::splitArticulation(Vertex vertex)
       new_connectivity.insert(nc);
     }
 
-    updateElementNodeConnectivity(point, new_connectivity);
+    updateEntityPointConnectivity(point, new_connectivity);
   }
 
   // Copy the out edges of the original vertex to the new vertex
@@ -768,7 +771,7 @@ Subgraph::splitArticulation(Vertex vertex)
     Vertex
     source = boost::source(edge, *this);
 
-    ComponentMap::const_iterator
+    VertexComponentMap::const_iterator
     component_iterator = components.find(source);
 
     size_t
@@ -798,7 +801,7 @@ Subgraph::splitArticulation(Vertex vertex)
     EdgeId
     edge_id = edge.second;
 
-    ComponentMap::const_iterator
+    VertexComponentMap::const_iterator
     component_iterator = components.find(source);
 
     size_t
