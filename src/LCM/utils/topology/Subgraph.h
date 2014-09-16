@@ -52,7 +52,7 @@ public:
   ///subgraph vertex (in the boost subgraph).
   ///
   stk::mesh::Entity
-  vertexToEntity(Vertex vertex);
+  entityFromVertex(Vertex vertex);
 
   ///
   ///\brief Map a entity in the stk mesh to a vertex in the subgraph.
@@ -64,7 +64,7 @@ public:
   ///  stk mesh).
   ///
   Vertex
-  entityToVertex(stk::mesh::Entity entity);
+  vertexFromEntity(stk::mesh::Entity entity);
 
   ///
   ///\brief Add a vertex in the subgraph.
@@ -294,7 +294,7 @@ public:
     assert(get_bulk_data()->entity_rank(e) == get_boundary_rank());
 
     Vertex
-    vertex = entityToVertex(e);
+    vertex = vertexFromEntity(e);
 
     boost::graph_traits<Graph>::degree_size_type
     number_in_edges = boost::in_degree(vertex, *this);

@@ -35,23 +35,23 @@ Subgraph::Subgraph(
 
     // create new local vertex
     Vertex
-    local_vertex = boost::add_vertex(*this);
+    vertex = boost::add_vertex(*this);
 
     std::pair<Vertex, stk::mesh::Entity>
-    local_to_global = std::make_pair(local_vertex, entity);
+    vertex_entity_pair = std::make_pair(vertex, entity);
 
     std::pair<stk::mesh::Entity, Vertex>
-    global_to_local = std::make_pair(entity, local_vertex);
+    entity_vertex_pair = std::make_pair(entity, vertex);
 
-    vertex_entity_map_.insert(local_to_global);
+    vertex_entity_map_.insert(vertex_entity_pair);
 
-    entity_vertex_map_.insert(global_to_local);
+    entity_vertex_map_.insert(entity_vertex_pair);
 
     // store entity rank to vertex property
     VertexNamePropertyMap
     vertex_property_map = boost::get(VertexName(), *this);
 
-    boost::put(vertex_property_map, local_vertex, entity_rank);
+    boost::put(vertex_property_map, vertex, entity_rank);
   }
 
   // Add edges to the subgraph
@@ -61,35 +61,33 @@ Subgraph::Subgraph(
 
     // Get the edge
     STKEdge
-    global_edge = *edge_iterator;
+    stk_edge = *edge_iterator;
 
-    // Get global source and target vertices
+    // Get global source and target entities
     stk::mesh::Entity
-    global_source_vertex = global_edge.source;
+    source_entity = stk_edge.source;
 
     stk::mesh::Entity
-    global_target_vertex = global_edge.target;
+    target_entity = stk_edge.target;
 
     // Get local source and target vertices
     Vertex
-    local_source_vertex =
-        entity_vertex_map_.find(global_source_vertex)->second;
+    source_vertex = entity_vertex_map_.find(source_entity)->second;
 
     Vertex
-    local_target_vertex =
-        entity_vertex_map_.find(global_target_vertex)->second;
+    target_vertex = entity_vertex_map_.find(target_entity)->second;
 
     EdgeId
-    edge_id = global_edge.local_id;
+    edge_id = stk_edge.local_id;
 
     Edge
-    local_edge;
+    graph_edge;
 
     bool
-    is_inserted;
+    is_inserted = false;
 
-    boost::tie(local_edge, is_inserted) =
-        boost::add_edge(local_source_vertex, local_target_vertex, *this);
+    boost::tie(graph_edge, is_inserted) =
+        boost::add_edge(source_vertex, target_vertex, *this);
 
     assert(is_inserted == true);
 
@@ -97,7 +95,7 @@ Subgraph::Subgraph(
     EdgeNamePropertyMap
     edge_property_map = boost::get(EdgeName(), *this);
 
-    boost::put(edge_property_map, local_edge, edge_id);
+    boost::put(edge_property_map, graph_edge, edge_id);
   }
 
   return;
@@ -176,7 +174,7 @@ Subgraph::is_internal_and_open(stk::mesh::Entity e)
 // Map a vertex in the subgraph to a entity in the stk mesh.
 //
 stk::mesh::Entity
-Subgraph::vertexToEntity(Vertex local_vertex)
+Subgraph::entityFromVertex(Vertex local_vertex)
 {
   std::map<Vertex, stk::mesh::Entity>::const_iterator
   vertex_map_iterator = vertex_entity_map_.find(local_vertex);
@@ -190,7 +188,7 @@ Subgraph::vertexToEntity(Vertex local_vertex)
 // Map a entity in the stk mesh to a vertex in the subgraph.
 //
 Vertex
-Subgraph::entityToVertex(stk::mesh::Entity entity)
+Subgraph::vertexFromEntity(stk::mesh::Entity entity)
 {
   std::map<stk::mesh::Entity, Vertex>::const_iterator
   vertex_map_iterator = entity_vertex_map_.find(entity);
@@ -254,7 +252,7 @@ Subgraph::removeVertex(Vertex const vertex)
 {
   // get the global entity of vertex
   stk::mesh::Entity
-  entity = vertexToEntity(vertex);
+  entity = entityFromVertex(vertex);
 
   // remove the vertex and entity from global_local_vertex_map_ and
   // local_global_vertex_map_
@@ -286,10 +284,10 @@ Subgraph::addEdge(
 {
   // get global entities
   stk::mesh::Entity
-  global_source_vertex = vertexToEntity(local_source_vertex);
+  global_source_vertex = entityFromVertex(local_source_vertex);
 
   stk::mesh::Entity
-  global_target_vertex = vertexToEntity(local_target_vertex);
+  global_target_vertex = entityFromVertex(local_target_vertex);
 
   assert(get_bulk_data()->entity_rank(global_source_vertex) -
       get_bulk_data()->entity_rank(global_target_vertex) == 1);
@@ -343,10 +341,10 @@ Subgraph::removeEdge(
 
   // remove relation from stk mesh
   stk::mesh::Entity
-  global_source_vertex = vertexToEntity(local_source_vertex);
+  global_source_vertex = entityFromVertex(local_source_vertex);
 
   stk::mesh::Entity
-  global_target_vertex = vertexToEntity(local_target_vertex);
+  global_target_vertex = entityFromVertex(local_target_vertex);
 
   get_bulk_data()->destroy_relation(
       global_source_vertex,
@@ -694,7 +692,7 @@ Subgraph::splitArticulation(Vertex vertex)
   // only if the input vertex is a node
   if (vertex_rank == stk::topology::NODE_RANK) {
     stk::mesh::Entity
-    point = vertexToEntity(vertex);
+    point = entityFromVertex(vertex);
 
     for (ComponentMap::iterator i = components.begin();
         i != components.end(); ++i) {
@@ -713,13 +711,13 @@ Subgraph::splitArticulation(Vertex vertex)
       if (component_number == number_components - 1) continue;
 
       stk::mesh::Entity
-      element = vertexToEntity(current_vertex);
+      element = entityFromVertex(current_vertex);
 
       Vertex
       new_vertex = new_vertices[component_number];
 
       stk::mesh::Entity
-      new_point = vertexToEntity(new_vertex);
+      new_point = entityFromVertex(new_vertex);
 
       std::pair<stk::mesh::Entity, stk::mesh::Entity>
       nc = std::make_pair(element, new_point);
@@ -764,7 +762,7 @@ Subgraph::splitArticulation(Vertex vertex)
     vertex_component = (*component_iterator).second;
 
     stk::mesh::Entity
-    entity = vertexToEntity(source);
+    entity = entityFromVertex(source);
 
     if (vertex_component < number_components - 1) {
       EdgeId
@@ -817,10 +815,10 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
 {
   // Get the entity for the old and new vertices
   stk::mesh::Entity
-  old_entity = vertexToEntity(old_vertex);
+  old_entity = entityFromVertex(old_vertex);
 
   stk::mesh::Entity
-  new_entity = vertexToEntity(new_vertex);
+  new_entity = entityFromVertex(new_vertex);
 
   // Iterate over the out edges of the old vertex and check against the
   // out edges of the new vertex. If the edge does not exist, add.
@@ -921,7 +919,7 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
     vertex = *i;
 
     stk::mesh::Entity
-    entity = vertexToEntity(vertex);
+    entity = entityFromVertex(vertex);
 
     stk::mesh::EntityRank const
     rank = get_bulk_data()->entity_rank(entity);
@@ -955,10 +953,10 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
       target = boost::target(out_edge, *this);
 
       stk::mesh::Entity
-      global_source = vertexToEntity(source);
+      global_source = entityFromVertex(source);
 
       stk::mesh::Entity
-      global_target = vertexToEntity(target);
+      global_target = entityFromVertex(target);
 
       EdgeId
       edge_id = getEdgeId(out_edge);

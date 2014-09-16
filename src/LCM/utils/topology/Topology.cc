@@ -905,13 +905,13 @@ Topology::splitOpenFaces()
         face = *k;
 
         Vertex
-        face_vertex = segment_star.entityToVertex(face);
+        face_vertex = segment_star.vertexFromEntity(face);
 
         Vertex
         new_face_vertex = segment_star.cloneBoundaryVertex(face_vertex);
 
         stk::mesh::Entity
-        new_face = segment_star.vertexToEntity(new_face_vertex);
+        new_face = segment_star.entityFromVertex(new_face_vertex);
 
         // Reset fracture state for both old and new faces
         set_fracture_state(face, CLOSED);
@@ -925,7 +925,7 @@ Topology::splitOpenFaces()
 
       // Split the articulation point (current segment)
       Vertex
-      segment_vertex = segment_star.entityToVertex(segment);
+      segment_vertex = segment_star.vertexFromEntity(segment);
 
 #if defined(DEBUG_LCM_TOPOLOGY)
       {
@@ -982,7 +982,7 @@ Topology::splitOpenFaces()
     point_star(*this, first_entity, last_entity, first_edge, last_edge);
 
     Vertex
-    point_vertex = point_star.entityToVertex(point);
+    point_vertex = point_star.vertexFromEntity(point);
 
 #if defined(DEBUG_LCM_TOPOLOGY)
     {
