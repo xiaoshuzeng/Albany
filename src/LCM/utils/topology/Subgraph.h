@@ -192,7 +192,9 @@ public:
   /// was replaced by a new point.
   ///
   void
-  updateEntityPointConnectivity(stk::mesh::Entity point, EntityEntityMap & map);
+  updateEntityPointConnectivity(
+      stk::mesh::Entity old_point,
+      EntityEntityMap & entity_new_point_map);
 
   ///
   /// \brief Splits an articulation point.
@@ -214,7 +216,7 @@ public:
   /// the new node. If the nodal connectivity of an element does not
   /// change, do not add to the map.
   ///
-  std::map<stk::mesh::Entity, stk::mesh::Entity>
+  EntityEntityMap
   splitArticulation(Vertex vertex);
 
   ///

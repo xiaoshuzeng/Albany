@@ -209,10 +209,10 @@ entity_label(stk::mesh::EntityRank const rank)
     oss << "segment";
     break;
   case stk::topology::FACE_RANK:
-    oss << "polygon";
+    oss << "face";
     break;
   case stk::topology::ELEMENT_RANK:
-    oss << "polyhedron";
+    oss << "cell";
     break;
 #if defined(LCM_TOPOLOGY_HIGH_DIMENSIONS)
     case 4:
@@ -369,6 +369,7 @@ dot_footer()
 //
 std::string
 dot_entity(
+    stk::mesh::Entity const entity,
     stk::mesh::EntityId const id,
     stk::mesh::EntityRank const rank,
     FractureState const fracture_state)
@@ -377,13 +378,15 @@ dot_entity(
   oss;
 
   oss << "  \"";
-  oss << id;
+  oss << entity_label(rank);
   oss << "_";
-  oss << rank;
+  oss << id;
   oss << "\"";
   oss << " [label=\"";
   //oss << entity_label(rank);
   //oss << " ";
+  oss << entity;
+  oss << "   ";
   oss << id;
   oss << "\",style=filled,fillcolor=\"";
   oss << entity_color(rank, fracture_state);
@@ -443,13 +446,13 @@ dot_relation(
   oss;
 
   oss << "  \"";
+  oss << entity_label(source_rank);
+  oss << "_";
   oss << source_id;
-  oss << "_";
-  oss << source_rank;
   oss << "\" -> \"";
-  oss << target_id;
+  oss << entity_label(target_rank);
   oss << "_";
-  oss << target_rank;
+  oss << target_id;
   oss << "\" [color=\"";
   oss << relation_color(relation_local_id);
   oss << "\"]\n";
