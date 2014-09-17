@@ -186,6 +186,7 @@ void Topology::graphInitialization()
 
   get_bulk_data()->modification_begin();
 
+  removeMultiLevelRelations();
   initializeFractureState();
 
   get_bulk_data()->modification_end();
@@ -238,26 +239,25 @@ void Topology::removeMultiLevelRelations()
   typedef std::vector<EdgeId> EdgeIdList;
   typedef EdgeIdList::size_type EdgeIdListIndex;
 
-  size_t const
-  cell_node_rank_distance = stk::topology::ELEMENT_RANK
-      - stk::topology::NODE_RANK;
-
   // Go from points to cells
-  for (stk::mesh::EntityRank rank = stk::topology::NODE_RANK;
-      rank <= stk::topology::ELEMENT_RANK; ++rank) {
+  for (stk::mesh::EntityRank source_rank = stk::topology::NODE_RANK;
+      source_rank <= stk::topology::ELEMENT_RANK; ++source_rank) {
 
     stk::mesh::EntityVector
-    entities;
+    source_entities;
 
-    stk::mesh::get_entities(*(get_bulk_data()), rank, entities);
+    stk::mesh::get_entities(*(get_bulk_data()), source_rank, source_entities);
 
-    for (RelationVectorIndex i = 0; i < entities.size(); ++i) {
+    bool const
+    source_is_point = source_rank == stk::topology::NODE_RANK;
+
+    for (RelationVectorIndex i = 0; i < source_entities.size(); ++i) {
 
       stk::mesh::Entity
-      entity = entities[i];
+      source_entity = source_entities[i];
 
       stk::mesh::EntityVector
-      far_entities;
+      target_entities;
 
       EdgeIdList
       multilevel_relation_ids;
@@ -267,29 +267,33 @@ void Topology::removeMultiLevelRelations()
           ++target_rank) {
 
         stk::mesh::Entity const *
-        relations = get_bulk_data()->begin(entity, target_rank);
+        relations = get_bulk_data()->begin(source_entity, target_rank);
 
         size_t const
-        num_relations = get_bulk_data()->num_connectivity(entity, target_rank);
+        num_relations =
+            get_bulk_data()->num_connectivity(source_entity, target_rank);
 
         stk::mesh::ConnectivityOrdinal const *
-        ordinals = get_bulk_data()->begin_ordinals(entity, target_rank);
+        ordinals = get_bulk_data()->begin_ordinals(source_entity, target_rank);
+
+        bool const
+        target_is_point = target_rank == stk::topology::NODE_RANK;
 
         // Collect relations to delete
         for (size_t r = 0; r < num_relations; ++r) {
 
           size_t const
-          rank_distance =
-              rank > target_rank ? rank - target_rank : target_rank - rank;
+          rank_distance = source_rank > target_rank ?
+              source_rank - target_rank : 0;
 
           bool const
-          is_valid_relation =
-              rank < target_rank ||
-                  rank_distance == 1 ||
-                  rank_distance == cell_node_rank_distance;
+          end_is_point = source_is_point || target_is_point;
 
-          if (is_valid_relation == false) {
-            far_entities.push_back(relations[r]);
+          bool const
+          is_invalid_relation = end_is_point == false && rank_distance > 1;
+
+          if (is_invalid_relation == true) {
+            target_entities.push_back(relations[r]);
             multilevel_relation_ids.push_back(ordinals[r]);
           }
 
@@ -300,13 +304,13 @@ void Topology::removeMultiLevelRelations()
       for (EdgeIdListIndex i = 0; i < multilevel_relation_ids.size(); ++i) {
 
         stk::mesh::Entity
-        far_entity = far_entities[i];
+        far_entity = target_entities[i];
 
         EdgeId const
         multilevel_relation_id = multilevel_relation_ids[i];
 
         get_bulk_data()->destroy_relation(
-            entity,
+            source_entity,
             far_entity,
             multilevel_relation_id);
       }

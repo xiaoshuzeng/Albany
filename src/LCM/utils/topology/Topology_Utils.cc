@@ -75,7 +75,7 @@ display_relation(stk::mesh::BulkData& bulk_data, stk::mesh::Entity entity)
   std::cout << bulk_data.entity_rank(entity);
   std::cout << '\n';
 
-  for (stk::topology::rank_t rank = stk::topology::NODE_RANK;
+  for (stk::mesh::EntityRank rank = stk::topology::NODE_RANK;
       rank <= stk::topology::ELEMENT_RANK; ++rank) {
 
     stk::mesh::Entity const *
@@ -382,13 +382,17 @@ dot_entity(
   oss << "_";
   oss << id;
   oss << "\"";
-  oss << " [label=\"";
-  //oss << entity_label(rank);
-  //oss << " ";
-  oss << entity;
-  oss << "   ";
+  oss << " [label=";
+  oss << "<";
+  oss << "<font color=\"black\">";
   oss << id;
-  oss << "\",style=filled,fillcolor=\"";
+  oss << "</font>";
+  oss << " ";
+  oss << "<font color=\"white\">";
+  oss << entity;
+  oss << "</font>";
+  oss << ">,";
+  oss << "style=filled,fillcolor=\"";
   oss << entity_color(rank, fracture_state);
   oss << "\"]\n";
 

@@ -555,15 +555,15 @@ Subgraph::testArticulationPoint(
 // of the entity.
 //
 Vertex
-Subgraph::cloneBoundaryVertex(Vertex vertex)
+Subgraph::cloneBoundaryVertex(Vertex boundary_vertex)
 {
   stk::mesh::EntityRank
-  vertex_rank = getVertexRank(vertex);
+  boundary_rank = getVertexRank(boundary_vertex);
 
-  assert(vertex_rank == get_boundary_rank());
+  assert(boundary_rank == get_boundary_rank());
 
   Vertex
-  new_vertex = addVertex(vertex_rank);
+  vertex_clone = addVertex(boundary_rank);
 
   // Copy the out_edges of vertex to new_vertex
   OutEdgeIterator
@@ -572,7 +572,8 @@ Subgraph::cloneBoundaryVertex(Vertex vertex)
   OutEdgeIterator
   out_edge_end;
 
-  boost::tie(out_edge_begin, out_edge_end) = boost::out_edges(vertex, *this);
+  boost::tie(out_edge_begin, out_edge_end) =
+      boost::out_edges(boundary_vertex, *this);
 
   for (OutEdgeIterator i = out_edge_begin; i != out_edge_end; ++i) {
     Edge
@@ -584,22 +585,23 @@ Subgraph::cloneBoundaryVertex(Vertex vertex)
     Vertex
     target = boost::target(edge, *this);
 
-    addEdge(edge_id, new_vertex, target);
+    addEdge(edge_id, vertex_clone, target);
   }
 
   // Copy all out edges not in the subgraph to the new vertex
-  cloneOutEdges(vertex, new_vertex);
+  cloneOutEdges(boundary_vertex, vertex_clone);
 
   // Remove one of the edges from vertex, copy to new_vertex
-  // Arbitrarily remove the first edge from original vertex
   InEdgeIterator
   in_edge_begin;
 
   InEdgeIterator
   in_edge_end;
 
-  boost::tie(in_edge_begin, in_edge_end) = boost::in_edges(vertex, *this);
+  boost::tie(in_edge_begin, in_edge_end) =
+      boost::in_edges(boundary_vertex, *this);
 
+  // Arbitrarily remove the first edge from original vertex
   Edge
   edge = *(in_edge_begin);
 
@@ -609,12 +611,12 @@ Subgraph::cloneBoundaryVertex(Vertex vertex)
   Vertex
   source = boost::source(edge, *this);
 
-  removeEdge(source, vertex);
+  removeEdge(source, boundary_vertex);
 
   // Add edge to new vertex
-  addEdge(edge_id, source, new_vertex);
+  addEdge(edge_id, source, vertex_clone);
 
-  return new_vertex;
+  return vertex_clone;
 }
 
 //
@@ -852,48 +854,52 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
   // Iterate over the out edges of the old vertex and check against the
   // out edges of the new vertex. If the edge does not exist, add.
   stk::mesh::EntityRank const
-  rank = get_bulk_data()->entity_rank(old_entity);
+  top_rank = get_bulk_data()->entity_rank(old_entity);
 
-  stk::mesh::EntityRank const
-  one_down = static_cast<stk::mesh::EntityRank>(rank - 1);
+  assert(get_bulk_data()->entity_rank(new_entity) == top_rank);
 
-  stk::mesh::Entity const *
-  old_relations = get_bulk_data()->begin(old_entity, one_down);
-
-  size_t const
-  num_old_relations = get_bulk_data()->num_connectivity(old_entity, one_down);
-
-  stk::mesh::ConnectivityOrdinal const *
-  old_relation_ords = get_bulk_data()->begin_ordinals(old_entity, one_down);
-
-  for (size_t i = 0; i < num_old_relations; ++i) {
+  for (stk::mesh::EntityRank rank = stk::topology::NODE_RANK;
+      rank <= top_rank; ++rank) {
 
     stk::mesh::Entity const *
-    new_relations = get_bulk_data()->begin(new_entity, one_down);
+    old_relations = get_bulk_data()->begin(old_entity, rank);
 
     size_t const
-    num_new_relations = get_bulk_data()->num_connectivity(new_entity, one_down);
+    num_old_relations = get_bulk_data()->num_connectivity(old_entity, rank);
 
-    // assume the edge doesn't exist
-    bool
-    exists = false;
+    stk::mesh::ConnectivityOrdinal const *
+    old_relation_ords = get_bulk_data()->begin_ordinals(old_entity, rank);
 
-    for (size_t j = 0; j < num_new_relations; ++j) {
-      if (old_relations[i] == new_relations[j]) {
-        exists = true;
-        break;
+    for (size_t i = 0; i < num_old_relations; ++i) {
+
+      stk::mesh::Entity const *
+      new_relations = get_bulk_data()->begin(new_entity, rank);
+
+      size_t const
+      num_new_relations = get_bulk_data()->num_connectivity(new_entity, rank);
+
+      // Assume that the edge does not exist
+      bool
+      exists = false;
+
+      for (size_t j = 0; j < num_new_relations; ++j) {
+        if (old_relations[i] == new_relations[j]) {
+          exists = true;
+          break;
+        }
+      }
+
+      if (exists == false) {
+        EdgeId
+        edge_id = old_relation_ords[i];
+
+        stk::mesh::Entity
+        target = old_relations[i];
+
+        get_bulk_data()->declare_relation(new_entity, target, edge_id);
       }
     }
 
-    if (exists == false) {
-      EdgeId
-      edge_id = old_relation_ords[i];
-
-      stk::mesh::Entity
-      target = old_relations[i];
-
-      get_bulk_data()->declare_relation(new_entity, target, edge_id);
-    }
   }
 
   return;
