@@ -1119,7 +1119,7 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
         dl_->dummy,
         eb_name,
         "scalar",
-        38.7e-6, // JTO: What sort of Magic is 38.7 !?!
+        5.6e-4, // JTO: What sort of Magic is 38.7 !?!
         true,
         output_flag);
     ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
@@ -2263,20 +2263,16 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<Teuchos::ParameterList*>("Molar Volume", &molar_param);
 
       //Input
-      p->set<std::string
-          >("Total Concentration Name", "Total Concentration");
+      p->set<std::string>("Total Concentration Name",totalConcentration);
       p->set<std::string>("Delta Time Name", "Delta Time");
-      p->set<std::string
-          >("Diffusion Coefficient Name", "Diffusion Coefficient");
+      p->set<std::string>("Diffusion Coefficient Name", diffusionCoefficient);
       // Output
-      p->set<std::string>("He Concentration Name", "He Concentration");
-      p->set<std::string
-          >("Total Bubble Density Name", "Total Bubble Density");
-      p->set<std::string
-          >("Bubble Volume Fraction Name", "Bubble Volume Fraction");
+      p->set<std::string>("He Concentration Name", he_concentration);
+      p->set<std::string>("Total Bubble Density Name", total_bubble_density);
+      p->set<std::string>("Bubble Volume Fraction Name", bubble_volume_fraction);
 
-      ev = Teuchos::rcp(
-          new LCM::HeliumODEs<EvalT, PHAL::AlbanyTraits>(*p, dl_));
+      ev = rcp(
+          new LCM::HeliumODEs<EvalT, AlbanyTraits>(*p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
 
       // Outputting state variables
