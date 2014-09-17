@@ -2271,8 +2271,8 @@ constructEvaluators(PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p->set<std::string>("Total Bubble Density Name", total_bubble_density);
       p->set<std::string>("Bubble Volume Fraction Name", bubble_volume_fraction);
 
-      ev = rcp(
-          new LCM::HeliumODEs<EvalT, AlbanyTraits>(*p, dl_));
+      ev = Teuchos::rcp(
+          new LCM::HeliumODEs<EvalT, PHAL::AlbanyTraits>(*p, dl_));
       fm0.template registerEvaluator<EvalT>(ev);
 
       // Outputting state variables
