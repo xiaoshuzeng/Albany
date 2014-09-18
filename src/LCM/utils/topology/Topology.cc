@@ -597,32 +597,26 @@ Connectivity
 Topology::getBoundary()
 {
   stk::mesh::EntityRank const
-  boundary_entity_rank = get_boundary_rank();
-
-  stk::mesh::Selector
-  local_part = get_local_part();
-
-  std::vector<stk::mesh::Bucket*> const &
-  buckets = get_bulk_data()->buckets(boundary_entity_rank);
+  boundary_rank = get_boundary_rank();
 
   stk::mesh::EntityVector
-  entities;
+  faces;
 
-  stk::mesh::get_selected_entities(local_part, buckets, entities);
+  stk::mesh::get_entities(*(get_bulk_data()), boundary_rank, faces);
 
   Connectivity
   connectivity;
 
   EntityVectorIndex const
-  number_entities = entities.size();
+  number_faces = faces.size();
 
-  for (EntityVectorIndex i = 0; i < number_entities; ++i) {
+  for (EntityVectorIndex i = 0; i < number_faces; ++i) {
 
     stk::mesh::Entity
-    entity = entities[i];
+    face = faces[i];
 
     size_t const
-    number_connected_cells = get_bulk_data()->num_elements(entity);
+    number_connected_cells = get_bulk_data()->num_elements(face);
 
     switch (number_connected_cells) {
 
@@ -638,7 +632,7 @@ Topology::getBoundary()
     case 1:
       {
         stk::mesh::EntityVector const
-        nodes = getBoundaryEntityNodes(entity);
+        nodes = getBoundaryEntityNodes(face);
 
         EntityVectorIndex const
         number_nodes = nodes.size();
