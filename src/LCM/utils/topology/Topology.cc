@@ -1029,6 +1029,15 @@ Topology::splitOpenFaces()
 
   bulk_data.modification_end();
 
+#if defined(DEBUG_LCM_TOPOLOGY)
+    {
+      std::string const
+      file_name = "graph-pre-surface-elements.dot";
+
+      outputToGraphviz(file_name);
+    }
+#endif // DEBUG_LCM_TOPOLOGY
+
   bulk_data.modification_begin();
 
   // Same rank as bulk cells!
@@ -1050,8 +1059,11 @@ Topology::splitOpenFaces()
   for (std::set<EntityPair>::iterator i =
       fractured_faces.begin(); i != fractured_faces.end(); ++i) {
 
-    stk::mesh::Entity face1 = i->first;
-    stk::mesh::Entity face2 = i->second;
+    stk::mesh::Entity
+    face1 = i->first;
+
+    stk::mesh::Entity
+    face2 = i->second;
 
     stk::mesh::EntityVector
     interface_points = createSurfaceElementConnectivity(face1, face2);
@@ -1069,22 +1081,15 @@ Topology::splitOpenFaces()
 
     // Connect to points
     for (EntityVectorIndex j = 0; j < interface_points.size(); ++j) {
-      stk::mesh::Entity point = interface_points[j];
 
-      bulk_data.declare_relation(new_surface, point, j);
+      stk::mesh::Entity
+      interface_point = interface_points[j];
+
+      bulk_data.declare_relation(new_surface, interface_point, j);
     }
 
     ++new_id;
   }
-
-#if defined(DEBUG_LCM_TOPOLOGY)
-    {
-      std::string const
-      file_name = "graph-surface-elements.dot";
-
-      outputToGraphviz(file_name);
-    }
-#endif // DEBUG_LCM_TOPOLOGY
 
   bulk_data.modification_end();
   return;
