@@ -599,6 +599,9 @@ Topology::getBoundary()
   stk::mesh::EntityRank const
   boundary_rank = get_boundary_rank();
 
+  stk::mesh::EntityRank const
+  cell_rank = static_cast<stk::mesh::EntityRank>(boundary_rank + 1);
+
   stk::mesh::EntityVector
   faces;
 
@@ -612,8 +615,11 @@ Topology::getBoundary()
 
   for (EntityVectorIndex i = 0; i < number_faces; ++i) {
 
-    stk::mesh::Entity
+    stk::mesh::Entity const
     face = faces[i];
+
+    stk::mesh::Entity const *
+    cell_relations = get_bulk_data()->begin(face, cell_rank);
 
     size_t const
     number_connected_cells = get_bulk_data()->num_elements(face);
@@ -630,28 +636,69 @@ Topology::getBoundary()
       break;
 
     case 1:
-      {
-        stk::mesh::EntityVector const
-        nodes = getBoundaryEntityNodes(face);
-
-        EntityVectorIndex const
-        number_nodes = nodes.size();
-
-        std::vector<stk::mesh::EntityId>
-        node_ids(number_nodes);
-
-        for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
-          node_ids[i] = get_bulk_data()->identifier(nodes[i]);
-        }
-        connectivity.push_back(node_ids);
-      }
+      // Make sure connected cell is in bulk and continue.
+      assert(is_bulk_cell(cell_relations[0]) == true);
       break;
 
     case 2:
-      // Internal face, do nothing.
+      // Two connected faces. Determine 1f one of them is a surface element.
+      {
+        stk::mesh::Entity const
+        cell_0 = cell_relations[0];
+
+        stk::mesh::Entity const
+        cell_1 = cell_relations[1];
+
+        bool const
+        is_in_bulk_0 = is_in_bulk(cell_0);
+
+        bool const
+        is_in_bulk_1 = is_in_bulk(cell_1);
+
+        bool const
+        both_bulk = is_in_bulk_0 && is_in_bulk_1;
+
+        // If internal face do nothing.
+        if (both_bulk == true) continue;
+
+        bool const
+        is_in_interface_0 = is_in_interface(cell_0);
+
+        bool const
+        is_in_interface_1 = is_in_interface(cell_1);
+
+        bool const
+        both_interface = is_in_interface_0 && is_in_interface_1;
+
+        if (both_interface == true) {
+          std::cerr << "ERROR: " << __PRETTY_FUNCTION__;
+          std::cerr << '\n';
+          std::cerr << "Cannot be connected to two surface elements: ";
+          std::cerr << "Face: " << get_bulk_data()->identifier(face);
+          std::cerr << '\n';
+          exit(1);
+        }
+
+        // One element is bulk and one interface, so it's an internal face.
+      }
       break;
 
     }
+
+    stk::mesh::EntityVector const
+    nodes = getBoundaryEntityNodes(face);
+
+    EntityVectorIndex const
+    number_nodes = nodes.size();
+
+    std::vector<stk::mesh::EntityId>
+    node_ids(number_nodes);
+
+    for (EntityVectorIndex i = 0; i < number_nodes; ++i) {
+      node_ids[i] = get_bulk_data()->identifier(nodes[i]);
+    }
+
+    connectivity.push_back(node_ids);
 
   }
 
