@@ -148,7 +148,7 @@ int main(int ac, char* av[])
 
   case LCM::fracture::ONE:
     abstract_fracture_criterion =
-        Teuchos::rcp(new LCM::FractureCriterionRandom(
+        Teuchos::rcp(new LCM::FractureCriterionOnce(
                   topology,
                   bulk_part_name,
                   interface_part_name,
@@ -157,7 +157,7 @@ int main(int ac, char* av[])
 
   case LCM::fracture::RANDOM:
     abstract_fracture_criterion =
-        Teuchos::rcp(new LCM::FractureCriterionOnce(
+        Teuchos::rcp(new LCM::FractureCriterionRandom(
                   topology,
                   bulk_part_name,
                   interface_part_name,
