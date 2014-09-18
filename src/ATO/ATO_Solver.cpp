@@ -20,10 +20,13 @@ Please remove when issue is resolved
 #include "Albany_SolverFactory.hpp"
 #include "Albany_StateInfoStruct.hpp"
 
-#define ATO_FILTER_DEBUG
-#ifdef ATO_FILTER_DEBUG
+
+//#define ATO_FILTER_ON
+#undef ATO_FILTER_ON
+// TEV: Following is for debugging filter operator.
+#ifdef ATO_FILTER_ON
 #include "EpetraExt_RowMatrixOut.h"
-#endif //ATO_FILTER_DEBUG
+#endif //ATO_FILTER_ON
 
 /******************************************************************************/
 ATO::Solver::
@@ -61,7 +64,7 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   Teuchos::ParameterList& topoParams = problemParams.get<Teuchos::ParameterList>("Topology");
   _topoCentering = topoParams.get<std::string>("Centering");
   _topoName = topoParams.get<std::string>("Topology Name");
-  _topoFilterRadius = topoParams.get<double>("Filter Radius");
+  _topoFilterRadius = topoParams.get<double>("Filter Radius",0.0);
 
   // Get and set the default Piro parameters from a file, if given
   std::string piroFilename  = problemParams.get<std::string>("Piro Defaults Filename", "");
@@ -121,7 +124,9 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   _epetra_x_map = Teuchos::rcp(new Epetra_Map( *sub_x_map ));
 
   // initialize/build the filter operator. this is built once.
+#ifdef ATO_FILTER_ON
   buildFilterOperator(_subProblems[0].app);
+#endif //ATO_FILTER_ON
 
   if( _topoCentering == "Node" ){
     // create overlap topo vector for output purposes
@@ -787,9 +792,11 @@ ATO::Solver::buildFilterOperator(const Teuchos::RCP<Albany::Application> app)
   
     filterOperator->FillComplete();
 
-#ifdef ATO_FILTER_DEBUG
+// TEV: this is debugging code for examining filteroperator. Should be commented/ifdef'd out for
+// ... final production code.
+#ifdef ATO_FILTER_ON
     EpetraExt::RowMatrixToMatlabFile("ato_filter_operator.m",*filterOperator);
-#endif //ATO_FILTER_DEBUG
+#endif //ATO_FILTER_ON
     
   /*
     int num_remote_lids = overlap_exporter.NumRemoteIDs();
@@ -805,5 +812,7 @@ ATO::Solver::buildFilterOperator(const Teuchos::RCP<Albany::Application> app)
 
 }
 
-#undef ATO_FILTER_DEBUG
+#ifdef ATO_FILTER_ON
+#undef ATO_FILTER_ON
+#endif //ATO_FILTER_ON
 
