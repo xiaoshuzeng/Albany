@@ -215,6 +215,7 @@ SET(PDE_SRCS ${PDE_SRCS}
   evaluators/PHAL_NSBodyForce.cpp
   evaluators/PHAL_NSPermeabilityTerm.cpp
   evaluators/PHAL_NSForchheimerTerm.cpp
+  evaluators/PHAL_Permittivity.cpp
   evaluators/PNP_PotentialResid.cpp
   evaluators/PNP_ConcentrationResid.cpp
   )
