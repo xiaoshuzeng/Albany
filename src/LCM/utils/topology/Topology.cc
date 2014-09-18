@@ -1069,13 +1069,22 @@ Topology::splitOpenFaces()
 
     // Connect to points
     for (EntityVectorIndex j = 0; j < interface_points.size(); ++j) {
-      stk::mesh::Entity point = points[j];
+      stk::mesh::Entity point = interface_points[j];
 
       bulk_data.declare_relation(new_surface, point, j);
     }
 
     ++new_id;
   }
+
+#if defined(DEBUG_LCM_TOPOLOGY)
+    {
+      std::string const
+      file_name = "graph-surface-elements.dot";
+
+      outputToGraphviz(file_name);
+    }
+#endif // DEBUG_LCM_TOPOLOGY
 
   bulk_data.modification_end();
   return;
