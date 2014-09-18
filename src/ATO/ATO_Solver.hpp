@@ -13,6 +13,7 @@
 #include "LOCA_Epetra.H"
 #include "Epetra_Vector.h"
 #include "Epetra_LocalMap.h"
+#include "Epetra_CrsMatrix.h"
 #include "LOCA_Epetra_ModelEvaluatorInterface.H"
 #include <NOX_Epetra_MultiVector.H>
 
@@ -77,20 +78,13 @@ namespace ATO {
 
     std::vector<int> _wsOffset;  //index offsets to map to/from workset to/from 1D array.
 
-    // optimization solver data
-    int     _optMaxIter; // maximum iterations for optimization solver
-    double  _stabilizationExponent;
-    double  _penalizationExponent;
-    double  _moveLimiter;
-    double  _volumeConstraint;
-    double  _optConvTol; // maximum iterations for optimization solver
-
     bool _is_verbose;    // verbose or not for topological optimization solver
 
     Teuchos::RCP<Aggregator> _aggregator;
     Teuchos::RCP<Optimizer> _optimizer;
     std::string _topoName;
     std::string _topoCentering;
+    double      _topoFilterRadius; // not sure if this is the best place but for now...
 
     std::vector<Teuchos::RCP<Teuchos::ParameterList> > _subProblemAppParams;
     std::vector<SolverSubSolver> _subProblems;
@@ -108,12 +102,13 @@ namespace ATO {
     Teuchos::RCP<Epetra_Import> importer;
     Teuchos::RCP<Epetra_Export> exporter;
 
+    Teuchos::RCP<Epetra_CrsMatrix> filterOperator;
 
     // methods
     void copyTopologyIntoStateMgr(const double* p, Albany::StateManager& stateMgr );
     void copyObjectiveFromStateMgr( double& f, double* dfdp );
     void zeroSet();
-    void buildFilterOperator(const Teuchos::RCP<Albany::Application> app) const;
+    void buildFilterOperator(const Teuchos::RCP<Albany::Application> app);
     Teuchos::RCP<const Teuchos::ParameterList> getValidProblemParameters() const;
     Teuchos::RCP<Teuchos::ParameterList> 
       createInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appParams, int physIndex) const;

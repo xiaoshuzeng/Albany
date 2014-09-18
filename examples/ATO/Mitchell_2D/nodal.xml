@@ -48,6 +48,7 @@
       <ParameterList name="SIMP">
         <Parameter name="Penalization Parameter" type="double" value="3.0" />
       </ParameterList>
+      <Parameter name="Filter Radius" type="double" value="1." />
     </ParameterList>
 
     <ParameterList name="Physics Problem 0">    

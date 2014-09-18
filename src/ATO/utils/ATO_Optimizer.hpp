@@ -45,7 +45,7 @@ class Optimizer
   Teuchos::RCP<const Epetra_Comm> comm;
 
   double _optConvTol;
-  double _optMaxIter;
+  int    _optMaxIter;
 
 };
 
