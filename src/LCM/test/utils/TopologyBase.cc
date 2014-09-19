@@ -129,12 +129,6 @@ int main(int ac, char* av[])
   Teuchos::RCP<LCM::AbstractFractureCriterion>
   abstract_fracture_criterion;
 
-  std::string const
-  bulk_part_name = "bulk";
-
-  std::string const
-  interface_part_name = "interface";
-
   switch (fracture_criterion) {
 
   default:
@@ -150,8 +144,6 @@ int main(int ac, char* av[])
     abstract_fracture_criterion =
         Teuchos::rcp(new LCM::FractureCriterionOnce(
                   topology,
-                  bulk_part_name,
-                  interface_part_name,
                   probability));
     break;
 
@@ -159,8 +151,6 @@ int main(int ac, char* av[])
     abstract_fracture_criterion =
         Teuchos::rcp(new LCM::FractureCriterionRandom(
                   topology,
-                  bulk_part_name,
-                  interface_part_name,
                   probability));
     break;
 

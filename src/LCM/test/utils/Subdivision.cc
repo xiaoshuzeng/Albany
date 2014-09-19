@@ -67,7 +67,9 @@ main(int ac, char* av[])
   std::cout << "Before mesh subdivision" << std::endl;
   std::cout << "***********************" << std::endl;
 
-  LCM::display_connectivity(*topology.get_bulk_data(), stk::topology::ELEMENT_RANK);
+  LCM::display_connectivity(
+      topology.get_bulk_data(),
+      stk::topology::ELEMENT_RANK);
 
   // Start the mesh update process
   // Prepares mesh for barycentric subdivision
@@ -105,11 +107,13 @@ main(int ac, char* av[])
   // Must be called each time at conclusion of mesh modification
   topology.restoreElementToNodeConnectivity();
 
-  LCM::display_connectivity(*topology.get_bulk_data(), stk::topology::ELEMENT_RANK);
+  LCM::display_connectivity(
+      topology.get_bulk_data(),
+      stk::topology::ELEMENT_RANK);
 
   std::cout << std::endl;
   std::cout << "topology.barycentricSubdivision() takes "
-	    << cpu_time_used << " seconds"<< std::endl;
+      << cpu_time_used << " seconds" << std::endl;
 
   Teuchos::RCP<Albany::AbstractDiscretization> discretization_ptr =
       topology.get_discretization();

@@ -62,18 +62,18 @@ AAdapt::TopologyMod::TopologyMod(
   beta = params->get<double>("beta");
 
   topology_ =
-    Teuchos::rcp(new LCM::Topology(discretization_));
+    Teuchos::rcp(new LCM::Topology(
+        discretization_,
+        bulk_block_name,
+        interface_block_name));
 
   fracture_criterion_ =
     Teuchos::rcp(
         new LCM::FractureCriterionTraction(
             *topology_,
-            bulk_block_name,
-            interface_block_name,
             stress_name,
             critical_traction,
-            beta)
-  );
+            beta));
 
   topology_->set_fracture_criterion(fracture_criterion_);
 }

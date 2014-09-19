@@ -31,7 +31,7 @@ Subgraph::Subgraph(
 
     // get entity rank
     stk::mesh::EntityRank
-    entity_rank = get_bulk_data()->entity_rank(entity);
+    entity_rank = get_bulk_data().entity_rank(entity);
 
     // create new local vertex
     Vertex
@@ -122,13 +122,13 @@ Subgraph::get_stk_mesh_struct()
   return get_topology().get_stk_mesh_struct();
 }
 
-stk::mesh::BulkData *
+stk::mesh::BulkData &
 Subgraph::get_bulk_data()
 {
   return get_topology().get_bulk_data();
 }
 
-stk::mesh::MetaData *
+stk::mesh::MetaData &
 Subgraph::get_meta_data()
 {
   return get_topology().get_meta_data();
@@ -221,7 +221,7 @@ Subgraph::addVertex(stk::mesh::EntityRank vertex_rank)
   stk::mesh::EntityVector
   new_entities;
 
-  get_bulk_data()->generate_new_entities(requests, new_entities);
+  get_bulk_data().generate_new_entities(requests, new_entities);
 
   stk::mesh::Entity
   entity = new_entities[0];
@@ -273,7 +273,7 @@ Subgraph::removeVertex(Vertex const vertex)
 
   // remove the entity from stk mesh
   bool const
-  deleted = get_bulk_data()->destroy_entity(entity);
+  deleted = get_bulk_data().destroy_entity(entity);
 
   assert(deleted == true);
 
@@ -296,8 +296,8 @@ Subgraph::addEdge(
   stk::mesh::Entity
   target_entity = entityFromVertex(target_vertex);
 
-  assert(get_bulk_data()->entity_rank(source_entity) -
-      get_bulk_data()->entity_rank(target_entity) == 1);
+  assert(get_bulk_data().entity_rank(source_entity) -
+      get_bulk_data().entity_rank(target_entity) == 1);
 
   // Add edge to local graph
   std::pair<Edge, bool>
@@ -307,7 +307,7 @@ Subgraph::addEdge(
   if (graph_edge.second == false) return graph_edge;
 
   // Add edge to stk mesh
-  get_bulk_data()->declare_relation(source_entity, target_entity, edge_id);
+  get_bulk_data().declare_relation(source_entity, target_entity, edge_id);
 
   // Add edge id to edge property
   EdgeNamePropertyMap
@@ -351,7 +351,7 @@ Subgraph::removeEdge(
   stk::mesh::Entity
   target_entity = entityFromVertex(target_vertex);
 
-  get_bulk_data()->destroy_relation(source_entity, target_entity, edge_id);
+  get_bulk_data().destroy_relation(source_entity, target_entity, edge_id);
 
   return;
 }
@@ -518,7 +518,7 @@ Subgraph::testArticulationPoint(
     entity = entityFromVertex(articulation_vertex);
 
     stk::mesh::BulkData &
-    bulk_data = *get_bulk_data();
+    bulk_data = get_bulk_data();
 
     std::string
     file_name = "undirected-" + entity_string(bulk_data, entity) + ".dot";
@@ -635,13 +635,13 @@ Subgraph::updateEntityPointConnectivity(
 
     // Identify relation id and remove
     stk::mesh::Entity const *
-    relations = get_bulk_data()->begin_nodes(entity);
+    relations = get_bulk_data().begin_nodes(entity);
 
     stk::mesh::ConnectivityOrdinal const *
-    ords = get_bulk_data()->begin_node_ordinals(entity);
+    ords = get_bulk_data().begin_node_ordinals(entity);
 
     size_t const
-    num_relations = get_bulk_data()->num_nodes(entity);
+    num_relations = get_bulk_data().num_nodes(entity);
 
     EdgeId
     edge_id;
@@ -659,12 +659,12 @@ Subgraph::updateEntityPointConnectivity(
 
     assert(found == true);
 
-    get_bulk_data()->destroy_relation(entity, old_point, edge_id);
+    get_bulk_data().destroy_relation(entity, old_point, edge_id);
 
     stk::mesh::Entity
     new_point = i->second;
 
-    get_bulk_data()->declare_relation(entity, new_point, edge_id);
+    get_bulk_data().declare_relation(entity, new_point, edge_id);
   }
   return;
 }
@@ -854,29 +854,29 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
   // Iterate over the out edges of the old vertex and check against the
   // out edges of the new vertex. If the edge does not exist, add.
   stk::mesh::EntityRank const
-  top_rank = get_bulk_data()->entity_rank(old_entity);
+  top_rank = get_bulk_data().entity_rank(old_entity);
 
-  assert(get_bulk_data()->entity_rank(new_entity) == top_rank);
+  assert(get_bulk_data().entity_rank(new_entity) == top_rank);
 
   for (stk::mesh::EntityRank rank = stk::topology::NODE_RANK;
       rank <= top_rank; ++rank) {
 
     stk::mesh::Entity const *
-    old_relations = get_bulk_data()->begin(old_entity, rank);
+    old_relations = get_bulk_data().begin(old_entity, rank);
 
     size_t const
-    num_old_relations = get_bulk_data()->num_connectivity(old_entity, rank);
+    num_old_relations = get_bulk_data().num_connectivity(old_entity, rank);
 
     stk::mesh::ConnectivityOrdinal const *
-    old_relation_ords = get_bulk_data()->begin_ordinals(old_entity, rank);
+    old_relation_ords = get_bulk_data().begin_ordinals(old_entity, rank);
 
     for (size_t i = 0; i < num_old_relations; ++i) {
 
       stk::mesh::Entity const *
-      new_relations = get_bulk_data()->begin(new_entity, rank);
+      new_relations = get_bulk_data().begin(new_entity, rank);
 
       size_t const
-      num_new_relations = get_bulk_data()->num_connectivity(new_entity, rank);
+      num_new_relations = get_bulk_data().num_connectivity(new_entity, rank);
 
       // Assume that the edge does not exist
       bool
@@ -896,7 +896,7 @@ Subgraph::cloneOutEdges(Vertex old_vertex, Vertex new_vertex)
         stk::mesh::Entity
         target = old_relations[i];
 
-        get_bulk_data()->declare_relation(new_entity, target, edge_id);
+        get_bulk_data().declare_relation(new_entity, target, edge_id);
       }
     }
 
@@ -957,13 +957,13 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
     entity = entityFromVertex(vertex);
 
     stk::mesh::EntityRank const
-    rank = get_bulk_data()->entity_rank(entity);
+    rank = get_bulk_data().entity_rank(entity);
 
     FractureState const
     fracture_state = get_fracture_state(entity);
 
     stk::mesh::EntityId const
-    entity_id = get_bulk_data()->identifier(entity);
+    entity_id = get_bulk_data().identifier(entity);
 
     gviz_out << dot_entity(entity, entity_id, rank, fracture_state);
 
@@ -997,10 +997,10 @@ Subgraph::outputToGraphviz(std::string const & output_filename)
       edge_id = getEdgeId(out_edge);
 
       gviz_out << dot_relation(
-          get_bulk_data()->identifier(global_source),
-          get_bulk_data()->entity_rank(global_source),
-          get_bulk_data()->identifier(global_target),
-          get_bulk_data()->entity_rank(global_target),
+          get_bulk_data().identifier(global_source),
+          get_bulk_data().entity_rank(global_source),
+          get_bulk_data().identifier(global_target),
+          get_bulk_data().entity_rank(global_target),
           edge_id);
 
     }
