@@ -63,7 +63,7 @@ int main(int ac, char* av[])
     topology(input_file,output_file);
 
   stk::mesh::BulkData&
-    bulkData = *(topology.get_bulk_data());
+    bulkData = topology.get_bulk_data();
 
   // Node rank should be 0 and element rank should be equal to the dimension of the
   // system (e.g. 2 for 2D meshes and 3 for 3D meshes)

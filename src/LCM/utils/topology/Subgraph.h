@@ -265,10 +265,10 @@ public:
   Teuchos::RCP<Albany::AbstractSTKMeshStruct> &
   get_stk_mesh_struct();
 
-  stk::mesh::BulkData *
+  stk::mesh::BulkData &
   get_bulk_data();
 
-  stk::mesh::MetaData *
+  stk::mesh::MetaData &
   get_meta_data();
 
   stk::mesh::EntityRank const
@@ -293,7 +293,7 @@ public:
   is_internal(stk::mesh::Entity e)
   {
 
-    assert(get_bulk_data()->entity_rank(e) == get_boundary_rank());
+    assert(get_bulk_data().entity_rank(e) == get_boundary_rank());
 
     Vertex
     vertex = vertexFromEntity(e);
