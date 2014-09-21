@@ -57,6 +57,8 @@ public:
   typedef typename EvalT::ScalarT ScalarT;
   typedef typename EvalT::MeshScalarT MeshScalarT;
 
+  enum SG_RF {CONSTANT, UNIFORM, LOGNORMAL};
+
   Permittivity(Teuchos::ParameterList& p);
   
   void postRegistrationSetup(typename Traits::SetupData d,
@@ -100,6 +102,8 @@ private:
   //! Convenience function to initialize permittivity based on 
   //  Truncated KL Expansion || Log Normal RF
   void init_KL_RF(std::string &type, Teuchos::ParameterList& subList, Teuchos::ParameterList& p);
+
+  SG_RF randField;
 
 };
 }

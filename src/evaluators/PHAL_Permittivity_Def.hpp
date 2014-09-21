@@ -11,12 +11,14 @@
 #include "Albany_Utils.hpp"
 
 //Radom field types
+/*
 enum SG_RF {CONSTANT, UNIFORM, LOGNORMAL};
 const int num_sg_rf = 3;
 const SG_RF sg_rf_values[] = {CONSTANT, UNIFORM, LOGNORMAL};
 const char *sg_rf_names[] = {"Constant", "Uniform", "Log-Normal"};
 
 SG_RF randField = CONSTANT;
+*/
 
 namespace PHAL {
 
@@ -26,6 +28,8 @@ Permittivity(Teuchos::ParameterList& p) :
   permittivity(p.get<std::string>("QP Variable Name"),
               p.get<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout"))
 {
+
+  randField = CONSTANT;
 
   Teuchos::ParameterList* cond_list =
     p.get<Teuchos::ParameterList*>("Parameter List");
