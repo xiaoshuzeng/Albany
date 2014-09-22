@@ -34,10 +34,15 @@ public:
   /// \brief Create mesh data structure
   ///
   /// \param[in] Albany discretization object
+  /// \param[in] Name of bulk block
+  /// \param[in] Name of interface block
   ///
   /// Use if already have an Albany mesh object
   ///
-  Topology(Teuchos::RCP<Albany::AbstractDiscretization> & discretization);
+  Topology(
+      Teuchos::RCP<Albany::AbstractDiscretization> & abstract_disc,
+      std::string const & bulk_block_name,
+      std::string const & interface_block_name);
 
   ///
   /// \brief Iterates over the boundary entities of the mesh of (all
@@ -186,8 +191,8 @@ public:
   void
   createStar(
       stk::mesh::Entity entity,
-      std::set<stk::mesh::EntityKey> & subgraph_entities,
-      std::set<stkEdge, EdgeLessThan> & subgraph_edges);
+      std::set<stk::mesh::Entity> & subgraph_entities,
+      std::set<STKEdge, EdgeLessThan> & subgraph_edges);
 
   ///
   /// \brief Fractures all open boundary entities of the mesh.
@@ -248,7 +253,7 @@ public:
   ///
   stk::mesh::EntityVector
   getEntitiesByRank(
-      stk::mesh::BulkData const & mesh,
+      stk::mesh::BulkData const & bulk_data,
       stk::mesh::EntityRank entity_rank);
 
   ///
@@ -256,7 +261,7 @@ public:
   ///
   EntityVectorIndex
   getNumberEntitiesByRank(
-      stk::mesh::BulkData const & bulk_date,
+      stk::mesh::BulkData const & bulk_data,
       stk::mesh::EntityRank entity_rank);
 
   ///
@@ -356,7 +361,7 @@ public:
   /// \brief Returns a pointer with the coordinates of a given entity
   ///
   double*
-  getPointerOfCoordinates(stk::mesh::Entity entity);
+  getEntityCoordinates(stk::mesh::Entity entity);
 
   ///
   /// \brief Returns a vector with the corresponding former boundary
@@ -575,52 +580,66 @@ public:
     return discretization_;
   }
 
-  Albany::STKDiscretization *
+  Albany::STKDiscretization &
   get_stk_discretization()
   {
-    return static_cast<Albany::STKDiscretization*>(discretization_.get());
+    return static_cast<Albany::STKDiscretization &>(
+        *(get_discretization().get()));
   }
 
-  stk::mesh::BulkData *
+  stk::mesh::BulkData &
   get_bulk_data()
   {
-    return stk_mesh_struct_->bulkData;
+    return *(get_stk_mesh_struct()->bulkData);
   }
 
-  stk::mesh::MetaData *
+  stk::mesh::MetaData &
   get_meta_data()
   {
-    return stk_mesh_struct_->metaData;
-  }
-
-  void
-  set_cell_popology(shards::CellTopology const & ct)
-  {
-    cell_topology_ = ct;
-  }
-
-  shards::CellTopology &
-  get_cell_topology()
-  {
-    return cell_topology_;
+    return *(get_stk_mesh_struct()->metaData);
   }
 
   size_t const
   get_space_dimension()
   {
-    return static_cast<size_t>(get_meta_data()->spatial_dimension());
+    return static_cast<size_t>(get_meta_data().spatial_dimension());
   }
 
   stk::mesh::EntityRank const
   get_boundary_rank()
   {
-    return get_meta_data()->side_rank();
+    return get_meta_data().side_rank();
+  }
+
+  void
+  set_bulk_block_name(std::string const & bn)
+  {
+    bulk_block_name_ = bn;
+  }
+
+  void
+  set_interface_block_name(std::string const & in)
+  {
+    interface_block_name_ = in;
+  }
+
+  std::string const &
+  get_bulk_block_name()
+  {
+    return bulk_block_name_;
+  }
+
+  std::string const &
+  get_interface_block_name()
+  {
+    return interface_block_name_;
   }
 
   IntScalarFieldType &
   get_fracture_state_field(stk::mesh::EntityRank rank)
   {
-    return *(stk_mesh_struct_->getFieldContainer()->getFractureState(rank));
+    return
+        *(get_stk_mesh_struct()->getFieldContainer()->getFractureState(rank));
   }
 
   void
@@ -636,60 +655,71 @@ public:
   }
 
   stk::mesh::Part &
-  get_fracture_bulk_part();
+  get_bulk_part()
+  {
+    return *(get_meta_data().get_part(get_bulk_block_name()));
+  }
 
   stk::mesh::Part &
-  get_fracture_interface_part();
+  get_interface_part()
+  {
+    return *(get_meta_data().get_part(get_interface_block_name()));
+  }
+
+  shards::CellTopology const &
+  get_cell_topology()
+  {
+    return get_meta_data().get_cell_topology(get_bulk_part());
+  }
 
   stk::mesh::Part &
   get_local_part()
   {
-    return get_meta_data()->locally_owned_part();
+    return get_meta_data().locally_owned_part();
   }
 
   stk::mesh::Selector
   get_local_bulk_selector()
   {
-    return stk::mesh::Selector(get_local_part() & get_fracture_bulk_part());
+    return stk::mesh::Selector(get_local_part() & get_bulk_part());
   }
 
   stk::mesh::Selector
   get_local_interface_selector()
   {
-    return stk::mesh::Selector(
-        get_local_part() & get_fracture_interface_part());
+    return stk::mesh::Selector(get_local_part() & get_interface_part());
   }
 
   bool
   is_local_entity(stk::mesh::Entity e)
   {
-    return get_bulk_data()->parallel_rank()
-        == get_bulk_data()->parallel_owner_rank(e);
+    return get_bulk_data().parallel_rank()
+        == get_bulk_data().parallel_owner_rank(e);
   }
 
   bool
   is_in_bulk(stk::mesh::Entity e)
   {
-    return get_bulk_data()->bucket(e).member(get_fracture_bulk_part());
+    return get_bulk_data().bucket(e).member(get_bulk_part());
   }
 
   bool
   is_bulk_cell(stk::mesh::Entity e)
   {
-    return (get_bulk_data()->entity_rank(e) == stk::topology::ELEMENT_RANK)
+    return (get_bulk_data().entity_rank(e) == stk::topology::ELEMENT_RANK)
         && is_in_bulk(e);
   }
 
   bool
   is_in_interface(stk::mesh::Entity e)
   {
-    return get_bulk_data()->bucket(e).member(get_fracture_interface_part());
+    return get_bulk_data().bucket(e).member(get_interface_part());
   }
 
   bool
   is_interface_cell(stk::mesh::Entity e)
   {
-    return (get_bulk_data()->entity_rank(e) == stk::topology::ELEMENT_RANK)
+    return (get_bulk_data().entity_rank(e) == stk::topology::ELEMENT_RANK)
         && is_in_interface(e);
   }
 
@@ -699,7 +729,7 @@ public:
   void
   set_fracture_state(stk::mesh::Entity e, FractureState const fs)
   {
-    stk::mesh::EntityRank const rank = get_bulk_data()->entity_rank(e);
+    stk::mesh::EntityRank const rank = get_bulk_data().entity_rank(e);
     if (rank < stk::topology::ELEMENT_RANK) {
       *(stk::mesh::field_data(get_fracture_state_field(rank), e)) =
           static_cast<int>(fs);
@@ -712,7 +742,7 @@ public:
   FractureState
   get_fracture_state(stk::mesh::Entity e)
   {
-    stk::mesh::EntityRank const rank = get_bulk_data()->entity_rank(e);
+    stk::mesh::EntityRank const rank = get_bulk_data().entity_rank(e);
     return
     rank >= stk::topology::ELEMENT_RANK ?
         CLOSED :
@@ -725,10 +755,10 @@ public:
   is_internal(stk::mesh::Entity e)
   {
 
-    assert(get_bulk_data()->entity_rank(e) == get_boundary_rank());
+    assert(get_bulk_data().entity_rank(e) == get_boundary_rank());
 
     size_t const
-    number_in_edges = get_bulk_data()->num_elements(e);
+    number_in_edges = get_bulk_data().num_elements(e);
 
     assert(number_in_edges == 1 || number_in_edges == 2);
 
@@ -785,20 +815,17 @@ private:
   std::vector<stk::mesh::EntityVector>
   connectivity_;
 
-  std::map<int, int>
-  element_global_to_local_ids_;
-
   std::set<EntityPair>
   fractured_faces_;
 
   std::vector<int>
   highest_ids_;
 
-  /// \attention Topology of elements in mesh. Only valid if one
-  ///            element type used.  Will not give correct results
-  ///            if mesh has multiple element types.
-  shards::CellTopology
-  cell_topology_;
+  std::string
+  bulk_block_name_;
+
+  std::string
+  interface_block_name_;
 
   /// Pointer to failure criterion object
   Teuchos::RCP<AbstractFractureCriterion>

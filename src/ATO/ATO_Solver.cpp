@@ -22,12 +22,20 @@ Please remove when issue is resolved
 
 #include "ATO_TopoTools.hpp"
 
+//#define ATO_FILTER_ON
+#undef ATO_FILTER_ON
+
+// TEV: Following is for debugging filter operator.
+#ifdef ATO_FILTER_ON
+#include "EpetraExt_RowMatrixOut.h"
+#endif //ATO_FILTER_ON
+
 /******************************************************************************/
 ATO::Solver::
 Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
        const Teuchos::RCP<const Epetra_Comm>& comm,
        const Teuchos::RCP<const Epetra_Vector>& initial_guess)
-: _solverComm(comm), _mainAppParams(appParams)
+: _solverComm(comm), _mainAppParams(appParams), filterOperator(Teuchos::null)
 /******************************************************************************/
 {
   zeroSet();
@@ -58,6 +66,7 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   Teuchos::ParameterList& topoParams = problemParams.get<Teuchos::ParameterList>("Topology");
   ATO::TopologyFactory topoFactory;
   _topology = topoFactory.create(topoParams);
+  _topoFilterRadius = topoParams.get<double>("Filter Radius",0.0);
 
   // Get and set the default Piro parameters from a file, if given
   std::string piroFilename  = problemParams.get<std::string>("Piro Defaults Filename", "");
@@ -116,8 +125,13 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   TEUCHOS_TEST_FOR_EXCEPT( sub_x_map == Teuchos::null );
   _epetra_x_map = Teuchos::rcp(new Epetra_Map( *sub_x_map ));
 
-//  if( _topoCentering == "Node" ){
   if( _topology->getCentering() == "Node" ){
+
+#ifdef ATO_FILTER_ON
+    // initialize/build the filter operator. this is built once.
+    buildFilterOperator(_subProblems[0].app);
+#endif //ATO_FILTER_ON
+
     // create overlap topo vector for output purposes
     Albany::StateManager& stateMgr = _subProblems[0].app->getStateMgr();
     Teuchos::RCP<const Epetra_BlockMap> 
@@ -715,4 +729,125 @@ ATO::Solver::CreateSubSolverData(const ATO::SolverSubSolver& sub) const
 
   return ret;
 }
+
+/******************************************************************************/
+void
+ATO::Solver::buildFilterOperator(const Teuchos::RCP<Albany::Application> app)
+/******************************************************************************/
+{
+
+
+  if( _topology->getCentering() == "Node" ){
+
+    Teuchos::RCP<Adapt::NodalDataBlock> node_data = app->getStateMgr().getNodalDataBlock();
+
+    // create exporter
+    Teuchos::RCP<const Epetra_Comm> comm             = app->getComm();
+    Teuchos::RCP<const Epetra_BlockMap>  local_node_blockmap   = node_data->getLocalMap();
+    Teuchos::RCP<const Epetra_BlockMap>  overlap_node_blockmap = node_data->getOverlapMap();
+  
+    // construct simple maps for node ids. 
+    int num_global_elements = local_node_blockmap->NumGlobalElements();
+    int num_my_elements     = local_node_blockmap->NumMyElements();
+    int *global_node_ids    = new int[num_my_elements]; 
+    local_node_blockmap->MyGlobalElements(global_node_ids);
+    Epetra_Map local_node_map(num_global_elements,num_my_elements,global_node_ids,0,*comm);
+    delete [] global_node_ids;
+  
+    num_global_elements = overlap_node_blockmap->NumGlobalElements();
+    num_my_elements     = overlap_node_blockmap->NumMyElements();
+    global_node_ids    = new int[num_my_elements]; 
+    overlap_node_blockmap->MyGlobalElements(global_node_ids);
+    Epetra_Map overlap_node_map(num_global_elements,num_my_elements,global_node_ids,0,*comm);
+    delete [] global_node_ids;
+  
+    Epetra_Export exporter = Epetra_Export(overlap_node_map, local_node_map);
+  
+    const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type&
+          wsElNodeID = app->getDiscretization()->getWsElNodeID();
+  
+    const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<double*> > >::type&
+      coords = app->getDiscretization()->getCoords();
+  
+    std::map< int, std::set<int> > neighbors;
+  
+    double filter_radius_sqrd = _topoFilterRadius*_topoFilterRadius;
+    // awful n^2 search... all against all
+    size_t dimension   = app->getDiscretization()->getNumDim();
+    double *home_coord = new double[dimension];
+    size_t num_worksets = coords.size();
+    for (size_t home_ws=0; home_ws<num_worksets; home_ws++) {
+      int home_num_cells = coords[home_ws].size();
+      for (int home_cell=0; home_cell<home_num_cells; home_cell++) {
+        size_t num_nodes = coords[home_ws][home_cell].size();
+        for (int home_node=0; home_node<num_nodes; home_node++) {
+          int home_node_gid = wsElNodeID[home_ws][home_cell][home_node];
+          if(neighbors.find(home_node_gid)==neighbors.end()) {  // if this node was already accessed just skip
+            for (int dim=0; dim<dimension; dim++)  {
+              home_coord[dim] = coords[home_ws][home_cell][home_node][dim];
+            }
+            std::set<int> my_neighbors;
+            for (size_t trial_ws=0; trial_ws<num_worksets; trial_ws++) {
+              int trial_num_cells = coords[trial_ws].size();
+              for (int trial_cell=0; trial_cell<trial_num_cells; trial_cell++) {
+                size_t trial_num_nodes = coords[trial_ws][trial_cell].size();
+                for (int trial_node=0; trial_node<trial_num_nodes; trial_node++) {
+                  double tmp;
+                  double delta_norm_sqr = 0.;
+                  for (int dim=0; dim<dimension; dim++)  { //individual coordinates
+                    tmp = home_coord[dim]-coords[trial_ws][trial_cell][trial_node][dim];
+                    delta_norm_sqr += tmp*tmp;
+                  }
+                  if(delta_norm_sqr<=filter_radius_sqrd) {
+                    int trial_node_gid = wsElNodeID[trial_ws][trial_cell][trial_node];
+                    my_neighbors.insert(trial_node_gid);
+                  }
+                }
+              }
+            }
+            neighbors.insert( std::pair<int,std::set<int> >(home_node_gid,my_neighbors) );
+          }
+        }
+      }
+    }
+    delete [] home_coord;
+  
+    // now build filter operator
+    int numnonzeros = 0;
+    filterOperator = Teuchos::rcp(new Epetra_CrsMatrix(Copy,overlap_node_map,numnonzeros));
+    for (std::map<int,std::set<int> >::iterator it=neighbors.begin(); it!=neighbors.end(); ++it) { 
+      int home_node_gid = it->first;
+      std::set<int> connected_nodes = it->second;
+      for (std::set<int>::iterator set_it=connected_nodes.begin(); set_it!=connected_nodes.end(); ++set_it) {
+         double value = 1.;
+         int neighbor_node_gid = *set_it;
+         filterOperator->InsertGlobalValues(home_node_gid,1,&value,&neighbor_node_gid);
+      }
+    }
+  
+    filterOperator->FillComplete();
+
+// TEV: this is debugging code for examining filteroperator. Should be commented/ifdef'd out for
+// ... final production code.
+#ifdef ATO_FILTER_ON
+    EpetraExt::RowMatrixToMatlabFile("ato_filter_operator.m",*filterOperator);
+#endif //ATO_FILTER_ON
+    
+  /*
+    int num_remote_lids = overlap_exporter.NumRemoteIDs();
+    int *remote_lids = new int[num_remote_lids];
+    remote_lids = overlap_exporter.RemoteLIDs();
+    delete [] remote_lids;
+  */
+  } else {
+    // Element centered filter
+  }
+  
+  return;
+
+}
+
+#ifdef ATO_FILTER_ON
+#undef ATO_FILTER_ON
+#endif //ATO_FILTER_ON
 

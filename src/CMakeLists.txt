@@ -215,6 +215,7 @@ SET(PDE_SRCS ${PDE_SRCS}
   evaluators/PHAL_NSBodyForce.cpp
   evaluators/PHAL_NSPermeabilityTerm.cpp
   evaluators/PHAL_NSForchheimerTerm.cpp
+  evaluators/PHAL_Permittivity.cpp
   evaluators/PNP_PotentialResid.cpp
   evaluators/PNP_ConcentrationResid.cpp
   )
@@ -521,18 +522,17 @@ include_directories (${Trilinos_INCLUDE_DIRS}
 link_directories (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS}
   ${FMDB_LIBRARY_DIR})
 
-IF ( NLOPT )
-  include_directories (${NLOPT_INCLUDE_DIR})
-  link_directories (${NLOPT_LIBRARY_DIR})
-  set(NLOPT_LIB nlopt)
+IF ( ENABLE_NLopt )
+  include_directories (${NLopt_INCLUDE_DIR})
+  link_directories (${NLopt_LIBRARY_DIR})
+  set(NLopt_LIB nlopt)
 ELSE()
-  set(NLOPT_LIB )
+  set(NLopt_LIB )
 ENDIF()
 
-IF ( WITH_DOTK )
+IF ( ENABLE_DOTK )
   include_directories (${DOTK_INCLUDE_DIR})
   link_directories (${DOTK_LIBRARY_DIR})
-  message("Adding DOTk")
 #  set(DOTK_LIB dotk)
   set(DOTK_LIB )
 ELSE()
@@ -653,7 +653,7 @@ set(ALL_LIBRARIES
   ${ALB_TRILINOS_LIBS}
   ${ALB_CUBIT_LIBS}
   ${LAME_LIB}
-  ${NLOPT_LIB}
+  ${NLopt_LIB}
   ${DOTK_LIB}
   ${LAMENT_LIB}
   ${Peridigm_LIBRARIES}

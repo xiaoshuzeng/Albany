@@ -4,8 +4,8 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
-#ifndef PHAL_THERMAL_CONDUCTIVITY_HPP
-#define PHAL_THERMAL_CONDUCTIVITY_HPP
+#ifndef PHAL_PERMITTIVITY_HPP
+#define PHAL_PERMITTIVITY_HPP
 
 #include "Phalanx_ConfigDefs.hpp"
 #include "Phalanx_Evaluator_WithBaseImpl.hpp"
@@ -22,33 +22,33 @@
 
 namespace PHAL {
 /** 
- * \brief Evaluates thermal conductivity, either as a constant or a truncated
+ * \brief Evaluates permittivity, either as a constant or a truncated
  * KL expansion.
 
 This class may be used in two ways. 
 
-1. The simplest is to use a constant thermal conductivity across the entire domain (one element block,
+1. The simplest is to use a constant permittivity across the entire domain (one element block,
 one material), say with a value of 5.0. In this case, one would declare at the "Problem" level, that a 
-constant thermal conductivity was being used, and its value was 5.0:
+constant permittivity was being used, and its value was 5.0:
 
 <ParameterList name="Problem">
    ...
-    <ParameterList name="Thermal Conductivity">
-       <Parameter name="Thermal Conductivity Type" type="string" value="Constant"/>
+    <ParameterList name="Permittivity">
+       <Parameter name="Permittivity Type" type="string" value="Constant"/>
        <Parameter name="Value" type="double" value="5.0"/>
     </ParameterList>
 </ParameterList>
 
-An example of this is test problem is SteadyHeat2DInternalNeumann
+An example of this is test problem is PNP
 
 2. The other extreme is to have a multiple element block problem, say 3, with each element block corresponding
 to a material. Each element block has its own field manager, and different evaluators are used in each element
-block. See the test problem Heat2DMMCylWithSource for an example of this use case.
+block.
 
  */
 
 template<typename EvalT, typename Traits>
-class ThermalConductivity : 
+class Permittivity : 
   public PHX::EvaluatorWithBaseImpl<Traits>,
   public PHX::EvaluatorDerived<EvalT, Traits>,
   public Sacado::ParameterAccessor<EvalT, SPL_Traits> {
@@ -59,7 +59,7 @@ public:
 
   enum SG_RF {CONSTANT, UNIFORM, LOGNORMAL};
 
-  ThermalConductivity(Teuchos::ParameterList& p);
+  Permittivity(Teuchos::ParameterList& p);
   
   void postRegistrationSetup(typename Traits::SetupData d,
 			     PHX::FieldManager<Traits>& vm);
@@ -70,18 +70,18 @@ public:
 
 private:       
 
-//! Validate the name strings under "Thermal Conductivity" section in xml input file, 
+//! Validate the name strings under "Permittivity" section in xml input file, 
   Teuchos::RCP<const Teuchos::ParameterList>
-               getValidThermalCondParameters() const;
+               getValidPermittivityParameters() const;
 
   bool is_constant;
 
   std::size_t numQPs;
   std::size_t numDims;
   PHX::MDField<MeshScalarT,Cell,QuadPoint,Dim> coordVec;
-  PHX::MDField<ScalarT,Cell,QuadPoint> thermalCond;
+  PHX::MDField<ScalarT,Cell,QuadPoint> permittivity;
 
-  //! Conductivity type
+  //! Permittivity type
   std::string type; 
 
   //! Constant value
@@ -93,13 +93,13 @@ private:
   //! Values of the random variables
   Teuchos::Array<ScalarT> rv;
 
-  //! Material database - holds thermal conductivity among other quantities
+  //! Material database - holds permittivity among other quantities
   Teuchos::RCP<QCAD::MaterialDatabase> materialDB;
 
-  //! Convenience function to initialize constant thermal conductivity
+  //! Convenience function to initialize constant permittivity
   void init_constant(ScalarT value, Teuchos::ParameterList& p);
 
-  //! Convenience function to initialize thermal conductivity based on 
+  //! Convenience function to initialize permittivity based on 
   //  Truncated KL Expansion || Log Normal RF
   void init_KL_RF(std::string &type, Teuchos::ParameterList& subList, Teuchos::ParameterList& p);
 

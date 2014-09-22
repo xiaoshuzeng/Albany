@@ -86,8 +86,8 @@ TensorFieldType;
 
 // Specific to topological manipulation
 typedef std::pair<stk::mesh::Entity, stk::mesh::Entity> EntityPair;
-typedef std::map<Vertex, size_t> ComponentMap;
-typedef std::map<stk::mesh::Entity, stk::mesh::Entity> ElementNodeMap;
+typedef std::map<Vertex, size_t> VertexComponentMap;
+typedef std::map<stk::mesh::Entity, stk::mesh::Entity> EntityEntityMap;
 
 enum FractureState
 {
@@ -113,10 +113,10 @@ enum VTKCellType
 ///
 /// Used to create edges from the stk mesh object in a boost graph
 ///
-struct stkEdge
+struct STKEdge
 {
-  stk::mesh::EntityKey source;
-  stk::mesh::EntityKey target;
+  stk::mesh::Entity source;
+  stk::mesh::Entity target;
   EdgeId local_id;
 };
 
@@ -125,12 +125,15 @@ struct stkEdge
 ///
 struct EdgeLessThan
 {
-  bool operator()(stkEdge const & a, stkEdge const & b) const
-      {
+  bool operator()(STKEdge const & a, STKEdge const & b) const
+  {
     if (a.source < b.source) return true;
-    if (a.source > b.source) return false;
-    // source a and b are the same - check target
-    return (a.target < b.target);
+
+    // stk::mesh::Entity does not have operator>() (!),
+    // thus check for equality next.
+    if (a.source == b.source) return (a.target < b.target);
+
+    return false;
   }
 };
 

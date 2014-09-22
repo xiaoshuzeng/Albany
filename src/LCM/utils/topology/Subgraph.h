@@ -37,34 +37,34 @@ public:
   ///
   Subgraph(
       Topology & topology,
-      std::set<stk::mesh::EntityKey>::iterator first_vertex,
-      std::set<stk::mesh::EntityKey>::iterator last_vertex,
-      std::set<stkEdge>::iterator first_edge,
-      std::set<stkEdge>::iterator last_edge);
+      std::set<stk::mesh::Entity>::iterator first_entity,
+      std::set<stk::mesh::Entity>::iterator last_entity,
+      std::set<STKEdge>::iterator first_edge,
+      std::set<STKEdge>::iterator last_edge);
 
   ///
   ///\brief Map a vertex in the subgraph to a entity in the stk mesh.
   ///
   ///\param[in] Vertex in the subgraph
-  ///\return Global entity key for the stk mesh
+  ///\return Global entity for the stk mesh
   ///
-  ///Return the global entity key (in the stk mesh) given a local
+  ///Return the global entity (in the stk mesh) given a local
   ///subgraph vertex (in the boost subgraph).
   ///
-  stk::mesh::EntityKey
-  localToGlobal(Vertex local_vertex);
+  stk::mesh::Entity
+  entityFromVertex(Vertex vertex);
 
   ///
   ///\brief Map a entity in the stk mesh to a vertex in the subgraph.
   ///
-  ///\param[in] Global entity key for the stk mesh
+  ///\param[in] Global entity for the stk mesh
   ///\return Vertex in the subgraph
   ///
-  ///Return local vertex (in the boost graph) given global entity key (in the
+  ///Return local vertex (in the boost graph) given global entity (in the
   ///  stk mesh).
   ///
   Vertex
-  globalToLocal(stk::mesh::EntityKey global_vertex_key);
+  vertexFromEntity(stk::mesh::Entity entity);
 
   ///
   ///\brief Add a vertex in the subgraph.
@@ -110,8 +110,8 @@ public:
   std::pair<Edge, bool>
   addEdge(
       EdgeId const edge_id,
-      Vertex const local_source_vertex,
-      Vertex const local_target_vertex);
+      Vertex const source_vertex,
+      Vertex const target_vertex);
 
   ///
   /// \brief Remove edge from graph
@@ -124,8 +124,8 @@ public:
   ///
   void
   removeEdge(
-      Vertex const & local_source_vertex,
-      Vertex const & local_target_vertex);
+      Vertex const source_vertex,
+      Vertex const target_vertex);
 
   ///
   /// \param[in] Vertex in subgraph
@@ -164,9 +164,9 @@ public:
   ///
   void
   testArticulationPoint(
-      Vertex const input_vertex,
+      Vertex const articulation_vertex,
       size_t & number_components,
-      ComponentMap & component_map);
+      VertexComponentMap & vertex_component_map);
 
   ///
   /// \brief Clones a boundary entity from the subgraph and separates
@@ -184,7 +184,7 @@ public:
   /// in edge: Return.
   ///
   Vertex
-  cloneBoundaryEntity(Vertex vertex);
+  cloneBoundaryVertex(Vertex vertex);
 
   ///
   /// Restore element to node connectivity needed by STK.
@@ -192,7 +192,9 @@ public:
   /// was replaced by a new point.
   ///
   void
-  updateElementNodeConnectivity(stk::mesh::Entity point, ElementNodeMap & map);
+  updateEntityPointConnectivity(
+      stk::mesh::Entity old_point,
+      EntityEntityMap & entity_new_point_map);
 
   ///
   /// \brief Splits an articulation point.
@@ -214,7 +216,7 @@ public:
   /// the new node. If the nodal connectivity of an element does not
   /// change, do not add to the map.
   ///
-  std::map<stk::mesh::Entity, stk::mesh::Entity>
+  EntityEntityMap
   splitArticulation(Vertex vertex);
 
   ///
@@ -263,10 +265,10 @@ public:
   Teuchos::RCP<Albany::AbstractSTKMeshStruct> &
   get_stk_mesh_struct();
 
-  stk::mesh::BulkData *
+  stk::mesh::BulkData &
   get_bulk_data();
 
-  stk::mesh::MetaData *
+  stk::mesh::MetaData &
   get_meta_data();
 
   stk::mesh::EntityRank const
@@ -291,10 +293,10 @@ public:
   is_internal(stk::mesh::Entity e)
   {
 
-    assert(get_bulk_data()->entity_rank(e) == get_boundary_rank());
+    assert(get_bulk_data().entity_rank(e) == get_boundary_rank());
 
     Vertex
-    vertex = globalToLocal(get_bulk_data()->entity_key(e));
+    vertex = vertexFromEntity(e);
 
     boost::graph_traits<Graph>::degree_size_type
     number_in_edges = boost::in_degree(vertex, *this);
@@ -303,6 +305,12 @@ public:
 
     return number_in_edges == 2;
   }
+
+  ///
+  /// Auxiliary types
+  ///
+  typedef std::map<Vertex, stk::mesh::Entity> VertexEntityMap;
+  typedef std::map<stk::mesh::Entity, Vertex> EntityVertexMap;
 
 private:
 
@@ -321,14 +329,16 @@ private:
   topology_;
 
   ///
-  /// map local vertex -> global entity key
+  /// map local vertex -> global entity
   ///
-  std::map<Vertex, stk::mesh::EntityKey> local_global_vertex_map_;
+  VertexEntityMap
+  vertex_entity_map_;
 
   ///
-  /// map global entity key -> local vertex
+  /// map global entity -> local vertex
   ///
-  std::map<stk::mesh::EntityKey, Vertex> global_local_vertex_map_;
+  EntityVertexMap
+  entity_vertex_map_;
 };
 // class Subgraph
 

@@ -44,7 +44,7 @@ HeliumODEs(Teuchos::ParameterList& p,
   t_decay_constant_ = mat_params_2->get<RealType>("Tritium Decay Constant");
   he_radius_ = mat_params_2->get<RealType>("Helium Radius");
   eta_ = mat_params_2->get<RealType>("Atoms Per Cluster");
-  omega_ = mat_params_3->get<RealType>("Molar Volume");
+  omega_ = mat_params_3->get<RealType>("Value");
 
   // add dependent fields
   this->addDependentField(total_concentration_);

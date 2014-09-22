@@ -23,9 +23,9 @@ SG_RF randField = CONSTANT;
 namespace PHAL {
 
 template<typename EvalT, typename Traits>
-ThermalConductivity<EvalT, Traits>::
-ThermalConductivity(Teuchos::ParameterList& p) :
-  thermalCond(p.get<std::string>("QP Variable Name"),
+Permittivity<EvalT, Traits>::
+Permittivity(Teuchos::ParameterList& p) :
+  permittivity(p.get<std::string>("QP Variable Name"),
               p.get<Teuchos::RCP<PHX::DataLayout> >("QP Scalar Data Layout"))
 {
 
@@ -35,7 +35,7 @@ ThermalConductivity(Teuchos::ParameterList& p) :
     p.get<Teuchos::ParameterList*>("Parameter List");
 
   Teuchos::RCP<const Teuchos::ParameterList> reflist =
-    this->getValidThermalCondParameters();
+    this->getValidPermittivityParameters();
 
   // Check the parameters contained in the input file. Do not check the defaults
   // set programmatically
@@ -52,7 +52,7 @@ ThermalConductivity(Teuchos::ParameterList& p) :
   std::string ebName =
     p.get<std::string>("Element Block Name", "Missing");
 
-  type = cond_list->get("Thermal Conductivity Type", "Constant");
+  type = cond_list->get("Permittivity Type", "Constant");
 
   if (type == "Constant") {
 
@@ -79,15 +79,15 @@ ThermalConductivity(Teuchos::ParameterList& p) :
          true, Teuchos::Exceptions::InvalidParameter,
          std::endl <<
          "Error! Must specify a material database if using block dependent " <<
-         "thermal conductivity" << std::endl);
+         "permittivity" << std::endl);
     }
 
-    // Get the sublist for thermal conductivity for the element block in the mat DB (the material in the
+    // Get the sublist for permittivity for the element block in the mat DB (the material in the
     // elem block ebName.
 
-    Teuchos::ParameterList& subList = materialDB->getElementBlockSublist(ebName, "Thermal Conductivity");
+    Teuchos::ParameterList& subList = materialDB->getElementBlockSublist(ebName, "Permittivity");
 
-    std::string typ = subList.get("Thermal Conductivity Type", "Constant");
+    std::string typ = subList.get("Permittivity Type", "Constant");
 
     if (typ == "Constant") {
 
@@ -104,16 +104,16 @@ ThermalConductivity(Teuchos::ParameterList& p) :
 
   else {
     TEUCHOS_TEST_FOR_EXCEPTION(true, Teuchos::Exceptions::InvalidParameter,
-                       "Invalid thermal conductivity type " << type);
+                       "Invalid permittivity type " << type);
   }
 
-  this->addEvaluatedField(thermalCond);
-  this->setName("Thermal Conductivity"+PHX::TypeString<EvalT>::value);
+  this->addEvaluatedField(permittivity);
+  this->setName("Permittivity"+PHX::TypeString<EvalT>::value);
 }
 
 template<typename EvalT, typename Traits>
 void
-ThermalConductivity<EvalT, Traits>::
+Permittivity<EvalT, Traits>::
 init_constant(ScalarT value, Teuchos::ParameterList& p){
 
     is_constant = true;
@@ -121,18 +121,18 @@ init_constant(ScalarT value, Teuchos::ParameterList& p){
 
     constant_value = value;
 
-    // Add thermal conductivity as a Sacado-ized parameter
+    // Add permittivity as a Sacado-ized parameter
     Teuchos::RCP<ParamLib> paramLib =
       p.get< Teuchos::RCP<ParamLib> >("Parameter Library", Teuchos::null);
 
     new Sacado::ParameterRegistration<EvalT, SPL_Traits>(
-      "Thermal Conductivity", this, paramLib);
+      "Permittivity", this, paramLib);
 
 } // init_constant
 
 template<typename EvalT, typename Traits>
 void
-ThermalConductivity<EvalT, Traits>::
+Permittivity<EvalT, Traits>::
 init_KL_RF(std::string &type, Teuchos::ParameterList& sublist, Teuchos::ParameterList& p){
 
     is_constant = false;
@@ -160,7 +160,7 @@ init_KL_RF(std::string &type, Teuchos::ParameterList& sublist, Teuchos::Paramete
     Teuchos::RCP<ParamLib> paramLib =
       p.get< Teuchos::RCP<ParamLib> >("Parameter Library", Teuchos::null);
     for (int i=0; i<num_KL; i++) {
-      std::string ss = Albany::strint("Thermal Conductivity KL Random Variable",i);
+      std::string ss = Albany::strint("Permittivity KL Random Variable",i);
       new Sacado::ParameterRegistration<EvalT, SPL_Traits>(ss, this, paramLib);
       rv[i] = sublist.get(ss, 0.0);
     }
@@ -169,24 +169,24 @@ init_KL_RF(std::string &type, Teuchos::ParameterList& sublist, Teuchos::Paramete
 
 // **********************************************************************
 template<typename EvalT, typename Traits>
-void ThermalConductivity<EvalT, Traits>::
+void Permittivity<EvalT, Traits>::
 postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& fm)
 {
-  this->utils.setFieldData(thermalCond,fm);
+  this->utils.setFieldData(permittivity,fm);
   if (!is_constant)
       this->utils.setFieldData(coordVec,fm);
 }
 
 // **********************************************************************
 template<typename EvalT, typename Traits>
-void ThermalConductivity<EvalT, Traits>::
+void Permittivity<EvalT, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
   if (is_constant) {
     for (std::size_t cell=0; cell < workset.numCells; ++cell) {
       for (std::size_t qp=0; qp < numQPs; ++qp) {
-         thermalCond(cell,qp) = constant_value;
+         permittivity(cell,qp) = constant_value;
       }
     }
   }
@@ -198,9 +198,9 @@ evaluateFields(typename Traits::EvalData workset)
           for (std::size_t i=0; i<numDims; i++)
               point[i] = Sacado::ScalarValue<MeshScalarT>::eval(coordVec(cell,qp,i));
           if (randField == UNIFORM)
-              thermalCond(cell,qp) = exp_rf_kl->evaluate(point, rv);
+              permittivity(cell,qp) = exp_rf_kl->evaluate(point, rv);
           else if (randField == LOGNORMAL)
-              thermalCond(cell,qp) = std::exp(exp_rf_kl->evaluate(point, rv));
+              permittivity(cell,qp) = std::exp(exp_rf_kl->evaluate(point, rv));
       }
     }
   }
@@ -208,35 +208,35 @@ evaluateFields(typename Traits::EvalData workset)
 
 // **********************************************************************
 template<typename EvalT,typename Traits>
-typename ThermalConductivity<EvalT,Traits>::ScalarT&
-ThermalConductivity<EvalT,Traits>::getValue(const std::string &n)
+typename Permittivity<EvalT,Traits>::ScalarT&
+Permittivity<EvalT,Traits>::getValue(const std::string &n)
 {
   if (is_constant) {
     return constant_value;
   }
 
   for (int i=0; i<rv.size(); i++) {
-    if (n == Albany::strint("Thermal Conductivity KL Random Variable",i))
+    if (n == Albany::strint("Permittivity KL Random Variable",i))
       return rv[i];
   }
   TEUCHOS_TEST_FOR_EXCEPTION(true, Teuchos::Exceptions::InvalidParameter,
                      std::endl <<
                      "Error! Logic error in getting paramter " << n
-                     << " in ThermalConductivity::getValue()" << std::endl);
+                     << " in Permittivity::getValue()" << std::endl);
   return constant_value;
 }
 
 // **********************************************************************
 template<typename EvalT,typename Traits>
 Teuchos::RCP<const Teuchos::ParameterList>
-ThermalConductivity<EvalT,Traits>::getValidThermalCondParameters() const
+Permittivity<EvalT,Traits>::getValidPermittivityParameters() const
 {
   Teuchos::RCP<Teuchos::ParameterList> validPL =
-       rcp(new Teuchos::ParameterList("Valid Thermal Conductivity Params"));;
+       rcp(new Teuchos::ParameterList("Valid Permittivity Params"));;
 
-  validPL->set<std::string>("Thermal Conductivity Type", "Constant",
-               "Constant thermal conductivity across the entire domain");
-  validPL->set<double>("Value", 1.0, "Constant thermal conductivity value");
+  validPL->set<std::string>("Permittivity Type", "Constant",
+               "Constant permittivity across the entire domain");
+  validPL->set<double>("Value", 1.0, "Constant permittivity value");
 
 // Truncated KL parameters
 

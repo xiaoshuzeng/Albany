@@ -24,26 +24,26 @@
 namespace LCM {
 
 ///
+/// Useful to distinguish among different partitioning schemes.
+///
+namespace fracture {
+
+  enum Criterion {
+    UNKNOWN,
+    ONE,
+    RANDOM,
+    TRACTION};
+
+}
+
+///
 /// Base class for fracture criteria
 ///
 class AbstractFractureCriterion {
 
 public:
 
-  AbstractFractureCriterion(
-      Topology & topology,
-      std::string const & bulk_block_name,
-      std::string const & interface_block_name) :
-      topology_(topology),
-      bulk_block_name_(bulk_block_name),
-      interface_block_name_(interface_block_name),
-      stk_discretization_(*(topology.get_stk_discretization())),
-      stk_mesh_struct_(*(stk_discretization_.getSTKMeshStruct())),
-      bulk_data_(*(stk_mesh_struct_.bulkData)),
-      meta_data_(*(stk_mesh_struct_.metaData)),
-      dimension_(stk_mesh_struct_.numDim),
-      bulk_part_(*(meta_data_.get_part(bulk_block_name))),
-      interface_part_(*(meta_data_.get_part(interface_block_name)))
+  AbstractFractureCriterion(Topology & topology) : topology_(topology)
   {
   }
 
@@ -65,88 +65,67 @@ public:
   std::string const &
   get_bulk_block_name()
   {
-    return bulk_block_name_;
+    return get_topology().get_bulk_block_name();
   }
 
   std::string const &
   get_interface_block_name()
   {
-    return interface_block_name_;
+    return get_topology().get_interface_block_name();
   }
 
   Albany::STKDiscretization &
   get_stk_discretization()
   {
-    return stk_discretization_;
+    return get_topology().get_stk_discretization();
   }
 
   Albany::AbstractSTKMeshStruct const &
   get_stk_mesh_struct()
   {
-    return stk_mesh_struct_;
+    return *(get_topology().get_stk_mesh_struct());
   }
 
   stk::mesh::BulkData const &
   get_bulk_data()
   {
-    return bulk_data_;
+    return get_topology().get_bulk_data();
   }
 
   stk::mesh::MetaData const &
   get_meta_data()
   {
-    return meta_data_;
+    return get_topology().get_meta_data();
   }
 
   Intrepid::Index
-  get_dimension()
+  get_space_dimension()
   {
-    return dimension_;
+    return get_topology().get_space_dimension();
   }
 
   stk::mesh::Part &
   get_bulk_part()
   {
-    return bulk_part_;
+    return get_topology().get_bulk_part();
   }
 
   stk::mesh::Part &
   get_interface_part()
   {
-    return interface_part_;
+    return get_topology().get_interface_part();
+  }
+
+  shards::CellTopology const &
+  get_cell_topology()
+  {
+    return get_topology().get_cell_topology();
   }
 
 protected:
 
   Topology &
   topology_;
-
-  std::string
-  bulk_block_name_;
-
-  std::string
-  interface_block_name_;
-
-  Albany::STKDiscretization &
-  stk_discretization_;
-
-  Albany::AbstractSTKMeshStruct const &
-  stk_mesh_struct_;
-
-  stk::mesh::BulkData const &
-  bulk_data_;
-
-  stk::mesh::MetaData const &
-  meta_data_;
-
-  Intrepid::Index
-  dimension_;
-
-  stk::mesh::Part &
-  bulk_part_;
-
-  stk::mesh::Part &
-  interface_part_;
 
 private:
 
@@ -163,28 +142,24 @@ class FractureCriterionRandom: public AbstractFractureCriterion {
 
 public:
 
-  FractureCriterionRandom(
-      Topology & topology,
-      std::string const & bulk_block_name,
-      std::string const & interface_block_name,
-      double const probability) :
-      AbstractFractureCriterion(
-          topology,
-          bulk_block_name,
-          interface_block_name),
-      probability_(probability)
+  FractureCriterionRandom(Topology & topology, double const probability) :
+      AbstractFractureCriterion(topology), probability_(probability)
   {
   }
 
   bool
   check(stk::mesh::BulkData & bulk_data, stk::mesh::Entity interface)
   {
-    stk::mesh::EntityRank const rank = bulk_data.entity_rank(interface);
+    stk::mesh::EntityRank const
+    rank = bulk_data.entity_rank(interface);
 
-    assert(
-        bulk_data.num_connectivity(
-            interface,
-            (stk::mesh::EntityRank )(rank + 1)) == 2);
+    stk::mesh::EntityRank const
+    rank_up = static_cast<stk::mesh::EntityRank>(rank + 1);
+
+    size_t const
+    num_connected = bulk_data.num_connectivity(interface, rank_up);
+
+    assert(num_connected == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
@@ -211,28 +186,26 @@ class FractureCriterionOnce: public AbstractFractureCriterion {
 
 public:
 
-  FractureCriterionOnce(
-      Topology & topology,
-      std::string const & bulk_block_name,
-      std::string const & interface_block_name,
-      double const probability) :
-      AbstractFractureCriterion(
-          topology,
-          bulk_block_name,
-          interface_block_name),
+  FractureCriterionOnce(Topology & topology, double const probability) :
+      AbstractFractureCriterion(topology),
       probability_(probability),
       open_(true)
   {
   }
 
   bool
-  check(stk::mesh::BulkData& mesh, stk::mesh::Entity interface)
+  check(stk::mesh::BulkData & bulk_data, stk::mesh::Entity interface)
   {
-    stk::mesh::EntityRank const rank = mesh.entity_rank(interface);
+    stk::mesh::EntityRank const
+    rank = bulk_data.entity_rank(interface);
 
-    assert(
-        mesh.num_connectivity(interface, (stk::mesh::EntityRank )(rank + 1))
-            == 2);
+    stk::mesh::EntityRank const
+    rank_up = static_cast<stk::mesh::EntityRank>(rank + 1);
+
+    size_t const
+    num_connected = bulk_data.num_connectivity(interface, rank_up);
+
+    assert(num_connected == 2);
 
     double const
     random = 0.5 * Teuchos::ScalarTraits<double>::random() + 0.5;
@@ -269,8 +242,6 @@ public:
 
   FractureCriterionTraction(
       Topology & topology,
-      std::string const & bulk_block_name,
-      std::string const & interface_block_name,
       std::string const & stress_name,
       double const critical_traction,
       double const beta);
