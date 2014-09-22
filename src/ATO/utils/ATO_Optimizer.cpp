@@ -5,6 +5,7 @@
 //*****************************************************************//
 
 #include "ATO_Optimizer.hpp"
+#include "ATO_DOTk_Optimizer.hpp"
 #include "Teuchos_TestForException.hpp"
 #include "ATO_Solver.hpp"
 #include <nlopt.h>
@@ -19,14 +20,17 @@ OptimizerFactory::create(const Teuchos::ParameterList& optimizerParams)
 /**********************************************************************/
 {
   std::string optPackage = optimizerParams.get<std::string>("Package");
-  if( optPackage == "OC"  )  return Teuchos::rcp(new Optimizer_OC(optimizerParams));
+
+  if( optPackage == "OC"    )  return Teuchos::rcp(new Optimizer_OC(optimizerParams));
   else
-  if( optPackage == "NLopt"  )  return Teuchos::rcp(new Optimizer_NLopt(optimizerParams));
+  if( optPackage == "NLopt" )  return Teuchos::rcp(new Optimizer_NLopt(optimizerParams));
+  else
+  if( optPackage == "DOTk"  )  return Teuchos::rcp(new Optimizer_DOTk(optimizerParams));
   else
     TEUCHOS_TEST_FOR_EXCEPTION(
       true, Teuchos::Exceptions::InvalidParameter, std::endl 
       << "Error!  Optimization package: " << optPackage << " Unknown!" << std::endl 
-      << "Valid options are (OC, NLopt)" << std::endl);
+      << "Valid options are (OC, NLopt, DOTk)" << std::endl);
 }
 
 /**********************************************************************/
@@ -37,6 +41,7 @@ Optimizer::Optimizer(const Teuchos::ParameterList& optimizerParams)
   _optMaxIter = optimizerParams.get<int>("Optimization Maximum Iterations");
 
   solverInterface = NULL;
+  comm = Teuchos::null;
 }
 
 /**********************************************************************/

@@ -95,7 +95,7 @@ namespace Albany {
 
     Teuchos::ArrayRCP<Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits> > > getFieldManager();
     Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits> > getDirichletFieldManager() ;
-    Teuchos::ArrayRCP<Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits> > > getNeumannFieldManager();
+    Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits> > getNeumannFieldManager();
 
     //! Return the Null space object used to communicate with MP
     const Teuchos::RCP<Piro::MLRigidBodyModes>& getNullSpace(){ return rigidBodyModes; }
@@ -142,7 +142,7 @@ namespace Albany {
     Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits> > dfm;
 
     //! Field manager for Neumann Conditions Fill
-    Teuchos::ArrayRCP<Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits> > > nfm;
+    Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits> > nfm;
 
     //! Special fields needed to implement the problem
     AbstractFieldContainer::FieldContainerRequirements requirements;

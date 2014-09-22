@@ -174,10 +174,7 @@ constructNeumannEvaluators(const Teuchos::RCP<Albany::MeshSpecsStruct>& meshSpec
 //   condNames[3] = "P";
 //   condNames[4] = "lateral";
 
-   nfm.resize(1); // Aeras X scalar advection problem only has one
-                  // element block
-
-   nfm[0] = nbcUtils.constructBCEvaluators(meshSpecs,
+   nfm = nbcUtils.constructBCEvaluators(meshSpecs,
                                            neumannNames,
                                            dof_names,
                                            true,

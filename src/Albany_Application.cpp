@@ -561,7 +561,7 @@ computeGlobalResidual(const double current_time,
       // FillType template argument used to specialize Sacado
       fm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
       if (nfm!=Teuchos::null)
-         nfm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
+         nfm->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
     }
   }
 
@@ -705,7 +705,7 @@ computeGlobalJacobian(const double alpha,
       // FillType template argument used to specialize Sacado
       fm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::Jacobian>(workset);
       if (nfm!=Teuchos::null)
-        nfm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::Jacobian>(workset);
+        nfm->evaluateFields<PHAL::AlbanyTraits::Jacobian>(workset);
     }
   }
 
@@ -1062,7 +1062,7 @@ for (unsigned int i=0; i<shapeParams.size(); i++) *out << shapeParams[i] << "  "
       // FillType template argument used to specialize Sacado
       fm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::Tangent>(workset);
       if (nfm!=Teuchos::null)
-        nfm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::Tangent>(workset);
+        nfm->evaluateFields<PHAL::AlbanyTraits::Tangent>(workset);
     }
   }
 
@@ -1227,7 +1227,7 @@ applyGlobalDistParamDeriv(const double current_time,
       // FillType template argument used to specialize Sacado
       fm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::DistParamDeriv>(workset);
       if (nfm!=Teuchos::null)
-        nfm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::DistParamDeriv>(workset);
+        nfm->evaluateFields<PHAL::AlbanyTraits::DistParamDeriv>(workset);
     }
   }
 
@@ -1446,7 +1446,7 @@ for (unsigned int i=0; i<shapeParams.size(); i++) *out << shapeParams[i] << "  "
       // FillType template argument used to specialize Sacado
       fm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::SGResidual>(workset);
       if (nfm!=Teuchos::null)
-        nfm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::SGResidual>(workset);
+        nfm->evaluateFields<PHAL::AlbanyTraits::SGResidual>(workset);
     }
   }
 
@@ -1622,7 +1622,7 @@ for (unsigned int i=0; i<shapeParams.size(); i++) *out << shapeParams[i] << "  "
       // FillType template argument used to specialize Sacado
       fm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::SGJacobian>(workset);
       if (nfm!=Teuchos::null)
-        nfm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::SGJacobian>(workset);
+        nfm->evaluateFields<PHAL::AlbanyTraits::SGJacobian>(workset);
     }
   }
 
@@ -1887,7 +1887,7 @@ computeGlobalSGTangent(
       // FillType template argument used to specialize Sacado
       fm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::SGTangent>(workset);
       if (nfm!=Teuchos::null)
-        nfm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::SGTangent>(workset);
+        nfm->evaluateFields<PHAL::AlbanyTraits::SGTangent>(workset);
     }
   }
 
@@ -2127,7 +2127,7 @@ for (unsigned int i=0; i<shapeParams.size(); i++) *out << shapeParams[i] << "  "
       // FillType template argument used to specialize Sacado
       fm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::MPResidual>(workset);
       if (nfm!=Teuchos::null)
-        nfm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::MPResidual>(workset);
+        nfm->evaluateFields<PHAL::AlbanyTraits::MPResidual>(workset);
     }
   }
 
@@ -2291,7 +2291,7 @@ for (unsigned int i=0; i<shapeParams.size(); i++) *out << shapeParams[i] << "  "
       // FillType template argument used to specialize Sacado
       fm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::MPJacobian>(workset);
       if (nfm!=Teuchos::null)
-        nfm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::MPJacobian>(workset);
+        nfm->evaluateFields<PHAL::AlbanyTraits::MPJacobian>(workset);
     }
   }
 
@@ -2556,7 +2556,7 @@ computeGlobalMPTangent(
       // FillType template argument used to specialize Sacado
       fm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::MPTangent>(workset);
       if (nfm!=Teuchos::null)
-        nfm[wsPhysIndex[ws]]->evaluateFields<PHAL::AlbanyTraits::MPTangent>(workset);
+        nfm->evaluateFields<PHAL::AlbanyTraits::MPTangent>(workset);
     }
   }
 
@@ -2804,8 +2804,7 @@ void Albany::Application::postRegSetup(std::string eval)
     if (dfm!=Teuchos::null)
       dfm->postRegistrationSetupForType<PHAL::AlbanyTraits::Residual>(eval);
     if (nfm!=Teuchos::null)
-      for (int ps=0; ps < nfm.size(); ps++)
-        nfm[ps]->postRegistrationSetupForType<PHAL::AlbanyTraits::Residual>(eval);
+      nfm->postRegistrationSetupForType<PHAL::AlbanyTraits::Residual>(eval);
   }
   else if (eval=="Jacobian") {
     for (int ps=0; ps < fm.size(); ps++)
@@ -2813,8 +2812,7 @@ void Albany::Application::postRegSetup(std::string eval)
     if (dfm!=Teuchos::null)
       dfm->postRegistrationSetupForType<PHAL::AlbanyTraits::Jacobian>(eval);
     if (nfm!=Teuchos::null)
-      for (int ps=0; ps < nfm.size(); ps++)
-        nfm[ps]->postRegistrationSetupForType<PHAL::AlbanyTraits::Jacobian>(eval);
+      nfm->postRegistrationSetupForType<PHAL::AlbanyTraits::Jacobian>(eval);
   }
   else if (eval=="Tangent") {
     for (int ps=0; ps < fm.size(); ps++)
@@ -2822,8 +2820,7 @@ void Albany::Application::postRegSetup(std::string eval)
     if (dfm!=Teuchos::null)
       dfm->postRegistrationSetupForType<PHAL::AlbanyTraits::Tangent>(eval);
     if (nfm!=Teuchos::null)
-      for (int ps=0; ps < nfm.size(); ps++)
-        nfm[ps]->postRegistrationSetupForType<PHAL::AlbanyTraits::Tangent>(eval);
+      nfm->postRegistrationSetupForType<PHAL::AlbanyTraits::Tangent>(eval);
   }
 #ifdef ALBANY_SG_MP
   else if (eval=="SGResidual") {
@@ -2832,8 +2829,7 @@ void Albany::Application::postRegSetup(std::string eval)
     if (dfm!=Teuchos::null)
       dfm->postRegistrationSetupForType<PHAL::AlbanyTraits::SGResidual>(eval);
     if (nfm!=Teuchos::null)
-      for (int ps=0; ps < nfm.size(); ps++)
-        nfm[ps]->postRegistrationSetupForType<PHAL::AlbanyTraits::SGResidual>(eval);
+      nfm->postRegistrationSetupForType<PHAL::AlbanyTraits::SGResidual>(eval);
   }
   else if (eval=="SGJacobian") {
     for (int ps=0; ps < fm.size(); ps++)
@@ -2841,8 +2837,7 @@ void Albany::Application::postRegSetup(std::string eval)
     if (dfm!=Teuchos::null)
       dfm->postRegistrationSetupForType<PHAL::AlbanyTraits::SGJacobian>(eval);
     if (nfm!=Teuchos::null)
-      for (int ps=0; ps < nfm.size(); ps++)
-        nfm[ps]->postRegistrationSetupForType<PHAL::AlbanyTraits::SGJacobian>(eval);
+      nfm->postRegistrationSetupForType<PHAL::AlbanyTraits::SGJacobian>(eval);
   }
   else if (eval=="SGTangent") {
     for (int ps=0; ps < fm.size(); ps++)
@@ -2850,8 +2845,7 @@ void Albany::Application::postRegSetup(std::string eval)
     if (dfm!=Teuchos::null)
       dfm->postRegistrationSetupForType<PHAL::AlbanyTraits::SGTangent>(eval);
     if (nfm!=Teuchos::null)
-      for (int ps=0; ps < nfm.size(); ps++)
-        nfm[ps]->postRegistrationSetupForType<PHAL::AlbanyTraits::SGTangent>(eval);
+      nfm->postRegistrationSetupForType<PHAL::AlbanyTraits::SGTangent>(eval);
   }
   else if (eval=="MPResidual") {
     for (int ps=0; ps < fm.size(); ps++)
@@ -2859,8 +2853,7 @@ void Albany::Application::postRegSetup(std::string eval)
     if (dfm!=Teuchos::null)
       dfm->postRegistrationSetupForType<PHAL::AlbanyTraits::MPResidual>(eval);
     if (nfm!=Teuchos::null)
-      for (int ps=0; ps < nfm.size(); ps++)
-        nfm[ps]->postRegistrationSetupForType<PHAL::AlbanyTraits::MPResidual>(eval);
+      nfm->postRegistrationSetupForType<PHAL::AlbanyTraits::MPResidual>(eval);
   }
   else if (eval=="MPJacobian") {
     for (int ps=0; ps < fm.size(); ps++)
@@ -2868,8 +2861,7 @@ void Albany::Application::postRegSetup(std::string eval)
     if (dfm!=Teuchos::null)
       dfm->postRegistrationSetupForType<PHAL::AlbanyTraits::MPJacobian>(eval);
     if (nfm!=Teuchos::null)
-      for (int ps=0; ps < nfm.size(); ps++)
-        nfm[ps]->postRegistrationSetupForType<PHAL::AlbanyTraits::MPJacobian>(eval);
+      nfm->postRegistrationSetupForType<PHAL::AlbanyTraits::MPJacobian>(eval);
   }
   else if (eval=="MPTangent") {
     for (int ps=0; ps < fm.size(); ps++)
@@ -2877,8 +2869,7 @@ void Albany::Application::postRegSetup(std::string eval)
     if (dfm!=Teuchos::null)
       dfm->postRegistrationSetupForType<PHAL::AlbanyTraits::MPTangent>(eval);
     if (nfm!=Teuchos::null)
-      for (int ps=0; ps < nfm.size(); ps++)
-        nfm[ps]->postRegistrationSetupForType<PHAL::AlbanyTraits::MPTangent>(eval);
+      nfm->postRegistrationSetupForType<PHAL::AlbanyTraits::MPTangent>(eval);
   }
 #endif //ALBANY_SG_MP
   else

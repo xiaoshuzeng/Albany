@@ -161,9 +161,7 @@ FELIX::StokesFO::constructNeumannEvaluators(const Teuchos::RCP<Albany::MeshSpecs
    condNames[4] = "lateral";
    condNames[5] = "basal_scalar_field";
 
-   nfm.resize(1); // FELIX problem only has one element block
-
-   nfm[0] = nbcUtils.constructBCEvaluators(meshSpecs, neumannNames, dof_names, true, 0,
+   nfm = nbcUtils.constructBCEvaluators(meshSpecs, neumannNames, dof_names, true, 0,
                                           condNames, offsets, dl,
                                           this->params, this->paramLib);
 

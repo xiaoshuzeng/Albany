@@ -143,9 +143,7 @@ Aeras::ShallowWaterProblem::constructNeumannEvaluators(const Teuchos::RCP<Albany
 //   condNames[3] = "P";
 //   condNames[4] = "lateral";
 
-   nfm.resize(1); // Aeras problem only has one element block
-
-   nfm[0] = nbcUtils.constructBCEvaluators(meshSpecs, neumannNames, dof_names, true, 0,
+   nfm = nbcUtils.constructBCEvaluators(meshSpecs, neumannNames, dof_names, true, 0,
                                           condNames, offsets, dl,
                                           this->params, this->paramLib);
 

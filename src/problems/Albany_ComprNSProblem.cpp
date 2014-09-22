@@ -161,9 +161,7 @@ Albany::ComprNSProblem::constructNeumannEvaluators(const Teuchos::RCP<Albany::Me
 
    condNames[1] = "dFluxdn";
 
-   nfm.resize(1); // ComprNS problem only has one element block
-
-   nfm[0] = nbcUtils.constructBCEvaluators(meshSpecs, neumannNames, dof_names, true, 0,
+   nfm = nbcUtils.constructBCEvaluators(meshSpecs, neumannNames, dof_names, true, 0,
                                           condNames, offsets, dl,
                                           this->params, this->paramLib);
 

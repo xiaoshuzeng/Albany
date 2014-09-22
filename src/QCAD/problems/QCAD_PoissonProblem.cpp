@@ -293,8 +293,6 @@ QCAD::PoissonProblem::constructNeumannEvaluators(const Teuchos::RCP<Albany::Mesh
 
    condNames[3] = "robin";
 
-   nfm.resize(1); // Poisson problem only has one physics set
-
    //nfm[0] = bcUtils.constructBCEvaluators(meshSpecs, bcNames, dof_names, false, 0,
    //				  condNames, offsets, dl, this->params, this->paramLib, materialDB);
    bool isVectorField = false;
@@ -512,7 +510,7 @@ QCAD::PoissonProblem::constructNeumannEvaluators(const Teuchos::RCP<Albany::Mesh
    fm->requireField<AlbanyTraits::MPTangent>(mptan_tag0);
 #endif //ALBANY_SG_MP
 
-   nfm[0] = fm;
+   nfm = fm;
 }
 
 Teuchos::RCP<const Teuchos::ParameterList>

@@ -317,9 +317,7 @@ constructNeumannEvaluators(
   condNames[1] = "dudn";
   condNames[2] = "P";
 
-  nfm.resize(1); // Elasticity problem only has one element block
-
-  nfm[0] = neuUtils.constructBCEvaluators(
+  nfm = neuUtils.constructBCEvaluators(
       meshSpecs,
       neumannNames,
       dof_names,

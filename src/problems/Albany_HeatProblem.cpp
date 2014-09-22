@@ -153,8 +153,7 @@ Albany::HeatProblem::constructNeumannEvaluators(const Teuchos::RCP<Albany::MeshS
 
    condNames[3] = "robin";
 
-   nfm.resize(1); // Heat problem only has one physics set
-   nfm[0] = bcUtils.constructBCEvaluators(meshSpecs, bcNames, dof_names, false, 0,
+   nfm = bcUtils.constructBCEvaluators(meshSpecs, bcNames, dof_names, false, 0,
                                   condNames, offsets, dl, this->params, this->paramLib, materialDB);
 
 }

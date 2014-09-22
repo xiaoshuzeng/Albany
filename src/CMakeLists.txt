@@ -529,6 +529,16 @@ ELSE()
   set(NLOPT_LIB )
 ENDIF()
 
+IF ( WITH_DOTK )
+  include_directories (${DOTK_INCLUDE_DIR})
+  link_directories (${DOTK_LIBRARY_DIR})
+  message("Adding DOTk")
+#  set(DOTK_LIB dotk)
+  set(DOTK_LIB )
+ELSE()
+  set(DOTK_LIB )
+ENDIF()
+
 
 # LAME
 IF(ALBANY_LAME)
@@ -644,6 +654,7 @@ set(ALL_LIBRARIES
   ${ALB_CUBIT_LIBS}
   ${LAME_LIB}
   ${NLOPT_LIB}
+  ${DOTK_LIB}
   ${LAMENT_LIB}
   ${Peridigm_LIBRARIES}
   ${SCOREC_LIB}

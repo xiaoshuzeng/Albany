@@ -20,6 +20,8 @@ Please remove when issue is resolved
 #include "Albany_SolverFactory.hpp"
 #include "Albany_StateInfoStruct.hpp"
 
+#include "ATO_TopoTools.hpp"
+
 /******************************************************************************/
 ATO::Solver::
 Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
@@ -54,8 +56,8 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
 
   // Parse topology info
   Teuchos::ParameterList& topoParams = problemParams.get<Teuchos::ParameterList>("Topology");
-  _topoCentering = topoParams.get<std::string>("Centering");
-  _topoName = topoParams.get<std::string>("Topology Name");
+  ATO::TopologyFactory topoFactory;
+  _topology = topoFactory.create(topoParams);
 
   // Get and set the default Piro parameters from a file, if given
   std::string piroFilename  = problemParams.get<std::string>("Piro Defaults Filename", "");
@@ -114,7 +116,8 @@ Solver(const Teuchos::RCP<Teuchos::ParameterList>& appParams,
   TEUCHOS_TEST_FOR_EXCEPT( sub_x_map == Teuchos::null );
   _epetra_x_map = Teuchos::rcp(new Epetra_Map( *sub_x_map ));
 
-  if( _topoCentering == "Node" ){
+//  if( _topoCentering == "Node" ){
+  if( _topology->getCentering() == "Node" ){
     // create overlap topo vector for output purposes
     Albany::StateManager& stateMgr = _subProblems[0].app->getStateMgr();
     Teuchos::RCP<const Epetra_BlockMap> 
@@ -214,35 +217,64 @@ ATO::Solver::copyTopologyIntoStateMgr( const double* p, Albany::StateManager& st
   Albany::StateArrayVec& dest = stateArrays.elemStateArrays;
   int numWorksets = dest.size();
 
-  if( _topoCentering == "Element" ){
+  Teuchos::RCP<Albany::AbstractDiscretization> disc = stateMgr.getDiscretization();
+  const Albany::WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
+  const Teuchos::Array<std::string>& fixedBlocks = _topology->getFixedBlocks();
+
+  if( _topology->getCentering() == "Element" ){
     int wsOffset = 0;
     for(int ws=0; ws<numWorksets; ws++){
-      Albany::MDArray& wsTopo = dest[ws][_topoName];
+      Albany::MDArray& wsTopo = dest[ws][_topology->getName()];
       int wsSize = wsTopo.size();
-      for(int i=0; i<wsSize; i++)
-        wsTopo(i) = p[wsOffset+i];
+      if( find(fixedBlocks.begin(), fixedBlocks.end(), wsEBNames[ws]) == fixedBlocks.end() ){
+        for(int i=0; i<wsSize; i++)
+          wsTopo(i) = p[wsOffset+i];
+      }
       wsOffset += wsSize;
     }
   } else 
-  if( _topoCentering == "Node" ){
-
-    // communicate boundary info
-    int numLocalNodes = topoVec->MyLength();
-    double* ltopo; topoVec->ExtractView(&ltopo);
-    std::memcpy((void*)ltopo, (void*)p, numLocalNodes*sizeof(double));
-    overlapTopoVec->Import(*topoVec, *importer, Insert);
-    double* otopo; overlapTopoVec->ExtractView(&otopo);
+  if( _topology->getCentering() == "Node" ){
 
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type&
       wsElNodeID = stateMgr.getDiscretization()->getWsElNodeID();
     Teuchos::RCP<const Epetra_BlockMap> 
       overlapNodeMap = stateMgr.getNodalDataBlock()->getOverlapMap();
 
-
+    // communicate boundary info
+    int numLocalNodes = topoVec->MyLength();
+    double* ltopo; topoVec->ExtractView(&ltopo);
+//    std::memcpy((void*)ltopo, (void*)p, numLocalNodes*sizeof(double));
     for(int ws=0; ws<numWorksets; ws++){
-      Albany::MDArray& wsTopo = dest[ws][_topoName];
+      Albany::MDArray& wsTopo = dest[ws][_topology->getName()];
       int numCells = wsTopo.dimension(0);
       int numNodes = wsTopo.dimension(1);
+      if( find(fixedBlocks.begin(), fixedBlocks.end(), wsEBNames[ws]) == fixedBlocks.end() ) {
+        for(int cell=0; cell<numCells; cell++)
+          for(int node=0; node<numNodes; node++){
+            int gid = wsElNodeID[ws][cell][node];
+            int lid = overlapNodeMap->LID(gid);
+            ltopo[lid] = p[lid];
+          }
+      } else {
+        double matVal = _topology->getMaterialValue();
+        for(int cell=0; cell<numCells; cell++)
+          for(int node=0; node<numNodes; node++){
+            int gid = wsElNodeID[ws][cell][node];
+            int lid = overlapNodeMap->LID(gid);
+            ltopo[lid] = matVal;
+          }
+      }
+    }
+
+    overlapTopoVec->Import(*topoVec, *importer, Insert);
+
+
+    double* otopo; overlapTopoVec->ExtractView(&otopo);
+    for(int ws=0; ws<numWorksets; ws++){
+      Albany::MDArray& wsTopo = dest[ws][_topology->getName()];
+      int numCells = wsTopo.dimension(0);
+      int numNodes = wsTopo.dimension(1);
+      if( find(fixedBlocks.begin(), fixedBlocks.end(), wsEBNames[ws]) != fixedBlocks.end() ) continue;
       for(int cell=0; cell<numCells; cell++)
         for(int node=0; node<numNodes; node++){
           int gid = wsElNodeID[ws][cell][node];
@@ -255,7 +287,7 @@ ATO::Solver::copyTopologyIntoStateMgr( const double* p, Albany::StateManager& st
     Teuchos::RCP<Albany::NodeFieldContainer> 
       nodeContainer = stateMgr.getNodalDataBlock()->getNodeContainer();
 
-    std::string nodal_topoName = _topoName+"_node";
+    std::string nodal_topoName = _topology->getName()+"_node";
     (*nodeContainer)[nodal_topoName]->saveField(overlapTopoVec,/*offset=*/0);
 
   }
@@ -279,17 +311,23 @@ ATO::Solver::copyObjectiveFromStateMgr( double& f, double* dfdp )
   f = fSrc(0);
   fSrc(0) = 0.0;
 
-  if( _topoCentering == "Element" ){
+  Teuchos::RCP<Albany::AbstractDiscretization> disc = stateMgr.getDiscretization();
+  const Albany::WorksetArray<std::string>::type& wsEBNames = disc->getWsEBNames();
+  const Teuchos::Array<std::string>& fixedBlocks = _topology->getFixedBlocks();
+
+  if( _topology->getCentering() == "Element" ){
     int wsOffset = 0;
     for(int ws=0; ws<numWorksets; ws++){
       Albany::MDArray& dfdpSrc = src[ws][derName];
       int wsSize = dfdpSrc.size();
-      for(int i=0; i<wsSize; i++)
-        dfdp[wsOffset+i] = dfdpSrc(i);
+      if( find(fixedBlocks.begin(), fixedBlocks.end(), wsEBNames[ws]) == fixedBlocks.end() ){
+        for(int i=0; i<wsSize; i++)
+          dfdp[wsOffset+i] = dfdpSrc(i);
+      }
       wsOffset += wsSize;
     }
   } else
-  if( _topoCentering == "Node" ){
+  if( _topology->getCentering() == "Node" ){
 
     Teuchos::RCP<Albany::AbstractDiscretization> disc = stateMgr.getDiscretization();
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type&
@@ -303,6 +341,7 @@ ATO::Solver::copyObjectiveFromStateMgr( double& f, double* dfdp )
     double* odfdp; overlapdfdpVec->ExtractView(&odfdp);
 
     for(int ws=0; ws<numWorksets; ws++){
+      if( find(fixedBlocks.begin(), fixedBlocks.end(), wsEBNames[ws]) != fixedBlocks.end() ) continue;
       Albany::MDArray& dfdpSrc = src[ws][derName];
       int numCells = dfdpSrc.dimension(0);
       int numNodes = dfdpSrc.dimension(1);
@@ -355,7 +394,7 @@ int
 ATO::Solver::GetNumOptDofs()
 /******************************************************************************/
 {
-  if( _topoCentering == "Element" ){
+  if( _topology->getCentering() == "Element" ){
     Albany::StateManager& stateMgr = _subProblems[0].app->getStateMgr();
     Albany::StateArrays& stateArrays = stateMgr.getStateArrays();
     Albany::StateArrayVec& dest = stateArrays.elemStateArrays;
@@ -364,14 +403,14 @@ ATO::Solver::GetNumOptDofs()
 
     int numTotalElems = 0;
     for(int ws=0; ws<numWorksets; ws++){
-      Albany::MDArray& wsTopo = dest[ws][_topoName];
+      Albany::MDArray& wsTopo = dest[ws][_topology->getName()];
       int wsSize = wsTopo.size();
       numTotalElems += wsSize;
     }
     return numTotalElems;
     
   } else
-  if( _topoCentering == "Node" ){
+  if( _topology->getCentering() == "Node" ){
     return _subProblems[0].app->getDiscretization()->getNodeMap()->NumMyElements();
   }
 }
@@ -475,9 +514,12 @@ ATO::Solver::createInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appPar
   physics_probParams.setParameters(physics_subList);
 
   // Add topology information
-  Teuchos::ParameterList& topoParams = 
-    appParams->sublist("Problem").get<Teuchos::ParameterList>("Topology");
-  physics_probParams.set<Teuchos::ParameterList>("Topology",topoParams);
+//  Teuchos::ParameterList& topoParams = 
+//    appParams->sublist("Problem").get<Teuchos::ParameterList>("Topology");
+//  physics_probParams.set<Teuchos::ParameterList>("Topology",topoParams);
+
+  physics_probParams.set<Teuchos::RCP<Topology> >("Topology",_topology);
+
 
   // Add aggregator information
   Teuchos::ParameterList& aggParams = 
@@ -488,6 +530,9 @@ ATO::Solver::createInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appPar
   Teuchos::ParameterList& discList = appParams->sublist("Discretization");
   Teuchos::ParameterList& physics_discList = physics_appParams->sublist("Discretization", false);
   physics_discList.setParameters(discList);
+
+  if( _topology->getFixedBlocks().size() > 0 )
+    physics_discList.set("Separate Evaluators by Element Block", true);
 
   // Piro sublist processing
   physics_appParams->set("Piro",appParams->sublist("Piro"));
@@ -517,16 +562,6 @@ ATO::Solver::createInputFile( const Teuchos::RCP<Teuchos::ParameterList>& appPar
     numDimensions == 1, Teuchos::Exceptions::InvalidParameter, std::endl 
     << "Error!  Topology optimization is not avaliable in 1D." << std::endl);
 
-  //// See if requested physics work with ATO (add your physics here)
-  std::vector<std::string> ATOablePhysics;
-  ATOablePhysics.push_back( "LinearElasticity" );
-  
-  std::vector<std::string>::iterator it;
-  it = std::find(ATOablePhysics.begin(), ATOablePhysics.end(), problemNameBase);
-  TEUCHOS_TEST_FOR_EXCEPTION (
-    it == ATOablePhysics.end(), Teuchos::Exceptions::InvalidParameter, std::endl 
-    << "Error!  Invalid problem base name: " << problemNameBase << std::endl);
-  
   
   return physics_appParams;
 

@@ -45,7 +45,7 @@ Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits> >
 Albany::AbstractProblem::getDirichletFieldManager()
 { return dfm; }
 
-Teuchos::ArrayRCP<Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits> > >
+Teuchos::RCP<PHX::FieldManager<PHAL::AlbanyTraits> >
 Albany::AbstractProblem::getNeumannFieldManager()
 { return nfm; }
 

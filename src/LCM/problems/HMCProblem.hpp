@@ -83,8 +83,8 @@ namespace Albany {
     HMCProblem& operator=(const HMCProblem&);
 
 
-    void parseMaterialModel(Teuchos::RCP<Teuchos::ParameterList>& p,
-                       const Teuchos::RCP<Teuchos::ParameterList>& params) const;
+//    void parseMaterialModel(Teuchos::RCP<Teuchos::ParameterList>& p,
+//                       const Teuchos::RCP<Teuchos::ParameterList>& params) const;
 
     Teuchos::RCP<QCAD::MaterialDatabase> material_db_;
 

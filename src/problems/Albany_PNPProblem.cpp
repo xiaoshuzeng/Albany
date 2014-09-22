@@ -142,7 +142,7 @@ Albany::PNPProblem::constructNeumannEvaluators(const Teuchos::RCP<Albany::MeshSp
    std::vector<std::string> condNames; //dudx, dudy, dudz, dudn, basal 
 
 
-   nfm[0] = nbcUtils.constructBCEvaluators(meshSpecs, nbcNames,
+   nfm = nbcUtils.constructBCEvaluators(meshSpecs, nbcNames,
                                            Teuchos::arcp(dof_names),
                                            true, 0, condNames, offsets, dl,
                                            this->params, this->paramLib);

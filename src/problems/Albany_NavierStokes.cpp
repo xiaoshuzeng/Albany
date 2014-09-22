@@ -253,9 +253,7 @@ Albany::NavierStokes::constructNeumannEvaluators(const Teuchos::RCP<Albany::Mesh
 
    condNames[1] = "dudn";
 
-   nfm.resize(1);
-
-   nfm[0] = nbcUtils.constructBCEvaluators(meshSpecs, nbcNames, 
+   nfm = nbcUtils.constructBCEvaluators(meshSpecs, nbcNames, 
 					   Teuchos::arcp(dof_names), 
 					   false, 0, condNames, offsets, dl,
 					   this->params, this->paramLib);

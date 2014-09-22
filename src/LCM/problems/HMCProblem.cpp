@@ -24,7 +24,7 @@ HMCProblem(const Teuchos::RCP<Teuchos::ParameterList>& params_,
   }
   TEUCHOS_TEST_FOR_EXCEPTION(!validMaterialDB,
                              std::logic_error,
-                             "Mechanics Problem Requires a Material Database");
+                             "HMC Problem Requires a Material Database");
 
 
 // the following function returns the problem information required for setting the rigid body modes (RBMs) for elasticity problems
@@ -168,9 +168,7 @@ Albany::HMCProblem::constructNeumannEvaluators(
    condNames[1] = "dudn";
    condNames[2] = "P";
 
-   nfm.resize(1); // HMC problem only has one element block
-
-   nfm[0] = neuUtils.constructBCEvaluators(meshSpecs, neumannNames, dof_names, true, 0,
+   nfm = neuUtils.constructBCEvaluators(meshSpecs, neumannNames, dof_names, true, 0,
                                           condNames, offsets, dl,
                                           this->params, this->paramLib);
 
@@ -186,31 +184,7 @@ Albany::HMCProblem::getValidProblemParameters() const
   validPL->set<int>("Additional Scales", false, "1");
   validPL->set<std::string>("MaterialDB Filename","materials.xml",
                             "Filename of material database xml file");
-  validPL->sublist("Hierarchical Elasticity Model", false, "");
-
   return validPL;
-}
-
-void
-Albany::HMCProblem::
-parseMaterialModel(Teuchos::RCP<Teuchos::ParameterList>& p, 
-                   const Teuchos::RCP<Teuchos::ParameterList>& params) const
-{
-  Teuchos::ParameterList& modelList = params->sublist("Hierarchical Elasticity Model");
-  p->set("C11", modelList.get("C11",0.0));
-  p->set("C33", modelList.get("C33",0.0));
-  p->set("C12", modelList.get("C12",0.0));
-  p->set("C23", modelList.get("C23",0.0));
-  p->set("C44", modelList.get("C44",0.0));
-  p->set("C66", modelList.get("C66",0.0));
-
-  for(int i=0; i<numMicroScales; i++){
-    std::string scaleName = Albany::strint("Microscale",i+1);
-    const Teuchos::ParameterList& scaleList = modelList.sublist(scaleName);
-    p->sublist(scaleName);
-    p->set(scaleName,scaleList);
-  }
-  
 }
 
 void

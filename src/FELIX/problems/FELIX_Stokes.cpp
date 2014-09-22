@@ -214,10 +214,7 @@ FELIX::Stokes::constructNeumannEvaluators(const Teuchos::RCP<Albany::MeshSpecsSt
    
    condNames[2] = "basal";
 
-   nfm.resize(1);
-
-
-   nfm[0] = nbcUtils.constructBCEvaluators(meshSpecs, nbcNames,
+   nfm = nbcUtils.constructBCEvaluators(meshSpecs, nbcNames,
                                            Teuchos::arcp(dof_names),
                                            true, 0, condNames, offsets, dl,
                                            this->params, this->paramLib);

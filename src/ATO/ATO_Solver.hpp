@@ -27,6 +27,7 @@ namespace ATO {
   class SolverSubSolver;
   class SolverSubSolverData;
   class OptimizationProblem;
+  class Topology;
 
   class OptInterface {
   public:
@@ -89,8 +90,9 @@ namespace ATO {
 
     Teuchos::RCP<Aggregator> _aggregator;
     Teuchos::RCP<Optimizer> _optimizer;
-    std::string _topoName;
-    std::string _topoCentering;
+    Teuchos::RCP<Topology> _topology;
+//    std::string _topoName;
+//    std::string _topoCentering;
 
     std::vector<Teuchos::RCP<Teuchos::ParameterList> > _subProblemAppParams;
     std::vector<SolverSubSolver> _subProblems;
