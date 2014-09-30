@@ -19,8 +19,6 @@
 #include <fstream>
 
 #include <Shards_BasicTopologies.hpp>
-#include "Shards_CellTopology.hpp"
-#include "Shards_CellTopologyData.h"
 
 #include <Intrepid_CellTools.hpp>
 #include <Intrepid_Basis.hpp>
@@ -1226,7 +1224,7 @@ Albany::STKDiscretization::determine_local_side_id( const stk::mesh::Entity elem
 
   using namespace stk;
 
-  const CellTopologyData * const elem_top = mesh::get_cell_topology( bulkData.bucket(elem) ).getCellTopologyData();
+  stk::topology elem_top = bulkData.bucket(elem).topology();
 
   const unsigned num_elem_nodes = bulkData.num_nodes(elem);
   const unsigned num_side_nodes = bulkData.num_nodes(side);
@@ -1259,7 +1257,7 @@ Albany::STKDiscretization::determine_local_side_id( const stk::mesh::Entity elem
     if ( side_id < 0 ) {
       std::ostringstream msg ;
       msg << "determine_local_side_id( " ;
-      msg << elem_top->name ;
+      msg << elem_top.name() ;
       msg << " , Element[ " ;
       msg << bulkData.identifier(elem);
       msg << " ]{" ;
@@ -1275,22 +1273,24 @@ Albany::STKDiscretization::determine_local_side_id( const stk::mesh::Entity elem
   }
   else { // Conventional elem->node - side->node connectivity present
 
-    for ( unsigned i = 0 ; side_id == -1 && i < elem_top->side_count ; ++i ) {
-      const CellTopologyData & side_top = * elem_top->side[i].topology ;
-      const unsigned     * side_map =   elem_top->side[i].node ;
+    std::vector<unsigned> side_map;
+    for ( unsigned i = 0 ; side_id == -1 && i < elem_top.num_sides() ; ++i ) {
+      stk::topology side_top    = elem_top.side_topology(i);
+      side_map.clear();
+      elem_top.side_node_ordinals(i, std::back_inserter(side_map));
 
-      if ( num_side_nodes == side_top.node_count ) {
+      if ( num_side_nodes == side_top.num_nodes() ) {
 
         side_id = i ;
 
         for ( unsigned j = 0 ;
-              side_id == static_cast<int>(i) && j < side_top.node_count ; ++j ) {
+              side_id == static_cast<int>(i) && j < side_top.num_nodes() ; ++j ) {
 
           stk::mesh::Entity elem_node = elem_nodes[ side_map[j] ];
 
           bool found = false ;
 
-          for ( unsigned k = 0 ; ! found && k < side_top.node_count ; ++k ) {
+          for ( unsigned k = 0 ; ! found && k < side_top.num_nodes() ; ++k ) {
             found = elem_node == side_nodes[k];
           }
 
@@ -1302,7 +1302,7 @@ Albany::STKDiscretization::determine_local_side_id( const stk::mesh::Entity elem
     if ( side_id < 0 ) {
       std::ostringstream msg ;
       msg << "determine_local_side_id( " ;
-      msg << elem_top->name ;
+      msg << elem_top.name() ;
       msg << " , Element[ " ;
       msg << bulkData.identifier(elem);
       msg << " ]{" ;
@@ -1939,30 +1939,29 @@ Albany::STKDiscretization::meshToGraph()
 
     stk::mesh::Bucket& cells = *buckets[b];
 
-    const CellTopologyData * const elem_top
-      = stk::mesh::get_cell_topology( cells ).getCellTopologyData();
+    stk::topology elem_top = cells.topology();
 
-    if(strncmp(elem_top->name, "Hexahedron", 10) == 0){
+    if (elem_top == stk::topology::HEX_8) {
        table[b] = hex_table;
        nconnect[b] = hex_nconnect;
     }
-    else if(strncmp(elem_top->name, "Tetrahedron", 11) == 0){
+    else if (elem_top == stk::topology::TET_4) {
        table[b] = tet_table;
        nconnect[b] = tet_nconnect;
     }
-    else if(strncmp(elem_top->name, "Triangle", 8) == 0){
+    else if (elem_top == stk::topology::TRI_3) {
        table[b] = tri_table;
        nconnect[b] = tri_nconnect;
     }
-    else if(strncmp(elem_top->name, "Quadrilateral", 13) == 0){
+    else if (elem_top == stk::topology::QUAD_4) {
        table[b] = quad_table;
        nconnect[b] = quad_nconnect;
     }
-    else
-
+    else {
       TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
-                           "Error - unknown element type : " << elem_top->name
-                           << " requested in nodal graph algorithm" << std::endl);
+                                 "Error - unknown element type : " << elem_top.name()
+                                 << " requested in nodal graph algorithm" << std::endl);
+    }
 
     /* Find the surrounding elements for each node owned by this processor */
     for (std::size_t ecnt=0; ecnt < cells.size(); ecnt++) {
