@@ -210,9 +210,7 @@ bool full_rebalance(mesh::BulkData  & bulk_data ,
 
   if ( rebalancingHasOccurred )
   {
-    bulk_data.modification_begin();
     bulk_data.change_entity_owner( cs_elem );
-    bulk_data.modification_end();
   }
 
   //: Finished
