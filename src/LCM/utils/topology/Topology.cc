@@ -412,7 +412,7 @@ Topology::getBoundaryEntityNodes(stk::mesh::Entity boundary_entity)
 
   for (RelationVectorIndex i = 0; i < number_face_nodes; ++i) {
     EdgeId const
-    cell_order = get_cell_topology().getNodeMap(boundary_rank, face_order, i);
+    cell_order = cell_topology.getNodeMap(boundary_rank, face_order, i);
 
     // Brute force approach. Maybe there is a better way to do this?
     stk::mesh::Entity const *
