@@ -40,7 +40,7 @@
     <Parameter  name="Relative Tolerance" type="double" value="1.0e-5"/>
     <Parameter  name="Absolute Tolerance" type="double" value="1.0e-3"/>
     <Parameter  name="Number of Sensitivity Comparisons" type="int" value="1"/>
-    <Parameter  name="Sensitivity Test Values 0" type="Array(double)" value="{0.0149180774898}"/>
+    <Parameter  name="Sensitivity Test Values 0" type="Array(double)" value="{-0.0467450977247}"/>
   </ParameterList>
   <ParameterList name="Piro">
     <ParameterList name="Rythmos">
