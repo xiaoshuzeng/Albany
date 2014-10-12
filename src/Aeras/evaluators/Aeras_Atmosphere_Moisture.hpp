@@ -16,7 +16,6 @@
 #include "Aeras_Dimension.hpp"
 
 #include "Teuchos_ParameterList.hpp"
-#include "Epetra_Vector.h"
 
 namespace Aeras {
 
