@@ -101,7 +101,8 @@ ComputeVolume(const double* p, double& v, double* dvdp)
     }
   } else 
   if( topology->getCentering() == "Node" ){
-    Teuchos::RCP<const Epetra_Map> nodeMap = disc->getNodeMap();
+    Teuchos::RCP<const Epetra_BlockMap>
+      overlapNodeMap = stateMgr->getNodalDataBlock()->getOverlapMap();
     for(int ws=0; ws<numWorksets; ws++){
   
       int physIndex = wsPhysIndex[ws];
@@ -114,7 +115,7 @@ ComputeVolume(const double* p, double& v, double* dvdp)
         for(int node=0; node<numNodes; node++)
           for(int qp=0; qp<numQPs; qp++){
             int gid = wsElNodeID[ws][cell][node];
-            int lid = nodeMap->LID(gid);
+            int lid = overlapNodeMap->LID(gid);
             elVol += p[lid]*basisAtQPs[physIndex](node,qp)*weighted_measure[ws](cell,qp);
           }
         localv += elVol;
@@ -123,9 +124,6 @@ ComputeVolume(const double* p, double& v, double* dvdp)
     comm->SumAll(&localv, &v, 1);
 
     if( dvdp != NULL ){
-      Teuchos::RCP<const Epetra_BlockMap>
-        overlapNodeMap = stateMgr->getNodalDataBlock()->getOverlapMap();
-
       localVec->PutScalar(0.0);
       overlapVec->PutScalar(0.0);
       double* odvdp; overlapVec->ExtractView(&odvdp);
@@ -157,6 +155,7 @@ ComputeVolume(const double* p, double& v, double* dvdp)
   }
 
 }
+
 /******************************************************************************/
 void
 ATO::OptimizationProblem::
@@ -223,6 +222,9 @@ setupTopOpt( Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >  _meshSpe
                                      "scalar", initValue, /*registerOldState=*/ false, false);
       stateMgr->registerStateVariable(topology->getName()+"_node", dl->node_node_scalar, "all",
                                      "scalar", initValue, /*registerOldState=*/ false, true);
+      if( topology->OutputFilteredTopology() )
+        stateMgr->registerStateVariable(topology->getName()+"_node_filtered", dl->node_node_scalar, "all",
+                                       "scalar", initValue, /*registerOldState=*/ false, true);
     }
 
   }
@@ -296,8 +298,8 @@ ATO::OptimizationProblem::InitTopOpt()
         int numNodes = wsTopo.dimension(1);
         for(int cell=0; cell<numCells; cell++)
           for(int node=0; node<numNodes; node++){
-            int gid = wsElNodeID[ws][cell][node];
-            int lid = overlapNodeMap->LID(gid);
+//            int gid = wsElNodeID[ws][cell][node];
+//            int lid = overlapNodeMap->LID(gid);
             wsTopo(cell,node) = matVal;
           }
       } else
