@@ -145,6 +145,11 @@ set(INCLUDE_DIRS
 #message("include dirs - ${INCLUDE_DIRS}")
 
 include_directories(${INCLUDE_DIRS})
+IF(ALBANY_STK_REBALANCE)
+  include_directories (${Albany_SOURCE_DIR}/src/disc/stk/percept
+     ${Albany_SOURCE_DIR}/src/disc/stk/percept/stk_rebalance
+     ${Albany_SOURCE_DIR}/src/disc/stk/percept/stk_rebalance_utils)
+endif()
 
 link_directories (${Trilinos_LIBRARY_DIRS} ${Trilinos_TPL_LIBRARY_DIRS})
 
@@ -204,7 +209,11 @@ IF (ALBANY_LAME OR ALBANY_LAMENT)
     test/unit_tests/StandardUnitTestMain.cpp
     test/unit_tests/utLameStress_elastic.cpp
     )
-  target_link_libraries(utLameStress_elastic ${LAME_LIB} ${LAMENT_LIB} ${ALB_TRILINOS_LIBS} ${Trilinos_EXTRA_LD_FLAGS})
+  IF(ALBANY_STK_REBALANCE)
+    target_link_libraries(utLameStress_elastic albanySTKRebalance ${LAME_LIB} ${LAMENT_LIB} ${ALB_TRILINOS_LIBS} ${Trilinos_EXTRA_LD_FLAGS})
+  ELSE ()
+    target_link_libraries(utLameStress_elastic ${LAME_LIB} ${LAMENT_LIB} ${ALB_TRILINOS_LIBS} ${Trilinos_EXTRA_LD_FLAGS})
+  ENDIF ()
 ENDIF ()
 
 IF(BUILD_SHARED_LIBS)
