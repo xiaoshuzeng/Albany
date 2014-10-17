@@ -1409,7 +1409,7 @@ evaluateResponseDistParamDeriv(
   if ( paramLib->isParameter("Time") )
     t = paramLib->getRealValue<PHAL::AlbanyTraits::Residual>("Time");
 
-  responses[response_index]->evaluateDistParamDerivMV(t, xdot, xdotdot, x, param_array, dist_param_name, dg_dp);
+  responses[response_index]->evaluateDistParamDeriv(t, xdot, xdotdot, x, param_array, dist_param_name, dg_dp);
 }
 
 #ifdef ALBANY_SG_MP

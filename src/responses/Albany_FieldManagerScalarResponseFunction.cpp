@@ -240,6 +240,39 @@ evaluateGradient(const double current_time,
     rfm->postEvaluate<PHAL::AlbanyTraits::Jacobian>(workset);
   }  
 }
+
+void
+Albany::FieldManagerScalarResponseFunction::
+evaluateDistParamDeriv(
+      const double current_time,
+      const Epetra_Vector* xdot,
+      const Epetra_Vector* xdotdot,
+      const Epetra_Vector& x,
+      const Teuchos::Array<ParamVec>& param_array,
+      const std::string& dist_param_name,
+      Epetra_MultiVector* dg_dp)
+{
+  // Set data in Workset struct
+  PHAL::Workset workset;
+  application->setupBasicWorksetInfo(workset, current_time, xdot, xdotdot, &x, param_array);
+
+  // Perform fill via field manager (dg/dx)
+  int numWorksets = application->getNumWorksets();
+
+  if(dg_dp != NULL) {
+    workset.dist_param_deriv_name = dist_param_name;
+    workset.dgdp = Teuchos::rcp(dg_dp, false);
+    workset.overlapped_dgdp = Teuchos::rcp(new Epetra_MultiVector(*workset.distParamLib->get(dist_param_name)->overlap_map(),
+        dg_dp->NumVectors()));
+    rfm->preEvaluate<PHAL::AlbanyTraits::DistParamDeriv>(workset);
+    for (int ws=0; ws < numWorksets; ws++) {
+      application->loadWorksetBucketInfo<PHAL::AlbanyTraits::DistParamDeriv>(workset, ws);
+      rfm->evaluateFields<PHAL::AlbanyTraits::DistParamDeriv>(workset);
+    }
+    rfm->postEvaluate<PHAL::AlbanyTraits::DistParamDeriv>(workset);
+  }
+}
+
 #ifdef ALBANY_SG_MP
 void
 Albany::FieldManagerScalarResponseFunction::
