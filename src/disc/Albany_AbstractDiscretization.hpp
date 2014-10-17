@@ -74,6 +74,12 @@ class AbstractDiscretization {
     virtual Teuchos::RCP<const Epetra_Map>
     getOverlapMap() const = 0;
 
+    //! Get field DOF map
+    virtual Teuchos::RCP<const Epetra_Map> getMap(const std::string& field_name) const = 0;
+
+    //! Get field overlapped DOF map
+    virtual Teuchos::RCP<const Epetra_Map> getOverlapMap(const std::string& field_name) const = 0;
+
     //! Get Jacobian graph
     virtual Teuchos::RCP<const Epetra_CrsGraph>
     getJacobianGraph() const = 0;
@@ -83,11 +89,10 @@ class AbstractDiscretization {
     getOverlapJacobianGraph() const = 0;
 
     //! Get Node map
-    virtual Teuchos::RCP<const Epetra_Map>
-    getNodeMap() const = 0;
+    virtual Teuchos::RCP<const Epetra_Map> getNodeMap() const = 0;
 
-    //! Get Nodal block data
-//    virtual Teuchos::RCP<Adapt::NodalDataBlock> getNodalDataBlock() = 0;
+    //! Get overlapped Node map
+    virtual Teuchos::RCP<const Epetra_Map> getOverlapNodeMap() const = 0;
 
     //! Get Node set lists (typdef in Albany_Discretization.hpp)
     virtual const NodeSetList& getNodeSets() const = 0;
@@ -100,8 +105,12 @@ class AbstractDiscretization {
     virtual const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > > >::type&
        getWsElNodeEqID() const = 0;
 
+    //! Get map from (Ws, El, Local Node) -> unkLID
     virtual const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type&
        getWsElNodeID() const = 0;
+
+    //! Get IDArray for (Ws, Local Node, nComps) -> NodeLID, works for both scalar and vector fields
+    virtual const std::vector<IDArray>& getElNodeID(const std::string& field_name) const =0;
 
     //! Retrieve coodinate ptr_field (ws, el, node)
     virtual Teuchos::ArrayRCP<double>&  getCoordinates() const = 0;
@@ -111,9 +120,14 @@ class AbstractDiscretization {
     //! Print the coords for mesh debugging
     virtual void printCoords() const = 0;
 
+    //! Get MeshStruct
     virtual Teuchos::RCP<Albany::AbstractMeshStruct> getMeshStruct() const = 0;
 
+    //! Get stateArrays
     virtual Albany::StateArrays& getStateArrays() = 0;
+
+    //! Get nodal parameters state info struct
+    virtual const Albany::StateInfoStruct& getNodalParameterSIS() const = 0;
 
     //! Retrieve Vector (length num worksets) of element block names
     virtual const WorksetArray<std::string>::type&  getWsEBNames() const = 0;
@@ -126,6 +140,9 @@ class AbstractDiscretization {
 
     //! Get solution vector from mesh database
     virtual Teuchos::RCP<Epetra_Vector> getSolutionField() const = 0;
+
+    //! Get field vector from mesh database
+    virtual void getField(Epetra_Vector &field_vector, const std::string& field_name) const = 0;
 
     //! Flag if solution has a restart values -- used in Init Cond
     virtual bool hasRestartSolution() const = 0;
@@ -142,8 +159,11 @@ class AbstractDiscretization {
     //! Get number of total DOFs per node
     virtual int getNumEq() const = 0;
 
-    //! Set the solution field
+    //! Set the solution field into mesh database
     virtual void setSolutionField(const Epetra_Vector& soln) = 0;
+
+    //! Set the field vector into mesh database
+    virtual void setField(const Epetra_Vector &field_vector, const std::string& field_name, bool overlapped) = 0;
 
     //! Set the residual field for output
     virtual void setResidualField(const Epetra_Vector& residual) = 0;

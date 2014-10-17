@@ -99,6 +99,16 @@ Albany::STKDiscretization::getOverlapMap() const
   return overlap_map;
 }
 
+Teuchos::RCP<const Epetra_Map>
+Albany::STKDiscretization::getMap(const std::string& field_name) const {
+  return nodalDOFsStructContainer.getDOFsStruct(field_name).map;
+}
+
+Teuchos::RCP<const Epetra_Map>
+Albany::STKDiscretization::getOverlapMap(const std::string& field_name) const {
+  return nodalDOFsStructContainer.getDOFsStruct(field_name).overlap_map;
+}
+
 Teuchos::RCP<const Epetra_CrsGraph>
 Albany::STKDiscretization::getJacobianGraph() const
 {
@@ -115,6 +125,12 @@ Teuchos::RCP<const Epetra_Map>
 Albany::STKDiscretization::getNodeMap() const
 {
   return node_map;
+}
+
+Teuchos::RCP<const Epetra_Map>
+Albany::STKDiscretization::getOverlapNodeMap() const
+{
+  return overlap_node_map;
 }
 
 const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > > >::type&
@@ -604,9 +620,56 @@ Albany::STKDiscretization::getSolutionField(Epetra_Vector &result) const
 
 }
 
+
+void
+Albany::STKDiscretization::getField(Epetra_Vector &result, const std::string& name) const
+{
+
+  Teuchos::RCP<AbstractSTKFieldContainer> container = stkMeshStruct->getFieldContainer();
+
+  // Iterate over the on-processor nodes by getting node buckets and iterating over each bucket.
+  const std::string& part = nodalDOFsStructContainer.fieldToMap.find(name)->second->first.first;
+  stk::mesh::Selector selector = metaData.locally_owned_part();
+  if(part.size()) {
+    std::map<std::string, stk::mesh::Part*>::const_iterator it = stkMeshStruct->nsPartVec.find(part);
+    if(it != stkMeshStruct->nsPartVec.end())
+      selector &= stk::mesh::Selector( *(it->second) );
+  }
+
+  const DOFsStruct& dofsStruct = nodalDOFsStructContainer.getDOFsStruct(name);
+
+  container->fillVector(result, name, selector, dofsStruct.node_map,dofsStruct.dofManager);
+}
+
 /*****************************************************************/
 /*** Private functions follow. These are just used in above code */
 /*****************************************************************/
+
+void
+Albany::STKDiscretization::setField(const Epetra_Vector &result, const std::string& name, bool overlapped)
+{
+  Teuchos::RCP<AbstractSTKFieldContainer> container = stkMeshStruct->getFieldContainer();
+
+  const std::string& part = nodalDOFsStructContainer.fieldToMap.find(name)->second->first.first;
+
+  stk::mesh::Selector selector = overlapped ?
+      metaData.locally_owned_part() | metaData.globally_shared_part() :
+      metaData.locally_owned_part();
+
+  // Iterate over the on-processor nodes by getting node buckets and iterating over each bucket.
+  if(part.size()) {
+    std::map<std::string, stk::mesh::Part*>::const_iterator it = stkMeshStruct->nsPartVec.find(part);
+    if(it != stkMeshStruct->nsPartVec.end())
+      selector &= stk::mesh::Selector( *(it->second) );
+  }
+
+  const DOFsStruct& dofsStruct = nodalDOFsStructContainer.getDOFsStruct(name);
+
+  if(overlapped)
+    container->saveVector(result, name, selector, dofsStruct.overlap_node_map, dofsStruct.overlap_dofManager);
+  else
+    container->saveVector(result, name, selector, dofsStruct.node_map, dofsStruct.dofManager);
+}
 
 void
 Albany::STKDiscretization::setSolutionField(const Epetra_Vector& soln)
@@ -674,6 +737,77 @@ int Albany::STKDiscretization::nonzeroesPerRow(const int neq) const
   return estNonzeroesPerRow;
 }
 
+
+void Albany::STKDiscretization::computeNodalEpetraMaps (bool overlapped)
+{
+  // Loads member data:  ownednodes, numOwnedNodes, node_map, numGlobalNodes, map
+  // maps for owned nodes and unknowns
+
+  stk::mesh::Selector map_type_selector = overlapped ?
+           (metaData.locally_owned_part() | metaData.globally_shared_part()) :
+           metaData.locally_owned_part();
+
+  NodalDOFsStructContainer::MapOfDOFsStructs::iterator it, it2;
+  NodalDOFsStructContainer::MapOfDOFsStructs& mapOfDOFsStructs = nodalDOFsStructContainer.mapOfDOFsStructs;
+  std::vector< stk::mesh::Entity> nodes;
+  std::vector<int> indices;
+  int numNodes(0);
+
+  //compute NumGlobalNodes
+  stk::mesh::get_selected_entities( map_type_selector ,
+                  bulkData.buckets( stk::topology::NODE_RANK ) ,
+                  nodes );
+
+  long long int maxID(0), maxGID(0);
+  for (int i=0; i < nodes.size(); i++)
+    maxID = std::max(maxID, static_cast<long long int>(gid(nodes[i])));
+  comm->MaxAll(&maxID, &maxGID, 1);
+  numGlobalNodes = maxGID+1; //maxGID is the same for overlapped and unique maps
+
+  // build maps
+  for(it = mapOfDOFsStructs.begin(); it != mapOfDOFsStructs.end(); ++it ) {
+    stk::mesh::Selector selector(map_type_selector);
+    const std::string& part = it->first.first;
+    int nComp = it->first.second;
+    if(part.size())  {
+      std::map<std::string, stk::mesh::Part*>::const_iterator it = stkMeshStruct->nsPartVec.find(part);
+      if(it != stkMeshStruct->nsPartVec.end())
+        selector &= *(it->second);
+      else { //throw error
+        std::ostringstream msg;
+        msg << "Albany::STKDiscretization::computeNodalEpetraMaps(overlapped==" << overlapped <<
+            "):\n    Part " << part << " is not in  stkMeshStruct->nsPartVec.\n";
+        throw std::runtime_error(msg.str());
+      }
+    }
+
+    stk::mesh::get_selected_entities( selector ,
+                bulkData.buckets( stk::topology::NODE_RANK ) ,
+                nodes );
+
+    numNodes = nodes.size();
+    std::vector<int> indices(numNodes*nComp);
+    NodalDOFManager* dofManager = (overlapped) ? &it->second.overlap_dofManager : &it->second.dofManager;
+    dofManager->setup(&bulkData, nComp, numNodes, numGlobalNodes, interleavedOrdering);
+
+    for (int i=0; i < numNodes; i++)
+      for (int j=0; j < nComp; j++)
+        indices[dofManager->getLocalDOF(i,j)] = dofManager->getGlobalDOF(nodes[i],j);
+
+    Teuchos::RCP<Epetra_Map>& map = (overlapped) ? it->second.overlap_map : it->second.map;
+    map = Teuchos::null;
+    map = Teuchos::rcp(new Epetra_Map(-1, indices.size(), indices.data(), 0, *comm));
+
+    Teuchos::RCP<Epetra_Map>& node_map = (overlapped) ? it->second.overlap_node_map : it->second.node_map;
+    node_map = Teuchos::null;
+
+    it2=it;
+    if((nComp==1) || ((it2=mapOfDOFsStructs.find(make_pair(part,1)))!=mapOfDOFsStructs.end())) {
+      node_map = (overlapped) ? it2->second.overlap_map : it2->second.map;
+    }
+  }
+}
+
 void Albany::STKDiscretization::computeOwnedNodesAndUnknowns()
 {
   // Loads member data:  ownednodes, numOwnedNodes, node_map, numGlobalNodes, map
@@ -687,37 +821,18 @@ void Albany::STKDiscretization::computeOwnedNodesAndUnknowns()
 				    ownednodes );
 
   numOwnedNodes = ownednodes.size();
-  std::vector<int> indices(numOwnedNodes);
-  for (int i=0; i < numOwnedNodes; i++)
 
-    indices[i] = gid(ownednodes[i]);
-
-  node_map = Teuchos::null; // delete existing map happens here on remesh
-
-  node_map = Teuchos::rcp(new Epetra_Map(-1, numOwnedNodes,
-					 &(indices[0]), 0, *comm));
-
-  numGlobalNodes = node_map->MaxAllGID() + 1;
+  node_map = nodalDOFsStructContainer.getDOFsStruct("mesh_nodes").map;
 
   if(Teuchos::nonnull(stkMeshStruct->nodal_data_block))
-    stkMeshStruct->nodal_data_block->resizeLocalMap(indices, *comm);
+    stkMeshStruct->nodal_data_block->resizeLocalMap(node_map, *comm);
 
-  indices.resize(numOwnedNodes * neq);
-  for (int i=0; i < numOwnedNodes; i++)
-    for (std::size_t j=0; j < neq; j++)
-      indices[getOwnedDOF(i,j)] = getGlobalDOF(gid(ownednodes[i]),j);
-
-  map = Teuchos::null; // delete existing map happens here on remesh
-
-  map = Teuchos::rcp(new Epetra_Map(-1, indices.size(), &(indices[0]), 0, *comm));
-
+  map = nodalDOFsStructContainer.getDOFsStruct("ordinary_solution").map;
 
 }
 
 void Albany::STKDiscretization::computeOverlapNodesAndUnknowns()
 {
-  // Loads member data:  overlapodes, numOverlapodes, overlap_node_map, coordinates
-  std::vector<int> indices;
   // maps for overlap unknowns
   stk::mesh::Selector select_overlap_in_part =
     stk::mesh::Selector( metaData.universal_part() ) &
@@ -730,28 +845,13 @@ void Albany::STKDiscretization::computeOverlapNodesAndUnknowns()
 				    overlapnodes );
 
   numOverlapNodes = overlapnodes.size();
-  indices.resize(numOverlapNodes * neq);
-  for (int i=0; i < numOverlapNodes; i++)
-    for (std::size_t j=0; j < neq; j++)
-      indices[getOverlapDOF(i,j)] = getGlobalDOF(gid(overlapnodes[i]),j);
 
-  overlap_map = Teuchos::null; // delete existing map happens here on remesh
+  overlap_map = nodalDOFsStructContainer.getDOFsStruct("ordinary_solution").overlap_map;
 
-  overlap_map = Teuchos::rcp(new Epetra_Map(-1, indices.size(),
-					    &(indices[0]), 0, *comm));
-
-  // Set up epetra map of node IDs
-  indices.resize(numOverlapNodes);
-  for (int i=0; i < numOverlapNodes; i++)
-    indices[i] = gid(overlapnodes[i]);
-
-  overlap_node_map = Teuchos::null; // delete existing map happens here on remesh
-
-  overlap_node_map = Teuchos::rcp(new Epetra_Map(-1, indices.size(),
-						 &(indices[0]), 0, *comm));
+  overlap_node_map = nodalDOFsStructContainer.getDOFsStruct("mesh_nodes").overlap_map;
 
   if(Teuchos::nonnull(stkMeshStruct->nodal_data_block))
-    stkMeshStruct->nodal_data_block->resizeOverlapMap(indices, *comm);
+    stkMeshStruct->nodal_data_block->resizeOverlapMap(overlap_node_map, *comm);
 
   coordinates.resize(3*numOverlapNodes);
 
@@ -879,6 +979,17 @@ void Albany::STKDiscretization::computeWorksetInfo()
   // Clear map if remeshing
   if(!elemGIDws.empty()) elemGIDws.clear();
 
+  typedef stk::mesh::Cartesian NodeTag;
+  typedef stk::mesh::Cartesian ElemTag;
+  typedef stk::mesh::Cartesian CompTag;
+
+  NodalDOFsStructContainer::MapOfDOFsStructs::iterator it;
+  NodalDOFsStructContainer::MapOfDOFsStructs& mapOfDOFsStructs = nodalDOFsStructContainer.mapOfDOFsStructs;
+  for(it = mapOfDOFsStructs.begin(); it != mapOfDOFsStructs.end(); ++it) {
+    it->second.wsElNodeID.resize(numBuckets);
+    it->second.wsElNodeID_rawVec.resize(numBuckets);
+  }
+  
   for (int b=0; b < numBuckets; b++) {
 
     stk::mesh::Bucket& buck = *buckets[b];
@@ -890,9 +1001,6 @@ void Albany::STKDiscretization::computeWorksetInfo()
     {  //nodalDataToElemNode.
 
       nodesOnElemStateVec[b].resize(nodal_states.size());
-      typedef stk::mesh::Cartesian NodeTag;
-      typedef stk::mesh::Cartesian BuckTag;
-      typedef stk::mesh::Cartesian CompTag;
 
       for (int is=0; is< nodal_states.size(); ++is) {
         const std::string& name = nodal_states[is]->name;
@@ -905,7 +1013,7 @@ void Albany::STKDiscretization::computeWorksetInfo()
         {
           const ScalarFieldType& field = *metaData.get_field<ScalarFieldType>(stk::topology::NODE_RANK, name);
           stateVec.resize(dim0*dim[1]);
-          array.assign<BuckTag, NodeTag>(stateVec.data(),dim0,dim[1]);
+          array.assign<ElemTag, NodeTag>(stateVec.data(),dim0,dim[1]);
           for (int i=0; i < dim0; i++) {
             stk::mesh::Entity element = buck[i];
             stk::mesh::Entity const* rel = bulkData.begin_nodes(element);
@@ -920,7 +1028,7 @@ void Albany::STKDiscretization::computeWorksetInfo()
         {
           const VectorFieldType& field = *metaData.get_field<VectorFieldType>(stk::topology::NODE_RANK, name);
           stateVec.resize(dim0*dim[1]*dim[2]);
-          array.assign<BuckTag, NodeTag,CompTag>(stateVec.data(),dim0,dim[1],dim[2]);
+          array.assign<ElemTag, NodeTag,CompTag>(stateVec.data(),dim0,dim[1],dim[2]);
           for (int i=0; i < dim0; i++) {
             stk::mesh::Entity element = buck[i];
             stk::mesh::Entity const* rel = bulkData.begin_nodes(element);
@@ -937,7 +1045,7 @@ void Albany::STKDiscretization::computeWorksetInfo()
         {
           const TensorFieldType& field = *metaData.get_field<TensorFieldType>(stk::topology::NODE_RANK, name);
           stateVec.resize(dim0*dim[1]*dim[2]*dim[3]);
-          array.assign<BuckTag, NodeTag, CompTag, CompTag>(stateVec.data(),dim0,dim[1],dim[2],dim[3]);
+          array.assign<ElemTag, NodeTag, CompTag, CompTag>(stateVec.data(),dim0,dim[1],dim[2],dim[3]);
           for (int i=0; i < dim0; i++) {
             stk::mesh::Entity element = buck[i];
             stk::mesh::Entity const* rel = bulkData.begin_nodes(element);
@@ -963,6 +1071,14 @@ void Albany::STKDiscretization::computeWorksetInfo()
 
     // i is the element index within bucket b
 
+    stk::mesh::Entity element = buck[0];
+    int nodes_per_element = bulkData.num_nodes(element);
+    for(it = mapOfDOFsStructs.begin(); it != mapOfDOFsStructs.end(); ++it) {
+      int nComp = it->first.second;
+      it->second.wsElNodeID_rawVec[b].resize(buck.size()*nodes_per_element*nComp);
+      it->second.wsElNodeID[b].assign<ElemTag, NodeTag, CompTag>(it->second.wsElNodeID_rawVec[b].data(),(int)buck.size(),nodes_per_element,nComp);
+    }
+
     for (std::size_t i=0; i < buck.size(); i++) {
 
       // Traverse all the elements in this bucket
@@ -980,6 +1096,20 @@ void Albany::STKDiscretization::computeWorksetInfo()
       wsElNodeEqID[b][i].resize(nodes_per_element);
       wsElNodeID[b][i].resize(nodes_per_element);
       coords[b][i].resize(nodes_per_element);
+ 
+      for(it = mapOfDOFsStructs.begin(); it != mapOfDOFsStructs.end(); ++it) {
+        IDArray& wsElNodeID_array = it->second.wsElNodeID[b];
+        int nComp = it->first.second;
+          for (int j=0; j < nodes_per_element; j++)
+          {
+            stk::mesh::Entity node = node_rels[j];
+            for (int k=0; k < nComp; k++) {
+              int gid = it->second.overlap_dofManager.getGlobalDOF(node,k);
+              int node_lid = it->second.overlap_map->LID(gid);
+                wsElNodeID_array((int)i,j,k) = node_lid;
+            }
+          }
+      }
 
 #ifdef ALBANY_LCM
       if(stkMeshStruct->getFieldContainer()->hasSphereVolumeField() && nodes_per_element == 1)
@@ -987,6 +1117,8 @@ void Albany::STKDiscretization::computeWorksetInfo()
 #endif
 
       // loop over local nodes
+      IDArray& node_array = mapOfDOFsStructs[make_pair(std::string(""),1)].wsElNodeID[b];
+      IDArray& sol_array = mapOfDOFsStructs[make_pair(std::string(""),neq)].wsElNodeID[b];
       for (int j=0; j < nodes_per_element; j++) {
         stk::mesh::Entity rowNode = node_rels[j];
         int node_gid = gid(rowNode);
@@ -997,10 +1129,10 @@ void Albany::STKDiscretization::computeWorksetInfo()
         coords[b][i][j] = stk::mesh::field_data(*coordinates_field, rowNode);
 
         wsElNodeEqID[b][i][j].resize(neq);
-        wsElNodeID[b][i][j] = node_gid;
+        wsElNodeID[b][i][j] =node_array((int)i,j,0);
 
-        for (std::size_t eq=0; eq < neq; eq++)
-          wsElNodeEqID[b][i][j][eq] = getOverlapDOF(node_lid,eq);
+        for (int eq=0; eq < neq; eq++)
+          wsElNodeEqID[b][i][j][eq] = sol_array((int)i,j,eq);
       }
     }
   }
@@ -2088,9 +2220,28 @@ void
 Albany::STKDiscretization::updateMesh(bool /*shouldTransferIPData*/)
 {
 
+  const Albany::StateInfoStruct& nodal_param_states = stkMeshStruct->getFieldContainer()->getNodalParameterSIS();
+  nodalDOFsStructContainer.addEmptyDOFsStruct("ordinary_solution", "", neq);
+  nodalDOFsStructContainer.addEmptyDOFsStruct("mesh_nodes", "", 1);
+  for(int is=0; is<nodal_param_states.size(); is++) {
+    const Albany::StateStruct& param_state = *nodal_param_states[is];
+    const Albany::StateStruct::FieldDims& dim = param_state.dim;
+    int numComps = 1;
+    if (dim.size()==3) //vector
+      numComps = dim[2];
+    else if (dim.size()==4) //tensor
+      numComps = dim[2]*dim[3];
+
+    nodalDOFsStructContainer.addEmptyDOFsStruct(param_state.name, param_state.meshPart,numComps);
+    }
+
+  computeNodalEpetraMaps(false);
+
   computeOwnedNodesAndUnknowns();
 
   setupMLCoords();
+
+  computeNodalEpetraMaps(true);
 
   computeOverlapNodesAndUnknowns();
 

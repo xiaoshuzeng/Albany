@@ -32,6 +32,7 @@ SET(HEADERS
   Albany_OrdinarySTKFieldContainer_Def.hpp
   Albany_MultiSTKFieldContainer.hpp
   Albany_MultiSTKFieldContainer_Def.hpp
+  Albany_NodalDOFManager.hpp
   Albany_STKNodeFieldContainer.hpp
   Albany_STKNodeFieldContainer_Def.hpp
   Albany_TmplSTKMeshStruct.hpp

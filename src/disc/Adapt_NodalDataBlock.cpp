@@ -32,6 +32,25 @@ Adapt::NodalDataBlock::resizeOverlapMap(const std::vector<int>& overlap_nodeGIDs
 
 }
 
+
+void
+Adapt::NodalDataBlock::resizeOverlapMap(Teuchos::RCP<const Epetra_Map> overlap_nodeMap, const Epetra_Comm& comm){
+
+//  overlap_node_map = Teuchos::rcp(new Epetra_BlockMap(numGlobalNodes,
+  overlap_node_map = Teuchos::rcp(new Epetra_BlockMap(-1,
+                            overlap_nodeMap->NumMyElements(),
+                            overlap_nodeMap->MyGlobalElements(),
+                            blocksize,
+                            0,
+                            comm));
+
+  // Build the vector and accessors
+  overlap_node_vec = Teuchos::rcp(new Epetra_Vector(*overlap_node_map, false));
+
+  mapsHaveChanged = true;
+
+}
+
 void
 Adapt::NodalDataBlock::resizeLocalMap(const std::vector<int>& local_nodeGIDs, const Epetra_Comm& comm){
 
@@ -41,6 +60,26 @@ Adapt::NodalDataBlock::resizeLocalMap(const std::vector<int>& local_nodeGIDs, co
   local_node_map = Teuchos::rcp(new Epetra_BlockMap(-1,
                             local_nodeGIDs.size(),
                             &local_nodeGIDs[0],
+                            blocksize,
+                            0,
+                            comm));
+
+  // Build the vector and accessors
+  local_node_vec = Teuchos::rcp(new Epetra_Vector(*local_node_map, false));
+
+  mapsHaveChanged = true;
+
+}
+
+void
+Adapt::NodalDataBlock::resizeLocalMap(Teuchos::RCP<const Epetra_Map> nodeMap, const Epetra_Comm& comm){
+
+
+
+//  local_node_map = Teuchos::rcp(new Epetra_BlockMap(numGlobalNodes,
+  local_node_map = Teuchos::rcp(new Epetra_BlockMap(-1,
+                            nodeMap->NumMyElements(),
+                            nodeMap->MyGlobalElements(),
                             blocksize,
                             0,
                             comm));

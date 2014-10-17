@@ -32,6 +32,13 @@ class OrdinarySTKFieldContainer : public GenericSTKFieldContainer<Interleaved> {
     AbstractSTKFieldContainer::VectorFieldType* getSolutionField(){ return solution_field; };
 
     void fillSolnVector(Epetra_Vector& soln, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
+
+    void fillVector(Epetra_Vector& field_vector, const std::string& field_name, stk::mesh::Selector& field_selection,
+                    const Teuchos::RCP<Epetra_Map>& field_node_map, const NodalDOFManager& nodalDofManager);
+
+    void saveVector(const Epetra_Vector& field_vector, const std::string& field_name, stk::mesh::Selector& field_selection,
+                        const Teuchos::RCP<Epetra_Map>& field_node_map, const NodalDOFManager& nodalDofManager);
+
     void saveSolnVector(const Epetra_Vector& soln, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
     void saveResVector(const Epetra_Vector& res, stk::mesh::Selector& sel, const Teuchos::RCP<Epetra_Map>& node_map);
 
