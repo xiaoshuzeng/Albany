@@ -31,6 +31,11 @@
       <Parameter name="Number" type="int" value="1"/>
       <Parameter name="Parameter 0" type="string" value="Glen's Law Homotopy Parameter"/>
     </ParameterList>
+    <ParameterList name="Distributed Parameters">
+     <Parameter name="Number of Parameter Vectors" type="int" value="0"/>
+     <Parameter name="Parameter 0" type="string" value="basal_friction"/>
+     <Parameter name="Mesh Part" type="string" value="Bottom"/>
+    </ParameterList>
     <ParameterList name="FELIX Viscosity">
       <Parameter name="Type" type="string" value="Glen's Law"/>
       <Parameter name="Glen's Law Homotopy Parameter" type="double" value="0.1"/>
