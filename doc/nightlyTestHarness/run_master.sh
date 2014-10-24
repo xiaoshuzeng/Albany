@@ -53,7 +53,7 @@ time source $SCRIPTDIR/trilinos_checkout.sh
 ###fi
 
 echo; echo "...Starting full Trilinos Build"
-time source $SCRIPTDIR/trilinos_build_all.sh
+time source $SCRIPTDIR/trilinos_build.sh
 echo; echo "...Starting Albany VOTD clone and Build"
 time source $SCRIPTDIR/albany_build.sh
 

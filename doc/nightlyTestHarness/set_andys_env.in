@@ -12,13 +12,13 @@
 source /home/agsalin/.bash_profile
 
 # Set these to whatever you like
-SCRIPTDIR=/home/agsalin/NightlyAlbanyTriKota
-NIGHTLYDIR=/home/agsalin/NightlyAlbanyTriKota/Results
+SCRIPTDIR=/home/agsalin/NightlyTests
+NIGHTLYDIR=/home/agsalin/NightlyTests/Results
 
 #set this correctly
-BOOSTDIR=/home/agsalin/install/boost_1_49_0
+BOOSTDIR=/usr/local
 NETCDFDIR=/home/agsalin/install/netcdf-4.2/install
-HDF5DIR=/home/agsalin/install/hdf5-1.8.6/hdf5/
+HDF5DIR=/home/agsalin/install/hdf5-1.8.11/hdf5/
 #set this correctly, to software.sandia.gov user name
 SSGUSER=agsalin
 
