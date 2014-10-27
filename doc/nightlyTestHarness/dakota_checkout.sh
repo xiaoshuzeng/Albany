@@ -37,4 +37,4 @@ cd $TRIKOTADIR
 
 tar xvf $NIGHTLYDIR/dakota-stable.src.tar > $DAKOUTDIR/dakota_untar.out 2>&1
 
-mv dakota-5.4.0.src Dakota
+mv dakota-5.4.0+.src Dakota

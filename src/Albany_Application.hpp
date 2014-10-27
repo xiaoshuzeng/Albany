@@ -260,6 +260,15 @@ namespace Albany {
       const EpetraExt::ModelEvaluator::Derivative& dg_dxdotdot,
       const EpetraExt::ModelEvaluator::Derivative& dg_dp);
 
+    void evaluateResponseDistParamDeriv(  int response_index,
+      const double current_time,
+      const Epetra_Vector* xdot,
+      const Epetra_Vector* xdotdot,
+      const Epetra_Vector& x,
+      const Teuchos::Array<ParamVec>& param_array,
+      const std::string& dist_param_name,
+      Epetra_MultiVector* dg_dp);
+
 #ifdef ALBANY_SG_MP
     //! Compute global residual for stochastic Galerkin problem
     /*!
@@ -812,7 +821,6 @@ void Albany::Application::loadWorksetBucketInfo(PHAL::Workset& workset,
   workset.wsIndex = ws;
 
   workset.local_Vp.resize(workset.numCells);
-  workset.dist_param_index.resize(workset.numCells);
 
 //  workset.print(*out);
 

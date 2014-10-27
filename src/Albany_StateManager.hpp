@@ -51,7 +51,8 @@ public:
 			     const bool registerOldState=false,
 			     const bool outputToExodus=true,
 			     const std::string &responseIDtoRequire="",
-			     StateStruct::MeshFieldEntity const * fieldEntity=0);
+			     StateStruct::MeshFieldEntity const * fieldEntity=0,
+			     const std::string& meshPartName="");
 
   //! Method to call multiple times (before allocate) to register which states will be saved.
   //! Returns param vector with all info to build a SaveStateField or LoadStateField evaluator
@@ -69,7 +70,8 @@ public:
   registerStateVariable(const std::string &stateName, const Teuchos::RCP<PHX::DataLayout> &dl,
                                               const std::string& ebName,
                                               const bool outputToExodus,
-                                              StateStruct::MeshFieldEntity const* fieldEntity);
+                                              StateStruct::MeshFieldEntity const* fieldEntity,
+                                              const std::string& meshPartName="");
 
   //! If field name to save/load is different from state name
   Teuchos::RCP<Teuchos::ParameterList>

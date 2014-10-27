@@ -30,7 +30,11 @@ class NodalDataBlock {
 
     void resizeLocalMap(const std::vector<int>& local_nodeGIDs, const Epetra_Comm& comm);
 
+    void resizeLocalMap(Teuchos::RCP<const Epetra_Map> nodeMap, const Epetra_Comm& comm);
+
     void resizeOverlapMap(const std::vector<int>& overlap_nodeGIDs, const Epetra_Comm& comm);
+
+    void resizeOverlapMap(Teuchos::RCP<const Epetra_Map> overlap_nodeMap, const Epetra_Comm& comm);
 
     Teuchos::RCP<Epetra_Vector> getOverlapNodeVec(){ return overlap_node_vec; }
     Teuchos::RCP<Epetra_Vector> getLocalNodeVec(){ return local_node_vec; }

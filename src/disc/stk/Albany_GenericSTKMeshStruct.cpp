@@ -122,8 +122,11 @@ void Albany::GenericSTKMeshStruct::SetupFieldData(
   if (bulkData == NULL)
 
      bulkData = new stk::mesh::BulkData(*metaData,
-                                        Albany::getMpiCommFromEpetraComm(*comm)
-                                        //, worksetSize // capability currently removed from STK_Mesh
+                                        Albany::getMpiCommFromEpetraComm(*comm),
+                                        false, // add_fmwk_data
+                                        NULL, // ConnectivityMap
+                                        NULL, // FieldDataManager
+                                         worksetSize
                                         );
 
   // Build the container for the STK fields
@@ -373,15 +376,12 @@ int Albany::GenericSTKMeshStruct::computeWorksetSize(const int worksetSizeMax,
 {
   // Resize workset size down to maximum number in an element block
 
-  // if (worksetSizeMax > ebSizeMax || worksetSizeMax < 1) return ebSizeMax;
-  // else {
-  //    // compute numWorksets, and shrink workset size to minimize padding
-  //    const int numWorksets = 1 + (ebSizeMax-1) / worksetSizeMax;
-  //    return (1 + (ebSizeMax-1) /  numWorksets);
-  // }
-
-  return std::min(512, //stk::mesh::impl::BucketRepository::default_bucket_capacity,
-                  ebSizeMax);
+  if (worksetSizeMax > ebSizeMax || worksetSizeMax < 1) return ebSizeMax;
+  else {
+     // compute numWorksets, and shrink workset size to minimize padding
+     const int numWorksets = 1 + (ebSizeMax-1) / worksetSizeMax;
+     return (1 + (ebSizeMax-1) /  numWorksets);
+  }
 }
 
 namespace {

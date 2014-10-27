@@ -59,17 +59,16 @@ void GatherScalarNodalParameter<EvalT, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
   Teuchos::RCP<const Epetra_Vector> pvec =
-    workset.distParamLib->get(this->param_name)->vector();
+    workset.distParamLib->get(this->param_name)->overlapped_vector();
 
-  for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
-    const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID =
-      workset.wsElNodeEqID[cell];
+  const Albany::IDArray&  wsElDofs = workset.distParamLib->get(this->param_name)->workset_elem_dofs()[workset.wsIndex];
 
-    for (std::size_t node = 0; node < this->numNodes; ++node) {
-      const Teuchos::ArrayRCP<int>& eqID  = nodeID[node];
-      (this->val)(cell,node) = (*pvec)[eqID[0]];
+  for (std::size_t cell=0; cell < workset.numCells; ++cell )
+    for (std::size_t node = 0; node < this->numNodes; ++node)
+    {
+      int lid = wsElDofs((int)cell,(int)node,0);
+      (this->val)(cell,node) = (lid >= 0 ) ? (*pvec)[wsElDofs((int)cell,(int)node,0)] : 0;
     }
-  }
 }
 
 // **********************************************************************
@@ -98,7 +97,9 @@ evaluateFields(typename Traits::EvalData workset)
 {
   // Distributed parameter vector
   Teuchos::RCP<const Epetra_Vector> pvec =
-    workset.distParamLib->get(this->param_name)->vector();
+    workset.distParamLib->get(this->param_name)->overlapped_vector();
+
+  const Albany::IDArray&  wsElDofs = workset.distParamLib->get(this->param_name)->workset_elem_dofs()[workset.wsIndex];
 
   // Are we differentiating w.r.t. this parameter?
   bool is_active = (workset.dist_param_deriv_name == this->param_name);
@@ -108,30 +109,52 @@ evaluateFields(typename Traits::EvalData workset)
     const Epetra_MultiVector& Vp = *(workset.Vp);
     const int num_cols = Vp.NumVectors();
     const int num_deriv = this->numNodes;
+    const int num_nodes_res = this->numNodes;
+    bool trans = workset.transpose_dist_param_deriv;
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
-      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID =
-        workset.wsElNodeEqID[cell];
-      Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> >& local_Vp =
-        workset.local_Vp[cell];
-      Teuchos::ArrayRCP<int>& dist_param_index =
-        workset.dist_param_index[cell];
-      local_Vp.resize(num_deriv);
-      dist_param_index.resize(num_deriv);
-      for (std::size_t node = 0; node < this->numNodes; ++node) {
+      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& resID  = workset.wsElNodeEqID[cell];
+
+      for (std::size_t node = 0; node < num_deriv; ++node) {
 
         // Initialize Fad type for parameter value
-        const Teuchos::ArrayRCP<int>& eqID  = nodeID[node];
-        ScalarT v(num_deriv, node, (*pvec)[eqID[0]]);
+        int id = wsElDofs((int)cell,(int)node,0);
+        double pvec_id = (id >=0) ? (*pvec)[id] : 0;
+        ScalarT v(num_deriv, node, pvec_id);
         v.setUpdateValue(!workset.ignore_residual);
         (this->val)(cell,node) = v;
+      }
 
-        // Set index into Vp multi-vector
-        dist_param_index[node] = eqID[0];
+      if(workset.Vp != Teuchos::null) {
+        const Epetra_MultiVector& Vp = *(workset.Vp);
+        const int num_cols = Vp.NumVectors();
 
-        // Store Vp entries
-        local_Vp[node].resize(num_cols);
-        for (int col=0; col<num_cols; ++col)
-          local_Vp[node][col] = Vp[col][eqID[0]];
+
+        Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> >& local_Vp =
+                workset.local_Vp[cell];
+
+
+        if(trans) {
+          local_Vp.resize(num_nodes_res*workset.numEqs);
+          for (std::size_t node = 0; node < num_nodes_res; ++node) {
+            // Store Vp entries
+            const Teuchos::ArrayRCP<int>& eqID  = resID[node];
+            for (std::size_t eq = 0; eq < workset.numEqs; eq++) {
+              local_Vp[node*workset.numEqs+eq].resize(num_cols);
+              int id = eqID[eq];
+              for (int col=0; col<num_cols; ++col)
+                local_Vp[node*workset.numEqs+eq][col] = Vp[col][id];
+            }
+          }
+        }
+        else {
+          local_Vp.resize(num_deriv);
+          for (std::size_t node = 0; node < num_deriv; ++node) {
+            int id = wsElDofs((int)cell,(int)node,0);
+            local_Vp[node].resize(num_cols);
+            for (int col=0; col<num_cols; ++col)
+              local_Vp[node][col] = (id >=0) ?  Vp[col][id] : 0;
+          }
+        }
       }
     }
   }
@@ -139,11 +162,9 @@ evaluateFields(typename Traits::EvalData workset)
   // If not active, just set the parameter value in the phalanx field
   else {
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
-      const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID =
-        workset.wsElNodeEqID[cell];
       for (std::size_t node = 0; node < this->numNodes; ++node) {
-        const Teuchos::ArrayRCP<int>& eqID  = nodeID[node];
-        (this->val)(cell,node) = (*pvec)[eqID[0]];
+         int lid = wsElDofs((int)cell,(int)node,0);
+          (this->val)(cell,node) = (lid >=0) ? (*pvec)[lid] : 0;
       }
     }
   }

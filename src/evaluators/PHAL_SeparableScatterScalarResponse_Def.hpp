@@ -162,95 +162,64 @@ template<typename Traits>
 void SeparableScatterScalarResponse<PHAL::AlbanyTraits::DistParamDeriv, Traits>::
 preEvaluate(typename Traits::PreEvalData workset)
 {
-  /*
   // Initialize derivatives
-  Teuchos::RCP<Epetra_MultiVector> dgdx = workset.dgdx;
-  Teuchos::RCP<Epetra_MultiVector> overlapped_dgdx = workset.overlapped_dgdx;
-  if (dgdx != Teuchos::null) {
-    dgdx->PutScalar(0.0);
-    overlapped_dgdx->PutScalar(0.0);
+  Teuchos::RCP<Epetra_MultiVector> dgdp = workset.dgdp;
+  Teuchos::RCP<Epetra_MultiVector> overlapped_dgdp = workset.overlapped_dgdp;
+  if (dgdp != Teuchos::null) {
+    dgdp->PutScalar(0.0);
+    overlapped_dgdp->PutScalar(0.0);
   }
-
-  Teuchos::RCP<Epetra_MultiVector> dgdxdot = workset.dgdxdot;
-  Teuchos::RCP<Epetra_MultiVector> overlapped_dgdxdot =
-    workset.overlapped_dgdxdot;
-  if (dgdxdot != Teuchos::null) {
-    dgdxdot->PutScalar(0.0);
-    overlapped_dgdxdot->PutScalar(0.0);
-  }
-  */
 }
 
 template<typename Traits>
 void SeparableScatterScalarResponse<PHAL::AlbanyTraits::DistParamDeriv, Traits>::
 evaluateFields(typename Traits::EvalData workset)
 {
-  /*
   // Here we scatter the *local* response derivative
-  Teuchos::RCP<Epetra_MultiVector> dgdx = workset.overlapped_dgdx;
-  Teuchos::RCP<Epetra_MultiVector> dgdxdot = workset.overlapped_dgdxdot;
-  Teuchos::RCP<Epetra_MultiVector> dg;
-  if (dgdx != Teuchos::null)
-    dg = dgdx;
-  else
-    dg = dgdxdot;
+  Teuchos::RCP<Epetra_MultiVector> dgdp = workset.overlapped_dgdp;
+
+  if (dgdp == Teuchos::null)
+    return;
+
+  int num_deriv = numNodes;
 
   // Loop over cells in workset
+
+  const Albany::IDArray&  wsElDofs = workset.distParamLib->get(workset.dist_param_deriv_name)->workset_elem_dofs()[workset.wsIndex];
   for (std::size_t cell=0; cell < workset.numCells; ++cell) {
-    const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID =
-      workset.wsElNodeEqID[cell];
 
     // Loop over responses
     for (std::size_t res = 0; res < this->global_response.size(); res++) {
       ScalarT& val = this->local_response(cell, res);
 
       // Loop over nodes in cell
-      for (unsigned int node_dof=0; node_dof<numNodes; node_dof++) {
-        int neq = nodeID[node_dof].size();
+      for (int deriv=0; deriv<num_deriv; ++deriv) {
+        const int row = wsElDofs((int)cell,deriv,0);
 
-        // Loop over equations per node
-        for (unsigned int eq_dof=0; eq_dof<neq; eq_dof++) {
+          // Set dg/dp
+        if(row >=0){
+          dgdp->SumIntoMyValue(row, res, val.dx(deriv));
+          }
 
-          // local derivative component
-          int deriv = neq * node_dof + eq_dof;
-
-          // local DOF
-          int dof = nodeID[node_dof][eq_dof];
-
-          // Set dg/dx
-          dg->SumIntoMyValue(dof, res, val.dx(deriv));
-
-        } // column equations
-      } // column nodes
+      } // deriv
     } // response
   } // cell
-  */
 }
 
 template<typename Traits>
 void SeparableScatterScalarResponse<PHAL::AlbanyTraits::DistParamDeriv, Traits>::
 postEvaluate(typename Traits::PostEvalData workset)
 {
-  /*
-  // Here we scatter the *global* response
+  // Here we scatter the *global* response and its derivatives
   Teuchos::RCP<Epetra_Vector> g = workset.g;
+  Teuchos::RCP<Epetra_MultiVector> dgdp = workset.dgdp;
+  Teuchos::RCP<Epetra_MultiVector> overlapped_dgdp = workset.overlapped_dgdp;
   if (g != Teuchos::null)
-    for (std::size_t res = 0; res < this->global_response.size(); res++) {
-      (*g)[res] = this->global_response[res].val();
-  }
-
-  // Here we scatter the *global* response derivatives
-  Teuchos::RCP<Epetra_MultiVector> dgdx = workset.dgdx;
-  Teuchos::RCP<Epetra_MultiVector> overlapped_dgdx = workset.overlapped_dgdx;
-  if (dgdx != Teuchos::null)
-    dgdx->Export(*overlapped_dgdx, *workset.x_importer, Add);
-
-  Teuchos::RCP<Epetra_MultiVector> dgdxdot = workset.dgdxdot;
-  Teuchos::RCP<Epetra_MultiVector> overlapped_dgdxdot =
-    workset.overlapped_dgdxdot;
-  if (dgdxdot != Teuchos::null)
-    dgdxdot->Export(*overlapped_dgdxdot, *workset.x_importer, Add);
-  */
+     for (std::size_t res = 0; res < this->global_response.size(); res++) {
+       (*g)[res] = this->global_response[res].val();
+   }
+   if (dgdp != Teuchos::null)
+      workset.distParamLib->get(workset.dist_param_deriv_name)->export_add(*dgdp, *overlapped_dgdp);
 }
 
 // **********************************************************************

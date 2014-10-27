@@ -46,6 +46,18 @@ template<class Output>
     //! Get overlapped DOF map
     Teuchos::RCP<const Epetra_Map> getOverlapMap() const;
 
+    //! Get field DOF map
+    Teuchos::RCP<const Epetra_Map> getMap(const std::string& field_name) const {
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
+          "AlbPUMI:FMDBDiscretization: getMap(field_name) not implemented yet");
+    }
+
+    //! Get field overlapped DOF map
+    Teuchos::RCP<const Epetra_Map> getOverlapMap(const std::string& field_name) const {
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
+          "AlbPUMI:FMDBDiscretization: getOverlapMap(field_name) not implemented yet");
+    }
+
     //! Get Jacobian graph
     Teuchos::RCP<const Epetra_CrsGraph> getJacobianGraph() const;
 
@@ -71,10 +83,17 @@ template<class Output>
    //! Get connectivity map from elementGID to workset
     Albany::WsLIDList& getElemGIDws() { return elemGIDws; };
 
-    //! Get map from (Ws, El, Local Node) -> NodeLID
+    //! Get map from (Ws, El, Local Node, Eq) -> NodeLID
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > > >::type& getWsElNodeEqID() const;
 
+    //! Get map from (Ws, El, Local Node) -> NodeLID
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type& getWsElNodeID() const;
+
+    //! Get IDArray for (Ws, Local Node, nComps) -> NodeLID, works for both scalar and vector fields
+    const std::vector<IDArray>& getElNodeID(const std::string& field_name) const {
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
+          "AlbPUMI:FMDBDiscretization: getElNodeID(field_name) not implemented yet");
+    }
 
     //! Retrieve coodinate vector (num_used_nodes * 3)
     Teuchos::ArrayRCP<double>& getCoordinates() const;
@@ -98,6 +117,12 @@ template<class Output>
 
     Albany::StateArrays& getStateArrays() {return stateArrays;};
 
+    //! Get nodal parameters state info struct
+    virtual const Albany::StateInfoStruct& getNodalParameterSIS() const  {
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
+          "AlbPUMI:FMDBDiscretization: getNodalParameterSIS() not implemented yet");
+    }
+
     //! Retrieve Vector (length num worksets) of element block names
     const Albany::WorksetArray<std::string>::type&  getWsEBNames() const;
     //! Retrieve Vector (length num worksets) of physics set index
@@ -107,7 +132,19 @@ template<class Output>
 
     Teuchos::RCP<Epetra_Vector> getSolutionField() const;
 
+    //! Get field vector from mesh database
+    virtual void getField(Epetra_Vector &field_vector, const std::string& field_name) const  {
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
+          "AlbPUMI:FMDBDiscretization: getField(field_vector, field_name) not implemented yet");
+    }
+
     void setResidualField(const Epetra_Vector& residual);
+
+    //! Set the field vector into mesh database
+    virtual void setField(const Epetra_Vector &field_vector, const std::string& field_name, bool overlapped)  {
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
+          "AlbPUMI:FMDBDiscretization: setField(field_vector, field_name, overlapped) not implemented yet");
+    }
 
     // Retrieve mesh struct
     Teuchos::RCP<AlbPUMI::FMDBMeshStruct> getFMDBMeshStruct() {return fmdbMeshStruct;}

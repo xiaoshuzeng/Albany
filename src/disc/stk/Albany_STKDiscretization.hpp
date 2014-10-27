@@ -44,6 +44,35 @@ namespace Albany {
 
   };
 
+
+  struct DOFsStruct {
+    Teuchos::RCP<Epetra_Map> node_map;
+    Teuchos::RCP<Epetra_Map> overlap_node_map;
+    Teuchos::RCP<Epetra_Map> map;
+    Teuchos::RCP<Epetra_Map> overlap_map;
+    NodalDOFManager dofManager;
+    NodalDOFManager overlap_dofManager;
+    std::vector<std::vector<int> > wsElNodeID_rawVec;
+    std::vector<IDArray> wsElNodeID;
+  };
+
+  struct NodalDOFsStructContainer {
+    typedef std::map<std::pair<std::string,int>,  DOFsStruct >  MapOfDOFsStructs;
+
+    MapOfDOFsStructs mapOfDOFsStructs;
+    std::map<std::string, MapOfDOFsStructs::const_iterator> fieldToMap;
+    const DOFsStruct& getDOFsStruct(const std::string& field_name) const {return fieldToMap.find(field_name)->second->second;}; //TODO handole errors
+
+    void addEmptyDOFsStruct(const std::string& field_name, const std::string& meshPart, int numComps){
+    
+      if(numComps != 1)
+        mapOfDOFsStructs.insert(make_pair(make_pair(meshPart,1),DOFsStruct()));
+
+      fieldToMap[field_name] = mapOfDOFsStructs.insert(make_pair(make_pair(meshPart,numComps),DOFsStruct())).first;
+    }
+    
+  };
+
   class STKDiscretization : public Albany::AbstractDiscretization {
   public:
 
@@ -63,6 +92,12 @@ namespace Albany {
     //! Get overlapped DOF map
     Teuchos::RCP<const Epetra_Map> getOverlapMap() const;
 
+    //! Get field DOF map
+    Teuchos::RCP<const Epetra_Map> getMap(const std::string& field_name) const;
+
+    //! Get field overlapped DOF map
+    Teuchos::RCP<const Epetra_Map> getOverlapMap(const std::string& field_name) const;
+
     //! Get Jacobian graph
     Teuchos::RCP<const Epetra_CrsGraph> getJacobianGraph() const;
 
@@ -71,6 +106,9 @@ namespace Albany {
 
     //! Get Node map
     Teuchos::RCP<const Epetra_Map> getNodeMap() const;
+
+    //! Get overlapped Node map
+    Teuchos::RCP<const Epetra_Map> getOverlapNodeMap() const;
 
     //! Get Node set lists (typedef in Albany_AbstractDiscretization.hpp)
     const NodeSetList& getNodeSets() const { return nodeSets; };
@@ -85,7 +123,12 @@ namespace Albany {
     //! Get map from (Ws, El, Local Node) -> NodeLID
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > > >::type& getWsElNodeEqID() const;
 
+    //! Get map from (Ws, Local Node) -> NodeLID
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type& getWsElNodeID() const;
+
+    //! Get IDArray for (Ws, Local Node, nComps) -> NodeLID, works for both scalar and vector fields
+    const std::vector<IDArray>& getElNodeID(const std::string& field_name) const
+        {return nodalDOFsStructContainer.getDOFsStruct(field_name).wsElNodeID;}
 
     //! Retrieve coodinate vector (num_used_nodes * 3)
     Teuchos::ArrayRCP<double>& getCoordinates() const;
@@ -97,7 +140,12 @@ namespace Albany {
 
     void printCoords() const;
 
+    //! Get stateArrays
     Albany::StateArrays& getStateArrays() {return stateArrays;}
+
+    //! Get nodal parameters state info struct
+    const Albany::StateInfoStruct& getNodalParameterSIS() const
+      {return stkMeshStruct->getFieldContainer()->getNodalParameterSIS();}
 
     //! Retrieve Vector (length num worksets) of element block names
     const Albany::WorksetArray<std::string>::type&  getWsEBNames() const;
@@ -178,6 +226,9 @@ namespace Albany {
     // Copy values from STK Mesh field to given Epetra_Vector
     void getSolutionField(Epetra_Vector &result) const;
 
+    //! Copy field from STK Mesh field to given Epetra_Vector
+    void getField(Epetra_Vector &field_vector, const std::string& field_name) const;
+
     Teuchos::RCP<Epetra_MultiVector> getSolutionFieldHistoryImpl(int stepCount) const;
     void getSolutionFieldHistoryImpl(Epetra_MultiVector &result) const;
 
@@ -185,12 +236,17 @@ namespace Albany {
     // Here soln is the local (non overlapped) solution
     void setSolutionField(const Epetra_Vector& soln);
 
+    // Copy field vector into STK Mesh field
+    void setField(const Epetra_Vector &field_vector, const std::string& field_name, bool overlapped=false);
+
     // Copy solution vector from Epetra_Vector into STK Mesh
     // Here soln is the local + neighbor (overlapped) solution
     void setOvlpSolutionField(const Epetra_Vector& soln);
 
     int nonzeroesPerRow(const int neq) const;
     double monotonicTimeLabel(const double time);
+
+    void computeNodalEpetraMaps(bool overlapped);
 
     //! Process STK mesh for Owned nodal quantitites
     void computeOwnedNodesAndUnknowns();
@@ -236,6 +292,8 @@ namespace Albany {
 
     //! Unknown Map
     Teuchos::RCP<Epetra_Map> map;
+
+    NodalDOFsStructContainer nodalDOFsStructContainer;
 
     //! Overlapped unknown map, and node map
     Teuchos::RCP<Epetra_Map> overlap_map;

@@ -1268,25 +1268,25 @@ evaluateFields(typename Traits::EvalData workset)
   this->evaluateNeumannContribution(workset);
 
   if (trans) {
-
+    int neq = workset.numEqs;
+    const Albany::IDArray&  wsElDofs = workset.distParamLib->get(workset.dist_param_deriv_name)->workset_elem_dofs()[workset.wsIndex];
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
-      const Teuchos::ArrayRCP<int>& dist_param_index =
-        workset.dist_param_index[cell];
       const Teuchos::ArrayRCP<Teuchos::ArrayRCP<double> >& local_Vp =
         workset.local_Vp[cell];
-      const int num_deriv = local_Vp.size();
-
+      const int num_deriv = local_Vp.size()/neq;
       for (int i=0; i<num_deriv; i++) {
         for (int col=0; col<num_cols; col++) {
           double val = 0.0;
           for (std::size_t node = 0; node < this->numNodes; ++node) {
             for (std::size_t dim = 0; dim < this->numDOFsSet; ++dim){
               valptr = &(this->neumann)(cell, node, dim);
-              val += valptr->dx(i)*local_Vp[col][i];
+              int eq = this->offset[dim];
+              val += valptr->dx(i)*local_Vp[node*neq+eq][col];
             }
           }
-          const int row = dist_param_index[i];
-          fpV->SumIntoMyValue(row, col, val);
+          const int row = wsElDofs((int)cell,i,0);
+          if(row >= 0)
+            fpV->SumIntoMyValue(row, col, val);
         }
       }
     }
@@ -1294,7 +1294,6 @@ evaluateFields(typename Traits::EvalData workset)
   }
 
   else {
-
     for (std::size_t cell=0; cell < workset.numCells; ++cell ) {
       const Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> >& nodeID  =
         workset.wsElNodeEqID[cell];
@@ -1309,7 +1308,7 @@ evaluateFields(typename Traits::EvalData workset)
           for (int col=0; col<num_cols; col++) {
             double val = 0.0;
             for (int i=0; i<num_deriv; ++i)
-              val += valptr->dx(i)*local_Vp[col][i];
+              val += valptr->dx(i)*local_Vp[i][col];
             fpV->SumIntoMyValue(row, col, val);
           }
         }

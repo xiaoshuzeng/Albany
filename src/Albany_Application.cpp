@@ -47,7 +47,7 @@ int countRes; //counter which counts instances of residual (for debug output)
 Albany::Application::
 Application(const RCP<const Epetra_Comm>& comm_,
             const RCP<Teuchos::ParameterList>& params,
-            const Teuchos::RCP<const Epetra_Vector>& initial_guess) :
+            const RCP<const Epetra_Vector>& initial_guess) :
   comm(comm_),
   out(Teuchos::VerboseObjectBase::getDefaultOStream()),
   physicsBasedPreconditioner(false),
@@ -214,7 +214,7 @@ void Albany::Application::buildProblem()   {
   // This really needs to happen after the discretization is created for
   // distributed responses, but currently it can't be moved because there
   // are responses that setup states, which has to happen before the
-  // discreatization is created.  We will delay setup of the distributed
+  // discretization is created.  We will delay setup of the distributed
   // responses to deal with this temporarily.
   Teuchos::ParameterList& responseList =
     problemParams->sublist("Response Functions");
@@ -268,6 +268,28 @@ void Albany::Application::finalSetUp(const Teuchos::RCP<Teuchos::ParameterList>&
   // If the states have been already allocated, skip this.
   if(!stateMgr.areStateVarsAllocated())
     stateMgr.setStateArrays(disc);
+
+  //Create Distributed parameters and initialize them with data stored in the mesh.
+  const Albany::StateInfoStruct& distParamSIS = disc->getNodalParameterSIS();
+  for(int is=0; is<distParamSIS.size(); is++) {
+    // Get name of distributed parameter
+    const std::string& param_name = distParamSIS[is]->name;
+
+    //Get parameter maps and build parameter vector
+    const Teuchos::RCP<const Epetra_Map>& node_map = disc->getMap(param_name);
+    const Teuchos::RCP<const Epetra_Map> & overlap_node_map = disc->getOverlapMap(param_name);
+    Teuchos::RCP<Epetra_Vector> dist_param(new Epetra_Vector(*node_map));
+
+    //Initialize parameter with data stored in the mesh
+    disc->getField(*dist_param, param_name);
+
+    //Create distributed parameter and set workset_elem_dofs
+    Teuchos::RCP<EpetraDistributedParameter>  parameter(new EpetraDistributedParameter(param_name, dist_param, node_map, overlap_node_map));
+    parameter->set_workset_elem_dofs(Teuchos::rcpFromRef(disc->getElNodeID(param_name)));
+
+    //Add parameter to the distributed parameter library
+    distParamLib->add(parameter->name(), parameter);
+  }
 
   // Now setup response functions (see note above)
   for (int i=0; i<responses.size(); i++)
@@ -508,6 +530,9 @@ computeGlobalResidual(const double current_time,
 
   // Scatter x and xdot to the overlapped distrbution
   solMgr->scatterX(x, xdot, xdotdot);
+  
+  //Scatter distributed parameters
+  distParamLib->scatter();
 
   // Set parameters
   for (int i=0; i<p.size(); i++)
@@ -655,6 +680,9 @@ computeGlobalJacobian(const double alpha,
 
   // Scatter x and xdot to the overlapped distribution
   solMgr->scatterX(x, xdot, xdotdot);
+
+  //Scatter distributed parameters
+  distParamLib->scatter();
 
   // Set parameters
   for (int i=0; i<p.size(); i++)
@@ -841,6 +869,9 @@ computeGlobalTangent(const double alpha,
 
   // Scatter x and xdot to the overlapped distribution
   solMgr->scatterX(x, xdot, xdotdot);
+
+  //Scatter distributed parameters
+  distParamLib->scatter();
 
   // Scatter Vx dot the overlapped distribution
   RCP<Epetra_MultiVector> overlapped_Vx;
@@ -1146,6 +1177,9 @@ applyGlobalDistParamDeriv(const double current_time,
   // Scatter x and xdot to the overlapped distribution
   solMgr->scatterX(x, xdot, xdotdot);
 
+  //Scatter distributed parameters
+  distParamLib->scatter();
+
   // Set parameters
   for (int i=0; i<p.size(); i++)
     for (unsigned int j=0; j<p[i].size(); j++)
@@ -1164,8 +1198,16 @@ applyGlobalDistParamDeriv(const double current_time,
   }
 #endif
 
-  RCP<Epetra_MultiVector> overlapped_fpV =
-    rcp(new Epetra_MultiVector(*(disc->getOverlapMap()), fpV.NumVectors()));
+  RCP<Epetra_MultiVector> overlapped_fpV;
+
+  if (trans) {
+    overlapped_fpV = rcp(new Epetra_MultiVector(*(distParamLib->get(dist_param_name)->overlap_map()),
+        V.NumVectors()));
+  }
+  else {
+    overlapped_fpV = rcp(new Epetra_MultiVector(*(disc->getOverlapMap()), fpV.NumVectors()));
+  }
+
   overlapped_fpV->PutScalar(0.0);
   fpV.PutScalar(0.0);
 
@@ -1198,11 +1240,20 @@ applyGlobalDistParamDeriv(const double current_time,
   }
 
   // Import V (after BC's applied) to overlapped distribution
-  RCP<Epetra_MultiVector> overlapped_V =
-    rcp(new Epetra_MultiVector(
+  RCP<Epetra_MultiVector> overlapped_V;
+  if (trans) {
+    Teuchos::RCP<Epetra_Import>& importer = solMgr->get_importer();
+    overlapped_V = rcp(new Epetra_MultiVector(
+              *(disc->getOverlapMap()),
+              V.NumVectors()));
+    overlapped_V->Import(*V_bc, *importer, Insert);
+  }
+  else {
+    overlapped_V = rcp(new Epetra_MultiVector(
           *(distParamLib->get(dist_param_name)->overlap_map()),
           V.NumVectors()));
-  distParamLib->get(dist_param_name)->import(*overlapped_V, *V_bc);
+    distParamLib->get(dist_param_name)->import(*overlapped_V, *V_bc);
+  }
 
   // Set data in Workset struct, and perform fill via field manager
   {
@@ -1215,7 +1266,6 @@ applyGlobalDistParamDeriv(const double current_time,
       loadBasicWorksetInfo( workset,
                             paramLib->getRealValue<PHAL::AlbanyTraits::Residual>("Time") );
 
-    workset.distParamLib = distParamLib;
     workset.dist_param_deriv_name = dist_param_name;
     workset.Vp = overlapped_V;
     workset.fpV = overlapped_fpV;
@@ -1231,10 +1281,19 @@ applyGlobalDistParamDeriv(const double current_time,
     }
   }
 
+  // std::stringstream pg; pg << "neumann_phalanx_graph_ ";
+  // nfm[0]->writeGraphvizFile<PHAL::AlbanyTraits::DistParamDeriv>(pg.str(),true,true);
+
   { TEUCHOS_FUNC_TIME_MONITOR("> Albany Fill: Distributed Parameter Derivative Export");
 
   // Assemble global df/dp*V
-  fpV.Export(*overlapped_fpV, *exporter, Add);
+
+  if (trans) {
+    distParamLib->get(dist_param_name)->export_add(fpV, *overlapped_fpV);
+  }
+  else {
+    fpV.Export(*overlapped_fpV, *exporter, Add);
+  }
   } // End timer
 
   // Apply Dirichlet conditions using dfm (Dirchelt Field Manager)
@@ -1332,6 +1391,25 @@ evaluateResponseDerivative(
 
   responses[response_index]->evaluateDerivative(
     t, xdot, xdotdot, x, p, deriv_p, g, dg_dx, dg_dxdot, dg_dxdotdot, dg_dp);
+}
+
+void
+Albany::Application::
+evaluateResponseDistParamDeriv(
+    int response_index,
+    const double current_time,
+    const Epetra_Vector* xdot,
+    const Epetra_Vector* xdotdot,
+    const Epetra_Vector& x,
+    const Teuchos::Array<ParamVec>& param_array,
+    const std::string& dist_param_name,
+    Epetra_MultiVector* dg_dp) {
+  TEUCHOS_FUNC_TIME_MONITOR("> Albany Fill: Response Distributed Parameter Derivative");
+  double t = current_time;
+  if ( paramLib->isParameter("Time") )
+    t = paramLib->getRealValue<PHAL::AlbanyTraits::Residual>("Time");
+
+  responses[response_index]->evaluateDistParamDeriv(t, xdot, xdotdot, x, param_array, dist_param_name, dg_dp);
 }
 
 #ifdef ALBANY_SG_MP
@@ -2717,6 +2795,9 @@ evaluateStateFieldManager(const double current_time,
   // Scatter x and xdot to the overlapped distrbution
   solMgr->scatterX(x, xdot, xdotdot);
 
+  //Scatter distributed parameters
+  distParamLib->scatter();
+
   // Set data in Workset struct
   PHAL::Workset workset;
   loadBasicWorksetInfo( workset, current_time );
@@ -2821,6 +2902,15 @@ void Albany::Application::postRegSetup(std::string eval)
       dfm->postRegistrationSetupForType<PHAL::AlbanyTraits::Tangent>(eval);
     if (nfm!=Teuchos::null)
       nfm->postRegistrationSetupForType<PHAL::AlbanyTraits::Tangent>(eval);
+  }
+  else if (eval=="Distributed Parameter Derivative") { //!!!
+    for (int ps=0; ps < fm.size(); ps++)
+      fm[ps]->postRegistrationSetupForType<PHAL::AlbanyTraits::DistParamDeriv>(eval);
+    if (dfm!=Teuchos::null)
+      dfm->postRegistrationSetupForType<PHAL::AlbanyTraits::DistParamDeriv>(eval);
+    if (nfm!=Teuchos::null)
+      for (int ps=0; ps < nfm.size(); ps++)
+        nfm[ps]->postRegistrationSetupForType<PHAL::AlbanyTraits::DistParamDeriv>(eval);
   }
 #ifdef ALBANY_SG_MP
   else if (eval=="SGResidual") {
@@ -2995,10 +3085,12 @@ void Albany::Application::loadBasicWorksetInfo(
        PHAL::Workset& workset,
        double current_time)
 {
+    workset.numEqs = neq;
     workset.x        = solMgr->get_overlapped_x();
     workset.xdot     = solMgr->get_overlapped_xdot();
     workset.xdotdot     = solMgr->get_overlapped_xdotdot();
     workset.current_time = current_time;
+    workset.distParamLib = distParamLib;
     //workset.delta_time = delta_time;
     if (workset.xdot != Teuchos::null) workset.transientTerms = true;
     if (workset.xdotdot != Teuchos::null) workset.accelerationTerms = true;
@@ -3046,6 +3138,9 @@ void Albany::Application::setupBasicWorksetInfo(
   // Scatter x and xdot to the overlapped distrbution
   solMgr->scatterX(*x, xdot, xdotdot);
 
+  //Scatter distributed parameters
+  distParamLib->scatter();
+
   // Set parameters
   for (int i=0; i<p.size(); i++)
     for (unsigned int j=0; j<p[i].size(); j++)
@@ -3054,6 +3149,8 @@ void Albany::Application::setupBasicWorksetInfo(
   workset.x = overlapped_x;
   workset.xdot = overlapped_xdot;
   workset.xdotdot = overlapped_xdotdot;
+  workset.distParamLib = distParamLib;
+
   if (!paramLib->isParameter("Time"))
     workset.current_time = current_time;
   else
