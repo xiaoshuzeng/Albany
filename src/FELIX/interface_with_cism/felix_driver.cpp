@@ -384,7 +384,7 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
        double homotopy = parameterList->sublist("Problem").sublist("FELIX Viscosity").get("Glen's Law Homotopy Parameter", 1.0);
        if(meshStruct->restartDataTime()== homotopy) {
          parameterList->sublist("Problem").set("Solution Method", "Steady");
-         paramList->sublist("Piro").set("Solver Type", "NOX");
+         parameterList->sublist("Piro").set("Solver Type", "NOX");
        }
     }
 
