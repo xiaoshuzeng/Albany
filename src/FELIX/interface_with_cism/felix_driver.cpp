@@ -14,6 +14,7 @@
 #include <Ionit_Initializer.h>
 #include "Albany_OrdinarySTKFieldContainer.hpp"
 #include "Thyra_EpetraThyraWrappers.hpp"
+#include "Teuchos_TestForException.hpp"
 
 //uncomment the following if you want to write stuff out to matrix market to debug
 //#define WRITE_TO_MATRIX_MARKET 
@@ -49,13 +50,15 @@ long ewlb, ewub, nslb, nsub;
 long ewn, nsn, upn, nhalo; 
 long global_ewn, global_nsn; 
 double * gravity_ptr, * rho_ice_ptr, * rho_seawater_ptr; //IK, 3/18/14: why are these pointers?  wouldn't they just be doubles? 
+double final_time; //final time, added 10/30/14, IK 
 double seconds_per_year, vel_scaling_param; 
 double * thicknessDataPtr, *topographyDataPtr;
 double * upperSurfaceDataPtr, * lowerSurfaceDataPtr;
 double * floating_maskDataPtr, * ice_maskDataPtr, * lower_cell_locDataPtr;
 long nCellsActive;
 long debug_output_verbosity;
-int nNodes, nElementsActive;  
+int nNodes, nElementsActive; 
+int nElementsActivePrevious = 0;  
 double* xyz_at_nodes_Ptr, *surf_height_at_nodes_Ptr, *beta_at_nodes_Ptr;
 double *flwa_at_active_elements_Ptr; 
 int * global_node_id_owned_map_Ptr; 
@@ -67,7 +70,7 @@ double *uVel_ptr;
 double *vVel_ptr; 
 bool first_time_step = true; 
 Teuchos::RCP<Epetra_Map> node_map; 
-
+Teuchos::RCP<Epetra_Vector> previousSolution; 
 
 Teuchos::RCP<const Epetra_Vector>
 epetraVectorFromThyra(
@@ -206,6 +209,7 @@ void felix_driver_init(int argc, int exec_mode, FelixToGlimmer * ftg_ptr, const 
     gravity_ptr = ftg_ptr -> getDoubleVar("gravity","constants");
     rho_ice_ptr = ftg_ptr -> getDoubleVar("rho_ice","constants");
     rho_seawater_ptr = ftg_ptr -> getDoubleVar("rho_seawater","constants");
+    final_time = *(ftg_ptr -> getDoubleVar("tend","numerics"));
     thicknessDataPtr = ftg_ptr -> getDoubleVar("thck","geometry");
     topographyDataPtr = ftg_ptr -> getDoubleVar("topg","geometry");
     upperSurfaceDataPtr = ftg_ptr -> getDoubleVar("usrf","geometry");
@@ -367,7 +371,6 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
         sol[1] = vvel_vec[node_LID]/velScale;
       }
     }
- 
     // ---------------------------------------------------------------------------------------------------
     // Solve 
     // ---------------------------------------------------------------------------------------------------
@@ -382,14 +385,24 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
     {
        meshStruct->setRestartDataTime(parameterList->sublist("Problem").get("Homotopy Restart Step", 1.));
        double homotopy = parameterList->sublist("Problem").sublist("FELIX Viscosity").get("Glen's Law Homotopy Parameter", 1.0);
-       if(meshStruct->restartDataTime()== homotopy)
+       if(meshStruct->restartDataTime()== homotopy) {
          parameterList->sublist("Problem").set("Solution Method", "Steady");
+         parameterList->sublist("Piro").set("Solver Type", "NOX");
+       }
     }
 
     albanyApp->createDiscretization();
-    albanyApp->finalSetUp(parameterList);
 
-    solver = slvrfctry->createThyraSolverAndGetAlbanyApp(albanyApp, mpiComm, mpiComm, Teuchos::null, false);
+    //IK, 10/30/14: Check that # of elements from previous time step hasn't changed. 
+    //If it has not, use previous solution as initial guess for current time step.
+    //Otherwise do not set initial solution.  It's possible this can be improved so some part of the previous solution is used
+    //defined on the current mesh (if it receded, which likely it will in dynamic ice sheet simulations...). 
+    if (nElementsActivePrevious != nElementsActive) previousSolution = Teuchos::null; 
+    albanyApp->finalSetUp(parameterList, previousSolution);
+
+    //if (!first_time_step) 
+    //  std::cout << "previousSolution: " << *previousSolution << std::endl; 
+    solver = slvrfctry->createThyraSolverAndGetAlbanyApp(albanyApp, mpiComm, mpiComm, previousSolution, false);
 
     Teuchos::ParameterList solveParams;
     solveParams.set("Compute Sensitivities", true);
@@ -410,7 +423,12 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
     EpetraExt::BlockMapToMatrixMarketFile("overlap_map.mm", overlapMap);
     EpetraExt::MultiVectorToMatrixMarketFile("solution.mm", *albanyApp->getDiscretization()->getSolutionField());
 #endif
-    
+   
+   //set previousSolution (used as initial guess for next time step) to final Albany solution. 
+   previousSolution = Teuchos::rcp(new Epetra_Vector(*albanyApp->getDiscretization()->getSolutionField())); 
+   nElementsActivePrevious = nElementsActive;   
+ 
+   //std::cout << "Final solution: " << *albanyApp->getDiscretization()->getSolutionField() << std::endl;  
     // ---------------------------------------------------------------------------------------------------
     // Compute sensitivies / responses and perform regression tests
     // IK, 12/9/13: how come this is turned off in mpas branch? 
@@ -448,8 +466,8 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
       if (is_scalar) {
         if (debug_output_verbosity != 0) g->Print(*out << "\nResponse vector " << i << ":\n");
 
-        if (num_p == 0) {
-          // Just calculate regression data
+        if (num_p == 0 && cur_time_yr == final_time) {
+          // Just calculate regression data -- only if in final time step
           status += slvrfctry->checkSolveTestResults(i, 0, g.get(), NULL);
         } else {
           for (int j=0; j<num_p; j++) {
@@ -459,13 +477,18 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
                 dgdp->Print(*out << "\nSensitivities (" << i << "," << j << "):!\n");
               }
             }
-            status += slvrfctry->checkSolveTestResults(i, j, g.get(), dgdp.get());
+            if (cur_time_yr == final_time) {
+              status += slvrfctry->checkSolveTestResults(i, j, g.get(), dgdp.get());
+            }
           }
         }
       }
     }
-    if (debug_output_verbosity != 0) 
+    if (debug_output_verbosity != 0 && cur_time_yr == final_time) //only print regression test result if you're in the final time step 
       *out << "\nNumber of Failed Comparisons: " << status << std::endl;
+    //IK, 10/30/14: added the following line so that when you run ctest from CISM the test fails if there are some failed comparisons.
+    if (status > 0)     
+      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "All regression comparisons did not pass!" << std::endl);
 
     // ---------------------------------------------------------------------------------------------------
     // Copy solution back to glimmer uvel and vvel arrays to be passed back

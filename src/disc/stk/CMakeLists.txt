@@ -16,7 +16,6 @@ SET(SOURCES
   Albany_FromCubitSTKMeshStruct.cpp
   Albany_IossSTKMeshStruct.cpp
   Albany_AsciiSTKMeshStruct.cpp
-  Albany_CismSTKMeshStruct.cpp
   Albany_AsciiSTKMesh2D.cpp
   Albany_ExtrudedSTKMeshStruct.cpp
   )
@@ -40,7 +39,6 @@ SET(HEADERS
   Albany_FromCubitSTKMeshStruct.hpp
   Albany_IossSTKMeshStruct.hpp
   Albany_AsciiSTKMeshStruct.hpp
-  Albany_CismSTKMeshStruct.hpp
   Albany_AsciiSTKMesh2D.hpp
   Albany_ExtrudedSTKMeshStruct.hpp
   )
