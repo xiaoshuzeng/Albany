@@ -86,13 +86,13 @@ template<class Output>
     //! Get map from (Ws, El, Local Node, Eq) -> NodeLID
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > > >::type& getWsElNodeEqID() const;
 
-    //! Get map from (Ws, El, Local Node) -> NodeLID
+    //! Get map from (Ws, El, Local Node) -> NodeGID
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type& getWsElNodeID() const;
 
     //! Get IDArray for (Ws, Local Node, nComps) -> NodeLID, works for both scalar and vector fields
-    const std::vector<IDArray>& getElNodeID(const std::string& field_name) const {
+    const std::vector<IDArray>& getElNodeEqID(const std::string& field_name) const {
       TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
-          "AlbPUMI:FMDBDiscretization: getElNodeID(field_name) not implemented yet");
+          "AlbPUMI:FMDBDiscretization: getElNodeEqID(field_name) not implemented yet");
     }
 
     //! Retrieve coodinate vector (num_used_nodes * 3)

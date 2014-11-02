@@ -52,6 +52,8 @@ namespace Albany {
     Teuchos::RCP<Epetra_Map> overlap_map;
     NodalDOFManager dofManager;
     NodalDOFManager overlap_dofManager;
+    std::vector<std::vector<int> > wsElNodeEqID_rawVec;
+    std::vector<IDArray> wsElNodeEqID;
     std::vector<std::vector<int> > wsElNodeID_rawVec;
     std::vector<IDArray> wsElNodeID;
   };
@@ -123,12 +125,12 @@ namespace Albany {
     //! Get map from (Ws, El, Local Node) -> NodeLID
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > > >::type& getWsElNodeEqID() const;
 
-    //! Get map from (Ws, Local Node) -> NodeLID
+    //! Get map from (Ws, Local Node) -> NodeGID
     const Albany::WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type& getWsElNodeID() const;
 
     //! Get IDArray for (Ws, Local Node, nComps) -> NodeLID, works for both scalar and vector fields
-    const std::vector<IDArray>& getElNodeID(const std::string& field_name) const
-        {return nodalDOFsStructContainer.getDOFsStruct(field_name).wsElNodeID;}
+    const std::vector<IDArray>& getElNodeEqID(const std::string& field_name) const
+        {return nodalDOFsStructContainer.getDOFsStruct(field_name).wsElNodeEqID;}
 
     //! Retrieve coodinate vector (num_used_nodes * 3)
     Teuchos::ArrayRCP<double>& getCoordinates() const;

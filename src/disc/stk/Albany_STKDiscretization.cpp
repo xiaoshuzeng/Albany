@@ -988,6 +988,8 @@ void Albany::STKDiscretization::computeWorksetInfo()
   for(it = mapOfDOFsStructs.begin(); it != mapOfDOFsStructs.end(); ++it) {
     it->second.wsElNodeID.resize(numBuckets);
     it->second.wsElNodeID_rawVec.resize(numBuckets);
+    it->second.wsElNodeEqID.resize(numBuckets);
+    it->second.wsElNodeEqID_rawVec.resize(numBuckets);
   }
   
   for (int b=0; b < numBuckets; b++) {
@@ -1075,6 +1077,8 @@ void Albany::STKDiscretization::computeWorksetInfo()
     int nodes_per_element = bulkData.num_nodes(element);
     for(it = mapOfDOFsStructs.begin(); it != mapOfDOFsStructs.end(); ++it) {
       int nComp = it->first.second;
+      it->second.wsElNodeEqID_rawVec[b].resize(buck.size()*nodes_per_element*nComp);
+      it->second.wsElNodeEqID[b].assign<ElemTag, NodeTag, CompTag>(it->second.wsElNodeEqID_rawVec[b].data(),(int)buck.size(),nodes_per_element,nComp);
       it->second.wsElNodeID_rawVec[b].resize(buck.size()*nodes_per_element*nComp);
       it->second.wsElNodeID[b].assign<ElemTag, NodeTag, CompTag>(it->second.wsElNodeID_rawVec[b].data(),(int)buck.size(),nodes_per_element,nComp);
     }
@@ -1098,15 +1102,17 @@ void Albany::STKDiscretization::computeWorksetInfo()
       coords[b][i].resize(nodes_per_element);
  
       for(it = mapOfDOFsStructs.begin(); it != mapOfDOFsStructs.end(); ++it) {
+        IDArray& wsElNodeEqID_array = it->second.wsElNodeEqID[b];
         IDArray& wsElNodeID_array = it->second.wsElNodeID[b];
         int nComp = it->first.second;
           for (int j=0; j < nodes_per_element; j++)
           {
             stk::mesh::Entity node = node_rels[j];
             for (int k=0; k < nComp; k++) {
-              int gid = it->second.overlap_dofManager.getGlobalDOF(node,k);
-              int node_lid = it->second.overlap_map->LID(gid);
-                wsElNodeID_array((int)i,j,k) = node_lid;
+              int node_gid = it->second.overlap_dofManager.getGlobalDOF(node,k);
+              int node_lid = it->second.overlap_map->LID(node_gid);
+                wsElNodeEqID_array((int)i,j,k) = node_lid;
+                wsElNodeID_array((int)i,j,k) = gid(node);
             }
           }
       }
@@ -1117,8 +1123,9 @@ void Albany::STKDiscretization::computeWorksetInfo()
 #endif
 
       // loop over local nodes
-      IDArray& node_array = mapOfDOFsStructs[make_pair(std::string(""),1)].wsElNodeID[b];
-      IDArray& sol_array = mapOfDOFsStructs[make_pair(std::string(""),neq)].wsElNodeID[b];
+      DOFsStruct& dofs_struct = mapOfDOFsStructs[make_pair(std::string(""),neq)];
+      IDArray& node_array = dofs_struct.wsElNodeID[b];
+      IDArray& node_eq_array = dofs_struct.wsElNodeEqID[b];
       for (int j=0; j < nodes_per_element; j++) {
         stk::mesh::Entity rowNode = node_rels[j];
         int node_gid = gid(rowNode);
@@ -1132,7 +1139,7 @@ void Albany::STKDiscretization::computeWorksetInfo()
         wsElNodeID[b][i][j] =node_array((int)i,j,0);
 
         for (int eq=0; eq < neq; eq++)
-          wsElNodeEqID[b][i][j][eq] = sol_array((int)i,j,eq);
+          wsElNodeEqID[b][i][j][eq] = node_eq_array((int)i,j,eq);
       }
     }
   }

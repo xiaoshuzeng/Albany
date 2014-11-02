@@ -105,12 +105,12 @@ class AbstractDiscretization {
     virtual const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > > >::type&
        getWsElNodeEqID() const = 0;
 
-    //! Get map from (Ws, El, Local Node) -> unkLID
+    //! Get map from (Ws, El, Local Node) -> unkGID
     virtual const WorksetArray<Teuchos::ArrayRCP<Teuchos::ArrayRCP<int> > >::type&
        getWsElNodeID() const = 0;
 
     //! Get IDArray for (Ws, Local Node, nComps) -> NodeLID, works for both scalar and vector fields
-    virtual const std::vector<IDArray>& getElNodeID(const std::string& field_name) const =0;
+    virtual const std::vector<IDArray>& getElNodeEqID(const std::string& field_name) const =0;
 
     //! Retrieve coodinate ptr_field (ws, el, node)
     virtual Teuchos::ArrayRCP<double>&  getCoordinates() const = 0;
