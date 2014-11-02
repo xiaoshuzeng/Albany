@@ -285,7 +285,7 @@ void Albany::Application::finalSetUp(const Teuchos::RCP<Teuchos::ParameterList>&
 
     //Create distributed parameter and set workset_elem_dofs
     Teuchos::RCP<EpetraDistributedParameter>  parameter(new EpetraDistributedParameter(param_name, dist_param, node_map, overlap_node_map));
-    parameter->set_workset_elem_dofs(Teuchos::rcpFromRef(disc->getElNodeID(param_name)));
+    parameter->set_workset_elem_dofs(Teuchos::rcpFromRef(disc->getElNodeEqID(param_name)));
 
     //Add parameter to the distributed parameter library
     distParamLib->add(parameter->name(), parameter);
