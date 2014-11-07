@@ -7,6 +7,7 @@
 
 #include <limits>
 #include "Epetra_Export.h"
+#include "Epetra_Import.h"
 
 #include "Albany_Utils.hpp"
 #include "Albany_STKDiscretization.hpp"
@@ -407,16 +408,42 @@ Albany::STKDiscretization::setupMLCoords()
   //if user wants to write the coordinates to matrix market file, write them to matrix market file
   if (writeCoordsToMMFile == true) {
     if (node_map->Comm().MyPID()==0) {std::cout << "Writing mesh coordinates to Matrix Market file." << std::endl;}
-    //Writing of coordinates to MatrixMarket file for Ray
-    Epetra_Vector xCoords(Copy, *node_map, xx);
-    EpetraExt::MultiVectorToMatrixMarketFile("xCoords.mm", xCoords);
+     //
+     //create serial map that puts the whole solution on processor 0
+     int numMyElements = (node_map->Comm().MyPID() == 0) ? node_map->NumGlobalElements() : 0;
+     Teuchos::RCP<Epetra_Import> importOperator;
+     Teuchos::RCP<Epetra_Map> serial_map; 
+     Epetra_Vector xCoords(Copy, *node_map, xx);
+     if (node_map->Comm().NumProc() > 1) {
+       serial_map = Teuchos::rcp(new Epetra_Map(-1, numMyElements, 0, node_map->Comm()));
+       //create importer from parallel map to serial map and populate serial solution xfinal_serial
+       importOperator = Teuchos::rcp(new Epetra_Import(*serial_map, *node_map));
+       //Writing of coordinates to MatrixMarket file for Ray
+       Epetra_Vector xCoords_serial(*serial_map);
+       xCoords_serial.Import(xCoords, *importOperator, Insert);
+       EpetraExt::MultiVectorToMatrixMarketFile("xCoords.mm", xCoords_serial);
+     }
+     else 
+       EpetraExt::MultiVectorToMatrixMarketFile("xCoords.mm", xCoords);
     if (yy != NULL) {
       Epetra_Vector yCoords(Copy, *node_map, yy);
-      EpetraExt::MultiVectorToMatrixMarketFile("yCoords.mm", yCoords);
+      if (node_map->Comm().NumProc() > 1) {
+        Epetra_Vector yCoords_serial(*serial_map);
+        yCoords_serial.Import(yCoords, *importOperator, Insert);
+        EpetraExt::MultiVectorToMatrixMarketFile("yCoords.mm", yCoords_serial);
+      }
+      else 
+        EpetraExt::MultiVectorToMatrixMarketFile("yCoords.mm", yCoords);
     }
     if (zz != NULL){
       Epetra_Vector zCoords(Copy, *node_map, zz);
-      EpetraExt::MultiVectorToMatrixMarketFile("zCoords.mm", zCoords);
+      if (node_map->Comm().NumProc() > 1) {
+        Epetra_Vector zCoords_serial(*serial_map);
+        zCoords_serial.Import(zCoords, *importOperator, Insert);
+        EpetraExt::MultiVectorToMatrixMarketFile("zCoords.mm", zCoords_serial);
+      }
+      else
+        EpetraExt::MultiVectorToMatrixMarketFile("zCoords.mm", zCoords);
     }
   }
 
