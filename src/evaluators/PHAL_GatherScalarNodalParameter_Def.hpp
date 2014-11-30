@@ -106,8 +106,6 @@ evaluateFields(typename Traits::EvalData workset)
 
   // If active, intialize data needed for differentiation
   if (is_active) {
-    const Epetra_MultiVector& Vp = *(workset.Vp);
-    const int num_cols = Vp.NumVectors();
     const int num_deriv = this->numNodes;
     const int num_nodes_res = this->numNodes;
     bool trans = workset.transpose_dist_param_deriv;
