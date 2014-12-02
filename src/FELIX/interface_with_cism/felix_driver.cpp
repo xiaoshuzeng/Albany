@@ -57,8 +57,7 @@ double * upperSurfaceDataPtr, * lowerSurfaceDataPtr;
 double * floating_maskDataPtr, * ice_maskDataPtr, * lower_cell_locDataPtr;
 long nCellsActive;
 long debug_output_verbosity;
-int nNodes, nElementsActive; 
-int nElementsActivePrevious = 0;  
+int nNodes, nElementsActive;  
 double* xyz_at_nodes_Ptr, *surf_height_at_nodes_Ptr, *beta_at_nodes_Ptr;
 double *flwa_at_active_elements_Ptr; 
 int * global_node_id_owned_map_Ptr; 
@@ -70,7 +69,7 @@ double *uVel_ptr;
 double *vVel_ptr; 
 bool first_time_step = true; 
 Teuchos::RCP<Epetra_Map> node_map; 
-Teuchos::RCP<Epetra_Vector> previousSolution; 
+
 
 Teuchos::RCP<const Epetra_Vector>
 epetraVectorFromThyra(
@@ -371,6 +370,7 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
         sol[1] = vvel_vec[node_LID]/velScale;
       }
     }
+ 
     // ---------------------------------------------------------------------------------------------------
     // Solve 
     // ---------------------------------------------------------------------------------------------------
@@ -392,17 +392,9 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
     }
 
     albanyApp->createDiscretization();
+    albanyApp->finalSetUp(parameterList);
 
-    //IK, 10/30/14: Check that # of elements from previous time step hasn't changed. 
-    //If it has not, use previous solution as initial guess for current time step.
-    //Otherwise do not set initial solution.  It's possible this can be improved so some part of the previous solution is used
-    //defined on the current mesh (if it receded, which likely it will in dynamic ice sheet simulations...). 
-    if (nElementsActivePrevious != nElementsActive) previousSolution = Teuchos::null; 
-    albanyApp->finalSetUp(parameterList, previousSolution);
-
-    //if (!first_time_step) 
-    //  std::cout << "previousSolution: " << *previousSolution << std::endl; 
-    solver = slvrfctry->createThyraSolverAndGetAlbanyApp(albanyApp, mpiComm, mpiComm, previousSolution, false);
+    solver = slvrfctry->createThyraSolverAndGetAlbanyApp(albanyApp, mpiComm, mpiComm, Teuchos::null, false);
 
     Teuchos::ParameterList solveParams;
     solveParams.set("Compute Sensitivities", true);
@@ -423,12 +415,7 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
     EpetraExt::BlockMapToMatrixMarketFile("overlap_map.mm", overlapMap);
     EpetraExt::MultiVectorToMatrixMarketFile("solution.mm", *albanyApp->getDiscretization()->getSolutionField());
 #endif
-   
-   //set previousSolution (used as initial guess for next time step) to final Albany solution. 
-   previousSolution = Teuchos::rcp(new Epetra_Vector(*albanyApp->getDiscretization()->getSolutionField())); 
-   nElementsActivePrevious = nElementsActive;   
- 
-   //std::cout << "Final solution: " << *albanyApp->getDiscretization()->getSolutionField() << std::endl;  
+    
     // ---------------------------------------------------------------------------------------------------
     // Compute sensitivies / responses and perform regression tests
     // IK, 12/9/13: how come this is turned off in mpas branch? 

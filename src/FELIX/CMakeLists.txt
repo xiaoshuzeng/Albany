@@ -25,7 +25,6 @@
        problems/FELIX_StokesFO.cpp
        problems/FELIX_StokesL1L2.cpp
        interface_with_mpas/Albany_MpasSTKMeshStruct.cpp
-       interface_with_cism/Albany_CismSTKMeshStruct.cpp
    )
    
 IF(ENABLE_MPAS_INTERFACE)
@@ -69,7 +68,6 @@ ENDIF()
        problems/FELIX_StokesFO.hpp
        problems/FELIX_StokesL1L2.hpp
        interface_with_mpas/Albany_MpasSTKMeshStruct.hpp
-       interface_with_cism/Albany_CismSTKMeshStruct.hpp
   )
 
 IF(ENABLE_MPAS_INTERFACE)
