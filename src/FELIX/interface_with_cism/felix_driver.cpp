@@ -14,7 +14,6 @@
 #include <Ionit_Initializer.h>
 #include "Albany_OrdinarySTKFieldContainer.hpp"
 #include "Thyra_EpetraThyraWrappers.hpp"
-#include "Teuchos_TestForException.hpp"
 
 //uncomment the following if you want to write stuff out to matrix market to debug
 //#define WRITE_TO_MATRIX_MARKET 
@@ -469,9 +468,6 @@ void felix_driver_run(FelixToGlimmer * ftg_ptr, double& cur_time_yr, double time
     }
     if (debug_output_verbosity != 0) 
       *out << "\nNumber of Failed Comparisons: " << status << std::endl;
-    //IK, 10/30/14: added the following line so that when you run ctest from CISM the test fails if there are some failed comparisons.
-    if (status > 0)     
-      TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error, "All regression comparisons did not pass!" << std::endl);
 
     // ---------------------------------------------------------------------------------------------------
     // Copy solution back to glimmer uvel and vvel arrays to be passed back
