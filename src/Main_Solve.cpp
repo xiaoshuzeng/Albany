@@ -244,6 +244,7 @@ int main(int argc, char *argv[]) {
     Teuchos::ParameterList &debugParams =
       slvrfctry.getParameters().sublist("Debug Output", true);
     bool writeToMatrixMarketSoln = debugParams.get("Write Solution to MatrixMarket", false);
+    bool writeToMatrixMarketDistrSolnMap = debugParams.get("Write Distributed Solution and Map to MatrixMarket", false);
     bool writeToCoutSoln = debugParams.get("Write Solution to Standard Output", false);
     if (writeToMatrixMarketSoln == true) { 
 
@@ -258,6 +259,11 @@ int main(int argc, char *argv[]) {
 
       //writing to MatrixMarket file
       EpetraExt::MultiVectorToMatrixMarketFile("xfinal.mm", xfinal_serial);
+    }
+    if (writeToMatrixMarketDistrSolnMap == true) {
+      //writing to MatrixMarket file
+      EpetraExt::MultiVectorToMatrixMarketFile("xfinal_distributed.mm", *xfinal);
+      EpetraExt::BlockMapToMatrixMarketFile("xfinal_distributed_map.mm", *app->getDiscretization()->getMap());
     }
     if (writeToCoutSoln == true) 
        std::cout << "xfinal: " << *xfinal << std::endl;
