@@ -287,6 +287,7 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_DirichletCoordinateFunction.cpp
   evaluators/PHAL_DirichletOffNodeSet.cpp
   evaluators/PHAL_DirichletField.cpp
+  evaluators/PHAL_DirichletCondensed.cpp
   evaluators/PHAL_DOFCellToSide.cpp
   evaluators/PHAL_DOFCellToSideQP.cpp
   evaluators/PHAL_DOFInterpolation.cpp
@@ -402,6 +403,8 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_DirichletField_Def.hpp
   evaluators/PHAL_DirichletOffNodeSet.hpp
   evaluators/PHAL_DirichletOffNodeSet_Def.hpp
+  evaluators/PHAL_DirichletCondensed.hpp
+  evaluators/PHAL_DirichletCondensed_Def.hpp
   evaluators/PHAL_DOFCellToSide.hpp
   evaluators/PHAL_DOFCellToSide_Def.hpp
   evaluators/PHAL_DOFCellToSideQP.hpp
