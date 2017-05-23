@@ -272,6 +272,9 @@ struct Workset {
 #endif
 #endif
 
+  // overlapped solution (for pre-imposition of DBCs)
+  Teuchos::RCP<Tpetra_Vector> overlapped_xT;
+
   // Meta-function class encoding T<EvalT::ScalarT> given EvalT
   // where T is any lambda expression (typically a placeholder expression)
   template <typename T>
