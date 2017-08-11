@@ -45,6 +45,26 @@ HydrologyMeltingRate (const Teuchos::ParameterList& p,
   Teuchos::ParameterList& physical_params  = *p.get<Teuchos::ParameterList*>("FELIX Physical Parameters");
   L = physical_params.get<double>("Ice Latent Heat");
 
+  /*
+   * Scalings, needed to account for different units: ice velocity
+   * is in m/yr, the mesh is in km, and hydrology time unit is s.
+   *
+   * The melting rate has 2 terms (forget about signs), with the following
+   * units (including the km^2 from dx):
+   *
+   * 1) G                 [W m^-2 km^2]
+   * 2) beta*|u|^2        [kPa m yr^-1 km^2]
+   *
+   * To sum apples to apples, we need to convert one to the units of the other.
+   * We choose to keep [kPa m yr^-1 km^2], which are the units used in the residuals,
+   * and we rescale G by
+   *
+   *  scaling_G = yr_to_s/1000
+   *
+   * where yr_to_s=365.25*24*3600 (the number of seconds in a year)
+   */
+  scaling_G = 365.25*24*3600/1000;
+
   this->setName("HydrologyMeltingRate"+PHX::typeAsString<EvalT>());
 }
 
@@ -80,8 +100,7 @@ void HydrologyMeltingRate<EvalT, Traits, IsStokes>::evaluateFields (typename Tra
 
       for (int qp=0; qp < numQPs; ++qp)
       {
-        m(cell,side,qp) = ( G(cell,side,qp) - beta(cell,side,qp) * std::pow(u_b(cell,side,qp),2) * 1000/31536000 ) / L;
-        // The factor 31536000 is to adjust from yr units (ice) to s units (hydrology)
+        m(cell,side,qp) = ( scaling_G*G(cell,side,qp) - beta(cell,side,qp) * std::pow(u_b(cell,side,qp),2) ) / L;
       }
     }
   }
@@ -91,8 +110,7 @@ void HydrologyMeltingRate<EvalT, Traits, IsStokes>::evaluateFields (typename Tra
     {
       for (int qp=0; qp < numQPs; ++qp)
       {
-        m(cell,qp) = ( G(cell,qp) - beta(cell,qp) * std::pow(u_b(cell,qp),2) * 1000/31536000 ) / L;
-        // The factor 1000/31536000 is to adjust from kPa and yr units (ice) to SI units (hydrology)
+        m(cell,qp) = ( scaling_G*G(cell,qp) - beta(cell,qp) * std::pow(u_b(cell,qp),2) ) / L;
       }
     }
   }

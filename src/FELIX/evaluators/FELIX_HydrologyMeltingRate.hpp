@@ -53,6 +53,7 @@ private:
 
   int               numQPs;
   double            L;
+  double            scaling_G;
 
   std::string       sideSetName; // Only needed if IsStokes=true
 };

@@ -72,17 +72,42 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
   use_eff_cav       = (hydrology_params.get<bool>("Use Effective Cavities Height", true) ? 1.0 : 0.0);
   eta_i             = physical_params.get<double>("Ice Viscosity",-1.0);
 
-  rho_combo = (melting_mass ? 1 : 0) / rho_w - (melting_cav ? 1 : 0) / rho_i;
+  rho_combo = (melting_mass ? 1.0 : 0.0) / rho_w - (melting_cav ? 1.0 : 0.0) / rho_i;
   mu_w      = physical_params.get<double>("Water Viscosity");
   h_r       = hydrology_params.get<double>("Bed Bumps Height");
   l_r       = hydrology_params.get<double>("Bed Bumps Length");
   A         = hydrology_params.get<double>("Flow Factor Constant");
 
-  // Scalings, needed to account for different units: ice velocity
-  // is in m/yr rather than m/s, while all other quantities are in SI units.
+  /*
+   * Scalings, needed to account for different units: ice velocity
+   * is in m/yr, the mesh is in km, and hydrology time unit is s.
+   *
+   * The residual has 5 terms (forget about signs), with the following
+   * units (including the km^2 from dx):
+   *
+   *  1) \int rho_combo*m*v*dx          [m km^2 yr^-1]
+   *  2) \int omega*v*dx                [m km^2 s^-1]
+   *  3) \int dot(q*grad(v))*dx         [m^3 s^-1]
+   *  4) \int A*h*N^3*v*dx              [1000 m km^2 yr^-1]
+   *  5) \int (h_r-h)*|u|/l_r*v*dx      [m km^2 yr^-1]
+   *
+   * where q=k*h^3*gradPhi/mu_w, and v is the test function.
+   * We decide to uniform all terms to have units [m km^2 s^-1].
+   * Where possible, we do this by rescaling some constants. Otherwise,
+   * we simply introduce a new scaling factor
+   *
+   *  1) rho_combo*m                    (no scaling)
+   *  2) scaling_omega*omega          scaling_omega = yr_to_s
+   *  3) scaling_q*dot(q,grad(v))       scaling_q       = 1e-6*yr_to_s
+   *  4) A_mod*h*N^3                    A_mod           = A/1000
+   *  5) (h_r-h)*|u|/l_r                (no scaling)
+   *
+   * where yr_to_s=365.25*24*3600 (the number of seconds in a year)
+   */
   double yr_to_s = 365.25*24*3600;
-  A   *= 1./(1000*yr_to_s);     // Need to adjust A, which is given in k^-{n+1} Pa^-n yr^-1, to [kPa]^-n s^-1.
-  l_r *= yr_to_s;               // Need to adjust u_b from m/yr to m/s. Since it's always divided by l_r, we simply scale l_r
+  A               = A/1000;
+  scaling_omega = yr_to_s;
+  scaling_q       = 1e-6*yr_to_s;
 
   this->setName("HydrologyResidualPotentialEqn"+PHX::typeAsString<EvalT>());
 }
@@ -138,7 +163,7 @@ evaluateFields (typename Traits::EvalData workset)
         res_node = 0;
         for (int qp=0; qp < numQPs; ++qp)
         {
-          res_qp = rho_combo*m(cell,side,qp) + omega(cell,side,qp)
+          res_qp = rho_combo*m(cell,side,qp) + scaling_omega*omega(cell,side,qp)
                  - (h_r -h(cell,side,qp))*u_b(cell,side,qp)/l_r
                  + h(cell,side,qp)*std::pow(A*N(cell,side,qp),3);
 
@@ -148,7 +173,7 @@ evaluateFields (typename Traits::EvalData workset)
           {
             for (int jdim=0; jdim<numDims; ++jdim)
             {
-              res_qp += q(cell,side,qp,idim) * metric(cell,side,qp,idim,jdim) * GradBF(cell,side,node,qp,jdim);
+              res_qp += scaling_q*q(cell,side,qp,idim) * metric(cell,side,qp,idim,jdim) * GradBF(cell,side,node,qp,jdim);
             }
           }
 
@@ -170,7 +195,7 @@ evaluateFields (typename Traits::EvalData workset)
           res_node = 0;
           for (int qp=0; qp < numQPs; ++qp)
           {
-            res_qp = rho_combo*m(cell,qp) + omega(cell,qp)*scaling_omega
+            res_qp = rho_combo*m(cell,qp) + scaling_omega*omega(cell,qp)
                    - (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
                    + h(cell,qp)*N(cell,qp)/eta_i;
 
@@ -178,7 +203,7 @@ evaluateFields (typename Traits::EvalData workset)
 
             for (int dim=0; dim<numDims; ++dim)
             {
-              res_qp += q(cell,qp,dim) * GradBF(cell,node,qp,dim);
+              res_qp += scaling_q*q(cell,qp,dim) * GradBF(cell,node,qp,dim);
             }
 
             res_node += res_qp * w_measure(cell,qp);
@@ -198,7 +223,7 @@ evaluateFields (typename Traits::EvalData workset)
           res_node = 0;
           for (int qp=0; qp < numQPs; ++qp)
           {
-            res_qp = rho_combo*m(cell,qp) + omega(cell,qp)*scaling_omega
+            res_qp = rho_combo*m(cell,qp) + scaling_omega*omega(cell,qp)
                    - (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
                    + h(cell,qp)*A*std::pow(N(cell,qp),3);
 
@@ -206,7 +231,7 @@ evaluateFields (typename Traits::EvalData workset)
 
             for (int dim=0; dim<numDims; ++dim)
             {
-              res_qp += q(cell,qp,dim) * GradBF(cell,node,qp,dim);
+              res_qp += scaling_q*q(cell,qp,dim) * GradBF(cell,node,qp,dim);
             }
 
             res_node += res_qp * w_measure(cell,qp);

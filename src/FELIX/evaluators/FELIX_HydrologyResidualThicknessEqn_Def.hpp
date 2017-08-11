@@ -72,11 +72,35 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
   else
     rho_i_inv = 0;
 
+  /*
+   * Scalings, needed to account for different units: ice velocity
+   * is in m/yr, the mesh is in km, and hydrology time unit is s.
+   *
+   * The residual has 4 terms (forget about signs), with the following
+   * units (including the km^2 from dx):
+   *
+   *  1) \int h_t*v*dx              [m km^2 s^-1]
+   *  2) \int rho_i_inv*m*v*dx      [m km^2 yr^-1]
+   *  3) \int A*h*N^3*v*dx          [1000 m km^2 yr^-1]
+   *  4) \int (h_r-h)*|u|/l_r*v*dx  [m km^2 yr^-1]
+   *
+   * where q=k*h^3*gradPhi/mu_w, and v is the test function.
+   * We decide to uniform all terms to have units [m km^2 s^-1].
+   * Where possible, we do this by rescaling some constants. Otherwise,
+   * we simply introduce a new scaling factor
+   *
+   *  1) scaling_h_t*h_t      scaling_h_t = yr_to_s
+   *  2) rho_i_inv_m          (no scaling)
+   *  3) A_mod*h*N^3          A_mod       = A/1000
+   *  4) (h_r-h)*|u|/l_r      (no scaling)
+   *
+   * where yr_to_s=365.25*24*3600 (the number of seconds in a year)
+   */
+
   // Scalings, needed to account for different units: ice velocity
   // is in m/yr rather than m/s, while all other quantities are in SI units.
-  double yr_to_s = 365.25*24*3600;
-  A   *= 1./(1000*yr_to_s);    // Need to adjust A, which is given in k [kPa]^-n yr^-1, to [kPa]^-n s^-1.
-  l_r *= yr_to_s;  // Since u_b is always divided by l_r, we simply scale l_r
+  scaling_h_t = 365.25*24*3600;
+  A               = A/1000;
 
   this->setName("HydrologyResidualThicknessEqn"+PHX::typeAsString<EvalT>());
 }
@@ -126,13 +150,15 @@ evaluateFields (typename Traits::EvalData workset)
         res_node = 0;
         for (int qp=0; qp < numQPs; ++qp)
         {
-          res_qp = rho_i_inv*m(cell,side,qp) - (h_r - use_eff_cav*h(cell,side,qp))*u_b(cell,side,qp)/l_r
-                 + h(cell,side,qp)*A*std::pow(N(cell,side,qp),3) - (unsteady ? h_dot(cell,side,qp) : zero);
+          res_qp = rho_i_inv*m(cell,side,qp)
+                 + (h_r - use_eff_cav*h(cell,side,qp))*u_b(cell,side,qp)/l_r
+                 - h(cell,side,qp)*A*std::pow(N(cell,side,qp),3)
+                 - (unsteady ? scaling_h_t*h_dot(cell,side,qp) : zero);
 
           res_node += res_qp * BF(cell,side,node,qp) * w_measure(cell,side,qp);
         }
 
-        residual (cell,side,node) += res_node;
+        residual (cell,side,node) = res_node;
       }
     }
   }
@@ -145,12 +171,14 @@ evaluateFields (typename Traits::EvalData workset)
         res_node = 0;
         for (int qp=0; qp < numQPs; ++qp)
         {
-          res_qp = rho_i_inv*m(cell,qp) + (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
-                 - h(cell,qp)*A*std::pow(N(cell,qp),3) - (unsteady ? h_dot(cell,qp) : zero);
+          res_qp = rho_i_inv*m(cell,qp)
+                 + (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
+                 - h(cell,qp)*A*std::pow(N(cell,qp),3)
+                 - (unsteady ? scaling_h_t*h_dot(cell,qp) : zero);
 
           res_node += res_qp * BF(cell,node,qp) * w_measure(cell,qp);
         }
-        residual (cell,node) += res_node;
+        residual (cell,node) = res_node;
       }
     }
   }

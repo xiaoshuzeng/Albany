@@ -72,6 +72,8 @@ private:
   double h_r;
   double l_r;
   double A;
+  double scaling_omega;
+  double scaling_q;
 
   // Variables necessary for stokes coupling
   std::string                     sideSetName;

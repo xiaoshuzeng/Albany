@@ -63,6 +63,7 @@ private:
   double h_r;
   double l_r;
   double A;
+  double scaling_h_t;
 
   bool unsteady;
 

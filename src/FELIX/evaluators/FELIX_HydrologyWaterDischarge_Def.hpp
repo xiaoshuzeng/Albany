@@ -38,10 +38,13 @@ HydrologyWaterDischarge (const Teuchos::ParameterList& p,
   alpha = hydrology.get<double>("Water Thickness Exponent (alpha)",3);
   beta  = hydrology.get<double>("Potential Gradient Exponent (beta)",2) - 2.0;
 
-  // The mesh is assumed to be in km, therefore we need to adjust the units
-  // of divergence and gradient, since all other distances are in SI units.
-  // We do so by simply rescaling k_0
-  k_0   *= 1e-6;
+  regularize = hydrology.get<bool>("Regularize With Continuation", false);
+  if (regularize)
+  {
+    regularizationParam = PHX::MDField<ScalarT,Dim>(p.get<std::string>("Regularization Parameter Name"),dl->shared_param);
+    this->addDependentField(regularizationParam);
+  }
+
 /*
   needsGradPhiNorm = false;
   if (beta!=0.0)
@@ -62,6 +65,10 @@ postRegistrationSetup(typename Traits::SetupData d,
 {
   this->utils.setFieldData(gradPhi,fm);
   this->utils.setFieldData(h,fm);
+  if (regularize)
+  {
+    this->utils.setFieldData(regularizationParam,fm);
+  }
 /*
   if (needsGradPhiNorm)
   {
@@ -75,6 +82,12 @@ postRegistrationSetup(typename Traits::SetupData d,
 template<typename EvalT, typename Traits, bool HasThicknessEqn>
 void HydrologyWaterDischarge<EvalT, Traits, HasThicknessEqn, false>::evaluateFields (typename Traits::EvalData workset)
 {
+  ScalarT regularization(0.0);
+  if (regularize)
+  {
+    regularization = std::pow(10.0,-10*regularizationParam(0));
+  }
+
 /*
   // q = - \frac{k h^3 \nabla (phiH-N)}{\mu_w}
   if (needsGradPhiNorm)
@@ -100,7 +113,7 @@ void HydrologyWaterDischarge<EvalT, Traits, HasThicknessEqn, false>::evaluateFie
         for (int dim(0); dim<numDim; ++dim)
         {
 //          q(cell,qp,dim) = -k_0 * std::pow(h(cell,qp),alpha) * gradPhi(cell,qp,dim) / mu_w;
-          q(cell,qp,dim) = -k_0 * std::pow(h(cell,qp),3) * gradPhi(cell,qp,dim) / mu_w;
+          q(cell,qp,dim) = -k_0 * std::pow(h(cell,qp)+regularization,3) * gradPhi(cell,qp,dim) / mu_w;
         }
       }
     }

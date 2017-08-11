@@ -51,6 +51,7 @@ private:
   PHX::MDField<const ScalarT,Cell,QuadPoint,Dim>  gradPhi;
   PHX::MDField<const ScalarT,Cell,QuadPoint>      gradPhiNorm;
   PHX::MDField<const hScalarT,Cell,QuadPoint>     h;
+  PHX::MDField<const ScalarT,Dim>                 regularizationParam;
 
   // Output:
   PHX::MDField<ScalarT,Cell,QuadPoint,Dim>  q;
@@ -64,6 +65,7 @@ private:
   double beta;
 
   bool needsGradPhiNorm;
+  bool regularize;
 };
 
 // Partial specialization for StokesFO coupling
