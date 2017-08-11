@@ -58,7 +58,7 @@ public:
       return numDim;
   }
 
-  //! Get boolean telling code if SDBCs are utilized  
+  //! Get boolean telling code if SDBCs are utilized
   virtual bool useSDBCs() const {return false; }
 
   //! Build the PDE instantiations, boundary conditions, and initial solution
@@ -214,6 +214,31 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   p->set<const std::string>("Field Name","Geothermal Flux");
   ev = rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
   fm0.template registerEvaluator<EvalT>(ev);
+
+  // Water discharge
+  if (std::find(this->requirements.begin(),this->requirements.end(),"water_discharge")!=this->requirements.end())
+  {
+    entity = Albany::StateStruct::ElemData;
+    p = stateMgr.registerStateVariable("water_discharge", dl->cell_vector, elementBlockName, true, &entity);
+    p->set<const std::string>("Field Name","Water Discharge");
+    p->set<bool>("Is Vector Field", true);
+    p->set<Teuchos::RCP<PHX::DataLayout>>("Dummy Data Layout",dl->dummy);
+    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT,PHAL::AlbanyTraits>(*p));
+    fm0.template registerEvaluator<EvalT>(ev);
+    if (fieldManagerChoice == Albany::BUILD_RESID_FM)
+    {
+      // Only PHAL::AlbanyTraits::Residual evaluates something
+      if (ev->evaluatedFields().size()>0)
+      {
+        // Require save potential
+        fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+      }
+    }
+
+    // We don't want to save a vector on quad points (really bad to visualize). Let's save one vector per cell
+    ev = evalUtils.constructQuadPointsToCellInterpolationEvaluator("Water Discharge",dl->qp_vector,dl->cell_vector);
+    fm0.template registerEvaluator<EvalT>(ev);
+  }
 
   // Basal gravitational water potential
   if (std::find(this->requirements.begin(),this->requirements.end(),"basal_gravitational_water_potential")!=this->requirements.end())
@@ -378,6 +403,7 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   p->set<std::string> ("Water Thickness QP Variable Name","Water Thickness");
   p->set<std::string> ("Hydraulic Potential Gradient QP Variable Name","Hydraulic Potential Gradient");
   p->set<std::string> ("Hydraulic Potential Gradient Norm QP Variable Name","Hydraulic Potential Gradient Norm");
+  p->set<std::string> ("Regularization Parameter Name","Homotopy Parameter");
 
   p->set<Teuchos::ParameterList*> ("FELIX Hydrology",&params->sublist("FELIX Hydrology"));
   p->set<Teuchos::ParameterList*> ("FELIX Physical Parameters",&params->sublist("FELIX Physical Parameters"));
@@ -571,7 +597,7 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   //--- Shared Parameter for Continuation:  ---//
   p = Teuchos::rcp(new Teuchos::ParameterList("Homotopy Parameter"));
 
-  param_name = "Glen's Law Homotopy Parameter";
+  param_name = "Homotopy Parameter";
   p->set<std::string>("Parameter Name", param_name);
   p->set< Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
 
