@@ -198,9 +198,6 @@ postRegistrationSetup (typename Traits::SetupData d,
       else
         this->utils.setFieldData(lambdaParam,fm);
   }
-
-  if (use_stereographic_map)
-    this->utils.setFieldData(coordVec,fm);
 }
 
 //**********************************************************************

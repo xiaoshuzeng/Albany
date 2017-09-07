@@ -64,14 +64,11 @@ private:
   PHX::MDField<const IceScalarT>    u_norm;
   PHX::MDField<const HydroScalarT>  N;
   PHX::MDField<const ParamScalarT>  lambdaField;
-  PHX::MDField<const MeshScalarT>   coordVec;
 
   // Output:
   PHX::MDField<ScalarT>       beta;
 
   std::string                 basalSideName;  // Only if IsStokes=true
-
-  bool use_stereographic_map;
 
   double x_0;
   double y_0;
