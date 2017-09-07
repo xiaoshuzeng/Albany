@@ -52,7 +52,7 @@ HydrologyMeltingRate (const Teuchos::ParameterList& p,
    * The melting rate has 2 terms (forget about signs), with the following
    * units (including the km^2 from dx):
    *
-   * 1) G                 [W m^-2 km^2]
+   * 1) G                 [W m^-2 km^2] = [Pa m s^-1 km^2]
    * 2) beta*|u|^2        [kPa m yr^-1 km^2]
    *
    * To sum apples to apples, we need to convert one to the units of the other.

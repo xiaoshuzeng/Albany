@@ -158,7 +158,7 @@ evaluateFieldsSide (typename Traits::EvalData workset)
       {
         // N = p_i-p_w
         // p_i = rho_i*g*H
-        // p_w = rho_w*g*z_b - phi
+        // p_w = phi - rho_w*g*z_b
         N (cell,side,node) = std::max(rho_i*g*H(cell,side,node) + rho_w*g*(z_s(cell,side,node) - H(cell,side,node)) - phi (cell,side,node),0.0);
       }
     }
@@ -205,7 +205,7 @@ evaluateFieldsCell (typename Traits::EvalData workset)
       {
         // N = p_i-p_w
         // p_i = rho_i*g*H
-        // p_w = rho_w*g*z_b - phi
+        // p_w = phi - rho_w*g*z_b
         N(cell,node) = std::max(rho_i*g*H(cell,node) + rho_w*g*(z_s(cell,node) - H(cell,node)) - phi(cell,node),0.0);
       }
     }

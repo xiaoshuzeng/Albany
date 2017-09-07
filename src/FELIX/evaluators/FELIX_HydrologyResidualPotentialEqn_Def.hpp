@@ -91,15 +91,15 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
    *  4) \int A*h*N^3*v*dx              [1000 m km^2 yr^-1]
    *  5) \int (h_r-h)*|u|/l_r*v*dx      [m km^2 yr^-1]
    *
-   * where q=k*h^3*gradPhi/mu_w, and v is the test function.
+   * where q=k*h^3*gradPhi/mu_w, and v is the test function (non-dimensional).
    * We decide to uniform all terms to have units [m km^2 s^-1].
    * Where possible, we do this by rescaling some constants. Otherwise,
    * we simply introduce a new scaling factor
    *
    *  1) rho_combo*m                    (no scaling)
-   *  2) scaling_omega*omega          scaling_omega = yr_to_s
-   *  3) scaling_q*dot(q,grad(v))       scaling_q       = 1e-6*yr_to_s
-   *  4) A_mod*h*N^3                    A_mod           = A/1000
+   *  2) scaling_omega*omega            scaling_omega = yr_to_s
+   *  3) scaling_q*dot(q,grad(v))       scaling_q     = 1e-6*yr_to_s
+   *  4) A_mod*h*N^3                    A_mod         = A/1000
    *  5) (h_r-h)*|u|/l_r                (no scaling)
    *
    * where yr_to_s=365.25*24*3600 (the number of seconds in a year)
