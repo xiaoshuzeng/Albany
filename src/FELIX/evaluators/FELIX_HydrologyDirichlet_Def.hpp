@@ -20,8 +20,8 @@ HydrologyDirichletBase<EvalT, Traits>::
 HydrologyDirichletBase(Teuchos::ParameterList& p) :
   offset    (p.get<int>("Equation Offset")),
   nodeSetID (p.get<std::string>("Node Set ID")),
-  H_name    (p.get<std::string>("Ice Thickness Variable Name")),
-  s_name    (p.get<std::string>("Surface Height Variable Name"))
+  H_name    (p.get<std::string>("Ice Thickness State Name")),
+  s_name    (p.get<std::string>("Surface Height State Name"))
 {
   Teuchos::ParameterList& physics = *p.get<Teuchos::ParameterList*> ("FELIX Physical Parameters");
   rho_w = physics.get<double>("Water Density");
