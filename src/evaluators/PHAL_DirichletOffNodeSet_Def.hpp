@@ -10,6 +10,7 @@
 #include "Phalanx_DataLayout.hpp"
 #include "Sacado_ParameterRegistration.hpp"
 #include "Tpetra_CrsMatrix.hpp"
+#include "Albany_STKDiscretization.hpp"
 
 // **********************************************************************
 // Genereric Template Code for Constructor and PostRegistrationSetup
@@ -35,10 +36,11 @@ void DirichletOffNodeSet<PHAL::AlbanyTraits::Residual, Traits>::
 evaluateFields(typename Traits::EvalData dirichletWorkset)
 {
   // Gather all node IDs from all the stored nodesets
+  // TODO: do this in postRegistrationSetup once and for all
   std::set<int> nodeSetsRows;
-  for (int ins(0); ins<nodeSets.size(); ++ins)
+  for (const std::string& nodeSet : nodeSets)
   {
-    const std::vector<std::vector<int> >& nsNodes = dirichletWorkset.nodeSets->find(nodeSets[ins])->second;
+    const std::vector<std::vector<int> >& nsNodes = dirichletWorkset.nodeSets->find(nodeSet)->second;
     for (int inode=0; inode<nsNodes.size(); ++inode)
     {
       nodeSetsRows.insert(nsNodes[inode][this->offset]);
@@ -50,12 +52,15 @@ evaluateFields(typename Traits::EvalData dirichletWorkset)
   Teuchos::ArrayRCP<const ST> xT_constView = xT->get1dView();
   Teuchos::ArrayRCP<ST> fT_nonconstView = fT->get1dViewNonConst();
 
-  // Loop on all local dofs and set the BC on those not in nodeSetsRows
-  LO num_local_dofs = fT->getMap()->getNodeNumElements();
-  for (LO row=0; row<num_local_dofs; ++row)
+  Teuchos::RCP<Albany::STKDiscretization> disc = Teuchos::rcp_dynamic_cast<Albany::STKDiscretization>(dirichletWorkset.disc);
+  Teuchos::RCP<const Tpetra_Map> nodes = disc->getNodeMapT();
+  for (int inode=0; inode<static_cast<int>(nodes->getNodeNumElements()); ++inode)
   {
+    int row = disc->getOwnedDOF(inode,this->offset);
     if (nodeSetsRows.find(row)==nodeSetsRows.end())
+    {
       fT_nonconstView[row] = xT_constView[row] - this->value;
+    }
   }
 }
 
@@ -76,10 +81,11 @@ void DirichletOffNodeSet<PHAL::AlbanyTraits::Jacobian, Traits>::
 evaluateFields(typename Traits::EvalData dirichletWorkset)
 {
   // Gather all node IDs from all the stored nodesets
+  // TODO: do this in postRegistrationSetup once and for all
   std::set<int> nodeSetsRows;
-  for (int ins(0); ins<nodeSets.size(); ++ins)
+  for (const std::string& nodeSet : nodeSets)
   {
-    const std::vector<std::vector<int> >& nsNodes = dirichletWorkset.nodeSets->find(nodeSets[ins])->second;
+    const std::vector<std::vector<int> >& nsNodes = dirichletWorkset.nodeSets->find(nodeSet)->second;
     for (int inode=0; inode<nsNodes.size(); ++inode)
     {
       nodeSetsRows.insert(nsNodes[inode][this->offset]);
@@ -105,10 +111,12 @@ evaluateFields(typename Traits::EvalData dirichletWorkset)
   Teuchos::Array<ST> matrixEntriesT;
   Teuchos::Array<LO> matrixIndicesT;
 
-  // Loop on all local dofs and set the BC on those not in nodeSetsRows
-  LO num_local_dofs = jacT->getRangeMap()->getNodeNumElements();
-  for (LO row=0; row<num_local_dofs; ++row)
+  // Loop on all local node and set the BC on those not in nodeSetsRows for dof=this->offset
+  Teuchos::RCP<Albany::STKDiscretization> disc = Teuchos::rcp_dynamic_cast<Albany::STKDiscretization>(dirichletWorkset.disc);
+  Teuchos::RCP<const Tpetra_Map> nodes = disc->getNodeMapT();
+  for (int inode=0; inode<static_cast<int>(nodes->getNodeNumElements()); ++inode)
   {
+    int row = disc->getOwnedDOF(inode,this->offset);
     if (nodeSetsRows.find(row)==nodeSetsRows.end())
     {
       // It's a row not on the given node sets
@@ -149,10 +157,11 @@ void DirichletOffNodeSet<PHAL::AlbanyTraits::Tangent, Traits>::
 evaluateFields(typename Traits::EvalData dirichletWorkset)
 {
   // Gather all node IDs from all the stored nodesets
+  // TODO: do this in postRegistrationSetup once and for all
   std::set<int> nodeSetsRows;
-  for (int ins(0); ins<nodeSets.size(); ++ins)
+  for (const std::string& nodeSet : nodeSets)
   {
-    const std::vector<std::vector<int> >& nsNodes = dirichletWorkset.nodeSets->find(nodeSets[ins])->second;
+    const std::vector<std::vector<int> >& nsNodes = dirichletWorkset.nodeSets->find(nodeSet)->second;
     for (int inode=0; inode<nsNodes.size(); ++inode)
     {
       nodeSetsRows.insert(nsNodes[inode][this->offset]);
@@ -173,11 +182,11 @@ evaluateFields(typename Traits::EvalData dirichletWorkset)
 
   const RealType j_coeff = dirichletWorkset.j_coeff;
   // Loop on all local dofs and set the BC on those not in nodeSetsRows
-  LO num_local_dofs = fpT!=Teuchos::null ? fpT->getMap()->getNodeNumElements() :
-                     (JVT!=Teuchos::null ? JVT->getMap()->getNodeNumElements() :
-                     (fT!=Teuchos::null ? fT->getMap()->getNodeNumElements() : 0));
-  for (LO row=0; row<num_local_dofs; ++row)
+  Teuchos::RCP<Albany::STKDiscretization> disc = Teuchos::rcp_dynamic_cast<Albany::STKDiscretization>(dirichletWorkset.disc);
+  Teuchos::RCP<const Tpetra_Map> nodes = disc->getNodeMapT();
+  for (int inode=0; inode<static_cast<int>(nodes->getNodeNumElements()); ++inode)
   {
+    int row = disc->getOwnedDOF(inode,this->offset);
     if (nodeSetsRows.find(row)==nodeSetsRows.end())
     {
       // It's a row not on the given node sets
@@ -224,10 +233,11 @@ void DirichletOffNodeSet<PHAL::AlbanyTraits::DistParamDeriv, Traits>::
 evaluateFields(typename Traits::EvalData dirichletWorkset)
 {
   // Gather all node IDs from all the stored nodesets
+  // TODO: do this in postRegistrationSetup once and for all
   std::set<int> nodeSetsRows;
-  for (int ins(0); ins<nodeSets.size(); ++ins)
+  for (const std::string& nodeSet : nodeSets)
   {
-    const std::vector<std::vector<int> >& nsNodes = dirichletWorkset.nodeSets->find(nodeSets[ins])->second;
+    const std::vector<std::vector<int> >& nsNodes = dirichletWorkset.nodeSets->find(nodeSet)->second;
     for (int inode=0; inode<nsNodes.size(); ++inode)
     {
       nodeSetsRows.insert(nsNodes[inode][this->offset]);
@@ -239,7 +249,6 @@ evaluateFields(typename Traits::EvalData dirichletWorkset)
   Teuchos::ArrayRCP<ST> fpVT_nonconstView;
   bool trans = dirichletWorkset.transpose_dist_param_deriv;
   int num_cols = fpVT->getNumVectors();
-  LO num_local_dofs = fpVT->getMap()->getNodeNumElements();
 
   // For (df/dp)^T*V we zero out corresponding entries in V
   if (trans)
@@ -249,8 +258,11 @@ evaluateFields(typename Traits::EvalData dirichletWorkset)
     Teuchos::ArrayRCP<ST> VpT_nonconstView;
 
     // Loop on all local dofs and set the BC on those not in nodeSetsRows
-    for (LO row=0; row<num_local_dofs; ++row)
+    Teuchos::RCP<Albany::STKDiscretization> disc = Teuchos::rcp_dynamic_cast<Albany::STKDiscretization>(dirichletWorkset.disc);
+    Teuchos::RCP<const Tpetra_Map> nodes = disc->getNodeMapT();
+    for (int inode=0; inode<static_cast<int>(nodes->getNodeNumElements()); ++inode)
     {
+      int row = disc->getOwnedDOF(inode,this->offset);
       if (nodeSetsRows.find(row)==nodeSetsRows.end())
       {
         // It's a row not on the given node sets
@@ -268,8 +280,11 @@ evaluateFields(typename Traits::EvalData dirichletWorkset)
   else
   {
     // Loop on all local dofs and set the BC on those not in nodeSetsRows
-    for (LO row=0; row<num_local_dofs; ++row)
+    Teuchos::RCP<Albany::STKDiscretization> disc = Teuchos::rcp_dynamic_cast<Albany::STKDiscretization>(dirichletWorkset.disc);
+    Teuchos::RCP<const Tpetra_Map> nodes = disc->getNodeMapT();
+    for (int inode=0; inode<static_cast<int>(nodes->getNodeNumElements()); ++inode)
     {
+      int row = disc->getOwnedDOF(inode,this->offset);
       if (nodeSetsRows.find(row)==nodeSetsRows.end())
       {
         // It's a row not on the given node sets
