@@ -25,6 +25,19 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
   u_b       (p.get<std::string> ("Sliding Velocity QP Variable Name"), dl->qp_scalar),
   residual  (p.get<std::string> ("Potential Eqn Residual Name"),dl->node_scalar)
 {
+  /*
+   *  The (hydraulic) potential equation has the following (strong) form
+   *
+   *     -div(q) + A*h*N^3 + rho_combo*m = -omega + (h_r-h)*|u_b|/l_r
+   *
+   *  where q is the water discharge, h the water thickness, A the Glen's law
+   *  flow factor, N the effective pressure, rho_combo=1/rho_water-1/rho_ice,
+   *  m the melting rate of the ice (due to geothermal flow and sliding),
+   *  omega the water source (water reaching the bed from the surface, through
+   *  moulins), h_r/l_r typical height/length of bed bumps, and u_b is the
+   *  sliding velocity of the ice
+   */
+
   if (IsStokesCoupling)
   {
     TEUCHOS_TEST_FOR_EXCEPTION (!dl->isSideLayouts, Teuchos::Exceptions::InvalidParameter,
@@ -36,7 +49,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
 
     sideSetName = p.get<std::string>("Side Set Name");
 
-    metric = PHX::MDField<const MeshScalarT,Cell,Side,QuadPoint,Dim,Dim>("Metric Name",dl->qp_tensor);
+    metric = PHX::MDField<const MeshScalarT,Cell,Side,QuadPoint,Dim,Dim>(p.get<std::string>("Metric Name"),dl->qp_tensor);
     this->addDependentField(metric);
   }
   else
@@ -68,7 +81,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
   double rho_i      = physical_params.get<double>("Ice Density", 910.0);
   double rho_w      = physical_params.get<double>("Water Density", 1028.0);
   bool melting_mass = hydrology_params.get<bool>("Use Melting In Conservation Of Mass", false);
-  bool melting_cav  = hydrology_params.get<bool>("Use Melting In Cavities Equation", false);
+  bool melting_cav  = hydrology_params.get<bool>("Use Melting In Thickness Equation", false);
   use_eff_cav       = (hydrology_params.get<bool>("Use Effective Cavities Height", true) ? 1.0 : 0.0);
   eta_i             = physical_params.get<double>("Ice Viscosity",-1.0);
 
@@ -86,7 +99,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
    * units (including the km^2 from dx):
    *
    *  1) \int rho_combo*m*v*dx          [m km^2 yr^-1]
-   *  2) \int omega*v*dx                [m km^2 s^-1]
+   *  2) \int omega*v*dx                [mm km^2 day^-1]
    *  3) \int dot(q*grad(v))*dx         [m^3 s^-1]
    *  4) \int A*h*N^3*v*dx              [1000 m km^2 yr^-1]
    *  5) \int (h_r-h)*|u|/l_r*v*dx      [m km^2 yr^-1]
@@ -97,7 +110,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
    * we simply introduce a new scaling factor
    *
    *  1) rho_combo*m                    (no scaling)
-   *  2) scaling_omega*omega            scaling_omega = yr_to_s
+   *  2) scaling_omega*omega            scaling_omega = yr_to_day/1000
    *  3) scaling_q*dot(q,grad(v))       scaling_q     = 1e-6*yr_to_s
    *  4) A_mod*h*N^3                    A_mod         = A/1000
    *  5) (h_r-h)*|u|/l_r                (no scaling)
@@ -106,7 +119,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
    */
   double yr_to_s = 365.25*24*3600;
   A               = A/1000;
-  scaling_omega = yr_to_s;
+  scaling_omega   = 365.25/1000;
   scaling_q       = 1e-6*yr_to_s;
 
   this->setName("HydrologyResidualPotentialEqn"+PHX::typeAsString<EvalT>());

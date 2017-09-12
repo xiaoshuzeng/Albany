@@ -21,6 +21,20 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
   u_b       (p.get<std::string> ("Sliding Velocity QP Variable Name"), dl->qp_scalar),
   residual  (p.get<std::string> ("Thickness Eqn Residual Name"),dl->node_scalar)
 {
+  /*
+   *  The (water) thickness equation has the following (strong) form
+   *
+   *     dh/dt = m/rho_i + (h_r-h)*|u_b|/l_r - AhN^3
+   *
+   *  where h is the water thickness, m the melting rate of the ice,
+   *  h_r/l_r typical height/length of bed bumps, u_b the sliding
+   *  velocity of the ice, A the Glen's law flow factor, and N is
+   *  the effective pressure. Also, dh/dt denotes the *partial* tim derivative.
+   *  NOTE: if the term m/rho_i is present, there is no proof of well posedness
+   *        for the hydrology equations. Therefore, we only turn this term
+   *        on upon request.
+   */
+
   if (IsStokes)
   {
     TEUCHOS_TEST_FOR_EXCEPTION (!dl->isSideLayouts, Teuchos::Exceptions::InvalidParameter,
@@ -65,7 +79,7 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
   l_r = hydrology_params.get<double>("Bed Bumps Length");
   A   = hydrology_params.get<double>("Flow Factor Constant");
 
-  bool melting_cav = hydrology_params.get<bool>("Use Melting In Cavities Equation", false);
+  bool melting_cav = hydrology_params.get<bool>("Use Melting In Thickness Equation", false);
   use_eff_cav = (hydrology_params.get<bool>("Use Effective Cavities Height", true) ? 1.0 : 0.0);
   if (melting_cav)
     rho_i_inv = 1./rho_i;
@@ -85,11 +99,11 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
    *  4) \int (h_r-h)*|u|/l_r*v*dx  [m km^2 yr^-1]
    *
    * where q=k*h^3*gradPhi/mu_w, and v is the test function.
-   * We decide to uniform all terms to have units [m km^2 s^-1].
+   * We decide to uniform all terms to have units [m km^2 yr^-1].
    * Where possible, we do this by rescaling some constants. Otherwise,
    * we simply introduce a new scaling factor
    *
-   *  1) scaling_h_t*h_t      scaling_h_t = yr_to_s
+   *  1) scaling_h_t*h_t      scaling_h_t = 1/yr_to_s
    *  2) rho_i_inv_m          (no scaling)
    *  3) A_mod*h*N^3          A_mod       = A/1000
    *  4) (h_r-h)*|u|/l_r      (no scaling)
@@ -100,7 +114,7 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
   // Scalings, needed to account for different units: ice velocity
   // is in m/yr rather than m/s, while all other quantities are in SI units.
   scaling_h_t = 365.25*24*3600;
-  A               = A/1000;
+  A           = A/1000;
 
   this->setName("HydrologyResidualThicknessEqn"+PHX::typeAsString<EvalT>());
 }

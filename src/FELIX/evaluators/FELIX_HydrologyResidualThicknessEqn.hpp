@@ -53,7 +53,7 @@ private:
   PHX::MDField<const IceScalarT>    u_b;
 
   // Output:
-  PHX::MDField<ScalarT,Cell,Node>   residual;
+  PHX::MDField<ScalarT>             residual;
 
   int numNodes;
   int numQPs;

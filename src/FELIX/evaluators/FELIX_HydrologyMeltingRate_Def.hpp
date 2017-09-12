@@ -61,9 +61,16 @@ HydrologyMeltingRate (const Teuchos::ParameterList& p,
    *
    *  scaling_G = yr_to_s/1000
    *
-   * where yr_to_s=365.25*24*3600 (the number of seconds in a year)
+   * where yr_to_s=365.25*24*3600 (the number of seconds in a year). Furthermore, we
+   * scale J to be in kJ/kg
+   *
+   * With this choice, considering G~10^-1 W/m^2, |u|~1000 m/yr, beta~10 kPa*yr/m, L~10^5 J/kg
+   * we get m ~ 100 kg/(m^2 yr). When multiplied by 1/rho_i in the residual, this gives a term of
+   * order 10^-1
+   *
    */
   scaling_G = 365.25*24*3600/1000;
+  L *= 1e-3;
 
   this->setName("HydrologyMeltingRate"+PHX::typeAsString<EvalT>());
 }
