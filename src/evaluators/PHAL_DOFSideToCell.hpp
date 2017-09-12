@@ -37,9 +37,9 @@ public:
 
 private:
 
-  std::string                     sideSetName;
-  std::vector<std::vector<int> >  sideNodes;
-  std::vector<int>                dims;
+  std::string                           sideSetName;
+  std::vector<std::vector<int> >        sideNodes;
+  std::vector<PHX::Device::size_type>   dims;
 
   // Input:
   //! Values on side

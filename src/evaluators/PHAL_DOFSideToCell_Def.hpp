@@ -76,7 +76,7 @@ DOFSideToCellBase(const Teuchos::ParameterList& p,
     TEUCHOS_TEST_FOR_EXCEPTION (true, Teuchos::Exceptions::InvalidParameter, "Error! Invalid field layout.\n");
   }
 
-  val_side.dimensions(dims);
+  val_side.fieldTag().dataLayout().dimensions(dims);
   this->addDependentField(val_side.fieldTag());
   this->addEvaluatedField(val_cell);
 
