@@ -88,13 +88,13 @@ namespace PHAL {
     //Kokkos::deep_copy(grad_val_qp.get_kokkos_view(), 0.0);
 
     for (std::size_t cell=0; cell < workset.numCells; ++cell) {
-        for (std::size_t qp=0; qp < numQPs; ++qp) {
-          for (std::size_t i=0; i<vecDim; i++) {
-            for (std::size_t dim=0; dim<numDims; dim++) {
-              // For node==0, overwrite. Then += for 1 to numNodes.
-              grad_val_qp(cell,qp,i,dim) = val_node(cell, 0, i) * GradBF(cell, 0, qp, dim);
-              for (std::size_t node= 1 ; node < numNodes; ++node) {
-                grad_val_qp(cell,qp,i,dim) += val_node(cell, node, i) * GradBF(cell, node, qp, dim);
+      for (std::size_t qp=0; qp < numQPs; ++qp) {
+        for (std::size_t i=0; i<vecDim; i++) {
+          for (std::size_t dim=0; dim<numDims; dim++) {
+            // For node==0, overwrite. Then += for 1 to numNodes.
+            grad_val_qp(cell,qp,i,dim) = val_node(cell, 0, i) * GradBF(cell, 0, qp, dim);
+            for (std::size_t node= 1 ; node < numNodes; ++node) {
+              grad_val_qp(cell,qp,i,dim) += val_node(cell, node, i) * GradBF(cell, node, qp, dim);
             }
           }
         }
