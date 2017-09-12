@@ -46,6 +46,7 @@ bool ProblemFactory::hasProblem (const std::string& problemName)
       problemName == "FELIX Stokes First Order 3D" ||
       problemName == "FELIX Stokes FO 3D" ||
       problemName == "FELIX Coupled FO H 3D" ||
+      problemName == "FELIX Coupled FO Hydrology 3D" ||
       problemName == "FELIX Stokes L1L2 2D" ||
       problemName == "FELIX Hydrology 2D" ||
       problemName == "FELIX Enthalpy 3D" ||
@@ -109,7 +110,9 @@ ProblemFactory::create() const
   else if (method == "FELIX Laplacian Sampling") {
     problem = rcp(new FELIX::LaplacianSampling(problemParams, discretizationParams, paramLib, 2));
   }
-
+  else if (method == "FELIX Coupled FO Hydrology 3D" ) {
+    problem = rcp(new FELIX::StokesFOHydrology(problemParams, discretizationParams, paramLib, 3));
+  }
   return problem;
 }
 

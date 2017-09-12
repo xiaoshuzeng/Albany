@@ -71,6 +71,7 @@
        problems/FELIX_SchoofFit.cpp
        problems/FELIX_Stokes.cpp
        problems/FELIX_StokesFO.cpp
+       problems/FELIX_StokesFOHydrology.cpp
        problems/FELIX_LaplacianSampling.cpp
        problems/FELIX_StokesFOThermoCoupled.cpp
        problems/FELIX_StokesL1L2.cpp
@@ -224,6 +225,7 @@ ENDIF()
        problems/FELIX_SchoofFit.hpp
        problems/FELIX_Stokes.hpp
        problems/FELIX_StokesFO.hpp
+       problems/FELIX_StokesFOHydrology.hpp
        problems/FELIX_LaplacianSampling.hpp
        problems/FELIX_StokesL1L2.hpp
   )
