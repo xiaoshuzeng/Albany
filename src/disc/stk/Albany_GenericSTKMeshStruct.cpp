@@ -803,8 +803,9 @@ void Albany::GenericSTKMeshStruct::checkNodeSetsFromSideSetsIntegrity ()
     unsigned num_nodes = metaData->get_topology(*ssPart).num_nodes();
     for (const auto& side : sides)
     {
-      TEUCHOS_TEST_FOR_EXCEPTION (bulkData->num_nodes(side)==num_nodes, std::runtime_error,
-                                  "Error! Found a side with wrong number of nodes stored. Most likely,"
+      TEUCHOS_TEST_FOR_EXCEPTION (bulkData->num_nodes(side)!=num_nodes, std::runtime_error,
+                                  "Error! Found a side with wrong number of nodes stored (" << bulkData->num_nodes(side)
+                                  << " instead of " << num_nodes << "). Most likely,"
                                   "its nodes were not added to the side with 'declare_relation').\n");
     }
   }
@@ -1715,10 +1716,10 @@ void Albany::GenericSTKMeshStruct::checkFieldIsInMesh (const std::string& fname,
     }
     if(isFieldInMesh) {
        TEUCHOS_TEST_FOR_EXCEPTION (missing, std::runtime_error, "Error! The field '" << fname << "' in the mesh has different rank or dimensions than the ones specified\n"
-                                                        << " Rank required: " << entity_rank << ", rank of field in mesh: " << (*f)->entity_rank() << "\n"  
+                                                        << " Rank required: " << entity_rank << ", rank of field in mesh: " << (*f)->entity_rank() << "\n"
                                                         << " Dimension required: " << dim << ", dimension of field in mesh: " << (*f)->field_array_rank()+1 << "\n");
     }
-    else 
+    else
       TEUCHOS_TEST_FOR_EXCEPTION (missing, std::runtime_error, "Error! The field '" << fname << "' was not found in the mesh.\n"
                                                        << "  Probably it was not registered it in the state manager (which forwards it to the mesh)\n");
   }
