@@ -161,7 +161,7 @@ Albany::BCUtils<Albany::DirichletTraits>::constructBCEvaluators(
   using PHX::MDALayout;
   using PHAL::AlbanyTraits;
 
-  use_sdbcs_ = false; 
+  use_sdbcs_ = false;
 
   if (!haveBCSpecified(
           params)) {  // If the BC sublist is not in the input file,
@@ -316,8 +316,8 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
   using PHX::MDALayout;
   using PHAL::AlbanyTraits;
   using std::string;
-  
-  use_sdbcs_ = false; 
+
+  use_sdbcs_ = false;
 
   ParameterList BCparams = params->sublist(traits_type::bcParamsPl);
   BCparams.validateParameters(
@@ -479,14 +479,14 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
 
       if (BCparams.isSublist(ss)) {
 
-        use_sdbcs_ = true; 
+        use_sdbcs_ = true;
         // grab the sublist
         ParameterList& sub_list = BCparams.sublist(ss);
 
         RCP<ParameterList> p = rcp(new ParameterList);
 
         p->set<int>("Type", traits_type::typeTs);
-        
+
         // Extract the time values into a vector
         p->set<Teuchos::Array<RealType>>(
             "Time Values",
@@ -656,7 +656,7 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
           traits_type::constructStrongDBCName(nodeSetIDs[i], bcNames[j]);
       if (BCparams.isParameter(ss)) {
         RCP<ParameterList> p = rcp(new ParameterList);
-        use_sdbcs_ = true; 
+        use_sdbcs_ = true;
         p->set<int>("Type", traits_type::typeSt);
         p->set<RCP<DataLayout>>("Data Layout", dummy);
         p->set<string>("Dirichlet Name", ss);
@@ -826,6 +826,12 @@ Albany::BCUtils<Albany::DirichletTraits>::buildEvaluatorsList(
 
   ///
   /// SideSet equations case: DBC to handle nodes not on the side set
+  /// Note: the common use of this DBC is to set the residual to 0
+  ///       and the jacobian to the identity, on the nodes outside the
+  ///       given nodeset(s). This way, we avoid having a singular jacobian.
+  ///       This would be avoidable if Albany could handle a different number
+  ///       of equations on the mesh nodes, that is, if neq was a field
+  ///       defined on the whole mesh.
   ///
   for (std::size_t j = 0; j < bcNames.size(); ++j)
   {
