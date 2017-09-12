@@ -22,7 +22,7 @@
 
     <ParameterList name="Response Functions">
       <Parameter name="Number"     type="int" value="1"/>
-      <Parameter name="Response 0" type="string" value="Solution Max Value"/>
+      <Parameter name="Response 0" type="string" value="Solution Average"/>
       <ParameterList name="ResponseParams 1">
         <Parameter name="Equation"      type="int" value="1"/>
         <Parameter name="Num Equations" type="int" value="1"/>
@@ -42,7 +42,7 @@
       <Parameter name="Use Water Thickness Equation"         type="bool"           value="false"/>
       <Parameter name="Use Effective Cavities Height"        type="bool"           value="false"/>
       <Parameter name="Use Melting In Conservation Of Mass"  type="bool"           value="false"/>
-      <Parameter name="Use Melting In Cavities Equation"     type="bool"           value="false"/>
+      <Parameter name="Use Melting In Thickness Equation"    type="bool"           value="false"/>
       <Parameter name="Transmissivity"                       type="double"         value="0.0001"/>    <!-- [m] -->
       <Parameter name="Bed Bumps Height"                     type="double"         value="0.002"/>     <!-- [m] -->
       <Parameter name="Bed Bumps Length"                     type="double"         value="1"/>         <!-- [m] -->
@@ -60,7 +60,7 @@
 
   <ParameterList name="Regression Results">
     <Parameter  name="Number of Comparisons"             type="int"           value="1"/>
-    <Parameter  name="Test Values"                       type="Array(double)" value="{8940176.73567}"/>
+    <Parameter  name="Test Values"                       type="Array(double)" value="{9997.21351192}"/>
     <Parameter  name="Number of Sensitivity Comparisons" type="int"           value="0"/>
     <Parameter  name="Relative Tolerance"                type="double"        value="1.0e-4"/>
     <Parameter  name="Absolute Tolerance"                type="double"        value="1.0e-4"/>

@@ -10,7 +10,7 @@
     <Parameter name="Solution Method" type="string" value="Continuation"/>
     <Parameter name="Name" type="string" value="FELIX Hydrology 2D"/>
     <Parameter name="Required Fields" type="Array(string)" value="{surface_height,surface_water_input,basal_velocity,
-                                                                   beta,ice_thickness,geothermal_flux}"/>
+                                                                   effective_pressure,beta,ice_thickness,geothermal_flux}"/>
 
     <ParameterList name="Dirichlet BCs">
       <Parameter name="DBC on NS NodeSet1 for DOF Hydraulic Potential" type="double" value="0.0"/>
@@ -51,13 +51,12 @@
       <Parameter name="Use Water Thickness Equation"        type="bool"   value="true"/>
       <Parameter name="Use Effective Cavities Height"       type="bool"   value="true"/>
       <Parameter name="Use Melting In Conservation Of Mass" type="bool"   value="true"/>
-      <Parameter name="Use Melting In Cavities Equation"    type="bool"   value="false"/>
+      <Parameter name="Use Melting In Thickness Equation"   type="bool"   value="false"/>
       <Parameter name="Regularize With Continuation"        type="bool"   value="true"/>
       <Parameter name="Transmissivity"                      type="double" value="0.0001"/>  <!-- [1] -->
-      <Parameter name="Bed Bumps Height"                    type="double" value="0.002"/>   <!-- [m] -->
+      <Parameter name="Bed Bumps Height"                    type="double" value="0.2"/>   <!-- [m] -->
       <Parameter name="Bed Bumps Length"                    type="double" value="1"/>       <!-- [m] -->
       <Parameter name="Flow Factor Constant"                type="double" value="0.00015"/> <!-- [k^-(n+1) Pa^-n yr^-1)] -->
-      <Parameter name="Field Norm Regularization"           type="double" value="1e-6"/>
     </ParameterList>
 
     <ParameterList name="FELIX Basal Friction Coefficient">
@@ -89,7 +88,7 @@
     <Parameter name="Cubature Degree" type="int" value="3"/>
     <Parameter name="Exodus Output File Name" type="string" value="./hydrology.exo"/>
     <ParameterList name="Required Fields Info">
-      <Parameter name="Number Of Fields"  type="int" value="6"/>
+      <Parameter name="Number Of Fields"  type="int" value="7"/>
       <ParameterList name="Field 0">
         <Parameter name="Field Name"    type="string" value="ice_thickness"/>  <!-- km -->
         <Parameter name="Field Origin"  type="string" value="File"/>
@@ -106,7 +105,7 @@
         <Parameter name="Field Name"    type="string" value="basal_velocity"/>  <!-- m/yr -->
         <Parameter name="Field Origin"  type="string" value="File"/>
         <Parameter name="Field Type"    type="string" value="Node Vector"/>
-        <Parameter name="Field Value"   type="Array(double)" value="{3,0}"/>
+        <Parameter name="Field Value"   type="Array(double)" value="{1000,0}"/>
       </ParameterList>
       <ParameterList name="Field 3">
         <Parameter name="Field Name"    type="string" value="surface_water_input"/>  <!-- mm/d -->
@@ -122,6 +121,11 @@
       </ParameterList>
       <ParameterList name="Field 5">
         <Parameter name="Field Name"    type="string" value="beta"/>
+        <Parameter name="Field Type"    type="string" value="Node Scalar"/>
+        <Parameter name="Field Usage"   type="string" value="Output"/>
+      </ParameterList>
+      <ParameterList name="Field 6">
+        <Parameter name="Field Name"    type="string" value="effective_pressure"/>
         <Parameter name="Field Type"    type="string" value="Node Scalar"/>
         <Parameter name="Field Usage"   type="string" value="Output"/>
       </ParameterList>

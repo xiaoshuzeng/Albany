@@ -49,6 +49,8 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/input_fo_gis_beta_smb_restart.xml
                ${CMAKE_CURRENT_BINARY_DIR}/input_fo_gis_beta_smb_restart.xml COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/input_fo_gis_wedge_pumi.xml
                ${CMAKE_CURRENT_BINARY_DIR}/input_fo_gis_wedge_pumi.xml COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/input_fo_gis_hydrology.xml
+               ${CMAKE_CURRENT_BINARY_DIR}/input_fo_gis_hydrology.xml COPYONLY)
 
 get_filename_component(testName ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 
@@ -87,3 +89,6 @@ endif()
 if(ALBANY_IFPACK2)
 add_test(${testName}_Gis20km_Tpetra ${AlbanyT.exe} input_fo_gis20km_testT.xml)
 endif(ALBANY_IFPACK2)
+
+add_test(${testName}_GisCoupledHydrology ${Albany.exe} input_fo_gis_hydrology.xml)
+set_tests_properties(${testName}_GisCoupledHydrology PROPERTIES DEPENDS ${testName}_GisPopulateMeshes)

@@ -10,6 +10,7 @@ GET_FILENAME_COMPONENT (testName ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 
 #2. Tests
 IF (ALBANY_EPETRA)
-#  ADD_TEST (${testName}_steady ${Albany.exe} input_steady.xml)
+  ADD_TEST (${testName}_potential_only ${Albany.exe} input_potential_only.xml)
+  ADD_TEST (${testName}_steady ${Albany.exe} input_steady.xml)
 #  ADD_TEST (${testName}_unsteady ${Albany.exe} input_unsteady.xml)
 ENDIF()
