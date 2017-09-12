@@ -395,7 +395,7 @@ Albany::DiscretizationFactory::createMeshStruct(Teuchos::RCP<Teuchos::ParameterL
                 "Error: Discretization method " << method
                 << " requested, but not compiled in" << std::endl);
 #endif
-    } 
+    }
 
     TEUCHOS_TEST_FOR_EXCEPTION(true, Teuchos::Exceptions::InvalidParameter, std::endl <<
                 "Error!  Unknown discretization method in DiscretizationFactory: " << method <<
@@ -422,13 +422,27 @@ Albany::DiscretizationFactory::createDiscretization(
         const AbstractFieldContainer::FieldContainerRequirements& req,
         const std::map<std::string, AbstractFieldContainer::FieldContainerRequirements>& side_set_req,
         const Teuchos::RCP<Albany::RigidBodyModes>& rigidBodyModes) {
+  Teuchos::Array<Teuchos::Array<bool>> couplings;
+  return createDiscretization(neq,couplings,sideSetEquations,sis,side_set_sis,req,side_set_req,rigidBodyModes);
+}
+
+Teuchos::RCP<Albany::AbstractDiscretization>
+Albany::DiscretizationFactory::createDiscretization(
+        unsigned int neq,
+        const Teuchos::Array<Teuchos::Array<bool>>& equationsCouplings,
+        const std::map<int, std::vector<std::string> >& sideSetEquations,
+        const Teuchos::RCP<Albany::StateInfoStruct>& sis,
+        const std::map<std::string, Teuchos::RCP<Albany::StateInfoStruct> >& side_set_sis,
+        const AbstractFieldContainer::FieldContainerRequirements& req,
+        const std::map<std::string, AbstractFieldContainer::FieldContainerRequirements>& side_set_req,
+        const Teuchos::RCP<Albany::RigidBodyModes>& rigidBodyModes) {
     TEUCHOS_TEST_FOR_EXCEPTION(meshStruct == Teuchos::null,
             std::logic_error,
             "meshStruct accessed, but it has not been constructed" << std::endl);
 
     setupInternalMeshStruct(neq, sis, side_set_sis, req, side_set_req);
     Teuchos::RCP<Albany::AbstractDiscretization> result =
-            createDiscretizationFromInternalMeshStruct(sideSetEquations, rigidBodyModes);
+            createDiscretizationFromInternalMeshStruct(equationsCouplings, sideSetEquations, rigidBodyModes);
 
     // Wrap the discretization in the catalyst decorator if needed.
 #ifdef ALBANY_CATALYST
@@ -477,6 +491,15 @@ Teuchos::RCP<Albany::AbstractDiscretization>
 Albany::DiscretizationFactory::createDiscretizationFromInternalMeshStruct(
         const std::map<int, std::vector<std::string> >& sideSetEquations,
         const Teuchos::RCP<Albany::RigidBodyModes>& rigidBodyModes) {
+    Teuchos::Array<Teuchos::Array<bool>> equationsCouplings;
+    return createDiscretizationFromInternalMeshStruct(equationsCouplings, sideSetEquations, rigidBodyModes);
+}
+
+Teuchos::RCP<Albany::AbstractDiscretization>
+Albany::DiscretizationFactory::createDiscretizationFromInternalMeshStruct(
+        const Teuchos::Array<Teuchos::Array<bool>>& equationsCouplings,
+        const std::map<int, std::vector<std::string> >& sideSetEquations,
+        const Teuchos::RCP<Albany::RigidBodyModes>& rigidBodyModes) {
 
     if (!piroParams.is_null() && !rigidBodyModes.is_null())
 
@@ -500,12 +523,12 @@ Albany::DiscretizationFactory::createDiscretizationFromInternalMeshStruct(
             case Albany::AbstractMeshStruct::STK_MS:
             {
                 Teuchos::RCP<Albany::AbstractSTKMeshStruct> ms = Teuchos::rcp_dynamic_cast<Albany::AbstractSTKMeshStruct>(meshStruct);
-#ifdef ALBANY_FELIX
-                if (method == "Extruded")
-                    return Teuchos::rcp(new Albany::STKDiscretizationStokesH(discParams, ms, commT, rigidBodyModes));
-                else
-#endif
-                    return Teuchos::rcp(new Albany::STKDiscretization(discParams, ms, commT, rigidBodyModes, sideSetEquations));
+//#ifdef ALBANY_FELIX
+//                if (method == "Extruded")
+//                    return Teuchos::rcp(new Albany::STKDiscretizationStokesH(discParams, ms, commT, rigidBodyModes));
+//                else
+//#endif
+                    return Teuchos::rcp(new Albany::STKDiscretization(discParams, ms, commT, rigidBodyModes, sideSetEquations, equationsCouplings));
             }
                 break;
 #endif

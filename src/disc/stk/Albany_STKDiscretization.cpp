@@ -70,7 +70,8 @@ STKDiscretization(
                   Teuchos::RCP<Albany::AbstractSTKMeshStruct>& stkMeshStruct_,
                   const Teuchos::RCP<const Teuchos_Comm>& commT_,
                   const Teuchos::RCP<Albany::RigidBodyModes>& rigidBodyModes_,
-                  const std::map<int,std::vector<std::string> >& sideSetEquations_) :
+                  const std::map<int,std::vector<std::string> >& sideSetEquations_,
+                  const Teuchos::Array<Teuchos::Array<bool>>& equationsCouplings_) :
 
   out(Teuchos::VerboseObjectBase::getDefaultOStream()),
   previous_time_label(-1.0e32),
@@ -82,11 +83,36 @@ STKDiscretization(
   neq(stkMeshStruct_->neq),
   stkMeshStruct(stkMeshStruct_),
   sideSetEquations(sideSetEquations_),
+  equationsCouplings(equationsCouplings_),
   interleavedOrdering(stkMeshStruct_->interleavedOrdering)
 {
 #if defined(ALBANY_EPETRA)
   comm = Albany::createEpetraCommFromTeuchosComm(commT_);
 #endif
+  if (equationsCouplings.size()==0)
+  {
+    // The user did not specify how equations are coupled. We assume they are all coupled together
+    equationsCouplings.resize(neq);
+    for (int ieq=0; ieq<neq; ++ieq)
+    {
+      equationsCouplings[ieq].resize(neq);
+      for (int jeq=0; jeq<neq; ++jeq)
+      {
+        equationsCouplings[ieq][jeq] = true;
+      }
+    }
+  }
+  else
+  {
+    TEUCHOS_TEST_FOR_EXCEPTION (equationsCouplings.size()!=neq, Teuchos::Exceptions::InvalidArgument,
+                                "Error! The array equationsCouplings_ should have size " << neq << ".\n");
+    for (int eq=0; eq<neq; ++eq)
+    {
+      TEUCHOS_TEST_FOR_EXCEPTION (equationsCouplings[eq].size()!=neq, Teuchos::Exceptions::InvalidArgument,
+                                  "Error! The array equationsCouplings_[" << eq << "] should have size " << neq << ".\n");
+    }
+  }
+
   Albany::STKDiscretization::updateMesh();
 }
 
@@ -660,7 +686,7 @@ void Albany::STKDiscretization::writeSolution(const Epetra_Vector& soln, const d
   writeSolutionT(*solnT, time, overlapped);
 }
 
-void Albany::STKDiscretization::writeSolution(const Epetra_Vector& soln, const Epetra_Vector& soln_dot, 
+void Albany::STKDiscretization::writeSolution(const Epetra_Vector& soln, const Epetra_Vector& soln_dot,
                                               const double time, const bool overlapped)
 {
   Teuchos::RCP<const Tpetra_Vector> solnT =
@@ -682,16 +708,16 @@ void Albany::STKDiscretization::writeSolutionT(
   const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT, const double time, const bool overlapped)
 {
   writeSolutionToMeshDatabaseT(solnT, soln_dotT, time, overlapped);
-  //IKT, FIXME? extend writeSolutionToFileT to take in soln_dotT? 
+  //IKT, FIXME? extend writeSolutionToFileT to take in soln_dotT?
   writeSolutionToFileT(solnT, time, overlapped);
 }
 
 void Albany::STKDiscretization::writeSolutionT(
-  const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT, 
+  const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT,
   const Tpetra_Vector& soln_dotdotT, const double time, const bool overlapped)
 {
   writeSolutionToMeshDatabaseT(solnT, soln_dotT, soln_dotdotT, time, overlapped);
-  //IKT, FIXME? extend writeSolutionToFileT to take in soln_dotT and soln_dotdotT? 
+  //IKT, FIXME? extend writeSolutionToFileT to take in soln_dotT and soln_dotdotT?
   writeSolutionToFileT(solnT, time, overlapped);
 }
 
@@ -725,7 +751,7 @@ void Albany::STKDiscretization::writeSolutionToMeshDatabaseT(
 }
 
 void Albany::STKDiscretization::writeSolutionToMeshDatabaseT(
-  const Tpetra_Vector& solnT, const Tpetra_Vector &soln_dotT, 
+  const Tpetra_Vector& solnT, const Tpetra_Vector &soln_dotT,
   const Tpetra_Vector& soln_dotdotT, const double time, const bool overlapped)
 {
   // Put solution as Tpetra_Vector into STK Mesh
@@ -1170,9 +1196,9 @@ Albany::STKDiscretization::setSolutionFieldT(const Tpetra_Vector& solnT, const T
 }
 
 void
-Albany::STKDiscretization::setSolutionFieldT(const Tpetra_Vector& solnT, 
-                                             const Tpetra_Vector& soln_dotT, 
-                                             const Tpetra_Vector& soln_dotdotT) 
+Albany::STKDiscretization::setSolutionFieldT(const Tpetra_Vector& solnT,
+                                             const Tpetra_Vector& soln_dotT,
+                                             const Tpetra_Vector& soln_dotdotT)
 {
 
   // Copy soln, soln_dot and soln_dotdot vectors into solution field, one node at a time
@@ -1183,7 +1209,7 @@ Albany::STKDiscretization::setSolutionFieldT(const Tpetra_Vector& solnT,
 
   // Iterate over the on-processor nodes
   stk::mesh::Selector locally_owned = metaData.locally_owned_part();
- 
+
   container->saveSolnVectorT(solnT, soln_dotT, soln_dotdotT, locally_owned, node_mapT);
 }
 
@@ -1234,9 +1260,9 @@ Albany::STKDiscretization::setOvlpSolutionFieldT(const Tpetra_Vector& solnT, con
 
 
 void
-Albany::STKDiscretization::setOvlpSolutionFieldT(const Tpetra_Vector& solnT, 
-                                                 const Tpetra_Vector& soln_dotT, 
-                                                 const Tpetra_Vector& soln_dotdotT) 
+Albany::STKDiscretization::setOvlpSolutionFieldT(const Tpetra_Vector& solnT,
+                                                 const Tpetra_Vector& soln_dotT,
+                                                 const Tpetra_Vector& soln_dotdotT)
 {
   // Copy soln, soln_dot and soln_dotdot vectors into solution field, one node at a time
   // Note that soln, soln_dot and soln_dotdot coming in is the local+ghost (overlapped) soln, soln_dot
@@ -1487,8 +1513,6 @@ void Albany::STKDiscretization::computeGraphsUpToFillComplete()
 
   overlap_graphT = Teuchos::null; // delete existing graph happens here on remesh
 
-  overlap_graphT = Teuchos::rcp(new Tpetra_CrsGraph(overlap_mapT, neq*nodes_per_element));
-
   stk::mesh::Selector select_owned_in_part =
     stk::mesh::Selector( metaData.universal_part() ) &
     stk::mesh::Selector( metaData.locally_owned_part() );
@@ -1500,8 +1524,7 @@ void Albany::STKDiscretization::computeGraphsUpToFillComplete()
   if (commT->getRank()==0)
     *out << "STKDisc: " << cells.size() << " elements on Proc 0 " << std::endl;
 
-  GO row, col;
-  Teuchos::ArrayView<GO> colAV;
+
 
   // determining the equations that are defined on the whole domain
   std::vector<int> globalEqns;
@@ -1513,6 +1536,166 @@ void Albany::STKDiscretization::computeGraphsUpToFillComplete()
     }
   }
 
+  int numGlobalEqns  = globalEqns.size();
+  int numSideSetEqns = sideSetEquations.size();
+
+  // Computing to how many other equations each volume equation is coupled
+  // Note: this does not keep into account where equations are defined.
+  //       For instance: if there are 2 equations, and the second is defined
+  //       only on side set "S", we may have num_couplings[0]=2, even if outside
+  //       side set "S" equation 0 is only coupled with itself. One must still
+  //       check whether all the coupled equations are active on that part of the mesh
+  //Teuchos::Array<int> num_couplings(neq);
+  //for (int ieq=0; ieq<neq; ++ieq) {
+  //  for (int jeq=0; jeq<neq; ++jeq) {
+  //    if (equationsCouplings[ieq][jeq]) {
+  //      ++num_couplings[ieq];
+  //    }
+  //  }
+  //}
+
+  // We want to determine the # of nonzeroes per row. If there are no sideSetEquations, this
+  // is simply given by the method nonzeroesPerRow of this class. Otherwise, we want to avoid
+  // having extra indices in the graph. We don't want to have rows corresponding to sideset
+  // equations at a node NOT on the sidesets the eqn is defined on. Such row, should ideally
+  // be non existent. However, due to some implementation detail, we need that row to be present,
+  // but we will only have a diagonal entry, which in the application will be used to set residual=0.
+  // This avoids storing a considerable amount of useless zeroes for such rows.
+  // E.g.: consider a square mesh, with 10x10 nodes. Let's say the problem has 3 unknowns, one
+  //       of which corresponds to an equation defined only on one side. If we used the crude
+  //       estimate nonzeroesPerRow(neq) = neq*9 for all rows, we would have 27 nonzeroes on all rows,
+  //       which means 100*27=2,700 nonzeroes total. By doing a more careful estimate, we get
+  //       100*2*9 + 10*2*3 + 10*3*3 + 90 = 2,040 unknowns, which correspond to:
+  //        -  100*2*9: nonzeroes for two global equation, on the whole mesh
+  //        -  10*2*3 : nonzeroes for the two global equations, coupled with one sideset equation.
+  //                    These are rows corresponding to global equations on the side mesh:
+  //                      10 (side nodes) x 2 (volume_eqns) x 1 (coupled equation) x 3 (nonzeroes per row on a 1-dimensional mesh)
+  //                    Note: coupled with only 1 equation (the side one) because the coupling global-global were counted in the previous term
+  //        -  10*3*3 : nonzeroes for one equation coupled with 3 equations on the side mesh.
+  //                    These are rows corresponding to side equation on the side mesh:
+  //                      10 (side nodes) x 1 (side_eqns) x 3 (coupled equations) x 3 (nonzeroes per row on a 1-dimensional mesh)
+  //        -  90     : these are the diagonal 1's put on the non-sideset nodes for the sideset equation, as discussed above
+  // The ratio of "wasted" entries that we would get with nonzeroesPerRow(neq) on all dofs increases
+  // as the size of the mesh increases, and the # of sideset equations increases (compared to the volume ones)
+  Teuchos::ArrayRCP<size_t> numEntriesPerRow(overlap_mapT->getNodeNumElements(),0);
+
+  // This is basically the "inverse map" of sideSetEquations: for each sideset,
+  // we store the id of the equations defined on them.
+  std::map<std::string,std::vector<int>> eqns_on_sides;
+  for (auto eq_parts : sideSetEquations)
+  {
+    for (auto part : eq_parts.second)
+    {
+      eqns_on_sides[part].push_back(eq_parts.first);
+    }
+  }
+
+  // First the #of nonzeroes for the side set equations. They are defined only on
+  // the side mesh nodes, and are coupled only with the equations that are
+  // defined on that side (including the equations defined in the whole mesh)
+  LO row_lid;
+  GO row_gid;
+  for (auto part_eqns : eqns_on_sides)
+  {
+    const std::string& part = part_eqns.first;
+    Teuchos::RCP<Albany::STKDiscretization> ss_disc = sideSetDiscretizationsSTK.at(part);
+    Teuchos::RCP<const Tpetra_Map> ss_overlap_node_mapT = ss_disc->getOverlapNodeMapT();
+
+    // Note: the gid of a node on the side mesh MAY not be the same as the gid of the
+    //       node on this mesh (e.g., basal mesh in an Extruded mesh with Column ordering).
+    //       To get the correct node_lid we use getLocalElement on this mesh's overlap_node_mapT
+    //       passing as a gid the col_gid of the diagonal index at the inode-th row of the
+    //       projector corresponding to this side mesh
+    Teuchos::RCP<const Tpetra_CrsGraph> projector_graph = ov_projectorsT.at(part)->getCrsGraph();
+    Teuchos::RCP<const Tpetra_Map> projector_col_map = ov_projectorsT.at(part)->getColMap();
+    Teuchos::ArrayView<const LO> indices;
+    for (size_t inode=0; inode<ss_overlap_node_mapT->getNodeNumElements(); ++inode)
+    {
+      // Process the # of nonzeros for all equations defined on this side set (including global ones)
+
+      // First set the # of nonzeroes of the sideSet equations.
+      // NOTE: Since they are defined only on the side, we use the nonzeroesPerRow of the side discretization
+      for (int eq : part_eqns.second)
+      {
+        projector_graph->getLocalRowView(ss_disc->getOwnedDOF(inode,eq),indices);
+        row_gid = projector_col_map->getGlobalElement(indices[0]);
+        row_lid = overlap_mapT->getLocalElement(row_gid);
+
+        //node_lid = overlap_node_mapT->getLocalElement(ss_overlap_node_mapT->getGlobalElement(inode));
+
+        //row_lid = getOwnedDOF(node_lid,eq);
+
+        // Adding one coupled equation worth of nonzeroes for each equation coupled to this one
+        for (int k : part_eqns.second)
+        {
+          if (equationsCouplings[eq][k]) {
+            numEntriesPerRow[row_lid] += ss_disc->nonzeroesPerRow(1);
+          }
+        }
+        for (int k : globalEqns)
+        {
+          if (equationsCouplings[eq][k]) {
+            numEntriesPerRow[row_lid] += ss_disc->nonzeroesPerRow(1);
+          }
+        }
+      }
+
+      // Then set the # of nonzeroes for the global equations defined on this node due to the
+      // couplings with the side set equations on this side set.
+      for (int eq : globalEqns)
+      {
+        projector_graph->getLocalRowView(ss_disc->getOwnedDOF(inode,eq),indices);
+        row_gid = projector_col_map->getGlobalElement(indices[0]);
+        row_lid = overlap_mapT->getLocalElement(row_gid);
+        //row_lid = getOwnedDOF(node_lid,eq);
+
+        // Adding one coupled equation worth of nonzeroes for each equation coupled to this one
+        for (int k : part_eqns.second)
+        {
+          if (equationsCouplings[eq][k]) {
+            numEntriesPerRow[row_lid] += ss_disc->nonzeroesPerRow(1);
+          }
+        }
+      }
+    }
+  }
+
+  // Then the nonzeros in the global equations due to couplings with other global equations
+  for (size_t inode=0; inode<overlap_node_mapT->getNodeNumElements(); ++inode)
+  {
+    // NOTE: Since they are defined on the whole mesh, we use the nonzeroesPerRow of the whole mesh
+    for (int eq : globalEqns)
+    {
+      row_lid = getOwnedDOF(inode,eq);
+
+      // Adding one coupled equation worth of nonzeroes for each global equation coupled to this one
+      for (int k : globalEqns) {
+        if (equationsCouplings[eq][k]) {
+          numEntriesPerRow[row_lid] += nonzeroesPerRow(1);
+        }
+      }
+    }
+
+    // To avoid issues with linear solvers, for the sideSet equations we need internal nodes
+    // (i.e., not on sidesets where the equation is defined) to store some indices. Since
+    // those dofs should not even exist, we simply store a diagonal index, with the idea
+    // that on those "dofs" we will set residual=0.
+    for (auto eq_parts : sideSetEquations)
+    {
+      row_lid = getOwnedDOF(inode,eq_parts.first);
+      if (numEntriesPerRow[row_lid]==0)
+      {
+        numEntriesPerRow[row_lid] = 1;
+      }
+    }
+  }
+
+  // Now we can create the overlap graph with the computed numEntriesPerRow
+  overlap_graphT = Teuchos::rcp(new Tpetra_CrsGraph(overlap_mapT, numEntriesPerRow));
+
+  GO col;
+  Teuchos::ArrayView<GO> colAV;
+
   for (std::size_t i=0; i < cells.size(); i++) {
     stk::mesh::Entity e = cells[i];
     stk::mesh::Entity const* node_rels = bulkData.begin_nodes(e);
@@ -1523,17 +1706,18 @@ void Albany::STKDiscretization::computeGraphsUpToFillComplete()
       stk::mesh::Entity rowNode = node_rels[j];
 
       // loop over eqs
-      for (std::size_t k=0; k < globalEqns.size(); ++k)
+      for (std::size_t k=0; k < numGlobalEqns; ++k)
       {
-        row = getGlobalDOF(gid(rowNode), globalEqns[k]);
-        for (std::size_t l=0; l < num_nodes; l++)
-        {
+        row_gid = getGlobalDOF(gid(rowNode), globalEqns[k]);
+        for (std::size_t l=0; l < num_nodes; l++) {
           stk::mesh::Entity colNode = node_rels[l];
-          for (std::size_t m=0; m < neq; m++) // Note: here we cycle through ALL the eqns (not just the global ones),
-          {                                   //       since they could all be coupled with this eq
-            col = getGlobalDOF(gid(colNode), m);
-            colAV = Teuchos::arrayView(&col, 1);
-            overlap_graphT->insertGlobalIndices(row, colAV);
+          for (std::size_t m=0; m < numGlobalEqns; m++) {
+            // Only add nonzero for volume equations coupled with this
+            if (equationsCouplings[k][m]) {
+              col = getGlobalDOF(gid(colNode), m);
+              colAV = Teuchos::arrayView(&col, 1);
+              overlap_graphT->insertGlobalIndices(row_gid, colAV);
+            }
           }
         }
       }
@@ -1542,65 +1726,101 @@ void Albany::STKDiscretization::computeGraphsUpToFillComplete()
 
   if (sideSetEquations.size()>0)
   {
-    // iterator over all sideSet-defined equations
-    std::map<int,std::vector<std::string> >::iterator it;
-    for (it=sideSetEquations.begin(); it!=sideSetEquations.end(); ++it)
+    GO row_gid;
+
+    for (auto part_eqns : eqns_on_sides)
     {
-      // Get the eq number
-      int eq = it->first;
+      // Extract this part and all its sides
+      stk::mesh::Part& part = *stkMeshStruct->ssPartVec.find(part_eqns.first)->second;
 
-      // In case we only have equations on side sets (no "volume" eqns),
-      // there would be problem with linear solvers. To avoid this, we
-      // put one diagonal entry for every side set equation.
-      // NOTE: some nodes will be processed twice, but this is safe
-      //       in Tpetra_CrsGraph: the redundant indices will be discarded
-      for (std::size_t inode=0; inode < overlapnodes.size(); ++inode)
+      // Get all owned sides in this side set
+      stk::mesh::Selector select_owned_in_sspart = stk::mesh::Selector( part ) & stk::mesh::Selector( metaData.locally_owned_part() );
+
+      std::vector< stk::mesh::Entity > sides;
+      stk::mesh::get_selected_entities( select_owned_in_sspart, bulkData.buckets( metaData.side_rank() ), sides ); // store the result in "sides"
+
+      // Loop on all the sides of this sideset
+      for (std::size_t localSideID=0; localSideID < sides.size(); localSideID++)
       {
-        stk::mesh::Entity node = overlapnodes[inode];
-        row = getGlobalDOF(gid(node), it->first);
-        colAV = Teuchos::arrayView(&row, 1);
-        overlap_graphT->insertGlobalIndices(row, colAV);
-      }
+        stk::mesh::Entity sidee = sides[localSideID];
+        stk::mesh::Entity const* node_rels = bulkData.begin_nodes(sidee);
+        const size_t num_nodes = bulkData.num_nodes(sidee);
 
-      // Number of side sets this eq is defined on
-      int numSideSets = it->second.size();
-      for (int ss(0); ss<numSideSets; ++ss)
-      {
-        stk::mesh::Part& part = *stkMeshStruct->ssPartVec.find(it->second[ss])->second;
-
-        // Get all owned sides in this side set
-        stk::mesh::Selector select_owned_in_sspart = stk::mesh::Selector( part ) & stk::mesh::Selector( metaData.locally_owned_part() );
-
-        std::vector< stk::mesh::Entity > sides;
-        stk::mesh::get_selected_entities( select_owned_in_sspart, bulkData.buckets( metaData.side_rank() ), sides ); // store the result in "sides"
-
-        // Loop on all the sides of this sideset
-        for (std::size_t localSideID=0; localSideID < sides.size(); localSideID++)
+        // loop over local nodes of the side (row)
+        for (std::size_t i=0; i < num_nodes; i++)
         {
-          stk::mesh::Entity sidee = sides[localSideID];
-          stk::mesh::Entity const* node_rels = bulkData.begin_nodes(sidee);
-          const size_t num_nodes = bulkData.num_nodes(sidee);
+          stk::mesh::Entity rowNode = node_rels[i];
 
-          // loop over local nodes of the side (row)
-          for (std::size_t i=0; i < num_nodes; i++)
+          // loop over local nodes of the side (col)
+          for (std::size_t j=0; j < num_nodes; j++)
           {
-            stk::mesh::Entity rowNode = node_rels[i];
-            row = getGlobalDOF(gid(rowNode), eq);
+            stk::mesh::Entity colNode = node_rels[j];
 
-            // loop over local nodes of the side (col)
-            for (std::size_t j=0; j < num_nodes; j++)
+            // loop on all the equations couplings.
+            // Note: we are coupling all eqns_on_sides.at(part_name) with all the equations (including global ones)
+            //       Then we ADD the couplings between the global equations and those defined on the side (since
+            //       so far we only added, for global equaitons, couplings with other global equations, see ~90 lines above)
+
+            for (int eq : part_eqns.second) {
+              row_gid = getGlobalDOF(gid(rowNode), eq);
+              // Couple with sideSet equations
+              for (int k : part_eqns.second) {
+                // Only add nonzero for side equations coupled with this
+                if (equationsCouplings[eq][k]) {
+                  col = getGlobalDOF(gid(colNode), k);
+                  colAV = Teuchos::arrayView(&col, 1);
+                  overlap_graphT->insertGlobalIndices(row_gid, colAV);
+                }
+              }
+              // Couple with global equations
+              for (int k : globalEqns) {
+                // Only add nonzero for volume equations coupled with this
+                if (equationsCouplings[eq][k]) {
+                  col = getGlobalDOF(gid(colNode), k);
+                  colAV = Teuchos::arrayView(&col, 1);
+                  overlap_graphT->insertGlobalIndices(row_gid, colAV);
+                }
+              }
+            }
+
+            // For rows corresponding to global equations, add only couplings with unknowns
+            // corresponding to sideSet equations (we already added the coupling global-global)
+            for (int eq : globalEqns)
             {
-              stk::mesh::Entity colNode = node_rels[j];
-
-             // loop on all the equations (the eq may be coupled with other eqns)
-              for (std::size_t m=0; m < neq; m++)
+              row_gid = getGlobalDOF(gid(rowNode), eq);
+              // Couple with sideSet equations
+              for (int k : part_eqns.second)
               {
-                col = getGlobalDOF(gid(colNode), m);
-                colAV = Teuchos::arrayView(&col, 1);
-                overlap_graphT->insertGlobalIndices(row, colAV);
+                // Only add nonzero for side equations coupled with this
+                if (equationsCouplings[eq][k]) {
+                  col = getGlobalDOF(gid(colNode), k);
+                  colAV = Teuchos::arrayView(&col, 1);
+                  overlap_graphT->insertGlobalIndices(row_gid, colAV);
+                }
               }
             }
           }
+        }
+      }
+    }
+
+    // To avoid issues with linear solvers, we need internal nodes (i.e., not on sidesets)
+    // to store some indices also for dofs corresponding to eqns defined only on sidesets
+    // We do this by storing only a 1 on the diagonal (with the idea that, in the problem's
+    // evaluators, we will set residual=0 on these dofs).
+    // NOTE: some nodes will be processed twice, but this is safe
+    //       in Tpetra_CrsGraph: the redundant indices will be discarded
+    for (std::size_t inode=0; inode < overlapnodes.size(); ++inode)
+    {
+      stk::mesh::Entity node = overlapnodes[inode];
+      for (auto eq_parts : sideSetEquations)
+      {
+        row_lid = getOwnedDOF(inode, eq_parts.first);
+        row_gid = getGlobalDOF(gid(node), eq_parts.first);
+        if (numEntriesPerRow[row_lid]==1)
+        {
+          colAV = Teuchos::arrayView(&row_gid, 1);
+          overlap_graphT->insertGlobalIndices(row_gid, colAV);
         }
       }
     }
@@ -1614,7 +1834,31 @@ void Albany::STKDiscretization::fillCompleteGraphs()
   // Create Owned graph by exporting overlap with known row map
   graphT = Teuchos::null; // delete existing graph happens here on remesh
 
-  graphT = Teuchos::rcp(new Tpetra_CrsGraph(mapT, nonzeroesPerRow(neq)));
+  Teuchos::ArrayRCP<const size_t> numEntriesPerRow_ovlp(overlap_mapT->getNodeNumElements());
+  size_t boundForAllLocalRows;
+  bool boundSameForAllLocalRows;
+  overlap_graphT->getNumEntriesPerLocalRowUpperBound (numEntriesPerRow_ovlp, boundForAllLocalRows, boundSameForAllLocalRows);
+
+  if (boundSameForAllLocalRows)
+  {
+    graphT = Teuchos::rcp(new Tpetra_CrsGraph(mapT, boundForAllLocalRows));
+  }
+  else
+  {
+    Teuchos::ArrayRCP<size_t> numEntriesPerRow(mapT->getNodeNumElements());
+
+    const LO invalid = Teuchos::OrdinalTraits<LO>::invalid();
+    for (size_t i=0; i<numEntriesPerRow_ovlp.size(); ++i)
+    {
+      GO gid = overlap_mapT->getGlobalElement(i);
+      LO lid = mapT->getLocalElement(gid);
+      if (lid!=invalid)
+      {
+        numEntriesPerRow[lid] = numEntriesPerRow_ovlp[i];
+      }
+    }
+    graphT = Teuchos::rcp(new Tpetra_CrsGraph(mapT, numEntriesPerRow));
+  }
 
   // Create non-overlapped matrix using two maps and export object
   Teuchos::RCP<Tpetra_Export> exporterT = Teuchos::rcp(new Tpetra_Export(overlap_mapT, mapT));
@@ -1881,10 +2125,10 @@ void Albany::STKDiscretization::computeWorksetInfo()
 
 #if defined(ALBANY_LCM)
       if(stkMeshStruct->getFieldContainer()->hasSphereVolumeField() && nodes_per_element == 1){
-	double* volumeTemp = stk::mesh::field_data(*sphereVolume_field, element);
-	if(volumeTemp){
-	  sphereVolume[b][i] = volumeTemp[0];
-	}
+  double* volumeTemp = stk::mesh::field_data(*sphereVolume_field, element);
+  if(volumeTemp){
+    sphereVolume[b][i] = volumeTemp[0];
+  }
       }
       if(stkMeshStruct->getFieldContainer()->hasLatticeOrientationField()){
         latticeOrientation[b][i] = static_cast<double*>( stk::mesh::field_data(*latticeOrientation_field, element) );
@@ -2183,7 +2427,7 @@ void Albany::STKDiscretization::computeSideSets(){
   }
 
 #ifdef ALBANY_CONTACT
-  contactManager = Teuchos::rcp(new Albany::ContactManager(discParams, commT, sideSets, getCoordinates(), 
+  contactManager = Teuchos::rcp(new Albany::ContactManager(discParams, commT, sideSets, getCoordinates(),
         node_mapT, wsElNodeID, wsElNodeEqID, stkMeshStruct->getMeshSpecs()));
 #endif
 }
@@ -3143,6 +3387,22 @@ Albany::STKDiscretization::updateMesh()
 
   transformMesh();
 
+  // If the mesh struct stores sideSet mesh structs, we build them here,
+  // since we need these structures when computing the graphs
+  if (stkMeshStruct->sideSetMeshStructs.size()>0)
+  {
+    for (auto it : stkMeshStruct->sideSetMeshStructs)
+    {
+      Teuchos::RCP<STKDiscretization> side_disc = Teuchos::rcp(new STKDiscretization(discParams,it.second,commT));
+      side_disc->updateMesh();
+      sideSetDiscretizations.insert(std::make_pair(it.first,side_disc));
+      sideSetDiscretizationsSTK.insert(std::make_pair(it.first,side_disc));
+      stkMeshStruct->buildCellSideNodeNumerationMap (it.first, sideToSideSetCellMap[it.first], sideNodeNumerationMap[it.first]);
+    }
+
+    buildSideSetProjectors();
+  }
+
   computeGraphs();
 
   computeWorksetInfo();
@@ -3167,20 +3427,4 @@ Albany::STKDiscretization::updateMesh()
 #ifdef OUTPUT_TO_SCREEN
   printCoords();
 #endif
-
-  // If the mesh struct stores sideSet mesh structs, we update them
-  if (stkMeshStruct->sideSetMeshStructs.size()>0)
-  {
-    for (auto it : stkMeshStruct->sideSetMeshStructs)
-    {
-      Teuchos::RCP<STKDiscretization> side_disc = Teuchos::rcp(new STKDiscretization(discParams,it.second,commT));
-      side_disc->updateMesh();
-      sideSetDiscretizations.insert(std::make_pair(it.first,side_disc));
-      sideSetDiscretizationsSTK.insert(std::make_pair(it.first,side_disc));
-
-      stkMeshStruct->buildCellSideNodeNumerationMap (it.first, sideToSideSetCellMap[it.first], sideNodeNumerationMap[it.first]);
-    }
-
-    buildSideSetProjectors();
-  }
 }

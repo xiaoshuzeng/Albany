@@ -23,7 +23,7 @@ Albany::AbstractProblem::AbstractProblem(
   rigidBodyModes(Teuchos::rcp(new Albany::RigidBodyModes(neq_)))
 {
 
- /* 
+ /*
   * Set the number of time derivatives. Semantics are to set the number of time derivatives:
   * x = 0, xdot = 1, xdotdot = 2
   * using the Discretization parameter "Number Of Time Derivatives" if this is specified, or if not
@@ -72,9 +72,20 @@ Albany::AbstractProblem::AbstractProblem(
             std::logic_error, "Solution Method must be Steady, Transient, Transient Tempus, "
             << "Continuation, Eigensolve, or Aeras Hyperviscosity, not : " << solutionMethod);
 
-   // Set the number in the Problem PL
-   params->set<int>("Number Of Time Derivatives", number_of_time_deriv);
+  // Set the number in the Problem PL
+  params->set<int>("Number Of Time Derivatives", number_of_time_deriv);
 
+  // By default, all equations are coupled together
+  equationsCouplings.resize(neq);
+  for (int ieq=0; ieq<neq; ++ieq)
+  {
+    equationsCouplings[ieq].resize(neq);
+    for (int jeq=0; jeq<neq; ++jeq)
+    {
+      // Note: this means that equation ieq depends on dof jeq
+      equationsCouplings[ieq][jeq] = true;
+    }
+  }
 }
 
 unsigned int
@@ -97,11 +108,23 @@ Albany::AbstractProblem::setNumEquations(const int neq_)
 {
   neq = neq_;
   rigidBodyModes->setNumPDEs(neq_);
+
+  // By default, all equations are coupled together
+  equationsCouplings.resize(neq);
+  for (int ieq=0; ieq<neq; ++ieq)
+  {
+    equationsCouplings[ieq].resize(neq);
+    for (int jeq=0; jeq<neq; ++jeq)
+    {
+      // Note: this means that equation ieq depends on dof jeq
+      equationsCouplings[ieq][jeq] = true;
+    }
+  }
 }
 
 
 // Get the solution method type name
-Albany::SolutionMethodType 
+Albany::SolutionMethodType
 Albany::AbstractProblem::getSolutionMethod()
 {
     return SolutionMethodName;

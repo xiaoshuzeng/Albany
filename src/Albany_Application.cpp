@@ -79,7 +79,7 @@ using Teuchos::rcpFromRef;
 int countJac; //counter which counts instances of Jacobian (for debug output)
 int countRes; //counter which counts instances of residual (for debug output)
 int countScale;
-double previous_time; 
+double previous_time;
 
 extern bool TpetraBuild;
 
@@ -94,11 +94,11 @@ Application(const RCP<const Teuchos_Comm>& comm_,
     morphFromInit(true), perturbBetaForDirichlets(0.0),
     phxGraphVisDetail(0),
     stateGraphVisDetail(0),
-    params_(params), 
-    requires_sdbcs_(false), 
+    params_(params),
+    requires_sdbcs_(false),
     requires_orig_dbcs_(false),
     no_dir_bcs_(false),
-    loca_sdbcs_valid_nonlin_solver_(true) 
+    loca_sdbcs_valid_nonlin_solver_(true)
 {
 #if defined(ALBANY_EPETRA)
   comm = Albany::createEpetraCommFromTeuchosComm(comm_);
@@ -108,7 +108,7 @@ Application(const RCP<const Teuchos_Comm>& comm_,
   buildProblem();
   createDiscretization();
   finalSetUp(params, initial_guess);
-  previous_time = 0.0; 
+  previous_time = 0.0;
 }
 
 Albany::Application::
@@ -120,15 +120,15 @@ Application(const RCP<const Teuchos_Comm>& comm_) :
     morphFromInit(true), perturbBetaForDirichlets(0.0),
     phxGraphVisDetail(0),
     stateGraphVisDetail(0),
-    requires_sdbcs_(false), 
+    requires_sdbcs_(false),
     no_dir_bcs_(false),
-    loca_sdbcs_valid_nonlin_solver_(true), 
+    loca_sdbcs_valid_nonlin_solver_(true),
     requires_orig_dbcs_(false)
 {
 #if defined(ALBANY_EPETRA)
   comm = Albany::createEpetraCommFromTeuchosComm(comm_);
 #endif
-  previous_time = 0.0; 
+  previous_time = 0.0;
 }
 
 namespace {
@@ -263,12 +263,12 @@ void Albany::Application::initialSetUp(
 
     bool const
     have_nox = piro_params.isSublist("NOX");
-      
+
     if (have_nox) {
-      Teuchos::ParameterList 
+      Teuchos::ParameterList
       nox_params = piro_params.sublist("NOX");
       std::string nonlinear_solver = nox_params.get<std::string>("Nonlinear Solver");
-      if (nonlinear_solver != "Line Search Based") 
+      if (nonlinear_solver != "Line Search Based")
         loca_sdbcs_valid_nonlin_solver_ = false;
     }
   }
@@ -294,12 +294,12 @@ void Albany::Application::initialSetUp(
     Teuchos::ParameterList &
     piro_params = params->sublist("Piro");
 
-    bool const 
-    have_dbcs = params->isSublist("Dirichlet BCs"); 
+    bool const
+    have_dbcs = params->isSublist("Dirichlet BCs");
 
-    if (have_dbcs == false) 
-      no_dir_bcs_ = true;   
- 
+    if (have_dbcs == false)
+      no_dir_bcs_ = true;
+
     bool const
     have_tempus = piro_params.isSublist("Tempus");
 
@@ -317,11 +317,11 @@ void Albany::Application::initialSetUp(
     tempus_stepper_params = tempus_params.sublist("Tempus Stepper");
 
     std::string stepper_type = tempus_stepper_params.get<std::string>("Stepper Type");
-    
+
     Teuchos::ParameterList nox_params;
 
-    if ((stepper_type == "Newmark Implicit d-Form") || 
-        (stepper_type == "Newmark Implicit a-Form")) 
+    if ((stepper_type == "Newmark Implicit d-Form") ||
+        (stepper_type == "Newmark Implicit a-Form"))
     {
 
       bool const
@@ -331,7 +331,7 @@ void Albany::Application::initialSetUp(
 
       std::string const
       solver_name = tempus_stepper_params.get<std::string>("Solver Name");
- 
+
       Teuchos::ParameterList &
       solver_name_params = tempus_stepper_params.sublist(solver_name);
 
@@ -343,7 +343,7 @@ void Albany::Application::initialSetUp(
       nox_params = solver_name_params.sublist("NOX");
 
       std::string nonlinear_solver = nox_params.get<std::string>("Nonlinear Solver");
- 
+
       //Set flag marking that we are running with Tempus + d-Form Newmark + SDBCs.
       if (stepper_type == "Newmark Implicit d-Form") {
         requires_sdbcs_ = true;
@@ -351,16 +351,16 @@ void Albany::Application::initialSetUp(
           TEUCHOS_TEST_FOR_EXCEPTION(
               true,
               std::logic_error,
-              "Newmark Implicit d-Form Stepper Type will not work correctly with 'Nonlinear Solver' = " 
-               << nonlinear_solver << "!  The valid Nonlinear Solver for this scheme is 'Line Search Based'."); 
+              "Newmark Implicit d-Form Stepper Type will not work correctly with 'Nonlinear Solver' = "
+               << nonlinear_solver << "!  The valid Nonlinear Solver for this scheme is 'Line Search Based'.");
         }
       }
       if (stepper_type == "Newmark Implicit a-Form") {
-        requires_orig_dbcs_ = true; 
+        requires_orig_dbcs_ = true;
       }
     }
     else if (stepper_type == "Newmark Explicit a-Form") {
-      requires_orig_dbcs_ = true; 
+      requires_orig_dbcs_ = true;
     }
 
 #if defined(DEBUG)
@@ -462,8 +462,8 @@ void Albany::Application::initialSetUp(
       Teuchos::RCP<Teuchos::ParameterList> rythmosSolverParams =
           Teuchos::sublist(piroParams, "Tempus", true);
     }
-    //IKT, 10/26/16, FIXME: get whether method is explicit from Tempus parameter list 
-    //expl = true; 
+    //IKT, 10/26/16, FIXME: get whether method is explicit from Tempus parameter list
+    //expl = true;
   }
   //*out << "stepperType, expl: " <<stepperType << ", " <<  expl << std::endl;
 
@@ -694,22 +694,22 @@ void Albany::Application::buildProblem()
     TEUCHOS_TEST_FOR_EXCEPTION(
         true,
         std::logic_error,
-        "Error in Albany::Application: you are using a Nonlinear Solver other than 'Line Search Based' with SDBCs, which is not supported!  Please re-run with Nonlinear Solver = Line Search Based.\n"); 
+        "Error in Albany::Application: you are using a Nonlinear Solver other than 'Line Search Based' with SDBCs, which is not supported!  Please re-run with Nonlinear Solver = Line Search Based.\n");
   }
 
-  if ((requires_sdbcs_ == true) && (problem->useSDBCs() == false) && (no_dir_bcs_ == false)) 
+  if ((requires_sdbcs_ == true) && (problem->useSDBCs() == false) && (no_dir_bcs_ == false))
   {
     TEUCHOS_TEST_FOR_EXCEPTION(
         true,
         std::logic_error,
-        "Error in Albany::Application: you are using a solver that requires SDBCs yet you are not using SDBCs!\n"); 
+        "Error in Albany::Application: you are using a solver that requires SDBCs yet you are not using SDBCs!\n");
   }
-  if ((requires_orig_dbcs_ == true) && (problem->useSDBCs() == true)) 
+  if ((requires_orig_dbcs_ == true) && (problem->useSDBCs() == true))
   {
     TEUCHOS_TEST_FOR_EXCEPTION(
         true,
         std::logic_error,
-        "Error in Albany::Application: you are using a solver that with SDBCs that does not work correctly with them!\n"); 
+        "Error in Albany::Application: you are using a solver that with SDBCs that does not work correctly with them!\n");
   }
 
   neq = problem->numEquations();
@@ -762,7 +762,10 @@ void Albany::Application::buildProblem()
 void Albany::Application::createDiscretization()
 {
   // Create the full mesh
-  disc = discFactory->createDiscretization(neq, problem->getSideSetEquations(),
+  disc = discFactory->createDiscretization(
+      neq,
+      problem->getEquationsCouplings(),
+      problem->getSideSetEquations(),
       stateMgr.getStateInfoStruct(),
       stateMgr.getSideSetStateInfoStruct(),
       problem->getFieldRequirements(),
@@ -928,7 +931,7 @@ void Albany::Application::finalSetUp(
   morFacade = createMORFacade(disc, problemParams);
 #endif
 #endif
-  //MPerego: Preforming post registration setup here to make sure that the discretization is already created, so that 
+  //MPerego: Preforming post registration setup here to make sure that the discretization is already created, so that
   //derivative dimensions are known. Cannot do post registration right before the evaluate , as done for other field managers.
   //because memoizer hack is needed by Aeras.
   //TODO, determine when it's best to perform post setup registration and fix memoizer hack if needed.
@@ -1035,7 +1038,7 @@ getPreconditionerT()
     return rcp(new ATOT::XFEM::Preconditioner(precParams));
   } else
 #endif
-//#endif 
+//#endif
   return Teuchos::null;
 }
 
@@ -1420,9 +1423,9 @@ computeGlobalResidualImplT(
   if (xT != Teuchos::null) x_ = Teuchos::rcp(new Tpetra_Vector(*xT));
   else x_ = Teuchos::null;
   if (xdotT != Teuchos::null) xdot_ = Teuchos::rcp(new Tpetra_Vector(*xdotT));
-  else xdot_ = Teuchos::null; 
+  else xdot_ = Teuchos::null;
   if (xdotdotT != Teuchos::null) xdotdot_ = Teuchos::rcp(new Tpetra_Vector(*xdotdotT));
-  else xdotdot_ = Teuchos::null; 
+  else xdotdot_ = Teuchos::null;
 #endif
 
   // Mesh motion needs to occur here on the global mesh befor
@@ -1478,9 +1481,9 @@ computeGlobalResidualImplT(
     for (int ws = 0; ws < numWorksets; ws++) {
       loadWorksetBucketInfo<PHAL::AlbanyTraits::Residual>(workset, ws);
 
-#ifdef DEBUG_OUTPUT 
-      *out << "IKT countRes = " << countRes << ", computeGlobalResid workset.xT = \n "; 
-      (workset.xT)->describe(*out, Teuchos::VERB_EXTREME); 
+#ifdef DEBUG_OUTPUT
+      *out << "IKT countRes = " << countRes << ", computeGlobalResid workset.xT = \n ";
+      (workset.xT)->describe(*out, Teuchos::VERB_EXTREME);
 #endif
 
       // FillType template argument used to specialize Sacado
@@ -1488,19 +1491,19 @@ computeGlobalResidualImplT(
           workset);
       if (nfm != Teuchos::null) {
 #ifdef ALBANY_PERIDIGM
-	// DJL this is a hack to avoid running a block with sphere elements
-	// through a Neumann field manager that was constructed for a non-sphere
-	// element topology.  The root cause is that Albany currently supports only
-	// a single Neumann field manager.  The history on that is murky.
-	// The single field manager is created for a specific element topology,
-	// and it fails if applied to worksets with a different element topology.
-	// The Peridigm use case is a discretization that contains blocks with
-	// sphere elements and blocks with standard FEM solid elements, and we
-	// want to apply Neumann BC to the standard solid elements.
-	if (workset.sideSets->size() != 0) {
-	  deref_nfm(nfm, wsPhysIndex, ws)
+  // DJL this is a hack to avoid running a block with sphere elements
+  // through a Neumann field manager that was constructed for a non-sphere
+  // element topology.  The root cause is that Albany currently supports only
+  // a single Neumann field manager.  The history on that is murky.
+  // The single field manager is created for a specific element topology,
+  // and it fails if applied to worksets with a different element topology.
+  // The Peridigm use case is a discretization that contains blocks with
+  // sphere elements and blocks with standard FEM solid elements, and we
+  // want to apply Neumann BC to the standard solid elements.
+  if (workset.sideSets->size() != 0) {
+    deref_nfm(nfm, wsPhysIndex, ws)
               ->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
-	}
+  }
 #else
         deref_nfm(nfm, wsPhysIndex, ws)
             ->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
@@ -1593,7 +1596,7 @@ computeGlobalResidualImplT(
     dfm->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
   }
 
-  //scale residual by scaleVec_ if scaleBCdofs is on 
+  //scale residual by scaleVec_ if scaleBCdofs is on
   if (scaleBCdofs == true) {
     fT->elementWiseMultiply(1.0, *scaleVec_, *fT, 0.0);
   }
@@ -1669,7 +1672,7 @@ computeGlobalResidual(const double current_time,
 }
 #endif
 
-#ifndef ALBANY_LCM 
+#ifndef ALBANY_LCM
 void
 Albany::Application::
 computeGlobalResidualT(
@@ -1744,8 +1747,8 @@ computeGlobalResidualT(
         p,
         Teuchos::rcpFromRef(fT));
   }
-  else { 
-    this->computeGlobalResidualSDBCsImplT( 
+  else {
+    this->computeGlobalResidualSDBCsImplT(
         current_time,
         Teuchos::rcp(xdotT, false),
         Teuchos::rcp(xdotdotT, false),
@@ -1901,10 +1904,10 @@ computeGlobalJacobianImplT(const double alpha,
       loadBasicWorksetInfoT(workset,
           paramLib->getRealValue<PHAL::AlbanyTraits::Residual>("Time"));
     }
-   
-#ifdef DEBUG_OUTPUT 
-    *out << "IKT countJac = " << countJac << ", computeGlobalJacobian workset.xT = \n"; 
-    (workset.xT)->describe(*out, Teuchos::VERB_EXTREME); 
+
+#ifdef DEBUG_OUTPUT
+    *out << "IKT countJac = " << countJac << ", computeGlobalJacobian workset.xT = \n";
+    (workset.xT)->describe(*out, Teuchos::VERB_EXTREME);
 #endif
 
     workset.fT = overlapped_fT;
@@ -1927,12 +1930,12 @@ computeGlobalJacobianImplT(const double alpha,
           workset);
       if (Teuchos::nonnull(nfm))
 #ifdef ALBANY_PERIDIGM
-	// DJL avoid passing a sphere mesh through a nfm that was
-	// created for non-sphere topology.
-	if (workset.sideSets->size() != 0) {
-	  deref_nfm(nfm, wsPhysIndex, ws)
+  // DJL avoid passing a sphere mesh through a nfm that was
+  // created for non-sphere topology.
+  if (workset.sideSets->size() != 0) {
+    deref_nfm(nfm, wsPhysIndex, ws)
               ->evaluateFields<PHAL::AlbanyTraits::Jacobian>(workset);
-	}
+  }
 #else
         deref_nfm(nfm, wsPhysIndex, ws)
             ->evaluateFields<PHAL::AlbanyTraits::Jacobian>(workset);
@@ -2255,7 +2258,7 @@ computeGlobalPreconditionerT(const RCP<Tpetra_CrsMatrix>& jac,
     const RCP<Tpetra_Operator>& prec)
 {
 //#if defined(ATO_USES_COGENT)
-#ifdef ALBANY_ATO 
+#ifdef ALBANY_ATO
   if(precType == "XFEM") {
     TEUCHOS_FUNC_TIME_MONITOR("> Albany Fill: Precond");
 
@@ -2912,12 +2915,12 @@ applyGlobalDistParamDerivImplT(const double current_time,
           workset);
       if (nfm != Teuchos::null)
 #ifdef ALBANY_PERIDIGM
-	// DJL avoid passing a sphere mesh through a nfm that was
-	// created for non-sphere topology.
-	if (workset.sideSets->size() != 0) {
-	  deref_nfm(nfm, wsPhysIndex, ws)
+  // DJL avoid passing a sphere mesh through a nfm that was
+  // created for non-sphere topology.
+  if (workset.sideSets->size() != 0) {
+    deref_nfm(nfm, wsPhysIndex, ws)
               ->evaluateFields<PHAL::AlbanyTraits::DistParamDeriv>(workset);
-	}
+  }
 #else
         deref_nfm(nfm, wsPhysIndex, ws)
             ->evaluateFields<PHAL::AlbanyTraits::DistParamDeriv>(workset);
@@ -6029,9 +6032,9 @@ computeGlobalResidualSDBCsImplT(
     TEUCHOS_TEST_FOR_EXCEPTION(true,
         std::logic_error, "Scaling cannot be used with computeGlobalResidualTempusSDBCsImplT routine!  "
         << "Please re-run without scaling.");
-  } 
- 
-  bool begin_time_step = false; 
+  }
+
+  bool begin_time_step = false;
 
   // Load connectivity map and coordinates
   const auto& wsElNodeEqID = disc->getWsElNodeEqID();
@@ -6070,9 +6073,9 @@ computeGlobalResidualSDBCsImplT(
   if (xT != Teuchos::null) x_ = Teuchos::rcp(new Tpetra_Vector(*xT));
   else x_ = Teuchos::null;
   if (xdotT != Teuchos::null) xdot_ = Teuchos::rcp(new Tpetra_Vector(*xdotT));
-  else xdot_ = Teuchos::null; 
+  else xdot_ = Teuchos::null;
   if (xdotdotT != Teuchos::null) xdotdot_ = Teuchos::rcp(new Tpetra_Vector(*xdotdotT));
-  else xdotdot_ = Teuchos::null; 
+  else xdotdot_ = Teuchos::null;
 #endif
 
   // Mesh motion needs to occur here on the global mesh befor
@@ -6113,32 +6116,32 @@ computeGlobalResidualSDBCsImplT(
     if (Teuchos::nonnull(rc_mgr)) rc_mgr->init_x_if_not(xT->getMap());
 
     PHAL::Workset workset;
-    double this_time; 
+    double this_time;
     if (!paramLib->isParameter("Time")) {
       loadBasicWorksetInfoT(workset, current_time);
-      this_time = current_time; 
+      this_time = current_time;
     }
     else {
       loadBasicWorksetInfoT(workset,
           paramLib->getRealValue<PHAL::AlbanyTraits::Residual>("Time"));
-      this_time = paramLib->getRealValue<PHAL::AlbanyTraits::Residual>("Time"); 
+      this_time = paramLib->getRealValue<PHAL::AlbanyTraits::Residual>("Time");
     }
- 
-#ifdef DEBUG_OUTPUT 
-    *out << "IKT previous_time, this_time = " << previous_time << ", " << this_time << "\n"; 
+
+#ifdef DEBUG_OUTPUT
+    *out << "IKT previous_time, this_time = " << previous_time << ", " << this_time << "\n";
 #endif
-    //Check if previous_time is same as current time.  If not, we are at the start 
-    //of a new time step, so we set boolean parameter to true. 
-    if (previous_time != this_time) begin_time_step = true;  
+    //Check if previous_time is same as current time.  If not, we are at the start
+    //of a new time step, so we set boolean parameter to true.
+    if (previous_time != this_time) begin_time_step = true;
 
     workset.fT = overlapped_fT;
 
     for (int ws = 0; ws < numWorksets; ws++) {
       loadWorksetBucketInfo<PHAL::AlbanyTraits::Residual>(workset, ws);
-     
-#ifdef DEBUG_OUTPUT 
-      *out << "IKT countRes = " << countRes << ", computeGlobalResid workset.xT = \n "; 
-      (workset.xT)->describe(*out, Teuchos::VERB_EXTREME); 
+
+#ifdef DEBUG_OUTPUT
+      *out << "IKT countRes = " << countRes << ", computeGlobalResid workset.xT = \n ";
+      (workset.xT)->describe(*out, Teuchos::VERB_EXTREME);
 #endif
 
       // FillType template argument used to specialize Sacado
@@ -6146,26 +6149,26 @@ computeGlobalResidualSDBCsImplT(
           workset);
       if (nfm != Teuchos::null) {
 #ifdef ALBANY_PERIDIGM
-	// DJL this is a hack to avoid running a block with sphere elements
-	// through a Neumann field manager that was constructed for a non-sphere
-	// element topology.  The root cause is that Albany currently supports only
-	// a single Neumann field manager.  The history on that is murky.
-	// The single field manager is created for a specific element topology,
-	// and it fails if applied to worksets with a different element topology.
-	// The Peridigm use case is a discretization that contains blocks with
-	// sphere elements and blocks with standard FEM solid elements, and we
-	// want to apply Neumann BC to the standard solid elements.
-	if (workset.sideSets->size() != 0) {
-	  deref_nfm(nfm, wsPhysIndex, ws)
+        // DJL this is a hack to avoid running a block with sphere elements
+        // through a Neumann field manager that was constructed for a non-sphere
+        // element topology.  The root cause is that Albany currently supports only
+        // a single Neumann field manager.  The history on that is murky.
+        // The single field manager is created for a specific element topology,
+        // and it fails if applied to worksets with a different element topology.
+        // The Peridigm use case is a discretization that contains blocks with
+        // sphere elements and blocks with standard FEM solid elements, and we
+        // want to apply Neumann BC to the standard solid elements.
+        if (workset.sideSets->size() != 0) {
+          deref_nfm(nfm, wsPhysIndex, ws)
               ->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
-	}
+        }
 #else
         deref_nfm(nfm, wsPhysIndex, ws)
             ->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
 #endif
       }
     }
-    previous_time = current_time; 
+    previous_time = current_time;
   }
 
   // Assemble the residual into a non-overlapping vector
@@ -6180,7 +6183,7 @@ computeGlobalResidualSDBCsImplT(
 #endif
 
   // Apply Dirichlet conditions using dfm (Dirchelt Field Manager)
-  Teuchos::RCP<Tpetra_Vector> xT_post_SDBCs; 
+  Teuchos::RCP<Tpetra_Vector> xT_post_SDBCs;
   if (dfm != Teuchos::null) {
     PHAL::Workset
     workset;
@@ -6211,7 +6214,7 @@ computeGlobalResidualSDBCsImplT(
 
     // FillType template argument used to specialize Sacado
     dfm->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
-    xT_post_SDBCs = Teuchos::rcp(new Tpetra_Vector(*workset.xT)); 
+    xT_post_SDBCs = Teuchos::rcp(new Tpetra_Vector(*workset.xT));
   }
 
   if (begin_time_step == true) {
@@ -6233,10 +6236,10 @@ computeGlobalResidualSDBCsImplT(
 
     for (int ws = 0; ws < numWorksets; ws++) {
       loadWorksetBucketInfo<PHAL::AlbanyTraits::Residual>(workset, ws);
-   
-#ifdef DEBUG_OUTPUT 
-      *out << "IKT countRes = " << countRes << ", computeGlobalResid workset.xT = \n "; 
-      (workset.xT)->describe(*out, Teuchos::VERB_EXTREME); 
+
+#ifdef DEBUG_OUTPUT
+      *out << "IKT countRes = " << countRes << ", computeGlobalResid workset.xT = \n ";
+      (workset.xT)->describe(*out, Teuchos::VERB_EXTREME);
 #endif
 
       // FillType template argument used to specialize Sacado
@@ -6244,19 +6247,19 @@ computeGlobalResidualSDBCsImplT(
           workset);
       if (nfm != Teuchos::null) {
 #ifdef ALBANY_PERIDIGM
-	// DJL this is a hack to avoid running a block with sphere elements
-	// through a Neumann field manager that was constructed for a non-sphere
-	// element topology.  The root cause is that Albany currently supports only
-	// a single Neumann field manager.  The history on that is murky.
-	// The single field manager is created for a specific element topology,
-	// and it fails if applied to worksets with a different element topology.
-	// The Peridigm use case is a discretization that contains blocks with
-	// sphere elements and blocks with standard FEM solid elements, and we
-	// want to apply Neumann BC to the standard solid elements.
-	if (workset.sideSets->size() != 0) {
-	  deref_nfm(nfm, wsPhysIndex, ws)
+        // DJL this is a hack to avoid running a block with sphere elements
+        // through a Neumann field manager that was constructed for a non-sphere
+        // element topology.  The root cause is that Albany currently supports only
+        // a single Neumann field manager.  The history on that is murky.
+        // The single field manager is created for a specific element topology,
+        // and it fails if applied to worksets with a different element topology.
+        // The Peridigm use case is a discretization that contains blocks with
+        // sphere elements and blocks with standard FEM solid elements, and we
+        // want to apply Neumann BC to the standard solid elements.
+        if (workset.sideSets->size() != 0) {
+          deref_nfm(nfm, wsPhysIndex, ws)
               ->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
-	}
+        }
 #else
         deref_nfm(nfm, wsPhysIndex, ws)
             ->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);

@@ -84,11 +84,21 @@ class DiscretizationFactory {
                          const std::map<std::string,AbstractFieldContainer::FieldContainerRequirements>& side_set_req,
                          const Teuchos::RCP<Albany::RigidBodyModes>& rigidBodyModes = Teuchos::null);
 
+    Teuchos::RCP<Albany::AbstractDiscretization>
+    createDiscretization(unsigned int num_equations,
+                         const Teuchos::Array<Teuchos::Array<bool>>& equationsCouplings,
+                         const std::map<int,std::vector<std::string> >& sideSetEquations,
+                         const Teuchos::RCP<Albany::StateInfoStruct>& sis,
+                         const std::map<std::string,Teuchos::RCP<Albany::StateInfoStruct> >& side_set_sis,
+                         const AbstractFieldContainer::FieldContainerRequirements& req,
+                         const std::map<std::string,AbstractFieldContainer::FieldContainerRequirements>& side_set_req,
+                         const Teuchos::RCP<Albany::RigidBodyModes>& rigidBodyModes = Teuchos::null);
+
     void
     setupInternalMeshStruct(
       unsigned int neq,
       const Teuchos::RCP<Albany::StateInfoStruct>& sis,
-      const AbstractFieldContainer::FieldContainerRequirements& req); 
+      const AbstractFieldContainer::FieldContainerRequirements& req);
 
    void
     setupInternalMeshStruct(
@@ -104,11 +114,16 @@ class DiscretizationFactory {
     Teuchos::RCP<Albany::AbstractDiscretization> createDiscretizationFromInternalMeshStruct(
       const std::map<int,std::vector<std::string> >& sideSetEquations,
       const Teuchos::RCP<Albany::RigidBodyModes>& rigidBodyModes);
-    
+
+    Teuchos::RCP<Albany::AbstractDiscretization> createDiscretizationFromInternalMeshStruct(
+      const Teuchos::Array<Teuchos::Array<bool>>& equationsCouplings,
+      const std::map<int,std::vector<std::string> >& sideSetEquations,
+      const Teuchos::RCP<Albany::RigidBodyModes>& rigidBodyModes);
+
     /* This function overwrite previous discretization parameter list */
     void
     setDiscretizationParameters(Teuchos::RCP<Teuchos::ParameterList> disc_params);
-    
+
 #ifdef ALBANY_AMP
         /* This function overwrite previous number of equations in mesh structure */
         void

@@ -78,7 +78,8 @@ namespace Albany {
        Teuchos::RCP<Albany::AbstractSTKMeshStruct>& stkMeshStruct,
        const Teuchos::RCP<const Teuchos_Comm>& commT,
        const Teuchos::RCP<Albany::RigidBodyModes>& rigidBodyModes = Teuchos::null,
-       const std::map<int,std::vector<std::string> >& sideSetEquations = std::map<int,std::vector<std::string> >());
+       const std::map<int,std::vector<std::string> >& sideSetEquations = {},
+       const Teuchos::Array<Teuchos::Array<bool>>& equationsCouplings = {});
 
     //! Destructor
     ~STKDiscretization();
@@ -213,20 +214,20 @@ namespace Albany {
 
 #if defined(ALBANY_EPETRA)
     void writeSolution(const Epetra_Vector& soln, const double time, const bool overlapped = false);
-    void writeSolution(const Epetra_Vector& soln, const Epetra_Vector& soln_dot, 
+    void writeSolution(const Epetra_Vector& soln, const Epetra_Vector& soln_dot,
                        const double time, const bool overlapped = false);
 #endif
 
    void writeSolutionT(const Tpetra_Vector& solnT, const double time, const bool overlapped = false);
    void writeSolutionT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT, const double time, const bool overlapped = false);
-   void writeSolutionT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT, 
+   void writeSolutionT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT,
                        const Tpetra_Vector& soln_dotdotT, const double time, const bool overlapped = false);
    void writeSolutionMV(const Tpetra_MultiVector& solnT, const double time, const bool overlapped = false);
    void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT, const double time, const bool overlapped = false);
-   void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT, 
+   void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT,
                                      const double time, const bool overlapped = false);
-   void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT, 
-                                     const Tpetra_Vector &solution_dotdotT, 
+   void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT,
+                                     const Tpetra_Vector &solution_dotdotT,
                                      const double time, const bool overlapped = false);
    void writeSolutionMVToMeshDatabase(const Tpetra_MultiVector &solutionT, const double time, const bool overlapped = false);
    void writeSolutionToFileT(const Tpetra_Vector& solnT, const double time, const bool overlapped = false);
@@ -347,7 +348,7 @@ namespace Albany {
     //Tpetra version of above
     void setSolutionFieldT(const Tpetra_Vector& solnT);
     void setSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT);
-    void setSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT, 
+    void setSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT,
                            const Tpetra_Vector& soln_dotdotT);
     void setSolutionFieldMV(const Tpetra_MultiVector& solnT);
 
@@ -355,7 +356,7 @@ namespace Albany {
     // Here soln is the local + neighbor (overlapped) solution
     void setOvlpSolutionFieldT(const Tpetra_Vector& solnT);
     void setOvlpSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT);
-    void setOvlpSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT, 
+    void setOvlpSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT,
                                const Tpetra_Vector& soln_dotdotT);
     void setOvlpSolutionFieldMV(const Tpetra_MultiVector& solnT);
 
@@ -451,6 +452,9 @@ namespace Albany {
 
     //! Number of equations (and unknowns) per node
     const unsigned int neq;
+
+    //! How the equations are coupled (if empty, all equations are coupled together)
+    Teuchos::Array<Teuchos::Array<bool>> equationsCouplings;
 
     //! Equations that are defined only on some side sets of the mesh
     std::map<int,std::vector<std::string> >   sideSetEquations;

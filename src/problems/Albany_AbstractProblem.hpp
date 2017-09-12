@@ -89,6 +89,12 @@ class AbstractProblem {
   unsigned int
   numStates() const;
 
+  //! Get how the equations are coupled. If the array is empty,
+  // we assume all equations are coupled together (all-to-all)
+  Teuchos::Array<Teuchos::Array<bool>> getEquationsCouplings () const {
+    return equationsCouplings;
+  }
+
   // Get the solution method type name
   SolutionMethodType
   getSolutionMethod();
@@ -96,8 +102,8 @@ class AbstractProblem {
   //! Get spatial dimension
   virtual int
   spatialDimension() const = 0;
- 
-  //! Get boolean telling code if SDBCs are utilized  
+
+  //! Get boolean telling code if SDBCs are utilized
   virtual bool
   useSDBCs() const = 0;
 
@@ -186,6 +192,9 @@ class AbstractProblem {
 
   //! Equations that are defined ONLY on some part of the mesh
   std::map<int, std::vector<std::string>> sideSetEquations;
+
+  //! A matrix neq x neq specifying how each equation depends on the others
+  Teuchos::Array<Teuchos::Array<bool>> equationsCouplings;
 
   // Variable use to store the solution method name.
   SolutionMethodType SolutionMethodName;
