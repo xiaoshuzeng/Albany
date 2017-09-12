@@ -35,7 +35,7 @@ public:
   typedef typename std::conditional<IsHydrology,ScalarT,ParamScalarT>::type  HydroScalarT;
 
   BasalFrictionCoefficientNode (const Teuchos::ParameterList& p,
-                            const Teuchos::RCP<Albany::Layouts>& dl);
+                                const Teuchos::RCP<Albany::Layouts>& dl);
 
   void postRegistrationSetup (typename Traits::SetupData d,
                               PHX::FieldManager<Traits>& vm);
