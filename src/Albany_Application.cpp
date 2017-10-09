@@ -709,7 +709,7 @@ void Albany::Application::buildProblem()
     TEUCHOS_TEST_FOR_EXCEPTION(
         true,
         std::logic_error,
-        "Error in Albany::Application: you are using a solver that with SDBCs that does not work correctly with them!\n");
+        "Error in Albany::Application: you are using a solver with SDBCs that does not work correctly with them!\n"); 
   }
 
   neq = problem->numEquations();
@@ -1491,19 +1491,19 @@ computeGlobalResidualImplT(
           workset);
       if (nfm != Teuchos::null) {
 #ifdef ALBANY_PERIDIGM
-  // DJL this is a hack to avoid running a block with sphere elements
-  // through a Neumann field manager that was constructed for a non-sphere
-  // element topology.  The root cause is that Albany currently supports only
-  // a single Neumann field manager.  The history on that is murky.
-  // The single field manager is created for a specific element topology,
-  // and it fails if applied to worksets with a different element topology.
-  // The Peridigm use case is a discretization that contains blocks with
-  // sphere elements and blocks with standard FEM solid elements, and we
-  // want to apply Neumann BC to the standard solid elements.
-  if (workset.sideSets->size() != 0) {
-    deref_nfm(nfm, wsPhysIndex, ws)
+	// DJL this is a hack to avoid running a block with sphere elements
+	// through a Neumann field manager that was constructed for a non-sphere
+	// element topology.  The root cause is that Albany currently supports only
+	// a single Neumann field manager.  The history on that is murky.
+	// The single field manager is created for a specific element topology,
+	// and it fails if applied to worksets with a different element topology.
+	// The Peridigm use case is a discretization that contains blocks with
+	// sphere elements and blocks with standard FEM solid elements, and we
+	// want to apply Neumann BC to the standard solid elements.
+	if (workset.sideSets->size() != 0) {
+	  deref_nfm(nfm, wsPhysIndex, ws)
               ->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
-  }
+	}
 #else
         deref_nfm(nfm, wsPhysIndex, ws)
             ->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
@@ -1545,13 +1545,13 @@ computeGlobalResidualImplT(
   Tpetra_MatrixMarket_Writer::writeDenseFile(nameResScaled, fT);
 #endif
 
-#ifdef ALBANY_LCM
+#if defined(ALBANY_LCM)
   // Push the assembled residual values back into the overlap vector
   overlapped_fT->doImport(*fT, *importerT, Tpetra::INSERT);
   // Write the residual to the discretization, which will later (optionally)
   // be written to the output file
   disc->setResidualFieldT(*overlapped_fT);
-#endif
+#endif // ALBANY_LCM
 
   // Apply Dirichlet conditions using dfm (Dirchelt Field Manager)
 
@@ -1583,14 +1583,19 @@ computeGlobalResidualImplT(
       workset.current_time = current_time;
     }
 
-    workset.distParamLib = distParamLib;
-    workset.disc = disc;
-
 #if defined(ALBANY_LCM)
+    // For DBCs in Schwarz alternating, the time should be set to remain
+    // fixed to the end of a Schwarz step.
+    if (is_alternating_schwarz_ == true) {
+      workset.current_time = dbc_time_;
+    }
     // Needed for more specialized Dirichlet BCs (e.g. Schwarz coupling)
     workset.apps_ = apps_;
     workset.current_app_ = Teuchos::rcp(this, false);
-#endif
+#endif // ALBANY_LCM
+
+    workset.distParamLib = distParamLib;
+    workset.disc = disc;
 
     // FillType template argument used to specialize Sacado
     dfm->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
@@ -1672,7 +1677,7 @@ computeGlobalResidual(const double current_time,
 }
 #endif
 
-#ifndef ALBANY_LCM
+#if !defined(ALBANY_LCM)
 void
 Albany::Application::
 computeGlobalResidualT(
@@ -1725,7 +1730,7 @@ computeGlobalResidualT(
     countRes++;  //increment residual counter
   }
 }
-#else
+#else // ALBANY_LCM
 void
 Albany::Application::
 computeGlobalResidualT(
@@ -1789,7 +1794,7 @@ computeGlobalResidualT(
     countRes++;  //increment residual counter
   }
 }
-#endif
+#endif // ALBANY_LCM
 
 #if defined(ALBANY_EPETRA)
 double
@@ -1930,12 +1935,12 @@ computeGlobalJacobianImplT(const double alpha,
           workset);
       if (Teuchos::nonnull(nfm))
 #ifdef ALBANY_PERIDIGM
-  // DJL avoid passing a sphere mesh through a nfm that was
-  // created for non-sphere topology.
-  if (workset.sideSets->size() != 0) {
-    deref_nfm(nfm, wsPhysIndex, ws)
+	// DJL avoid passing a sphere mesh through a nfm that was
+	// created for non-sphere topology.
+	if (workset.sideSets->size() != 0) {
+	  deref_nfm(nfm, wsPhysIndex, ws)
               ->evaluateFields<PHAL::AlbanyTraits::Jacobian>(workset);
-  }
+	}
 #else
         deref_nfm(nfm, wsPhysIndex, ws)
             ->evaluateFields<PHAL::AlbanyTraits::Jacobian>(workset);
@@ -2043,10 +2048,15 @@ computeGlobalJacobianImplT(const double alpha,
     workset.disc = disc;
 
 #if defined(ALBANY_LCM)
+    // For DBCs in Schwarz alternating, the time should be set to remain
+    // fixed to the end of a Schwarz step.
+    if (is_alternating_schwarz_ == true) {
+      workset.current_time = dbc_time_;
+    }
     // Needed for more specialized Dirichlet BCs (e.g. Schwarz coupling)
     workset.apps_ = apps_;
     workset.current_app_ = Teuchos::rcp(this, false);
-#endif
+#endif // ALBANY_LCM
 
     // FillType template argument used to specialize Sacado
     dfm->evaluateFields<PHAL::AlbanyTraits::Jacobian>(workset);
@@ -2644,10 +2654,15 @@ shapeParamsHaveBeenReset = false;
     workset.disc = disc;
 
 #if defined(ALBANY_LCM)
+    // For DBCs in Schwarz alternating, the time should be set to remain
+    // fixed to the end of a Schwarz step.
+    if (is_alternating_schwarz_ == true) {
+      workset.current_time = dbc_time_;
+    }
     // Needed for more specialized Dirichlet BCs (e.g. Schwarz coupling)
     workset.apps_ = apps_;
     workset.current_app_ = Teuchos::rcp(this, false);
-#endif
+#endif // ALBANY_LCM
 
     // FillType template argument used to specialize Sacado
     dfm->evaluateFields<PHAL::AlbanyTraits::Tangent>(workset);
@@ -2915,12 +2930,12 @@ applyGlobalDistParamDerivImplT(const double current_time,
           workset);
       if (nfm != Teuchos::null)
 #ifdef ALBANY_PERIDIGM
-  // DJL avoid passing a sphere mesh through a nfm that was
-  // created for non-sphere topology.
-  if (workset.sideSets->size() != 0) {
-    deref_nfm(nfm, wsPhysIndex, ws)
+	// DJL avoid passing a sphere mesh through a nfm that was
+	// created for non-sphere topology.
+	if (workset.sideSets->size() != 0) {
+	  deref_nfm(nfm, wsPhysIndex, ws)
               ->evaluateFields<PHAL::AlbanyTraits::DistParamDeriv>(workset);
-  }
+	}
 #else
         deref_nfm(nfm, wsPhysIndex, ws)
             ->evaluateFields<PHAL::AlbanyTraits::DistParamDeriv>(workset);
@@ -3280,10 +3295,15 @@ computeGlobalSGResidual(
     workset.disc = disc;
 
 #if defined(ALBANY_LCM)
+    // For DBCs in Schwarz alternating, the time should be set to remain
+    // fixed to the end of a Schwarz step.
+    if (is_alternating_schwarz_ == true) {
+      workset.current_time = dbc_time_;
+    }
     // Needed for more specialized Dirichlet BCs (e.g. Schwarz coupling)
     workset.apps_ = apps_;
     workset.current_app_ = Teuchos::rcp(this, false);
-#endif
+#endif// ALBANY_LCM
 
     // FillType template argument used to specialize Sacado
     dfm->evaluateFields<PHAL::AlbanyTraits::SGResidual>(workset);
@@ -3469,10 +3489,15 @@ computeGlobalSGJacobian(
     workset.disc = disc;
 
 #if defined(ALBANY_LCM)
+    // For DBCs in Schwarz alternating, the time should be set to remain
+    // fixed to the end of a Schwarz step.
+    if (is_alternating_schwarz_ == true) {
+      workset.current_time = dbc_time_;
+    }
     // Needed for more specialized Dirichlet BCs (e.g. Schwarz coupling)
     workset.apps_ = apps_;
     workset.current_app_ = Teuchos::rcp(this, false);
-#endif
+#endif // ALBANY_LCM
 
     // FillType template argument used to specialize Sacado
     dfm->evaluateFields<PHAL::AlbanyTraits::SGJacobian>(workset);
@@ -3748,10 +3773,15 @@ computeGlobalSGTangent(
     workset.disc = disc;
 
 #if defined(ALBANY_LCM)
+    // For DBCs in Schwarz alternating, the time should be set to remain
+    // fixed to the end of a Schwarz step.
+    if (is_alternating_schwarz_ == true) {
+      workset.current_time = dbc_time_;
+    }
     // Needed for more specialized Dirichlet BCs (e.g. Schwarz coupling)
     workset.apps_ = apps_;
     workset.current_app_ = Teuchos::rcp(this, false);
-#endif
+#endif // ALBANY_LCM
 
     // FillType template argument used to specialize Sacado
     dfm->evaluateFields<PHAL::AlbanyTraits::SGTangent>(workset);
@@ -3972,10 +4002,15 @@ computeGlobalMPResidual(
     workset.disc = disc;
 
 #if defined(ALBANY_LCM)
+    // For DBCs in Schwarz alternating, the time should be set to remain
+    // fixed to the end of a Schwarz step.
+    if (is_alternating_schwarz_ == true) {
+      workset.current_time = dbc_time_;
+    }
     // Needed for more specialized Dirichlet BCs (e.g. Schwarz coupling)
     workset.apps_ = apps_;
     workset.current_app_ = Teuchos::rcp(this, false);
-#endif
+#endif // ALBANY_LCM
 
     // FillType template argument used to specialize Sacado
     dfm->evaluateFields<PHAL::AlbanyTraits::MPResidual>(workset);
@@ -4155,10 +4190,15 @@ computeGlobalMPJacobian(
     workset.disc = disc;
 
 #if defined(ALBANY_LCM)
+    // For DBCs in Schwarz alternating, the time should be set to remain
+    // fixed to the end of a Schwarz step.
+    if (is_alternating_schwarz_ == true) {
+      workset.current_time = dbc_time_;
+    }
     // Needed for more specialized Dirichlet BCs (e.g. Schwarz coupling)
     workset.apps_ = apps_;
     workset.current_app_ = Teuchos::rcp(this, false);
-#endif
+#endif // ALBANY_LCM
 
     // FillType template argument used to specialize Sacado
     dfm->evaluateFields<PHAL::AlbanyTraits::MPJacobian>(workset);
@@ -4435,10 +4475,15 @@ computeGlobalMPTangent(
 
     // FillType template argument used to specialize Sacado
 #if defined(ALBANY_LCM)
+    // For DBCs in Schwarz alternating, the time should be set to remain
+    // fixed to the end of a Schwarz step.
+    if (is_alternating_schwarz_ == true) {
+      workset.current_time = dbc_time_;
+    }
     // Needed for more specialized Dirichlet BCs (e.g. Schwarz coupling)
     workset.apps_ = apps_;
     workset.current_app_ = Teuchos::rcp(this, false);
-#endif
+#endif // ALBANY_LCM
 
     dfm->evaluateFields<PHAL::AlbanyTraits::MPTangent>(workset);
   }
@@ -6030,7 +6075,7 @@ computeGlobalResidualSDBCsImplT(
 
   if (scale != 1.0) {
     TEUCHOS_TEST_FOR_EXCEPTION(true,
-        std::logic_error, "Scaling cannot be used with computeGlobalResidualTempusSDBCsImplT routine!  "
+        std::logic_error, "Scaling cannot be used with computeGlobalResidualSDBCsImplT routine!  "
         << "Please re-run without scaling.");
   }
 
@@ -6075,8 +6120,8 @@ computeGlobalResidualSDBCsImplT(
   if (xdotT != Teuchos::null) xdot_ = Teuchos::rcp(new Tpetra_Vector(*xdotT));
   else xdot_ = Teuchos::null;
   if (xdotdotT != Teuchos::null) xdotdot_ = Teuchos::rcp(new Tpetra_Vector(*xdotdotT));
-  else xdotdot_ = Teuchos::null;
-#endif
+  else xdotdot_ = Teuchos::null; 
+#endif // ALBANY_LCM
 
   // Mesh motion needs to occur here on the global mesh befor
   // it is potentially carved into worksets.
@@ -6180,7 +6225,7 @@ computeGlobalResidualSDBCsImplT(
   // Write the residual to the discretization, which will later (optionally)
   // be written to the output file
   disc->setResidualFieldT(*overlapped_fT);
-#endif
+#endif // ALBANY_LCM
 
   // Apply Dirichlet conditions using dfm (Dirchelt Field Manager)
   Teuchos::RCP<Tpetra_Vector> xT_post_SDBCs;
@@ -6207,10 +6252,15 @@ computeGlobalResidualSDBCsImplT(
     workset.disc = disc;
 
 #if defined(ALBANY_LCM)
+    // For DBCs in Schwarz alternating, the time should be set to remain
+    // fixed to the end of a Schwarz step.
+    if (is_alternating_schwarz_ == true) {
+      workset.current_time = dbc_time_;
+    }
     // Needed for more specialized Dirichlet BCs (e.g. Schwarz coupling)
     workset.apps_ = apps_;
     workset.current_app_ = Teuchos::rcp(this, false);
-#endif
+#endif // ALBANY_LCM
 
     // FillType template argument used to specialize Sacado
     dfm->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);
@@ -6276,7 +6326,7 @@ computeGlobalResidualSDBCsImplT(
     // Write the residual to the discretization, which will later (optionally)
     // be written to the output file
     disc->setResidualFieldT(*overlapped_fT);
-#endif
+#endif // ALBANY_LCM
     if (dfm != Teuchos::null) {
 
       PHAL::Workset workset;
@@ -6299,10 +6349,15 @@ computeGlobalResidualSDBCsImplT(
       workset.disc = disc;
 
 #if defined(ALBANY_LCM)
+      // For DBCs in Schwarz alternating, the time should be set to remain
+      // fixed to the end of a Schwarz step.
+      if (is_alternating_schwarz_ == true) {
+        workset.current_time = dbc_time_;
+      }
       // Needed for more specialized Dirichlet BCs (e.g. Schwarz coupling)
       workset.apps_ = apps_;
       workset.current_app_ = Teuchos::rcp(this, false);
-#endif
+#endif // ALBANY_LCM
 
       // FillType template argument used to specialize Sacado
       dfm->evaluateFields<PHAL::AlbanyTraits::Residual>(workset);

@@ -6,7 +6,7 @@
 
 #add_subdirectory(Alternating)
 add_subdirectory(Cubes)
-add_subdirectory(Dynamic)
+add_subdirectory(Alternating)
 if(ALBANY_DTK)
   add_subdirectory(ParallelCubes)
 endif()
