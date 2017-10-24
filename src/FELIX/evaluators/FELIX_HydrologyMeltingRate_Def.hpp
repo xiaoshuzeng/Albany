@@ -15,31 +15,23 @@ namespace FELIX {
 template<typename EvalT, typename Traits, bool IsStokes>
 HydrologyMeltingRate<EvalT, Traits, IsStokes>::
 HydrologyMeltingRate (const Teuchos::ParameterList& p,
-                      const Teuchos::RCP<Albany::Layouts>& dl) :
-  u_b  (p.get<std::string> ("Sliding Velocity QP Variable Name"), dl->qp_scalar),
-  G    (p.get<std::string> ("Geothermal Heat Source QP Variable Name"), dl->qp_scalar),
-  beta (p.get<std::string> ("Basal Friction Coefficient QP Variable Name"), dl->qp_scalar),
-  m    (p.get<std::string> ("Melting Rate QP Variable Name"),dl->qp_scalar)
+                      const Teuchos::RCP<Albany::Layouts>& dl)
 {
   if (IsStokes)
   {
     TEUCHOS_TEST_FOR_EXCEPTION (!dl->isSideLayouts, Teuchos::Exceptions::InvalidParameter,
                                 "Error! The layout structure does not appear to be that of a side set.\n");
-    numQPs      = dl->qp_scalar->dimension(2);
+    numQPs   = dl->qp_scalar->dimension(2);
+    numNodes = dl->node_scalar->dimension(2);
     sideSetName = p.get<std::string>("Side Set Name");
   }
   else
   {
     TEUCHOS_TEST_FOR_EXCEPTION (dl->isSideLayouts, Teuchos::Exceptions::InvalidParameter,
                                 "Error! The layout structure appears to be that of a side set.\n");
-    numQPs = dl->qp_scalar->dimension(1);
+    numQPs   = dl->qp_scalar->dimension(1);
+    numNodes = dl->node_scalar->dimension(1);
   }
-
-  this->addDependentField(beta);
-  this->addDependentField(u_b);
-  this->addDependentField(G);
-
-  this->addEvaluatedField(m);
 
   // Setting parameters
   Teuchos::ParameterList& physical_params  = *p.get<Teuchos::ParameterList*>("FELIX Physical Parameters");
@@ -71,6 +63,23 @@ HydrologyMeltingRate (const Teuchos::ParameterList& p,
    */
   scaling_G = 365.25*24*3600/1000;
   L *= 1e-3;
+
+  nodal = p.isParameter("Nodal") ? p.get<bool>("Nodal") : false;
+  Teuchos::RCP<PHX::DataLayout> layout;
+  if (nodal) {
+    layout = dl->node_scalar;
+  } else {
+    layout = dl->qp_scalar;
+  }
+  u_b  = PHX::MDField<const IceScalarT>(p.get<std::string> ("Sliding Velocity Variable Name"), layout);
+  G    = PHX::MDField<const ParamScalarT>(p.get<std::string> ("Geothermal Heat Source Variable Name"), layout);
+  beta = PHX::MDField<const ScalarT>(p.get<std::string> ("Basal Friction Coefficient Variable Name"), layout);
+  m    = PHX::MDField<ScalarT>(p.get<std::string> ("Melting Rate Variable Name"),layout);
+
+  this->addDependentField(beta);
+  this->addDependentField(u_b);
+  this->addDependentField(G);
+  this->addEvaluatedField(m);
 
   this->setName("HydrologyMeltingRate"+PHX::typeAsString<EvalT>());
 }
@@ -113,11 +122,12 @@ void HydrologyMeltingRate<EvalT, Traits, IsStokes>::evaluateFields (typename Tra
   }
   else
   {
+    int dim = nodal ? numNodes : numQPs;
     for (int cell=0; cell < workset.numCells; ++cell)
     {
-      for (int qp=0; qp < numQPs; ++qp)
+      for (int i=0; i<dim; ++i)
       {
-        m(cell,qp) = ( scaling_G*G(cell,qp) - beta(cell,qp) * std::pow(u_b(cell,qp),2) ) / L;
+        m(cell,i) = ( scaling_G*G(cell,i) - beta(cell,i) * std::pow(u_b(cell,i),2) ) / L;
       }
     }
   }

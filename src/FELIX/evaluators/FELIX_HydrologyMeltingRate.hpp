@@ -51,7 +51,10 @@ private:
   // Output:
   PHX::MDField<ScalarT>             m;
 
+  bool              nodal;
+
   int               numQPs;
+  int               numNodes;
   double            L;
   double            scaling_G;
 
