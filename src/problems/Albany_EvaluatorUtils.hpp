@@ -27,6 +27,7 @@
 #include <Phalanx_Evaluator.hpp>
 
 namespace Albany {
+
   /*!
    * \brief Generic Functions to construct evaluators more succinctly
    */
@@ -302,6 +303,17 @@ namespace Albany {
       const Teuchos::RCP<Intrepid2::Basis<PHX::Device, RealType, RealType> > intrepidBasisSide,
       const Teuchos::RCP<Intrepid2::Cubature<PHX::Device> > cubatureSide,
       const std::string& sideSetName) const;
+
+    //! Compute the diagonal of the local lumped mass matrix
+    Teuchos::RCP< PHX::Evaluator<Traits> >
+    constructLumpedMassEvaluator(const std::string& lumpedMassName,
+                                 const std::string& lumpingType) const;
+
+    //! Compute the diagonal of the local lumped mass matrix on a side set
+    Teuchos::RCP< PHX::Evaluator<Traits> >
+    constructLumpedMassSideEvaluator(const std::string& lumpedMassName,
+                                     const std::string& lumpingType,
+                                     const std::string& sideSetName) const;
 
   private:
 

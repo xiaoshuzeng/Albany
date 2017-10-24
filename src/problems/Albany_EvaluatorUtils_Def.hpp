@@ -4,31 +4,33 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 #include "Albany_EvaluatorUtils.hpp"
+#include "Albany_GeneralPurposeFieldsNames.hpp"
 #include "Albany_DataTypes.hpp"
 
-#include "PHAL_GatherSolution.hpp"
-#include "PHAL_GatherScalarNodalParameter.hpp"
-#include "PHAL_GatherCoordinateVector.hpp"
-#include "PHAL_ScatterResidual.hpp"
-#include "PHAL_MapToPhysicalFrame.hpp"
-#include "PHAL_MapToPhysicalFrameSide.hpp"
 #include "PHAL_ComputeBasisFunctions.hpp"
 #include "PHAL_ComputeBasisFunctionsSide.hpp"
 #include "PHAL_DOFCellToSide.hpp"
 #include "PHAL_DOFCellToSideQP.hpp"
 #include "PHAL_DOFGradInterpolation.hpp"
 #include "PHAL_DOFGradInterpolationSide.hpp"
-#include "PHAL_DOFSideToCell.hpp"
 #include "PHAL_DOFInterpolation.hpp"
 #include "PHAL_DOFInterpolationSide.hpp"
-#include "PHAL_DOFTensorInterpolation.hpp"
+#include "PHAL_DOFSideToCell.hpp"
 #include "PHAL_DOFTensorGradInterpolation.hpp"
+#include "PHAL_DOFTensorInterpolation.hpp"
 #include "PHAL_DOFVecGradInterpolation.hpp"
 #include "PHAL_DOFVecGradInterpolationSide.hpp"
 #include "PHAL_DOFVecInterpolation.hpp"
 #include "PHAL_DOFVecInterpolationSide.hpp"
+#include "PHAL_GatherCoordinateVector.hpp"
+#include "PHAL_GatherScalarNodalParameter.hpp"
+#include "PHAL_GatherSolution.hpp"
+#include "PHAL_LumpedMass.hpp"
+#include "PHAL_MapToPhysicalFrame.hpp"
+#include "PHAL_MapToPhysicalFrameSide.hpp"
 #include "PHAL_NodesToCellInterpolation.hpp"
 #include "PHAL_QuadPointsToCellInterpolation.hpp"
+#include "PHAL_ScatterResidual.hpp"
 #include "PHAL_SideQuadPointsToSideInterpolation.hpp"
 
 
@@ -352,7 +354,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructGatherCoordinateVecto
     p->set<bool>("Periodic BC", false);
 
     // Output:: Coordindate Vector at vertices
-    p->set<std::string>("Coordinate Vector Name", "Coord Vec");
+    p->set<std::string>("Coordinate Vector Name", coord_vec_name);
 
     if( strCurrentDisp != "" )
       p->set<std::string>("Current Displacement Vector Name", strCurrentDisp);
@@ -375,7 +377,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructMapToPhysicalFrameEva
     RCP<ParameterList> p = rcp(new ParameterList("Map To Physical Frame"));
 
     // Input: X, Y at vertices
-    p->set<string>("Coordinate Vector Name", "Coord Vec");
+    p->set<string>("Coordinate Vector Name", coord_vec_name);
     p->set<RCP <Intrepid2::Cubature<PHX::Device> > >("Cubature", cubature);
     p->set<RCP<shards::CellTopology> >("Cell Type", cellType);
     p->set< RCP<Intrepid2::Basis<PHX::Device, RealType, RealType> > >
@@ -403,8 +405,8 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructMapToPhysicalFrameSid
     RCP<ParameterList> p = rcp(new ParameterList("Map To Physical Frame Side"));
 
     // Input: X, Y at vertices
-    p->set<std::string>("Coordinate Vector Vertex Name", "Coord Vec " + sideSetName);
-    p->set<std::string>("Coordinate Vector QP Name", "Coord Vec " + sideSetName);
+    p->set<std::string>("Coordinate Vector Vertex Name", coord_vec_name + " " + sideSetName);
+    p->set<std::string>("Coordinate Vector QP Name", coord_vec_name + " " + sideSetName);
     p->set< RCP<Intrepid2::Cubature<PHX::Device> > >("Cubature", cubature);
     p->set<RCP<shards::CellTopology> >("Cell Type", cellType);
     p->set<std::string>("Side Set Name", sideSetName);
@@ -428,7 +430,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructComputeBasisFunctions
     RCP<ParameterList> p = rcp(new ParameterList("Compute Basis Functions"));
 
     // Inputs: X, Y at nodes, Cubature, and Basis
-    p->set<string>("Coordinate Vector Name","Coord Vec");
+    p->set<string>("Coordinate Vector Name",coord_vec_name);
     p->set< RCP<Intrepid2::Cubature<PHX::Device> > >("Cubature", cubature);
 
     p->set< RCP<Intrepid2::Basis<PHX::Device, RealType, RealType> > >
@@ -436,15 +438,14 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructComputeBasisFunctions
 
     p->set<RCP<shards::CellTopology> >("Cell Type", cellType);
     // Outputs: BF, weightBF, Grad BF, weighted-Grad BF, all in physical space
-    p->set<std::string>("Weights Name",          "Weights");
-    p->set<std::string>("Jacobian Det Name",          "Jacobian Det");
-    p->set<std::string>("Jacobian Name",          "Jacobian");
-    p->set<std::string>("Jacobian Inv Name",          "Jacobian Inv");
-    p->set<std::string>("BF Name",          "BF");
-    p->set<std::string>("Weighted BF Name", "wBF");
-
-    p->set<std::string>("Gradient BF Name",          "Grad BF");
-    p->set<std::string>("Weighted Gradient BF Name", "wGrad BF");
+    p->set<std::string>("Weights Name",              weights_name);
+    p->set<std::string>("Jacobian Det Name",         jacobian_det_name);
+    p->set<std::string>("Jacobian Name",             jacobian_det_name);
+    p->set<std::string>("Jacobian Inv Name",         jacobian_inv_name);
+    p->set<std::string>("BF Name",                   bf_name);
+    p->set<std::string>("Weighted BF Name",          weighted_bf_name);
+    p->set<std::string>("Gradient BF Name",          grad_bf_name);
+    p->set<std::string>("Weighted Gradient BF Name", weighted_grad_bf_name);
 
     return rcp(new PHAL::ComputeBasisFunctions<EvalT,Traits>(*p,dl));
 }
@@ -468,24 +469,20 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructComputeBasisFunctions
     RCP<ParameterList> p = rcp(new ParameterList("Compute Basis Functions Side"));
 
     // Inputs: X, Y at nodes, Cubature, and Basis
-    p->set<std::string>("Side Coordinate Vector Name","Coord Vec " + sideSetName);
+    p->set<std::string>("Coordinate Vector Name",coord_vec_name + " " + sideSetName);
     p->set< RCP<Intrepid2::Cubature<PHX::Device> > >("Cubature Side", cubatureSide);
     p->set< RCP<Intrepid2::Basis<PHX::Device, RealType, RealType> > >("Intrepid Basis Side", intrepidBasisSide);
     p->set<RCP<shards::CellTopology> >("Cell Type", cellType);
     p->set<std::string>("Side Set Name",sideSetName);
 
     // Outputs: BF, weightBF, Grad BF, weighted-Grad BF, all in physical space
-    p->set<std::string>("Weighted Measure Name",     "Weighted Measure "+sideSetName);
-    p->set<std::string>("Tangents Name",             "Tangents "+sideSetName);
-    p->set<std::string>("Metric Determinant Name",   "Metric Determinant "+sideSetName);
-    p->set<std::string>("BF Name",                   "BF "+sideSetName);
-    p->set<std::string>("Gradient BF Name",          "Grad BF "+sideSetName);
-    p->set<std::string>("Metric Name",               "Metric "+sideSetName);
-    p->set<std::string>("Inverse Metric Name",       "Inv Metric "+sideSetName);
-
-   // p->set<std::string> ("Side Normals Name", "Side Normals");
-   // p->set<std::string>("Coordinate Vector Name","Coord Vec");
-   // p->set<Teuchos::RCP<Layouts> >("Layout Name",dl);
+    p->set<std::string>("Weighted Measure Name",     weighted_measure_name + " "+sideSetName);
+    p->set<std::string>("Tangents Name",             tangents_name + " "+sideSetName);
+    p->set<std::string>("Metric Name",               metric_name + " "+sideSetName);
+    p->set<std::string>("Metric Determinant Name",   metric_det_name + " "+sideSetName);
+    p->set<std::string>("BF Name",                   bf_name + " "+sideSetName);
+    p->set<std::string>("Gradient BF Name",          grad_bf_name + " "+sideSetName);
+    p->set<std::string>("Inverse Metric Name",       metric_inv_name + " "+sideSetName);
 
     return rcp(new PHAL::ComputeBasisFunctionsSide<EvalT,Traits>(*p,dl->side_layouts.at(sideSetName)));
 }
@@ -539,7 +536,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructDOFCellToSideQPEvalua
     p->set<std::string>("Cell Variable Name", cell_dof_name);
     p->set<std::string>("Data Layout", layout);
     p->set<RCP<shards::CellTopology> >("Cell Type", cellType);
-    p->set<std::string>("BF Name", "BF "+sideSetName);
+    p->set<std::string>("BF Name", bf_name + " "+sideSetName);
     p->set<std::string>("Side Set Name", sideSetName);
 
     // Output
@@ -594,7 +591,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructDOFGradInterpolationE
     RCP<ParameterList> p = rcp(new ParameterList("DOF Grad Interpolation "+dof_name));
     // Input
     p->set<std::string>("Variable Name", dof_name);
-    p->set<std::string>("Gradient BF Name", "Grad BF");
+    p->set<std::string>("Gradient BF Name", grad_bf_name);
     p->set<int>("Offset of First DOF", offsetToFirstDOF);
 
     // Output (assumes same Name as input)
@@ -619,7 +616,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructDOFGradInterpolationS
     RCP<ParameterList> p = rcp(new ParameterList("DOF Grad Interpolation Side "+dof_name));
     // Input
     p->set<std::string>("Variable Name", dof_name);
-    p->set<std::string>("Gradient BF Name", "Grad BF "+sideSetName);
+    p->set<std::string>("Gradient BF Name", grad_bf_name + " "+sideSetName);
     p->set<std::string> ("Side Set Name",sideSetName);
 
     // Output (assumes same Name as input)
@@ -642,7 +639,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructDOFInterpolationEvalu
     RCP<ParameterList> p = rcp(new ParameterList("DOF Interpolation "+dof_name));
     // Input
     p->set<std::string>("Variable Name", dof_name);
-    p->set<std::string>("BF Name", "BF");
+    p->set<std::string>("BF Name", bf_name);
     p->set<int>("Offset of First DOF", offsetToFirstDOF);
 
     // Output (assumes same Name as input)
@@ -688,7 +685,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructDOFTensorInterpolatio
     RCP<ParameterList> p = rcp(new ParameterList("DOFTensor Interpolation "+dof_name));
     // Input
     p->set<std::string>("Variable Name", dof_name);
-    p->set<std::string>("BF Name", "BF");
+    p->set<std::string>("BF Name", bf_name);
     p->set<int>("Offset of First DOF", offsetToFirstDOF);
 
     // Output (assumes same Name as input)
@@ -709,7 +706,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructDOFTensorGradInterpol
     RCP<ParameterList> p = rcp(new ParameterList("DOFTensorGrad Interpolation "+dof_name));
     // Input
     p->set<std::string>("Variable Name", dof_name);
-    p->set<std::string>("Gradient BF Name", "Grad BF");
+    p->set<std::string>("Gradient BF Name", grad_bf_name);
     p->set<int>("Offset of First DOF", offsetToFirstDOF);
 
     // Output (assumes same Name as input)
@@ -731,7 +728,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructDOFVecGradInterpolati
     RCP<ParameterList> p = rcp(new ParameterList("DOFVecGrad Interpolation "+dof_name));
     // Input
     p->set<std::string>("Variable Name", dof_name);
-    p->set<std::string>("Gradient BF Name", "Grad BF");
+    p->set<std::string>("Gradient BF Name", grad_bf_name);
     p->set<int>("Offset of First DOF", offsetToFirstDOF);
 
     // Output (assumes same Name as input)
@@ -756,7 +753,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructDOFVecGradInterpolati
     RCP<ParameterList> p = rcp(new ParameterList("DOF Grad Interpolation Side "+dof_name));
     // Input
     p->set<std::string>("Variable Name", dof_name);
-    p->set<std::string>("Gradient BF Name", "Grad BF "+sideSetName);
+    p->set<std::string>("Gradient BF Name", grad_bf_name + " "+sideSetName);
     p->set<std::string> ("Side Set Name",sideSetName);
 
     // Output (assumes same Name as input)
@@ -778,7 +775,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructDOFVecInterpolationEv
     RCP<ParameterList> p = rcp(new ParameterList("DOFVec Interpolation "+dof_name));
     // Input
     p->set<std::string>("Variable Name", dof_name);
-    p->set<std::string>("BF Name", "BF");
+    p->set<std::string>("BF Name", bf_name);
     p->set<int>("Offset of First DOF", offsetToFirstDOF);
 
     // Output (assumes same Name as input)
@@ -820,9 +817,9 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructNodesToCellInterpolat
   p = Teuchos::rcp(new Teuchos::ParameterList("DOF Nodes to Cell Interpolation "+dof_name));
 
   // Input
-  p->set<std::string>("BF Variable Name", "BF");
+  p->set<std::string>("BF Variable Name", bf_name);
   p->set<std::string>("Field Node Name", dof_name);
-  p->set<std::string>("Weighted Measure Name", "Weights");
+  p->set<std::string>("Weighted Measure Name",weights_name);
   p->set<bool>("Is Vector Field", isVectorField);
 
   // Output
@@ -843,7 +840,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructQuadPointsToCellInter
 
   // Input
   p->set<std::string>("Field QP Name", dof_name);
-  p->set<std::string>("Weighted Measure Name", "Weights");
+  p->set<std::string>("Weighted Measure Name",weights_name);
 
   // Output
   p->set<std::string>("Field Cell Name", dof_name);
@@ -869,7 +866,7 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructSideQuadPointsToSideI
 
   // Input
   p->set<std::string>("Field QP Name", dof_name);
-  p->set<std::string>("Weighted Measure Name", "Weighted Measure "+sideSetName);
+  p->set<std::string>("Weighted Measure Name", weighted_measure_name + " "+sideSetName);
   p->set<std::string>("Side Set Name", sideSetName);
   p->set<bool>("Is Vector Field", isVectorField);
 
@@ -877,4 +874,44 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructSideQuadPointsToSideI
   p->set<std::string>("Field Side Name", dof_name);
 
   return Teuchos::rcp(new PHAL::SideQuadPointsToSideInterpolationBase<EvalT,Traits,ScalarT>(*p,dl->side_layouts.at(sideSetName)));
+}
+
+template<typename EvalT, typename Traits, typename ScalarT>
+Teuchos::RCP< PHX::Evaluator<Traits> >
+Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructLumpedMassEvaluator(
+  const std::string& lumpedMassName,
+  const std::string& lumpingType) const
+{
+  Teuchos::RCP<Teuchos::ParameterList> p (new Teuchos::ParameterList("LumpedMass"));
+
+  // Input
+  p->set<std::string>("BF Name", bf_name);
+  p->set<std::string>("Weighted Measure Name", weights_name);
+  p->set<std::string>("Lumping Type", lumpingType);
+
+  // Output
+  p->set<std::string>("Lumped Mass Name", lumpedMassName);
+
+  return Teuchos::rcp(new PHAL::LumpedMass<EvalT,Traits>(*p,dl));
+}
+
+template<typename EvalT, typename Traits, typename ScalarT>
+Teuchos::RCP< PHX::Evaluator<Traits> >
+Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructLumpedMassSideEvaluator(
+  const std::string& lumpedMassName,
+  const std::string& lumpingType,
+  const std::string& sideSetName) const
+{
+  Teuchos::RCP<Teuchos::ParameterList> p (new Teuchos::ParameterList("LumpedMass"));
+
+  // Input
+  p->set<std::string>("BF Name", bf_name);
+  p->set<std::string>("Weighted Measure Name", weighted_measure_name);
+  p->set<std::string>("Lumping Type", lumpingType);
+  p->set<std::string>("Side Set Name", sideSetName);
+
+  // Output
+  p->set<std::string>("Lumped Mass Name", lumpedMassName);
+
+  return Teuchos::rcp(new PHAL::LumpedMass<EvalT,Traits>(*p,dl->side_layouts.at(sideSetName)));
 }
