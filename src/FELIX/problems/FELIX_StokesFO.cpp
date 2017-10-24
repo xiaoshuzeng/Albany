@@ -35,8 +35,9 @@ StokesFO( const Teuchos::RCP<Teuchos::ParameterList>& params_,
 
   neq =  params_->sublist("Equation Set").get<int>("Num Equations", neq);
 
-  // Set the num PDEs for the null space object to pass to ML
-  this->rigidBodyModes->setNumPDEs(neq);
+  // Set the num equations. This will set the number of PDEs for the null
+  // space object to pass to ML and also set the default for equationsCouplings
+  this->setNumEquations(neq);
 
   // the following function returns the problem information required for setting the rigid body modes (RBMs) for elasticity problems
   //written by IK, Feb. 2012
