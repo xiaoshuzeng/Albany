@@ -9,8 +9,8 @@
 
 namespace FELIX {
 
-template<typename EvalT, typename Traits, bool IsStokes>
-HydrologyResidualThicknessEqn<EvalT, Traits, IsStokes>::
+template<typename EvalT, typename Traits, bool IsStokes, bool ThermoCoupled>
+HydrologyResidualThicknessEqn<EvalT, Traits, IsStokes, ThermoCoupled>::
 HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
                                const Teuchos::RCP<Albany::Layouts>& dl) :
   residual (p.get<std::string> ("Thickness Eqn Residual Name"),dl->node_scalar)
@@ -57,7 +57,6 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
   double rho_i = physical_params.get<double>("Ice Density");
   h_r = hydrology_params.get<double>("Bed Bumps Height");
   l_r = hydrology_params.get<double>("Bed Bumps Length");
-  A   = hydrology_params.get<double>("Flow Factor Constant");
 
   bool melting_cav = hydrology_params.get<bool>("Use Melting In Thickness Equation", false);
   use_eff_cav = (hydrology_params.get<bool>("Use Effective Cavities Height", true) ? 1.0 : 0.0);
@@ -85,7 +84,7 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
    *
    *  1) scaling_h_t*h_t      scaling_h_t = 1/yr_to_s
    *  2) rho_i_inv_m          (no scaling)
-   *  3) A_mod*h*N^3          A_mod       = A/1000
+   *  3) scaling_A*A*h*N^3    scaling_A = 1.0/1000
    *  4) (h_r-h)*|u|/l_r      (no scaling)
    *
    * where yr_to_s=365.25*24*3600 (the number of seconds in a year)
@@ -94,7 +93,7 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
   // Scalings, needed to account for different units: ice velocity
   // is in m/yr rather than m/s, while all other quantities are in SI units.
   scaling_h_t = 365.25*24*3600;
-  A           = A/1000;
+  scaling_A   = 1.0/1000;
 
   // We can solve this equation as a nodal equation
   nodal_equation = hydrology_params.isParameter("Thickness Equation Nodal") ? hydrology_params.get<bool>("Thickness Equation Nodal") : false;
@@ -111,14 +110,16 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
     this->addDependentField(w_measure);
   }
 
-  h   = PHX::MDField<const ScalarT>(p.get<std::string> ("Water Thickness Variable Name"),    layout);
-  N   = PHX::MDField<const ScalarT>(p.get<std::string> ("Effective Pressure Variable Name"), layout);
-  m   = PHX::MDField<const ScalarT>(p.get<std::string> ("Melting Rate Variable Name"),       layout);
-  u_b = PHX::MDField<const IceScalarT>(p.get<std::string> ("Sliding Velocity Variable Name"),   layout);
+  h           = PHX::MDField<const ScalarT>(p.get<std::string> ("Water Thickness Variable Name"),     layout);
+  N           = PHX::MDField<const ScalarT>(p.get<std::string> ("Effective Pressure Variable Name"),  layout);
+  m           = PHX::MDField<const ScalarT>(p.get<std::string> ("Melting Rate Variable Name"),        layout);
+  u_b         = PHX::MDField<const IceScalarT>(p.get<std::string> ("Sliding Velocity Variable Name"), layout);
+  flowFactorA = PHX::MDField<const TempScalarT>(p.get<std::string>("Flow Factor A Variable Name"), dl->cell_scalar2);
   this->addDependentField(h);
   this->addDependentField(N);
   this->addDependentField(m);
   this->addDependentField(u_b);
+  this->addDependentField(flowFactorA);
 
   unsteady = p.get<bool>("Unsteady");
   if (unsteady)
@@ -130,8 +131,8 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
   this->setName("HydrologyResidualThicknessEqn"+PHX::typeAsString<EvalT>());
 }
 
-template<typename EvalT, typename Traits, bool IsStokes>
-void HydrologyResidualThicknessEqn<EvalT, Traits, IsStokes>::
+template<typename EvalT, typename Traits, bool IsStokes, bool ThermoCoupled>
+void HydrologyResidualThicknessEqn<EvalT, Traits, IsStokes, ThermoCoupled>::
 postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& fm)
 {
@@ -140,6 +141,7 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(N,fm);
   this->utils.setFieldData(m,fm);
   this->utils.setFieldData(u_b,fm);
+  this->utils.setFieldData(flowFactorA,fm);
   if (unsteady) {
     this->utils.setFieldData(h_dot,fm);
   }
@@ -150,71 +152,91 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(residual,fm);
 }
 
-template<typename EvalT, typename Traits, bool IsStokes>
-void HydrologyResidualThicknessEqn<EvalT, Traits, IsStokes>::
+template<typename EvalT, typename Traits, bool IsStokes, bool ThermoCoupled>
+void HydrologyResidualThicknessEqn<EvalT, Traits, IsStokes, ThermoCoupled>::
 evaluateFields (typename Traits::EvalData workset)
 {
-  // h' = W_O - W_C = (m/rho_i + u_b*(h_b-h)/l_b) - AhN^n
+  if (IsStokes) {
+    evaluateFieldsSide(workset);
+  } else {
+    evaluateFieldsCell(workset);
+  }
+}
 
+template<typename EvalT, typename Traits, bool IsStokes, bool ThermoCoupled>
+void HydrologyResidualThicknessEqn<EvalT, Traits, IsStokes, ThermoCoupled>::
+evaluateFieldsSide (typename Traits::EvalData workset)
+{
+  // h' = W_O - W_C = (m/rho_i + u_b*(h_b-h)/l_b) - AhN^n
   ScalarT res_node, res_qp, zero(0.0);
 
-  if (IsStokes)
+  // Zero out, to avoid leaving stuff from previous workset!
+  residual.deep_copy(ScalarT(0.0));
+
+  if (workset.sideSets->find(sideSetName)==workset.sideSets->end())
+    return;
+
+  const std::vector<Albany::SideStruct>& sideSet = workset.sideSets->at(sideSetName);
+  for (auto const& it_side : sideSet)
   {
-    // Zero out, to avoid leaving stuff from previous workset!
-    residual.deep_copy(ScalarT(0.0));
+    // Get the local data of side and cell
+    const int cell = it_side.elem_LID;
+    const int side = it_side.side_local_id;
 
-    if (workset.sideSets->find(sideSetName)==workset.sideSets->end())
-      return;
-
-    const std::vector<Albany::SideStruct>& sideSet = workset.sideSets->at(sideSetName);
-    for (auto const& it_side : sideSet)
+    for (int node=0; node < numNodes; ++node)
     {
-      // Get the local data of side and cell
-      const int cell = it_side.elem_LID;
-      const int side = it_side.side_local_id;
-
-      for (int node=0; node < numNodes; ++node)
-      {
-        res_node = 0;
+      res_node = 0;
+      if (nodal_equation) {
+        res_node = rho_i_inv*m(cell,side,node) +
+                 + (h_r - use_eff_cav*h(cell,side,node))*u_b(cell,side,node)/l_r
+                 - h(cell,side,node)*scaling_A*flowFactorA(cell)*std::pow(N(cell,side,node),3)
+                 - (unsteady ? scaling_h_t*h_dot(cell,side,node) : zero);
+      } else {
         for (int qp=0; qp < numQPs; ++qp)
         {
           res_qp = rho_i_inv*m(cell,side,qp)
                  + (h_r - use_eff_cav*h(cell,side,qp))*u_b(cell,side,qp)/l_r
-                 - h(cell,side,qp)*A*std::pow(N(cell,side,qp),3)
+                 - h(cell,side,qp)*scaling_A*flowFactorA(cell,side)*std::pow(N(cell,side,qp),3)
                  - (unsteady ? scaling_h_t*h_dot(cell,side,qp) : zero);
 
           res_node += res_qp * BF(cell,side,node,qp) * w_measure(cell,side,qp);
         }
-
-        residual (cell,side,node) = res_node;
       }
+
+      residual (cell,side,node) = res_node;
     }
   }
-  else
-  {
-    for (int cell=0; cell < workset.numCells; ++cell)
-    {
-      for (int node=0; node < numNodes; ++node)
-      {
-        res_node = 0;
-        if (nodal_equation) {
-          res_node = rho_i_inv*m(cell,node) +
-                   + (h_r - use_eff_cav*h(cell,node))*u_b(cell,node)/l_r
-                   - h(cell,node)*A*std::pow(N(cell,node),3)
-                   - (unsteady ? scaling_h_t*h_dot(cell,node) : zero);
-        } else {
-          for (int qp=0; qp < numQPs; ++qp)
-          {
-            res_qp = rho_i_inv*m(cell,qp)
-                   + (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
-                   - h(cell,qp)*A*std::pow(N(cell,qp),3)
-                   - (unsteady ? scaling_h_t*h_dot(cell,qp) : zero);
+}
 
-            res_node += res_qp * BF(cell,node,qp) * w_measure(cell,qp);
-          }
+template<typename EvalT, typename Traits, bool IsStokes, bool ThermoCoupled>
+void HydrologyResidualThicknessEqn<EvalT, Traits, IsStokes, ThermoCoupled>::
+evaluateFieldsCell (typename Traits::EvalData workset)
+{
+  // h' = W_O - W_C = (m/rho_i + u_b*(h_b-h)/l_b) - AhN^n
+  ScalarT res_node, res_qp, zero(0.0);
+
+  for (int cell=0; cell < workset.numCells; ++cell)
+  {
+    for (int node=0; node < numNodes; ++node)
+    {
+      res_node = 0;
+      if (nodal_equation) {
+        res_node = rho_i_inv*m(cell,node) +
+                 + (h_r - use_eff_cav*h(cell,node))*u_b(cell,node)/l_r
+                 - h(cell,node)*scaling_A*flowFactorA(cell)*std::pow(N(cell,node),3)
+                 - (unsteady ? scaling_h_t*h_dot(cell,node) : zero);
+      } else {
+        for (int qp=0; qp < numQPs; ++qp)
+        {
+          res_qp = rho_i_inv*m(cell,qp)
+                 + (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
+                 - h(cell,qp)*scaling_A*flowFactorA(cell)*std::pow(N(cell,qp),3)
+                 - (unsteady ? scaling_h_t*h_dot(cell,qp) : zero);
+
+          res_node += res_qp * BF(cell,node,qp) * w_measure(cell,qp);
         }
-        residual (cell,node) = res_node;
       }
+      residual (cell,node) = res_node;
     }
   }
 }

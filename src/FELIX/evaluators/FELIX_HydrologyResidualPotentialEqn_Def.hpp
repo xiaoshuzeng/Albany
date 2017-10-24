@@ -10,8 +10,8 @@
 namespace FELIX {
 
 //**********************************************************************
-template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokesCoupling>
-HydrologyResidualPotentialEqn<EvalT, Traits, HasThicknessEqn, IsStokesCoupling>::
+template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokesCoupling, bool ThermoCoupled>
+HydrologyResidualPotentialEqn<EvalT, Traits, HasThicknessEqn, IsStokesCoupling, ThermoCoupled>::
 HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
                                const Teuchos::RCP<Albany::Layouts>& dl) :
   BF        (p.get<std::string> ("BF Name"), dl->node_qp_scalar),
@@ -79,7 +79,8 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
   mu_w      = physical_params.get<double>("Water Viscosity");
   h_r       = hydrology_params.get<double>("Bed Bumps Height");
   l_r       = hydrology_params.get<double>("Bed Bumps Length");
-  A         = hydrology_params.get<double>("Flow Factor Constant");
+
+  flowFactorA = PHX::MDField<const tScalarT>(p.get<std::string>("Flow Factor A Variable Name"), dl->cell_scalar2);
 
   mass_lumping = hydrology_params.isParameter("Mass Lumping") ? hydrology_params.get<bool>("Mass Lumping") : false;
   if (mass_lumping) {
@@ -129,7 +130,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
    * where yr_to_s=365.25*24*3600 (the number of seconds in a year)
    */
   double yr_to_s = 365.25*24*3600;
-  A               = A/1000;
+  scaling_A       = 1.0/1000;
   scaling_omega   = 365.25/1000;
   scaling_q       = 1e-3*yr_to_s;
 
@@ -137,8 +138,8 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
 }
 
 //**********************************************************************
-template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokesCoupling>
-void HydrologyResidualPotentialEqn<EvalT, Traits, HasThicknessEqn, IsStokesCoupling>::
+template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokesCoupling, bool ThermoCoupled>
+void HydrologyResidualPotentialEqn<EvalT, Traits, HasThicknessEqn, IsStokesCoupling, ThermoCoupled>::
 postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& fm)
 {
@@ -148,6 +149,7 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(q,fm);
   this->utils.setFieldData(omega,fm);
   this->utils.setFieldData(u_b,fm);
+  this->utils.setFieldData(flowFactorA,fm);
 
   if (IsStokesCoupling)
     this->utils.setFieldData(metric,fm);
@@ -166,116 +168,127 @@ postRegistrationSetup(typename Traits::SetupData d,
 }
 
 //**********************************************************************
-template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokesCoupling>
-void HydrologyResidualPotentialEqn<EvalT, Traits, HasThicknessEqn, IsStokesCoupling>::
+template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokesCoupling, bool ThermoCoupled>
+void HydrologyResidualPotentialEqn<EvalT, Traits, HasThicknessEqn, IsStokesCoupling, ThermoCoupled>::
 evaluateFields (typename Traits::EvalData workset)
+{
+  if (IsStokesCoupling) {
+    evaluateFieldsSide(workset);
+  } else {
+    evaluateFieldsCell(workset);
+  }
+}
+
+template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokesCoupling, bool ThermoCoupled>
+void HydrologyResidualPotentialEqn<EvalT, Traits, HasThicknessEqn, IsStokesCoupling, ThermoCoupled>::
+evaluateFieldsSide (typename Traits::EvalData workset)
 {
   // Omega is in mm/d rather than m/s
   double scaling_omega = 0.001/(24*3600);
 
-  if (IsStokesCoupling)
+  // Zero out, to avoid leaving stuff from previous workset!
+  residual.deep_copy(ScalarT(0.));
+
+  if (workset.sideSets->find(sideSetName)==workset.sideSets->end())
+    return;
+
+  ScalarT res_qp, res_node;
+  const std::vector<Albany::SideStruct>& sideSet = workset.sideSets->at(sideSetName);
+  for (auto const& it_side : sideSet)
   {
-    // Zero out, to avoid leaving stuff from previous workset!
-    residual.deep_copy(ScalarT(0.));
+    // Get the local data of side and cell
+    const int cell = it_side.elem_LID;
+    const int side = it_side.side_local_id;
 
-    if (workset.sideSets->find(sideSetName)==workset.sideSets->end())
-      return;
-
-    ScalarT res_qp, res_node;
-    const std::vector<Albany::SideStruct>& sideSet = workset.sideSets->at(sideSetName);
-    for (auto const& it_side : sideSet)
+    for (int node=0; node < numNodes; ++node)
     {
-      // Get the local data of side and cell
-      const int cell = it_side.elem_LID;
-      const int side = it_side.side_local_id;
+      res_node = 0;
+      for (int qp=0; qp < numQPs; ++qp)
+      {
+        res_qp = rho_combo*m(cell,side,qp) + scaling_omega*omega(cell,side,qp)
+               - (h_r -h(cell,side,qp))*u_b(cell,side,qp)/l_r
+               + h(cell,side,qp)*std::pow(scaling_A*flowFactorA(cell,side)*N(cell,side,qp),3);
 
+        res_qp *= BF(cell,side,node,qp);
+
+        for (int idim=0; idim<numDims; ++idim)
+        {
+          for (int jdim=0; jdim<numDims; ++jdim)
+          {
+            res_qp += scaling_q*q(cell,side,qp,idim) * metric(cell,side,qp,idim,jdim) * GradBF(cell,side,node,qp,jdim);
+          }
+        }
+
+        res_node += res_qp * w_measure(cell,side,qp);
+      }
+      residual (cell,side,node) += res_node;
+    }
+  }
+}
+
+template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokesCoupling, bool ThermoCoupled>
+void HydrologyResidualPotentialEqn<EvalT, Traits, HasThicknessEqn, IsStokesCoupling, ThermoCoupled>::
+evaluateFieldsCell (typename Traits::EvalData workset)
+{
+  if (eta_i>0)
+  {
+    ScalarT res_qp, res_node;
+    for (int cell=0; cell < workset.numCells; ++cell)
+    {
       for (int node=0; node < numNodes; ++node)
       {
         res_node = 0;
         for (int qp=0; qp < numQPs; ++qp)
         {
-          res_qp = rho_combo*m(cell,side,qp) + scaling_omega*omega(cell,side,qp)
-                 - (h_r -h(cell,side,qp))*u_b(cell,side,qp)/l_r
-                 + h(cell,side,qp)*std::pow(A*N(cell,side,qp),3);
+          res_qp = rho_combo*m(cell,qp) + scaling_omega*omega(cell,qp)
+                 - (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
+                 + h(cell,qp)*N(cell,qp)/eta_i;
 
-          res_qp *= BF(cell,side,node,qp);
+          res_qp *= BF(cell,node,qp);
 
-          for (int idim=0; idim<numDims; ++idim)
+          for (int dim=0; dim<numDims; ++dim)
           {
-            for (int jdim=0; jdim<numDims; ++jdim)
-            {
-              res_qp += scaling_q*q(cell,side,qp,idim) * metric(cell,side,qp,idim,jdim) * GradBF(cell,side,node,qp,jdim);
-            }
+            res_qp += scaling_q*q(cell,qp,dim) * GradBF(cell,node,qp,dim);
           }
 
-          res_node += res_qp * w_measure(cell,side,qp);
+          res_node += res_qp * w_measure(cell,qp);
         }
-        residual (cell,side,node) += res_node;
+
+        residual (cell,node) = res_node;
       }
     }
   }
   else
   {
-    if (eta_i>0)
+    ScalarT res_qp, res_node;
+    for (int cell=0; cell < workset.numCells; ++cell)
     {
-      ScalarT res_qp, res_node;
-      for (int cell=0; cell < workset.numCells; ++cell)
+      for (int node=0; node < numNodes; ++node)
       {
-        for (int node=0; node < numNodes; ++node)
+        res_node = 0;
+        for (int qp=0; qp < numQPs; ++qp)
         {
-          res_node = 0;
-          for (int qp=0; qp < numQPs; ++qp)
+          res_qp = scaling_omega*omega(cell,qp)
+                 - (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r;
+          if (!mass_lumping) {
+            res_qp += rho_combo*m(cell,qp) + (2.0/9.0)*h(cell,qp)*scaling_A*flowFactorA(cell)*std::pow(N(cell,qp),3);
+          }
+
+          res_qp *= BF(cell,node,qp);
+
+          for (int dim=0; dim<numDims; ++dim)
           {
-            res_qp = rho_combo*m(cell,qp) + scaling_omega*omega(cell,qp)
-                   - (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
-                   + h(cell,qp)*N(cell,qp)/eta_i;
-
-            res_qp *= BF(cell,node,qp);
-
-            for (int dim=0; dim<numDims; ++dim)
-            {
-              res_qp += scaling_q*q(cell,qp,dim) * GradBF(cell,node,qp,dim);
-            }
-
-            res_node += res_qp * w_measure(cell,qp);
+            res_qp += scaling_q*q(cell,qp,dim) * GradBF(cell,node,qp,dim);
           }
 
-          residual (cell,node) = res_node;
+          res_node += res_qp * w_measure(cell,qp);
         }
-      }
-    }
-    else
-    {
-      ScalarT res_qp, res_node;
-      for (int cell=0; cell < workset.numCells; ++cell)
-      {
-        for (int node=0; node < numNodes; ++node)
-        {
-          res_node = 0;
-          for (int qp=0; qp < numQPs; ++qp)
-          {
-            res_qp = scaling_omega*omega(cell,qp)
-                   - (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r;
-            if (!mass_lumping) {
-              res_qp += rho_combo*m(cell,qp) + (2.0/9.0)*h(cell,qp)*A*std::pow(N(cell,qp),3);
-            }
 
-            res_qp *= BF(cell,node,qp);
-
-            for (int dim=0; dim<numDims; ++dim)
-            {
-              res_qp += scaling_q*q(cell,qp,dim) * GradBF(cell,node,qp,dim);
-            }
-
-            res_node += res_qp * w_measure(cell,qp);
-          }
-
-          if (mass_lumping) {
-            res_node += rho_combo*m_nodal(cell,node) + (2.0/9.0)*h_nodal(cell,node)*A*std::pow(N_nodal(cell,node),3);
-          }
-
-          residual (cell,node) = res_node;
+        if (mass_lumping) {
+          res_node += rho_combo*m_nodal(cell,node) + (2.0/9.0)*h_nodal(cell,node)*scaling_A*flowFactorA(cell)*std::pow(N_nodal(cell,node),3);
         }
+
+        residual (cell,node) = res_node;
       }
     }
   }

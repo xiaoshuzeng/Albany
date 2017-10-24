@@ -11,7 +11,8 @@ enum class FelixParamEnum
   Mu           = 2,
   Power        = 3,
   Homotopy     = 4,
-  FieldNormReg = 5
+  FlowFactorA  = 5,
+  FieldNormReg = 6
 };
 
 

@@ -45,6 +45,7 @@
 // Include for Enthalpy
 #include "FELIX_EnthalpyResid.hpp"
 #include "FELIX_EnthalpyBasalResid.hpp"
+#include "FELIX_FlowFactorA.hpp"
 #include "FELIX_w_ZResid.hpp"
 #include "FELIX_BasalFrictionHeat.hpp"
 #include "FELIX_GeoFluxHeat.hpp"
@@ -98,7 +99,7 @@ namespace FELIX
     //! Return number of spatial dimensions
     virtual int spatialDimension() const { return numDim; }
 
-    //! Get boolean telling code if SDBCs are utilized  
+    //! Get boolean telling code if SDBCs are utilized
     virtual bool useSDBCs() const {return false; }
 
     //! Build the PDE instantiations, boundary conditions, and initial solution
@@ -1053,6 +1054,10 @@ if (basalSideName!="INVALID")
     ev = evalUtils.getPSTUtils().constructDOFInterpolationSideEvaluator("Ice Thickness Param", basalSideName);
     fm0.template registerEvaluator<EvalT>(ev);
 
+    //---- Restrict flow factor A from cell-based to cell-side-based (may be needed by BasalFrictionCoefficient)
+    ev = evalUtils.getPSTUtils().constructDOFCellToSideEvaluator("Flow Factor A",basalSideName,"Cell Scalar",cellType);
+    fm0.template registerEvaluator<EvalT> (ev);
+
     //---- Interpolate beta on QP on side
     ev = evalUtils.getPSTUtils().constructDOFInterpolationSideEvaluator("Beta Given", basalSideName);
     fm0.template registerEvaluator<EvalT>(ev);
@@ -1275,6 +1280,18 @@ if (basalSideName!="INVALID")
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
+  // --------- Flow Factor A --------- //
+  p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Flow Factor A"));
+
+  // Input
+  p->set<std::string>("Flow Rate Type",params->sublist("FELIX Basal Friction Coefficient").get<std::string>("Flow Rate Type","Uniform"));
+
+  // Output
+  p->set<std::string>("Flow Factor A Variable Name","Flow Factor A");
+
+  ev = Teuchos::rcp(new FELIX::FlowFactorA<EvalT,PHAL::AlbanyTraits, false>(*p,dl));
+  fm0.template registerEvaluator<EvalT>(ev);
+
   if (sliding)
   {
     // --- Basal Residual --- //
@@ -1325,6 +1342,18 @@ if (basalSideName!="INVALID")
 
     ev = Teuchos::rcp(new FELIX::EffectivePressure<EvalT,PHAL::AlbanyTraits,false,true>(*p,dl_basal));
     fm0.template registerEvaluator<EvalT>(ev);
+
+    //--- Shared Parameter: Uniform Flow Factor A ---//
+    p = Teuchos::rcp(new Teuchos::ParameterList("Basal Friction Coefficient: lambda"));
+
+    param_name = "Constant Flow Factor A";
+    p->set<std::string>("Parameter Name", param_name);
+    p->set< Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
+
+    Teuchos::RCP<FELIX::SharedParameter<EvalT,PHAL::AlbanyTraits,FelixParamEnum,FelixParamEnum::FlowFactorA>> ptr_A;
+    ptr_A = Teuchos::rcp(new FELIX::SharedParameter<EvalT,PHAL::AlbanyTraits,FelixParamEnum,FelixParamEnum::FlowFactorA>(*p,dl));
+    ptr_A->setNominalValue(params->sublist("Parameters"),params->sublist("FELIX Basal Friction Coefficient").get<double>(param_name,-1.0));
+    fm0.template registerEvaluator<EvalT>(ptr_A);
 
     //--- Shared Parameter for basal friction coefficient: alpha ---//
     p = Teuchos::rcp(new Teuchos::ParameterList("Basal Friction Coefficient: alpha"));
@@ -1383,6 +1412,7 @@ if (basalSideName!="INVALID")
     p->set<std::string>("Effective Pressure QP Variable Name", "Effective Pressure");
     p->set<std::string>("Side Set Name", basalSideName);
     p->set<std::string>("Coordinate Vector Variable Name", "Coord Vec " + basalSideName);
+    p->set<std::string>("Flow Factor A Variable Name", "Flow Factor A");
     p->set<Teuchos::ParameterList*>("Parameter List", &params->sublist("FELIX Basal Friction Coefficient"));
     p->set<Teuchos::ParameterList*>("Physical Parameter List", &params->sublist("FELIX Physical Parameters"));
     p->set<Teuchos::ParameterList*>("Stereographic Map", &params->sublist("Stereographic Map"));
@@ -1392,7 +1422,7 @@ if (basalSideName!="INVALID")
     //Output
     p->set<std::string>("Basal Friction Coefficient Variable Name", "Beta");
 
-    ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficient<EvalT,PHAL::AlbanyTraits,false,true>(*p,dl_basal));
+    ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficient<EvalT,PHAL::AlbanyTraits,false,true,true>(*p,dl_basal));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
@@ -1428,6 +1458,18 @@ if (basalSideName!="INVALID")
   ev = Teuchos::rcp(new GatherVerticallyAveragedVelocity<EvalT,PHAL::AlbanyTraits>(*p,dl));
   fm0.template registerEvaluator<EvalT>(ev);
 #endif
+
+  // --------- Flow Factor A --------- //
+  p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Flow Factor A"));
+
+  // Input
+  p->set<std::string>("Flow Rate Type",params->sublist("FELIX Basal Friction Coefficient").get<std::string>("Flow Rate Type","Uniform"));
+
+  // Output
+  p->set<std::string>("Flow Factor A Variable Name","Flow Factor A");
+
+  ev = Teuchos::rcp(new FELIX::FlowFactorA<EvalT,PHAL::AlbanyTraits, false>(*p,dl));
+  fm0.template registerEvaluator<EvalT>(ev);
 
   //--- Shared Parameter for Continuation:  ---//
   {

@@ -21,7 +21,7 @@ namespace FELIX
     This evaluator evaluates the residual of the Hydrology model (quasi-static formulation)
 */
 
-template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokesCoupling>
+template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokesCoupling, bool ThermoCoupled>
 class HydrologyResidualPotentialEqn : public PHX::EvaluatorWithBaseImpl<Traits>,
                                       public PHX::EvaluatorDerived<EvalT, Traits>
 {
@@ -33,6 +33,7 @@ public:
 
   typedef typename std::conditional<IsStokesCoupling,ScalarT,ParamScalarT>::type  uScalarT;
   typedef typename std::conditional<HasThicknessEqn,ScalarT,ParamScalarT>::type   hScalarT;
+  typedef typename std::conditional<ThermoCoupled,ScalarT,ParamScalarT>::type     tScalarT;
 
   HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
                                  const Teuchos::RCP<Albany::Layouts>& dl);
@@ -43,6 +44,9 @@ public:
   void evaluateFields (typename Traits::EvalData d);
 
 private:
+
+  void evaluateFieldsCell(typename Traits::EvalData d);
+  void evaluateFieldsSide(typename Traits::EvalData d);
 
   // Input:
   PHX::MDField<const RealType>      BF;
@@ -57,6 +61,8 @@ private:
   PHX::MDField<const ScalarT>       m_nodal;
   PHX::MDField<const ParamScalarT>  omega;
   PHX::MDField<const uScalarT>      u_b;
+
+  PHX::MDField<const tScalarT>      flowFactorA;
 
   // Input only needed if equation is on a sideset
   PHX::MDField<const MeshScalarT,Cell,Side,QuadPoint,Dim,Dim>   metric;
@@ -74,9 +80,9 @@ private:
   double rho_combo;
   double h_r;
   double l_r;
-  double A;
   double scaling_omega;
   double scaling_q;
+  double scaling_A;
 
   bool mass_lumping;
 

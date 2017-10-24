@@ -30,6 +30,7 @@
 #include "PHAL_SaveSideSetStateField.hpp"
 
 #include "FELIX_EffectivePressure.hpp"
+#include "FELIX_FlowFactorA.hpp"
 #include "FELIX_StokesFOResid.hpp"
 #include "FELIX_StokesFOBasalResid.hpp"
 #include "FELIX_StokesFOBodyForce.hpp"
@@ -548,6 +549,10 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
   ev = evalUtils.getPSTUtils().constructDOFInterpolationSideEvaluator("surface_water_input", basalSideName);
   fm0.template registerEvaluator<EvalT> (ev);
 
+  //---- Restrict flow factor A from cell-based to cell-side-based (may be needed by BasalFrictionCoefficient)
+  ev = evalUtils.getPSTUtils().constructDOFCellToSideEvaluator("Flow Factor A",basalSideName,"Cell Scalar",cellType);
+  fm0.template registerEvaluator<EvalT> (ev);
+
   //---- Interpolate geothermal flux
   ev = evalUtils.getPSTUtils().constructDOFInterpolationSideEvaluator("geothermal_flux", basalSideName);
   fm0.template registerEvaluator<EvalT> (ev);
@@ -666,14 +671,27 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
   ev = Teuchos::rcp(new FELIX::EffectivePressure<EvalT,PHAL::AlbanyTraits,true,false>(*p,dl_basal));
   fm0.template registerEvaluator<EvalT>(ev);
 
+  // --------- Flow Factor A --------- //
+  p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Flow Factor A"));
+
+  // Input
+  p->set<std::string>("Flow Rate Type",params->sublist("FELIX Basal Friction Coefficient").get<std::string>("Flow Rate Type","Uniform"));
+
+  // Output
+  p->set<std::string>("Flow Factor A Variable Name","Flow Factor A");
+
+  ev = Teuchos::rcp(new FELIX::FlowFactorA<EvalT,PHAL::AlbanyTraits, false>(*p,dl));
+  fm0.template registerEvaluator<EvalT>(ev);
+
   //--- FELIX basal friction coefficient ---//
   p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Basal Friction Coefficient"));
 
   //Input
-  p->set<std::string>("Sliding Velocity QP Variable Name", "sliding_velocity");
+  p->set<std::string>("Sliding Velocity Variable Name", "sliding_velocity");
   p->set<std::string>("BF Variable Name", "BF "+basalSideName);
-  p->set<std::string>("Effective Pressure QP Variable Name", "effective_pressure");
+  p->set<std::string>("Effective Pressure Variable Name", "effective_pressure");
   p->set<std::string>("Side Set Name", basalSideName);
+  p->set<std::string>("Flow Factor A Variable Name", "Flow Factor A");
   p->set<Teuchos::ParameterList*>("Parameter List", &params->sublist("FELIX Basal Friction Coefficient"));
   p->set<Teuchos::ParameterList*>("FELIX Physical Parameters", &params->sublist("FELIX Physical Parameters"));
   p->set<Teuchos::ParameterList*>("Stereographic Map", &params->sublist("Stereographic Map"));
@@ -681,14 +699,25 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
   //Output
   p->set<std::string>("Basal Friction Coefficient Variable Name", "beta");
 
-  ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficient<EvalT,PHAL::AlbanyTraits,true,true>(*p,dl_basal));
+  ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficient<EvalT,PHAL::AlbanyTraits,true,true,false>(*p,dl_basal));
   fm0.template registerEvaluator<EvalT>(ev);
 
   //--- FELIX basal friction coefficient at nodes (for output in the mesh) ---//
   p->set<bool>("Nodal",true);
-  ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficient<EvalT,PHAL::AlbanyTraits,true,true>(*p,dl_basal));
+  ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficient<EvalT,PHAL::AlbanyTraits,true,true,false>(*p,dl_basal));
   fm0.template registerEvaluator<EvalT>(ev);
 
+  //--- Shared Parameter: Uniform Flow Factor A ---//
+  p = Teuchos::rcp(new Teuchos::ParameterList("Basal Friction Coefficient: lambda"));
+
+  param_name = "Constant Flow Factor A";
+  p->set<std::string>("Parameter Name", param_name);
+  p->set< Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
+
+  Teuchos::RCP<FELIX::SharedParameter<EvalT,PHAL::AlbanyTraits,FelixParamEnum,FelixParamEnum::FlowFactorA>> ptr_A;
+  ptr_A = Teuchos::rcp(new FELIX::SharedParameter<EvalT,PHAL::AlbanyTraits,FelixParamEnum,FelixParamEnum::FlowFactorA>(*p,dl));
+  ptr_A->setNominalValue(params->sublist("Parameters"),params->sublist("FELIX Basal Friction Coefficient").get<double>(param_name,-1.0));
+  fm0.template registerEvaluator<EvalT>(ptr_A);
 
   //--- Shared Parameter for basal friction coefficient: lambda ---//
   p = Teuchos::rcp(new Teuchos::ParameterList("Basal Friction Coefficient: lambda"));
@@ -824,14 +853,14 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
   p = Teuchos::rcp(new Teuchos::ParameterList("Hydrology Melting Rate"));
 
   //Input
-  p->set<std::string> ("Geothermal Heat Source QP Variable Name","geothermal_flux");
-  p->set<std::string> ("Sliding Velocity QP Variable Name","sliding_velocity");
-  p->set<std::string> ("Basal Friction Coefficient QP Variable Name","beta");
+  p->set<std::string> ("Geothermal Heat Source Variable Name","geothermal_flux");
+  p->set<std::string> ("Sliding Velocity Variable Name","sliding_velocity");
+  p->set<std::string> ("Basal Friction Coefficient Variable Name","beta");
   p->set<std::string> ("Side Set Name", basalSideName);
   p->set<Teuchos::ParameterList*> ("FELIX Physical Parameters",&params->sublist("FELIX Physical Parameters"));
 
   //Output
-  p->set<std::string> ("Melting Rate QP Variable Name","Melting Rate");
+  p->set<std::string> ("Melting Rate Variable Name","Melting Rate");
 
   ev = Teuchos::rcp(new FELIX::HydrologyMeltingRate<EvalT,PHAL::AlbanyTraits,true>(*p,dl_basal));
   fm0.template registerEvaluator<EvalT>(ev);
@@ -844,12 +873,13 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
   p->set<std::string> ("Metric Name", "Metric " + basalSideName);
   p->set<std::string> ("Gradient BF Name", "Grad BF " + basalSideName);
   p->set<std::string> ("Weighted Measure Name", "Weighted Measure " + basalSideName);
-  p->set<std::string> ("Water Discharge QP Variable Name", "Water Discharge");
-  p->set<std::string> ("Effective Pressure QP Variable Name", "effective_pressure");
-  p->set<std::string> ("Water Thickness QP Variable Name", water_thickness_name);
-  p->set<std::string> ("Melting Rate QP Variable Name","Melting Rate");
-  p->set<std::string> ("Surface Water Input QP Variable Name","surface_water_input");
-  p->set<std::string> ("Sliding Velocity QP Variable Name","sliding_velocity");
+  p->set<std::string> ("Water Discharge Variable Name", "Water Discharge");
+  p->set<std::string> ("Effective Pressure Variable Name", "effective_pressure");
+  p->set<std::string> ("Water Thickness Variable Name", water_thickness_name);
+  p->set<std::string> ("Melting Rate Variable Name","Melting Rate");
+  p->set<std::string> ("Surface Water Input Variable Name","surface_water_input");
+  p->set<std::string> ("Sliding Velocity Variable Name","sliding_velocity");
+  p->set<std::string> ("Flow Factor A Variable Name","Flow Factor A");
   p->set<std::string> ("Side Set Name", basalSideName);
   p->set<Teuchos::ParameterList*> ("FELIX Physical Parameters",&params->sublist("FELIX Physical Parameters"));
   p->set<Teuchos::ParameterList*> ("FELIX Hydrology Parameters",&params->sublist("FELIX Hydrology"));
@@ -858,9 +888,9 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
   p->set<std::string> ("Potential Eqn Residual Name",hydro_resid_names[0]);
 
   if (has_h_equation)
-    ev = Teuchos::rcp(new FELIX::HydrologyResidualPotentialEqn<EvalT,PHAL::AlbanyTraits,true,true>(*p,dl_basal));
+    ev = Teuchos::rcp(new FELIX::HydrologyResidualPotentialEqn<EvalT,PHAL::AlbanyTraits,true,true,false>(*p,dl_basal));
   else
-    ev = Teuchos::rcp(new FELIX::HydrologyResidualPotentialEqn<EvalT,PHAL::AlbanyTraits,false,true>(*p,dl_basal));
+    ev = Teuchos::rcp(new FELIX::HydrologyResidualPotentialEqn<EvalT,PHAL::AlbanyTraits,false,true,false>(*p,dl_basal));
 
   fm0.template registerEvaluator<EvalT>(ev);
 
@@ -872,11 +902,11 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
     //Input
     p->set<std::string> ("BF Name", "BF " + basalSideName);
     p->set<std::string> ("Weighted Measure Name", "Weighted Measure " + basalSideName);
-    p->set<std::string> ("Water Thickness QP Variable Name",water_thickness_name);
-    p->set<std::string> ("Water Thickness Dot QP Variable Name",water_thickness_dot_name);
-    p->set<std::string> ("Effective Pressure QP Variable Name","effective_pressure");
-    p->set<std::string> ("Melting Rate QP Variable Name","Melting Rate");
-    p->set<std::string> ("Sliding Velocity QP Variable Name","sliding_velocity");
+    p->set<std::string> ("Water Thickness Variable Name",water_thickness_name);
+    p->set<std::string> ("Water Thickness Dot Variable Name",water_thickness_dot_name);
+    p->set<std::string> ("Effective Pressure Variable Name","effective_pressure");
+    p->set<std::string> ("Melting Rate Variable Name","Melting Rate");
+    p->set<std::string> ("Sliding Velocity Variable Name","sliding_velocity");
     p->set<std::string> ("Side Set Name", basalSideName);
     p->set<bool> ("Unsteady", unsteady);
     p->set<Teuchos::ParameterList*> ("FELIX Hydrology",&params->sublist("FELIX Hydrology"));
@@ -885,7 +915,7 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
     //Output
     p->set<std::string> ("Thickness Eqn Residual Name", hydro_resid_names[1]);
 
-    ev = Teuchos::rcp(new FELIX::HydrologyResidualThicknessEqn<EvalT,PHAL::AlbanyTraits,true>(*p,dl_basal));
+    ev = Teuchos::rcp(new FELIX::HydrologyResidualThicknessEqn<EvalT,PHAL::AlbanyTraits,true,false>(*p,dl_basal));
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
