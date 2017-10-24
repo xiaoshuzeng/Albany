@@ -6,11 +6,11 @@
   </ParameterList>
 
   <ParameterList name="Problem">
-    <Parameter name="Phalanx Graph Visualization Detail" type="int" value="0"/>
-    <Parameter name="Solution Method" type="string" value="Continuation"/>
-    <Parameter name="Name" type="string" value="FELIX Hydrology 2D"/>
-    <Parameter name="Required Fields" type="Array(string)" value="{surface_height,surface_water_input,basal_velocity,
-                                                                   effective_pressure,beta,ice_thickness,geothermal_flux}"/>
+    <Parameter name="Phalanx Graph Visualization Detail" type="int"           value="0"/>
+    <Parameter name="Solution Method"                    type="string"        value="Continuation"/>
+    <Parameter name="Name"                               type="string"        value="FELIX Hydrology 2D"/>
+    <Parameter name="Required Fields"                    type="Array(string)" value="{surface_height,surface_water_input,basal_velocity,
+                                                                                      effective_pressure,beta,ice_thickness,geothermal_flux}"/>
 
     <ParameterList name="Dirichlet BCs">
       <Parameter name="DBC on NS NodeSet1 for DOF Hydraulic Potential" type="double" value="0.0"/>
@@ -21,55 +21,64 @@
       <Parameter name="Function Data" type="Array(double)" value="{100,0.1}" />
     </ParameterList>
 
-    <!--ParameterList name="Neumann BCs">
-      <Parameter name="NBC on SS SideSet0 for DOF Hydraulic Potential set neumann" type="Array(double)" value="{0.0, 0.0, 0.0, 0.0, 0.0}"/>
-    </ParameterList-->
-
     <ParameterList name="Parameters">
-      <Parameter name="Number"      type="int"    value="1"/>
-      <Parameter name="Parameter 0" type="string" value="Homotopy Parameter"/>
+      <Parameter name="Number of Parameter Vectors" type="int"    value="2"/>
+      <ParameterList name="Parameter Vector 0">
+        <Parameter name="Number"      type="int"    value="1"/>
+        <Parameter name="Parameter 0" type="string" value="Homotopy Parameter"/>
+      </ParameterList>
+      <ParameterList name="Parameter Vector 1">
+        <Parameter name="Number"         type="int"           value="3"/>
+        <Parameter name="Parameter 0"    type="string"        value="Coulomb Friction Coefficient"/>
+        <Parameter name="Parameter 1"    type="string"        value="Bed Roughness"/>
+        <Parameter name="Parameter 2"    type="string"        value="Power Exponent"/>
+        <Parameter name="Nominal Values" type="Array(double)" value="{0.16,1.0,1.0}"/>
+      </ParameterList>
     </ParameterList>
 
     <ParameterList name="Response Functions">
-      <Parameter name="Number" type="int" value="0"/>
+      <Parameter name="Number"     type="int"    value="1"/>
       <Parameter name="Response 0" type="string" value="Solution Max Value"/>
       <ParameterList name="ResponseParams 1">
         <Parameter name="Equation" type="int" value="1" />
-        <Parameter name="Num Equations" type="int" value="1" />
       </ParameterList>
     </ParameterList>
 
     <ParameterList name="FELIX Physical Parameters">
-      <Parameter name="Water Viscosity" type="double" value="1e-6"/>      <!-- [kPa*s]  -->
-      <Parameter name="Water Density" type="double" value="1000"/>        <!-- [kg/m^3] -->
-      <Parameter name="Ice Density" type="double" value="900"/>           <!-- [kg/m^3] -->
-      <Parameter name="Ice Latent Heat" type="double" value="3e5"/>       <!-- [J/kg]   -->
-      <Parameter name="Gravity Acceleration" type="double" value="10"/>  <!-- [m/s^2]  -->
+      <Parameter name="Water Viscosity"      type="double" value="1e-6"/>   <!-- [kPa*s]  -->
+      <Parameter name="Water Density"        type="double" value="1000"/>   <!-- [kg/m^3] -->
+      <Parameter name="Ice Density"          type="double" value="900" />   <!-- [kg/m^3] -->
+      <Parameter name="Ice Latent Heat"      type="double" value="3e5" />   <!-- [J/kg]   -->
+      <Parameter name="Gravity Acceleration" type="double" value="9.8" />   <!-- [m/s^2]  -->
     </ParameterList>
 
     <ParameterList name="FELIX Hydrology">
-      <Parameter name="Use Water Thickness Equation"        type="bool"   value="true"/>
-      <Parameter name="Use Effective Cavities Height"       type="bool"   value="true"/>
-      <Parameter name="Use Melting In Conservation Of Mass" type="bool"   value="true"/>
-      <Parameter name="Use Melting In Thickness Equation"   type="bool"   value="false"/>
-      <Parameter name="Regularize With Continuation"        type="bool"   value="true"/>
-      <Parameter name="Transmissivity"                      type="double" value="0.0001"/>  <!-- [1] -->
-      <Parameter name="Bed Bumps Height"                    type="double" value="0.2"/>   <!-- [m] -->
-      <Parameter name="Bed Bumps Length"                    type="double" value="1"/>       <!-- [m] -->
-      <Parameter name="Flow Factor Constant"                type="double" value="0.00015"/> <!-- [k^-(n+1) Pa^-n yr^-1)] -->
+      <Parameter name="Thickness Equation Nodal"             type="bool"           value="false"/>
+      <Parameter name="Lump Mass In Potential Equation"      type="bool"           value="false"/>
+      <Parameter name="Use Water Thickness Equation"         type="bool"           value="true"/>
+      <Parameter name="Use Effective Cavities Height"        type="bool"           value="true"/>
+      <Parameter name="Use Melting In Conservation Of Mass"  type="bool"           value="true"/>
+      <Parameter name="Use Melting In Thickness Equation"    type="bool"           value="false"/>
+      <Parameter name="Regularize With Continuation"         type="bool"           value="true"/>
+      <Parameter name="Transmissivity"                       type="double"         value="0.05"/>        <!-- [m^-1 s^-1] -->
+      <Parameter name="Bed Bumps Height"                     type="double"         value="0.5"/>        <!-- [m] -->
+      <Parameter name="Bed Bumps Length"                     type="double"         value="5"/>          <!-- [m] -->
+      <Parameter name="Flow Factor Constant"                 type="double"         value="0.000215"/>   <!-- [kPa^-{n+1} yr^-1)] -->
+      <Parameter name="Zero Porewater Pressure On Node Sets" type="Array(string)"  value="{NodeSet1}"/>
     </ParameterList>
 
     <ParameterList name="FELIX Basal Friction Coefficient">
       <Parameter name="Basal Side Name"           type="string" value="basalside"/>
       <Parameter name="Type"                      type="string" value="Given Constant"/> <!-- "Given Constant", "Given Field"-->
-      <Parameter name="Constant Given Beta Value" type="double" value="-31.7"/>            <!-- [kPa yr m^-1] -->
+      <Parameter name="Constant Given Beta Value" type="double" value="100"/>            <!-- [kPa yr m^-1] -->
+      <Parameter name="Constant Flow Factor A"    type="double" value="0.00015"/>
     </ParameterList>
 
   </ParameterList> <!-- Problem -->
 
   <ParameterList name="Regression Results">
-    <Parameter  name="Number of Comparisons" type="int" value="1"/>
-    <Parameter  name="Test Values" type="Array(double)" value="{8940176.73567}"/>
+    <Parameter  name="Number of Comparisons" type="int" value="0"/>
+    <Parameter  name="Test Values" type="Array(double)" value="{}"/>
     <Parameter  name="Number of Sensitivity Comparisons" type="int" value="0"/>
     <Parameter  name="Relative Tolerance" type="double" value="1.0e-4"/>
     <Parameter  name="Absolute Tolerance" type="double" value="1.0e-4"/>
@@ -105,19 +114,19 @@
         <Parameter name="Field Name"    type="string" value="basal_velocity"/>  <!-- m/yr -->
         <Parameter name="Field Origin"  type="string" value="File"/>
         <Parameter name="Field Type"    type="string" value="Node Vector"/>
-        <Parameter name="Field Value"   type="Array(double)" value="{1000,0}"/>
+        <Parameter name="Field Value"   type="Array(double)" value="{60,0}"/>
       </ParameterList>
       <ParameterList name="Field 3">
         <Parameter name="Field Name"    type="string" value="surface_water_input"/>  <!-- mm/d -->
         <Parameter name="Field Origin"  type="string" value="File"/>
         <Parameter name="Field Type"    type="string" value="Node Scalar"/>
-        <Parameter name="Field Value"   type="Array(double)" value="{0.17}"/>
+        <Parameter name="File Name"     type="string" value="../AsciiMeshes/Rectangle/surface_water_input.ascii"/>
       </ParameterList>
       <ParameterList name="Field 4">
         <Parameter name="Field Name"    type="string" value="geothermal_flux"/>  <!-- W/m^2 -->
         <Parameter name="Field Origin"  type="string" value="File"/>
         <Parameter name="Field Type"    type="string" value="Node Scalar"/>
-        <Parameter name="Field Value"   type="Array(double)" value="{0.06}"/>
+        <Parameter name="Field Value"   type="Array(double)" value="{0.063}"/>
       </ParameterList>
       <ParameterList name="Field 5">
         <Parameter name="Field Name"    type="string" value="beta"/>
