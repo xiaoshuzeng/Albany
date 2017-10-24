@@ -34,7 +34,7 @@
 #include "FELIX_StokesFOBasalResid.hpp"
 #include "FELIX_StokesFOBodyForce.hpp"
 #include "FELIX_ViscosityFO.hpp"
-#include "PHAL_Field2Norm.hpp"
+#include "PHAL_FieldFrobeniusNorm.hpp"
 #include "FELIX_BasalFrictionCoefficient.hpp"
 #include "FELIX_BasalFrictionCoefficientNode.hpp"
 #include "FELIX_HydrologyWaterDischarge.hpp"
@@ -648,7 +648,7 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
   // Output
   p->set<std::string>("Field Norm Name","sliding_velocity");
 
-  ev = Teuchos::rcp(new PHAL::Field2Norm<EvalT,PHAL::AlbanyTraits>(*p,dl_basal));
+  ev = Teuchos::rcp(new PHAL::FieldFrobeniusNorm<EvalT,PHAL::AlbanyTraits>(*p,dl_basal));
   fm0.template registerEvaluator<EvalT>(ev);
 
   //--- Effective pressure calculation ---//
@@ -749,7 +749,7 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
   // Output
   p->set<std::string>("Field Norm Name","sliding_velocity");
 
-  ev = Teuchos::rcp(new PHAL::Field2Norm<EvalT,PHAL::AlbanyTraits>(*p,dl_basal));
+  ev = Teuchos::rcp(new PHAL::FieldFrobeniusNorm<EvalT,PHAL::AlbanyTraits>(*p,dl_basal));
   fm0.template registerEvaluator<EvalT>(ev);
 
   //--- FELIX viscosity ---//

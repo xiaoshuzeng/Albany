@@ -49,9 +49,12 @@ private:
   PHX::MDField<const RealType>      GradBF;
   PHX::MDField<const MeshScalarT>   w_measure;
   PHX::MDField<const ScalarT>       N;
+  PHX::MDField<const ScalarT>       N_nodal;
   PHX::MDField<const ScalarT>       q;
   PHX::MDField<const hScalarT>      h;
+  PHX::MDField<const hScalarT>      h_nodal;
   PHX::MDField<const ScalarT>       m;
+  PHX::MDField<const ScalarT>       m_nodal;
   PHX::MDField<const ParamScalarT>  omega;
   PHX::MDField<const uScalarT>      u_b;
 
@@ -74,6 +77,8 @@ private:
   double A;
   double scaling_omega;
   double scaling_q;
+
+  bool mass_lumping;
 
   // Variables necessary for stokes coupling
   std::string                     sideSetName;

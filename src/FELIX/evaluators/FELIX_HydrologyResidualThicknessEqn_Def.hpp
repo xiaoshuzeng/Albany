@@ -13,13 +13,7 @@ template<typename EvalT, typename Traits, bool IsStokes>
 HydrologyResidualThicknessEqn<EvalT, Traits, IsStokes>::
 HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
                                const Teuchos::RCP<Albany::Layouts>& dl) :
-  BF        (p.get<std::string> ("BF Name"), dl->node_qp_scalar),
-  w_measure (p.get<std::string> ("Weighted Measure Name"), dl->qp_scalar),
-  h         (p.get<std::string> ("Water Thickness QP Variable Name"), dl->qp_scalar),
-  N         (p.get<std::string> ("Effective Pressure QP Variable Name"), dl->qp_scalar),
-  m         (p.get<std::string> ("Melting Rate QP Variable Name"), dl->qp_scalar),
-  u_b       (p.get<std::string> ("Sliding Velocity QP Variable Name"), dl->qp_scalar),
-  residual  (p.get<std::string> ("Thickness Eqn Residual Name"),dl->node_scalar)
+  residual (p.get<std::string> ("Thickness Eqn Residual Name"),dl->node_scalar)
 {
   /*
    *  The (water) thickness equation has the following (strong) form
@@ -52,20 +46,6 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
 
     numNodes = dl->node_scalar->dimension(1);
     numQPs   = dl->qp_scalar->dimension(1);
-  }
-
-  this->addDependentField(BF);
-  this->addDependentField(w_measure);
-  this->addDependentField(h);
-  this->addDependentField(N);
-  this->addDependentField(m);
-  this->addDependentField(u_b);
-
-  unsteady = p.get<bool>("Unsteady");
-  if (unsteady)
-  {
-    h_dot = decltype(h_dot) (p.get<std::string> ("Water Thickness Dot QP Variable Name"), dl->qp_scalar);
-    this->addDependentField(h_dot);
   }
 
   this->addEvaluatedField(residual);
@@ -116,6 +96,37 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
   scaling_h_t = 365.25*24*3600;
   A           = A/1000;
 
+  // We can solve this equation as a nodal equation
+  nodal_equation = hydrology_params.isParameter("Thickness Equation Nodal") ? hydrology_params.get<bool>("Thickness Equation Nodal") : false;
+  Teuchos::RCP<PHX::DataLayout> layout;
+  if (nodal_equation) {
+    layout = dl->node_scalar;
+  } else {
+    layout = dl->qp_scalar;
+
+    BF        = PHX::MDField<const RealType>(p.get<std::string> ("BF Name"), dl->node_qp_scalar);
+    w_measure = PHX::MDField<const MeshScalarT>(p.get<std::string> ("Weighted Measure Name"), dl->qp_scalar);
+
+    this->addDependentField(BF);
+    this->addDependentField(w_measure);
+  }
+
+  h   = PHX::MDField<const ScalarT>(p.get<std::string> ("Water Thickness Variable Name"),    layout);
+  N   = PHX::MDField<const ScalarT>(p.get<std::string> ("Effective Pressure Variable Name"), layout);
+  m   = PHX::MDField<const ScalarT>(p.get<std::string> ("Melting Rate Variable Name"),       layout);
+  u_b = PHX::MDField<const IceScalarT>(p.get<std::string> ("Sliding Velocity Variable Name"),   layout);
+  this->addDependentField(h);
+  this->addDependentField(N);
+  this->addDependentField(m);
+  this->addDependentField(u_b);
+
+  unsteady = p.get<bool>("Unsteady");
+  if (unsteady)
+  {
+    h_dot = PHX::MDField<const ScalarT>(p.get<std::string> ("Water Thickness Dot Variable Name"), layout);
+    this->addDependentField(h_dot);
+  }
+
   this->setName("HydrologyResidualThicknessEqn"+PHX::typeAsString<EvalT>());
 }
 
@@ -124,15 +135,18 @@ void HydrologyResidualThicknessEqn<EvalT, Traits, IsStokes>::
 postRegistrationSetup(typename Traits::SetupData d,
                       PHX::FieldManager<Traits>& fm)
 {
-  this->utils.setFieldData(BF,fm);
-  this->utils.setFieldData(w_measure,fm);
+  this->utils.setFieldData(u_b,fm);
   this->utils.setFieldData(h,fm);
-  if (unsteady)
-    this->utils.setFieldData(h_dot,fm);
   this->utils.setFieldData(N,fm);
   this->utils.setFieldData(m,fm);
   this->utils.setFieldData(u_b,fm);
-
+  if (unsteady) {
+    this->utils.setFieldData(h_dot,fm);
+  }
+  if (!nodal_equation) {
+    this->utils.setFieldData(BF,fm);
+    this->utils.setFieldData(w_measure,fm);
+  }
   this->utils.setFieldData(residual,fm);
 }
 
@@ -183,14 +197,21 @@ evaluateFields (typename Traits::EvalData workset)
       for (int node=0; node < numNodes; ++node)
       {
         res_node = 0;
-        for (int qp=0; qp < numQPs; ++qp)
-        {
-          res_qp = rho_i_inv*m(cell,qp)
-                 + (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
-                 - h(cell,qp)*A*std::pow(N(cell,qp),3)
-                 - (unsteady ? scaling_h_t*h_dot(cell,qp) : zero);
+        if (nodal_equation) {
+          res_node = rho_i_inv*m(cell,node) +
+                   + (h_r - use_eff_cav*h(cell,node))*u_b(cell,node)/l_r
+                   - h(cell,node)*A*std::pow(N(cell,node),3)
+                   - (unsteady ? scaling_h_t*h_dot(cell,node) : zero);
+        } else {
+          for (int qp=0; qp < numQPs; ++qp)
+          {
+            res_qp = rho_i_inv*m(cell,qp)
+                   + (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
+                   - h(cell,qp)*A*std::pow(N(cell,qp),3)
+                   - (unsteady ? scaling_h_t*h_dot(cell,qp) : zero);
 
-          res_node += res_qp * BF(cell,node,qp) * w_measure(cell,qp);
+            res_node += res_qp * BF(cell,node,qp) * w_measure(cell,qp);
+          }
         }
         residual (cell,node) = res_node;
       }

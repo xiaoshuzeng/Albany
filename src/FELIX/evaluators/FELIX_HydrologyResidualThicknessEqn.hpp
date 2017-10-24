@@ -66,6 +66,7 @@ private:
   double scaling_h_t;
 
   bool unsteady;
+  bool nodal_equation;
 
   // Variables necessary for stokes coupling
   bool                            stokes_coupling;

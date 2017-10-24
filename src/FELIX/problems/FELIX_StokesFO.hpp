@@ -45,7 +45,7 @@
 #include "FELIX_StokesFOBodyForce.hpp"
 #include "FELIX_StokesFOStress.hpp"
 #include "FELIX_ViscosityFO.hpp"
-#include "PHAL_Field2Norm.hpp"
+#include "PHAL_FieldFrobeniusNorm.hpp"
 #include "FELIX_FluxDiv.hpp"
 #include "FELIX_BasalFrictionCoefficient.hpp"
 #include "FELIX_BasalFrictionCoefficientNode.hpp"
@@ -83,7 +83,7 @@ public:
   //! Return number of spatial dimensions
   virtual int spatialDimension() const { return numDim; }
 
-  //! Get boolean telling code if SDBCs are utilized  
+  //! Get boolean telling code if SDBCs are utilized
   virtual bool useSDBCs() const {return false; }
 
   //! Build the PDE instantiations, boundary conditions, and initial solution
@@ -214,14 +214,14 @@ FELIX::StokesFO::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0
     }
   }
 
-  //Dirichlet fields need to be distributed but they are not necessarily parameters. 
+  //Dirichlet fields need to be distributed but they are not necessarily parameters.
   is_dist = is_dist_param;
   if (this->params->isSublist("Dirichlet BCs")) {
     Teuchos::ParameterList dirichlet_list = this->params->sublist("Dirichlet BCs");
     for(auto it = dirichlet_list.begin(); it !=dirichlet_list.end(); ++it) {
       std::string pname = dirichlet_list.name(it);
       if(dirichlet_list.isParameter(pname) && dirichlet_list.isType<std::string>(pname)) //need to check, because pname could be the name sublist
-        is_dist[dirichlet_list.get<std::string>(pname)]=true;        
+        is_dist[dirichlet_list.get<std::string>(pname)]=true;
     }
   }
 
@@ -1173,7 +1173,7 @@ if (basalSideName!="INVALID")
     // Output
     p->set<std::string>("Field Norm Name","sliding_velocity");
 
-    ev = Teuchos::rcp(new PHAL::Field2Norm<EvalT,PHAL::AlbanyTraits>(*p,dl_basal));
+    ev = Teuchos::rcp(new PHAL::FieldFrobeniusNorm<EvalT,PHAL::AlbanyTraits>(*p,dl_basal));
     fm0.template registerEvaluator<EvalT>(ev);
 
     //--- Sliding velocity calculation ---//
@@ -1188,7 +1188,7 @@ if (basalSideName!="INVALID")
     // Output
     p->set<std::string>("Field Norm Name","sliding_velocity");
 
-    ev = Teuchos::rcp(new PHAL::Field2Norm<EvalT,PHAL::AlbanyTraits>(*p,dl_basal));
+    ev = Teuchos::rcp(new PHAL::FieldFrobeniusNorm<EvalT,PHAL::AlbanyTraits>(*p,dl_basal));
     fm0.template registerEvaluator<EvalT>(ev);
 
     if (!is_dist_param["effective_pressure"])
@@ -1262,9 +1262,9 @@ if (basalSideName!="INVALID")
     p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Basal Friction Coefficient"));
 
     //Input
-    p->set<std::string>("Sliding Velocity QP Variable Name", "sliding_velocity");
+    p->set<std::string>("Sliding Velocity Variable Name", "sliding_velocity");
     p->set<std::string>("BF Variable Name", "BF " + basalSideName);
-    p->set<std::string>("Effective Pressure QP Variable Name", "effective_pressure");
+    p->set<std::string>("Effective Pressure Variable Name", "effective_pressure");
     p->set<std::string>("Bed Roughness Variable Name", "bed_roughness");
     p->set<std::string>("Side Set Name", basalSideName);
     p->set<std::string>("Coordinate Vector Variable Name", "Coord Vec " + basalSideName);
@@ -1272,8 +1272,8 @@ if (basalSideName!="INVALID")
     p->set<Teuchos::ParameterList*>("Physical Parameter List", &params->sublist("FELIX Physical Parameters"));
     p->set<Teuchos::ParameterList*>("Stereographic Map", &params->sublist("Stereographic Map"));
     params->sublist("FELIX Basal Friction Coefficient").set<std::string>("Beta Given Variable Name", "basal_friction");
-    p->set<std::string>("Bed Topography QP Name", "bed_topography");
-    p->set<std::string>("Thickness QP Name", "ice_thickness");
+    p->set<std::string>("Bed Topography Name", "bed_topography");
+    p->set<std::string>("Thickness Name", "ice_thickness");
 
     //Output
     p->set<std::string>("Basal Friction Coefficient Variable Name", "beta");

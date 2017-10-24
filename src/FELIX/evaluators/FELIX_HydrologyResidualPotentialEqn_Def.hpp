@@ -17,12 +17,12 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
   BF        (p.get<std::string> ("BF Name"), dl->node_qp_scalar),
   GradBF    (p.get<std::string> ("Gradient BF Name"), dl->node_qp_gradient),
   w_measure (p.get<std::string> ("Weighted Measure Name"), dl->qp_scalar),
-  q         (p.get<std::string> ("Water Discharge QP Variable Name"), dl->qp_gradient),
-  N         (p.get<std::string> ("Effective Pressure QP Variable Name"), dl->qp_scalar),
-  m         (p.get<std::string> ("Melting Rate QP Variable Name"), dl->qp_scalar),
-  h         (p.get<std::string> ("Water Thickness QP Variable Name"), dl->qp_scalar),
-  omega     (p.get<std::string> ("Surface Water Input QP Variable Name"), dl->qp_scalar),
-  u_b       (p.get<std::string> ("Sliding Velocity QP Variable Name"), dl->qp_scalar),
+  q         (p.get<std::string> ("Water Discharge Variable Name"), dl->qp_gradient),
+  N         (p.get<std::string> ("Effective Pressure Variable Name"), dl->qp_scalar),
+  m         (p.get<std::string> ("Melting Rate Variable Name"), dl->qp_scalar),
+  h         (p.get<std::string> ("Water Thickness Variable Name"), dl->qp_scalar),
+  omega     (p.get<std::string> ("Surface Water Input Variable Name"), dl->qp_scalar),
+  u_b       (p.get<std::string> ("Sliding Velocity Variable Name"), dl->qp_scalar),
   residual  (p.get<std::string> ("Potential Eqn Residual Name"),dl->node_scalar)
 {
   /*
@@ -62,16 +62,6 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
     numDims  = dl->qp_gradient->dimension(2);
   }
 
-  this->addDependentField(BF);
-  this->addDependentField(GradBF);
-  this->addDependentField(w_measure);
-  this->addDependentField(q);
-  this->addDependentField(N);
-  this->addDependentField(h);
-  this->addDependentField(m);
-  this->addDependentField(omega);
-  this->addDependentField(u_b);
-
   this->addEvaluatedField(residual);
 
   // Setting parameters
@@ -91,6 +81,27 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
   l_r       = hydrology_params.get<double>("Bed Bumps Length");
   A         = hydrology_params.get<double>("Flow Factor Constant");
 
+  mass_lumping = hydrology_params.isParameter("Mass Lumping") ? hydrology_params.get<bool>("Mass Lumping") : false;
+  if (mass_lumping) {
+    h_nodal = PHX::MDField<const hScalarT>(p.get<std::string> ("Water Thickness Variable Name"), dl->node_scalar);
+    N_nodal = PHX::MDField<const ScalarT>(p.get<std::string> ("Effective Pressure Variable Name"), dl->node_scalar);
+    m_nodal = PHX::MDField<const ScalarT>(p.get<std::string> ("Melting Rate Variable Name"), dl->node_scalar);
+    this->addDependentField(N_nodal);
+    this->addDependentField(h_nodal);
+    this->addDependentField(m_nodal);
+  } else {
+    this->addDependentField(m);
+  }
+  this->addDependentField(N);
+  this->addDependentField(h);
+  this->addDependentField(BF);
+  this->addDependentField(GradBF);
+  this->addDependentField(w_measure);
+  this->addDependentField(q);
+  this->addDependentField(omega);
+  this->addDependentField(u_b);
+
+
   /*
    * Scalings, needed to account for different units: ice velocity
    * is in m/yr, the mesh is in km, and hydrology time unit is s.
@@ -100,7 +111,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
    *
    *  1) \int rho_combo*m*v*dx          [m km^2 yr^-1]
    *  2) \int omega*v*dx                [mm km^2 day^-1]
-   *  3) \int dot(q*grad(v))*dx         [m^3 s^-1]
+   *  3) \int dot(q*grad(v))*dx         [1000 m^3 s^-1]
    *  4) \int A*h*N^3*v*dx              [1000 m km^2 yr^-1]
    *  5) \int (h_r-h)*|u|/l_r*v*dx      [m km^2 yr^-1]
    *
@@ -111,7 +122,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
    *
    *  1) rho_combo*m                    (no scaling)
    *  2) scaling_omega*omega            scaling_omega = yr_to_day/1000
-   *  3) scaling_q*dot(q,grad(v))       scaling_q     = 1e-6*yr_to_s
+   *  3) scaling_q*dot(q,grad(v))       scaling_q     = 1e-3*yr_to_s
    *  4) A_mod*h*N^3                    A_mod         = A/1000
    *  5) (h_r-h)*|u|/l_r                (no scaling)
    *
@@ -120,7 +131,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
   double yr_to_s = 365.25*24*3600;
   A               = A/1000;
   scaling_omega   = 365.25/1000;
-  scaling_q       = 1e-6*yr_to_s;
+  scaling_q       = 1e-3*yr_to_s;
 
   this->setName("HydrologyResidualPotentialEqn"+PHX::typeAsString<EvalT>());
 }
@@ -135,14 +146,21 @@ postRegistrationSetup(typename Traits::SetupData d,
   this->utils.setFieldData(GradBF,fm);
   this->utils.setFieldData(w_measure,fm);
   this->utils.setFieldData(q,fm);
-  this->utils.setFieldData(N,fm);
-  this->utils.setFieldData(h,fm);
-  this->utils.setFieldData(m,fm);
   this->utils.setFieldData(omega,fm);
   this->utils.setFieldData(u_b,fm);
 
   if (IsStokesCoupling)
     this->utils.setFieldData(metric,fm);
+
+  if (mass_lumping) {
+    this->utils.setFieldData(N_nodal,fm);
+    this->utils.setFieldData(h_nodal,fm);
+    this->utils.setFieldData(m_nodal,fm);
+  } else {
+    this->utils.setFieldData(m,fm);
+  }
+  this->utils.setFieldData(N,fm);
+  this->utils.setFieldData(h,fm);
 
   this->utils.setFieldData(residual,fm);
 }
@@ -236,9 +254,11 @@ evaluateFields (typename Traits::EvalData workset)
           res_node = 0;
           for (int qp=0; qp < numQPs; ++qp)
           {
-            res_qp = rho_combo*m(cell,qp) + scaling_omega*omega(cell,qp)
-                   - (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
-                   + h(cell,qp)*A*std::pow(N(cell,qp),3);
+            res_qp = scaling_omega*omega(cell,qp)
+                   - (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r;
+            if (!mass_lumping) {
+              res_qp += rho_combo*m(cell,qp) + (2.0/9.0)*h(cell,qp)*A*std::pow(N(cell,qp),3);
+            }
 
             res_qp *= BF(cell,node,qp);
 
@@ -248,6 +268,10 @@ evaluateFields (typename Traits::EvalData workset)
             }
 
             res_node += res_qp * w_measure(cell,qp);
+          }
+
+          if (mass_lumping) {
+            res_node += rho_combo*m_nodal(cell,node) + (2.0/9.0)*h_nodal(cell,node)*A*std::pow(N_nodal(cell,node),3);
           }
 
           residual (cell,node) = res_node;

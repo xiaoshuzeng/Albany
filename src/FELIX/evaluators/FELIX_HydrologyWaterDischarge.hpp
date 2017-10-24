@@ -59,7 +59,6 @@ private:
   int numQPs;
   int numDim;
 
-  double mu_w;
   double k_0;
   double alpha;
   double beta;
@@ -102,7 +101,6 @@ private:
   int numDim;
   std::string   sideSetName;
 
-  double mu_w;
   double k_0;
   double alpha;
   double beta;

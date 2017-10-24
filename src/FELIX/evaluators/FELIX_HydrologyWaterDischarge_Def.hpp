@@ -17,9 +17,9 @@ template<typename EvalT, typename Traits, bool HasThicknessEqn>
 HydrologyWaterDischarge<EvalT, Traits, HasThicknessEqn, false>::
 HydrologyWaterDischarge (const Teuchos::ParameterList& p,
                          const Teuchos::RCP<Albany::Layouts>& dl) :
-  gradPhi     (p.get<std::string> ("Hydraulic Potential Gradient QP Variable Name"), dl->qp_gradient),
-  h           (p.get<std::string> ("Water Thickness QP Variable Name"), dl->qp_scalar),
-  q           (p.get<std::string> ("Water Discharge QP Variable Name"), dl->qp_gradient)
+  gradPhi     (p.get<std::string> ("Hydraulic Potential Gradient Variable Name"), dl->qp_gradient),
+  h           (p.get<std::string> ("Water Thickness Variable Name"), dl->qp_scalar),
+  q           (p.get<std::string> ("Water Discharge Variable Name"), dl->qp_gradient)
 {
   numQPs  = dl->qp_gradient->dimension(1);
   numDim  = dl->qp_gradient->dimension(2);
@@ -33,10 +33,13 @@ HydrologyWaterDischarge (const Teuchos::ParameterList& p,
   Teuchos::ParameterList& hydrology = *p.get<Teuchos::ParameterList*>("FELIX Hydrology");
   Teuchos::ParameterList& physics   = *p.get<Teuchos::ParameterList*>("FELIX Physical Parameters");
 
-  mu_w  = physics.get<double>("Water Viscosity");
+  double rho_w = physics.get<double>("Water Density");
+  double g     = physics.get<double>("Gravity Acceleration");
   k_0   = hydrology.get<double>("Transmissivity");
   alpha = hydrology.get<double>("Water Thickness Exponent (alpha)",3);
   beta  = hydrology.get<double>("Potential Gradient Exponent (beta)",2) - 2.0;
+
+  k_0 /= (rho_w * g);
 
   regularize = hydrology.get<bool>("Regularize With Continuation", false);
   if (regularize)
@@ -89,7 +92,7 @@ void HydrologyWaterDischarge<EvalT, Traits, HasThicknessEqn, false>::evaluateFie
   }
 
 /*
-  // q = - \frac{k h^3 \nabla (phiH-N)}{\mu_w}
+  // q = - k h^3 \nabla (phiH-N)
   if (needsGradPhiNorm)
   {
     for (int cell=0; cell < workset.numCells; ++cell)
@@ -98,7 +101,7 @@ void HydrologyWaterDischarge<EvalT, Traits, HasThicknessEqn, false>::evaluateFie
       {
         for (int dim(0); dim<numDim; ++dim)
         {
-          q(cell,qp,dim) = -k_0 * std::pow(h(cell,qp),alpha) * std::pow(gradPhiNorm(cell,qp),beta) * gradPhi(cell,qp,dim) / mu_w;
+          q(cell,qp,dim) = -k_0 * std::pow(h(cell,qp),alpha) * std::pow(gradPhiNorm(cell,qp),beta) * gradPhi(cell,qp,dim);
         }
       }
     }
@@ -112,8 +115,8 @@ void HydrologyWaterDischarge<EvalT, Traits, HasThicknessEqn, false>::evaluateFie
       {
         for (int dim(0); dim<numDim; ++dim)
         {
-//          q(cell,qp,dim) = -k_0 * std::pow(h(cell,qp),alpha) * gradPhi(cell,qp,dim) / mu_w;
-          q(cell,qp,dim) = -k_0 * std::pow(h(cell,qp)+regularization,3) * gradPhi(cell,qp,dim) / mu_w;
+//          q(cell,qp,dim) = -k_0 * std::pow(h(cell,qp),alpha) * gradPhi(cell,qp,dim);
+          q(cell,qp,dim) = -k_0 * std::pow(h(cell,qp)+regularization,3) * gradPhi(cell,qp,dim);
         }
       }
     }
@@ -148,10 +151,13 @@ HydrologyWaterDischarge (const Teuchos::ParameterList& p,
   Teuchos::ParameterList& hydrology = *p.get<Teuchos::ParameterList*>("FELIX Hydrology");
   Teuchos::ParameterList& physics   = *p.get<Teuchos::ParameterList*>("FELIX Physical Parameters");
 
-  mu_w  = physics.get<double>("Water Viscosity");
+  double rho_w = physics.get<double>("Water Density");
+  double g     = physics.get<double>("Gravity Acceleration");
   k_0   = hydrology.get<double>("Transmissivity");
   alpha = hydrology.get<double>("Water Thickness Exponent (alpha)",3);
   beta  = hydrology.get<double>("Potential Gradient Exponent (beta)",2) - 2.0;
+
+  k_0 /= (rho_w * g);
 /*
   needsGradPhiNorm = false;
   if (beta!=0.0)
@@ -203,7 +209,7 @@ evaluateFields (typename Traits::EvalData workset)
       {
         for (int dim(0); dim<numDim; ++dim)
         {
-          q(cell,side,qp,dim) = -k_0 * std::pow(h(cell,side,qp),alpha) * std::pow(gradPhiNorm(cell,side,qp),beta) * gradPhi(cell,side,qp,dim) / mu_w;
+          q(cell,side,qp,dim) = -k_0 * std::pow(h(cell,side,qp),alpha) * std::pow(gradPhiNorm(cell,side,qp),beta) * gradPhi(cell,side,qp,dim);
         }
       }
     }
@@ -221,7 +227,7 @@ evaluateFields (typename Traits::EvalData workset)
       {
         for (int dim(0); dim<numDim; ++dim)
         {
-          q(cell,side,qp,dim) = -k_0 * std::pow(h(cell,side,qp),alpha) * gradPhi(cell,side,qp,dim) / mu_w;
+          q(cell,side,qp,dim) = -k_0 * std::pow(h(cell,side,qp),alpha) * gradPhi(cell,side,qp,dim);
         }
       }
     }
