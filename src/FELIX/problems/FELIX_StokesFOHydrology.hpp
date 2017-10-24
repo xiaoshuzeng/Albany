@@ -36,7 +36,6 @@
 #include "FELIX_ViscosityFO.hpp"
 #include "PHAL_FieldFrobeniusNorm.hpp"
 #include "FELIX_BasalFrictionCoefficient.hpp"
-#include "FELIX_BasalFrictionCoefficientNode.hpp"
 #include "FELIX_HydrologyWaterDischarge.hpp"
 #include "FELIX_HydrologyResidualPotentialEqn.hpp"
 #include "FELIX_HydrologyResidualThicknessEqn.hpp"
@@ -685,6 +684,12 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
   ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficient<EvalT,PHAL::AlbanyTraits,true,true>(*p,dl_basal));
   fm0.template registerEvaluator<EvalT>(ev);
 
+  //--- FELIX basal friction coefficient at nodes (for output in the mesh) ---//
+  p->set<bool>("Nodal",true);
+  ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficient<EvalT,PHAL::AlbanyTraits,true,true>(*p,dl_basal));
+  fm0.template registerEvaluator<EvalT>(ev);
+
+
   //--- Shared Parameter for basal friction coefficient: lambda ---//
   p = Teuchos::rcp(new Teuchos::ParameterList("Basal Friction Coefficient: lambda"));
 
@@ -720,22 +725,6 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
   ptr_power = Teuchos::rcp(new FELIX::SharedParameter<EvalT,PHAL::AlbanyTraits,FelixParamEnum,FelixParamEnum::Power>(*p,dl));
   ptr_power->setNominalValue(params->sublist("Parameters"),params->sublist("FELIX Basal Friction Coefficient").get<double>(param_name,-1.0));
   fm0.template registerEvaluator<EvalT>(ptr_power);
-
-  //--- FELIX basal friction coefficient at nodes ---//
-  p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Basal Friction Coefficient Node"));
-
-  //Input
-  p->set<std::string>("Sliding Velocity Variable Name", "sliding_velocity");
-  p->set<std::string>("Effective Pressure Variable Name", "effective_pressure");
-  p->set<std::string>("Bed Roughness Variable Name", "Bed Roughness");
-  p->set<std::string>("Side Set Name", basalSideName);
-  p->set<Teuchos::ParameterList*>("Parameter List", &params->sublist("FELIX Basal Friction Coefficient"));
-
-  //Output
-  p->set<std::string>("Basal Friction Coefficient Variable Name", "beta");
-
-  ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficientNode<EvalT,PHAL::AlbanyTraits,true,true>(*p,dl_basal));
-  fm0.template registerEvaluator<EvalT>(ev);
 
   //--- Sliding velocity at nodes calculation ---//
   p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Velocity Norm"));

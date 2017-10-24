@@ -24,7 +24,6 @@
 #include "PHAL_Workset.hpp"
 
 #include "FELIX_BasalFrictionCoefficient.hpp"
-#include "FELIX_BasalFrictionCoefficientNode.hpp"
 #include "FELIX_EffectivePressure.hpp"
 #include "FELIX_ParamEnum.hpp"
 #include "FELIX_SharedParameter.hpp"
@@ -494,18 +493,9 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficient<EvalT,PHAL::AlbanyTraits,true,false>(*p,dl));
   fm0.template registerEvaluator<EvalT>(ev);
 
-  //--- FELIX basal friction coefficient node ---//
-  p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Basal Friction Coefficient Node"));
-
-  //Input
-  p->set<std::string>("Sliding Velocity Variable Name", "Sliding Velocity");
-  p->set<std::string>("Effective Pressure Variable Name", "Effective Pressure");
-  p->set<Teuchos::ParameterList*>("Parameter List", &params->sublist("FELIX Basal Friction Coefficient"));
-
-  //Output
-  p->set<std::string>("Basal Friction Coefficient Variable Name", "Beta");
-
-  ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficientNode<EvalT,PHAL::AlbanyTraits,true,false>(*p,dl));
+  //--- FELIX basal friction coefficient nodal (for output in the mesh) ---//
+  p->set<bool>("Nodal",true);
+  ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficient<EvalT,PHAL::AlbanyTraits,true,false>(*p,dl));
   fm0.template registerEvaluator<EvalT>(ev);
 
   // ------- Sliding Velocity -------- //
@@ -520,21 +510,6 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   p->set<std::string>("Field Norm Name","Sliding Velocity");
 
   ev = Teuchos::rcp(new PHAL::FieldFrobeniusNormParam<EvalT,PHAL::AlbanyTraits>(*p,dl));
-  fm0.template registerEvaluator<EvalT>(ev);
-
-  //--- FELIX basal friction coefficient node (to be saved in the mesh) ---//
-  p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Basal Friction Coefficient Node"));
-
-  //Input
-  p->set<std::string>("Sliding Velocity Variable Name", "Sliding Velocity");
-  p->set<std::string>("Effective Pressure Variable Name", "Effective Pressure");
-  p->set<Teuchos::ParameterList*>("Parameter List", &params->sublist("FELIX Basal Friction Coefficient"));
-  p->set<Teuchos::ParameterList*>("Stereographic Map", &params->sublist("Stereographic Map"));
-
-  //Output
-  p->set<std::string>("Basal Friction Coefficient Variable Name", "Beta");
-
-  ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficientNode<EvalT,PHAL::AlbanyTraits,true,false>(*p,dl));
   fm0.template registerEvaluator<EvalT>(ev);
 
   // ------- Hydrology Residual Potential Eqn-------- //
