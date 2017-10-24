@@ -18,7 +18,7 @@ template<typename EvalT, typename Traits>
 ComputeBasisFunctionsSide<EvalT, Traits>::
 ComputeBasisFunctionsSide (const Teuchos::ParameterList& p,
                            const Teuchos::RCP<Albany::Layouts>& dl_side) :
-  sideCoordVec  (p.get<std::string> ("Side Coordinate Vector Name"), dl_side->vertices_vector ),
+  sideCoordVec  (p.get<std::string> ("Coordinate Vector Name"), dl_side->vertices_vector ),
   tangents      (p.get<std::string> ("Tangents Name"), dl_side->qp_tensor_cd_sd ),
   metric        (p.get<std::string> ("Metric Name"), dl_side->qp_tensor ),
   w_measure     (p.get<std::string> ("Weighted Measure Name"), dl_side->qp_scalar ),
