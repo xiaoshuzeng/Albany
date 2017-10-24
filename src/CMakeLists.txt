@@ -161,6 +161,7 @@ SET(HEADERS ${HEADERS}
   problems/Albany_BCUtils_Def.hpp
   problems/Albany_EvaluatorUtils.hpp
   problems/Albany_EvaluatorUtils_Def.hpp
+  problems/Albany_GeneralPurposeFieldsNames.hpp
   problems/Albany_HeatProblem.hpp
   problems/Albany_Layouts.hpp
   problems/Albany_ProblemFactory.hpp
@@ -302,7 +303,7 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_DOFTensorInterpolation.cpp
   evaluators/PHAL_DOFVecInterpolation.cpp
   evaluators/PHAL_DOFVecInterpolationSide.cpp
-  evaluators/PHAL_Field2Norm.cpp
+  evaluators/PHAL_FieldFrobeniusNorm.cpp
   evaluators/PHAL_GatherAuxData.cpp
   evaluators/PHAL_GatherCoordinateVector.cpp
   evaluators/PHAL_GatherScalarNodalParameter.cpp
@@ -312,6 +313,7 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_IdentityCoordinateFunctionTraits.cpp
   evaluators/PHAL_LoadSideSetStateField.cpp
   evaluators/PHAL_LoadStateField.cpp
+  evaluators/PHAL_LumpedMass.cpp
   evaluators/PHAL_ConvertFieldType.cpp
   evaluators/PHAL_MapToPhysicalFrame.cpp
   evaluators/PHAL_MapToPhysicalFrameSide.cpp
@@ -431,8 +433,8 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_DOFVecInterpolation_Def.hpp
   evaluators/PHAL_DOFVecInterpolationSide.hpp
   evaluators/PHAL_DOFVecInterpolationSide_Def.hpp
-  evaluators/PHAL_Field2Norm.hpp
-  evaluators/PHAL_Field2Norm_Def.hpp
+  evaluators/PHAL_FieldFrobeniusNorm.hpp
+  evaluators/PHAL_FieldFrobeniusNorm_Def.hpp
   evaluators/PHAL_GatherAuxData.hpp
   evaluators/PHAL_GatherAuxData_Def.hpp
   evaluators/PHAL_GatherCoordinateVector.hpp
@@ -451,6 +453,8 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_LoadSideSetStateField_Def.hpp
   evaluators/PHAL_LoadStateField.hpp
   evaluators/PHAL_LoadStateField_Def.hpp
+  evaluators/PHAL_LumpedMass.hpp
+  evaluators/PHAL_LumpedMass_Def.hpp
   evaluators/PHAL_ConvertFieldType.hpp
   evaluators/PHAL_ConvertFieldType_Def.hpp
   evaluators/PHAL_MapToPhysicalFrame.hpp
