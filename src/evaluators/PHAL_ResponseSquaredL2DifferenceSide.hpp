@@ -35,7 +35,7 @@ private:
   typedef typename EvalT::ScalarT     ScalarT;
   typedef typename EvalT::MeshScalarT MeshScalarT;
 
-  int getLayout (const Teuchos::RCP<Albany::Layouts>& dl, const std::string& rank, Teuchos::RCP<PHX::DataLayout>& layout);
+  int getLayout (const Teuchos::RCP<Albany::Layouts>& dl, std::string& rank, Teuchos::RCP<PHX::DataLayout>& layout);
 
   std::string sideSetName;
 

@@ -187,32 +187,33 @@ postEvaluate(typename Traits::PostEvalData workset)
 // **********************************************************************
 template<typename EvalT, typename Traits, typename SourceScalarT, typename TargetScalarT>
 int PHAL::ResponseSquaredL2DifferenceSideBase<EvalT, Traits, SourceScalarT, TargetScalarT>::
-getLayout (const Teuchos::RCP<Albany::Layouts>& dl, const std::string& rank, Teuchos::RCP<PHX::DataLayout>& layout)
+getLayout (const Teuchos::RCP<Albany::Layouts>& dl, std::string& rank, Teuchos::RCP<PHX::DataLayout>& layout)
 {
+  std::transform(rank.begin(), rank.end(), rank.begin(), ::toupper);
   int dim = -1;
-  if (rank=="Scalar")
+  if (rank=="SCALAR")
   {
     layout = dl->qp_scalar;
     dim = 0;
   }
-  else if (rank=="Vector")
+  else if (rank=="VECTOR")
   {
     layout = dl->qp_vector;
     dim = 1;
   }
-  else if (rank=="Gradient")
+  else if (rank=="GRADIENT")
   {
     layout = dl->qp_gradient;
     dim = 1;
   }
-  else if (rank=="Tensor")
+  else if (rank=="TENSOR")
   {
     layout = dl->qp_tensor;
     dim = 2;
   }
   else
   {
-    TEUCHOS_TEST_FOR_EXCEPTION (true, Teuchos::Exceptions::InvalidParameter, "Error! Invalid 'Field Rank'.\n");
+    TEUCHOS_TEST_FOR_EXCEPTION (true, Teuchos::Exceptions::InvalidParameter, "Error! Invalid 'Field Rank' (" << rank << ").\n");
   }
 
   return dim;
