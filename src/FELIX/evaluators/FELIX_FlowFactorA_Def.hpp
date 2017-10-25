@@ -4,6 +4,8 @@
 //    in the file "license.txt" in the top-level Albany directory  //
 //*****************************************************************//
 
+#include "FELIX_ParamEnum.hpp"
+
 #include "Phalanx_DataLayout.hpp"
 #include "Phalanx_TypeStrings.hpp"
 
@@ -24,7 +26,9 @@ FlowFactorA<EvalT, Traits, ThermoCoupled>::FlowFactorA (const Teuchos::Parameter
   if (flowFactorType == "Uniform")
   {
     flowFactor_type = UNIFORM;
-    flowFactorParam = PHX::MDField<const ScalarT, Dim>("Flow Factor A",dl->shared_param);
+    flowFactorParam = PHX::MDField<const ScalarT, Dim>(ParamEnum::FlowFactorA_name,dl->shared_param);
+
+    this->addDependentField(flowFactorParam);
 
 #ifdef OUTPUT_TO_SCREEN
     *out << "Uniform Flow Factor A" << std::endl;
