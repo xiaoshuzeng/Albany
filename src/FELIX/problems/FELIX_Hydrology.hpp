@@ -388,19 +388,21 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
     fm0.template registerEvaluator<EvalT>(ev);
   }
 
-  //--- Hydraulic Potential Gradient Norm (in case of p-laplacian)---//
-  p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Potential Gradient Norm"));
-
-  // Input
-  p->set<std::string>("Field Name","Hydraulic Potential Gradient");
-  p->set<std::string>("Field Layout","Cell QuadPoint Gradient");
-  p->set<Teuchos::ParameterList*>("Parameter List", &params->sublist("FELIX Field Norm"));
-
-  // Output
-  p->set<std::string>("Field Norm Name","Hydraulic Potential Gradient Norm");
-
-  ev = Teuchos::rcp(new PHAL::FieldFrobeniusNorm<EvalT,PHAL::AlbanyTraits>(*p,dl));
-  fm0.template registerEvaluator<EvalT>(ev);
+/*
+ *  //--- Hydraulic Potential Gradient Norm (in case of p-laplacian)---//
+ *  p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Potential Gradient Norm"));
+ *
+ *  // Input
+ *  p->set<std::string>("Field Name","Hydraulic Potential Gradient");
+ *  p->set<std::string>("Field Layout","Cell QuadPoint Gradient");
+ *  p->set<Teuchos::ParameterList*>("Parameter List", &params->sublist("FELIX Field Norm"));
+ *
+ *  // Output
+ *  p->set<std::string>("Field Norm Name","Hydraulic Potential Gradient Norm");
+ *
+ *  ev = Teuchos::rcp(new PHAL::FieldFrobeniusNorm<EvalT,PHAL::AlbanyTraits>(*p,dl));
+ *  fm0.template registerEvaluator<EvalT>(ev);
+ */
 
   // ------- Hydrology Water Discharge -------- //
   p = Teuchos::rcp(new Teuchos::ParameterList("Hydrology Water Discharge"));
@@ -409,7 +411,7 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   p->set<std::string> ("Water Thickness Variable Name","Water Thickness");
   p->set<std::string> ("Hydraulic Potential Gradient Variable Name","Hydraulic Potential Gradient");
   p->set<std::string> ("Hydraulic Potential Gradient Norm Variable Name","Hydraulic Potential Gradient Norm");
-  p->set<std::string> ("Regularization Parameter Name","Homotopy Parameter");
+  p->set<std::string> ("Regularization Parameter Name",ParamEnum::HomotopyParam_name);
 
   p->set<Teuchos::ParameterList*> ("FELIX Hydrology",&params->sublist("FELIX Hydrology"));
   p->set<Teuchos::ParameterList*> ("FELIX Physical Parameters",&params->sublist("FELIX Physical Parameters"));
@@ -579,21 +581,21 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   }
 
   //--- Shared Parameter: Uniform Flow Factor A ---//
-  p = Teuchos::rcp(new Teuchos::ParameterList("Basal Friction Coefficient: lambda"));
+  p = Teuchos::rcp(new Teuchos::ParameterList("Constant Flow Factor A"));
 
-  param_name = "Constant Flow Factor A";
+  param_name = ParamEnum::FlowFactorA_name;
   p->set<std::string>("Parameter Name", param_name);
   p->set< Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
 
   Teuchos::RCP<FELIX::SharedParameter<EvalT,PHAL::AlbanyTraits,FelixParamEnum,FelixParamEnum::FlowFactorA>> ptr_A;
   ptr_A = Teuchos::rcp(new FELIX::SharedParameter<EvalT,PHAL::AlbanyTraits,FelixParamEnum,FelixParamEnum::FlowFactorA>(*p,dl));
-  ptr_A->setNominalValue(params->sublist("Parameters"),params->sublist("FELIX Basal Friction Coefficient").get<double>(param_name,-1.0));
+  ptr_A->setNominalValue(params->sublist("Parameters"),params->sublist("FELIX Hydrology").get<double>(param_name,-1.0));
   fm0.template registerEvaluator<EvalT>(ptr_A);
 
   //--- Shared Parameter for basal friction coefficient: lambda ---//
   p = Teuchos::rcp(new Teuchos::ParameterList("Basal Friction Coefficient: lambda"));
 
-  param_name = "Bed Roughness";
+  param_name = ParamEnum::Lambda_name;
   p->set<std::string>("Parameter Name", param_name);
   p->set< Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
 
@@ -605,7 +607,7 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   //--- Shared Parameter for basal friction coefficient: mu ---//
   p = Teuchos::rcp(new Teuchos::ParameterList("Basal Friction Coefficient: mu"));
 
-  param_name = "Coulomb Friction Coefficient";
+  param_name = ParamEnum::Mu_name;
   p->set<std::string>("Parameter Name", param_name);
   p->set< Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
 
@@ -617,7 +619,7 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   //--- Shared Parameter for basal friction coefficient: power ---//
   p = Teuchos::rcp(new Teuchos::ParameterList("Basal Friction Coefficient: power"));
 
-  param_name = "Power Exponent";
+  param_name = ParamEnum::Power_name;
   p->set<std::string>("Parameter Name", param_name);
   p->set< Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
 
@@ -629,13 +631,16 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   //--- Shared Parameter for Continuation:  ---//
   p = Teuchos::rcp(new Teuchos::ParameterList("Homotopy Parameter"));
 
-  param_name = "Homotopy Parameter";
+  param_name = ParamEnum::HomotopyParam_name;
   p->set<std::string>("Parameter Name", param_name);
   p->set< Teuchos::RCP<ParamLib> >("Parameter Library", paramLib);
 
+  // Note: homotopy param (h) is used to regularize. Hence, set default to 0.0, in case there's no continuation,
+  //       so we don't regularize. Recall that if no nominal values are set in input files, setNominalValue picks
+  //       the value passed as second input.
   Teuchos::RCP<FELIX::SharedParameter<EvalT,PHAL::AlbanyTraits,FelixParamEnum,FelixParamEnum::Homotopy>> ptr_homotopy;
   ptr_homotopy = Teuchos::rcp(new FELIX::SharedParameter<EvalT,PHAL::AlbanyTraits,FelixParamEnum,FelixParamEnum::Homotopy>(*p,dl));
-  ptr_homotopy->setNominalValue(params->sublist("Parameters"),params->sublist("FELIX Viscosity").get<double>(param_name,-1.0));
+  ptr_homotopy->setNominalValue(params->sublist("Parameters"),0.0);
   fm0.template registerEvaluator<EvalT>(ptr_homotopy);
 
   // ----------------------------------------------------- //
