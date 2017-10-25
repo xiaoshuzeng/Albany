@@ -10,7 +10,7 @@
 namespace FELIX
 {
 
-template<typename EvalT, typename Traits, typename ParamNameEnum, ParamNameEnum ParamName>
+template<typename EvalT, typename Traits, typename ParamNameEnum, ParamNameEnum ParamNameId>
 class SharedParameter : public PHX::EvaluatorWithBaseImpl<Traits>,
                         public PHX::EvaluatorDerived<EvalT, Traits>,
                         public Sacado::ParameterAccessor<EvalT, SPL_Traits>
@@ -18,7 +18,6 @@ class SharedParameter : public PHX::EvaluatorWithBaseImpl<Traits>,
 public:
 
   typedef typename EvalT::ScalarT   ScalarT;
-  typedef ParamNameEnum             EnumType;
 
   SharedParameter (const Teuchos::ParameterList& p, const Teuchos::RCP<Albany::Layouts>& dl)
   {
@@ -67,8 +66,8 @@ protected:
   PHX::MDField<ScalarT,Dim>   param_as_field;
 };
 
-template<typename EvalT, typename Traits, typename ParamNameEnum, ParamNameEnum ParamName>
-void SharedParameter<EvalT,Traits,ParamNameEnum,ParamName>::
+template<typename EvalT, typename Traits, typename ParamNameEnum, ParamNameEnum ParamNameId>
+void SharedParameter<EvalT,Traits,ParamNameEnum,ParamNameId>::
 setNominalValue (const Teuchos::ParameterList& p, double default_value)
 {
   // First we scan the Parameter list to see if this parameter is listed in it,
@@ -119,14 +118,14 @@ setNominalValue (const Teuchos::ParameterList& p, double default_value)
   dummy = 0;
 }
 
-template<typename EvalT, typename Traits, typename ParamNameEnum, ParamNameEnum ParamName>
-typename EvalT::ScalarT SharedParameter<EvalT,Traits,ParamNameEnum,ParamName>::value;
+template<typename EvalT, typename Traits, typename ParamNameEnum, ParamNameEnum ParamNameId>
+typename EvalT::ScalarT SharedParameter<EvalT,Traits,ParamNameEnum,ParamNameId>::value;
 
-template<typename EvalT, typename Traits, typename ParamNameEnum, ParamNameEnum ParamName>
-typename EvalT::ScalarT SharedParameter<EvalT,Traits,ParamNameEnum,ParamName>::dummy;
+template<typename EvalT, typename Traits, typename ParamNameEnum, ParamNameEnum ParamNameId>
+typename EvalT::ScalarT SharedParameter<EvalT,Traits,ParamNameEnum,ParamNameId>::dummy;
 
-template<typename EvalT, typename Traits, typename ParamNameEnum, ParamNameEnum ParamName>
-std::string SharedParameter<EvalT,Traits,ParamNameEnum,ParamName>::param_name;
+template<typename EvalT, typename Traits, typename ParamNameEnum, ParamNameEnum ParamNameId>
+std::string SharedParameter<EvalT,Traits,ParamNameEnum,ParamNameId>::param_name;
 
 } // Namespace FELIX
 
