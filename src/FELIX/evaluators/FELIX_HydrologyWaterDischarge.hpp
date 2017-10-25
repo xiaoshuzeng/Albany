@@ -23,13 +23,8 @@ namespace FELIX
 */
 
 template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokes>
-class HydrologyWaterDischarge;
-
-// Partial specialization for Hydrology Only problem
-template<typename EvalT, typename Traits, bool HasThicknessEqn>
-class HydrologyWaterDischarge<EvalT,Traits,HasThicknessEqn,false> :
-      public PHX::EvaluatorWithBaseImpl<Traits>,
-      public PHX::EvaluatorDerived<EvalT, Traits>
+class HydrologyWaterDischarge : public PHX::EvaluatorWithBaseImpl<Traits>,
+                                public PHX::EvaluatorDerived<EvalT, Traits>
 {
 public:
 
@@ -47,65 +42,31 @@ public:
 
 private:
 
-  // Input:
-  PHX::MDField<const ScalarT,Cell,QuadPoint,Dim>  gradPhi;
-  PHX::MDField<const ScalarT,Cell,QuadPoint>      gradPhiNorm;
-  PHX::MDField<const hScalarT,Cell,QuadPoint>     h;
-  PHX::MDField<const ScalarT,Dim>                 regularizationParam;
-
-  // Output:
-  PHX::MDField<ScalarT,Cell,QuadPoint,Dim>  q;
-
-  int numQPs;
-  int numDim;
-
-  double k_0;
-  double alpha;
-  double beta;
-
-  bool needsGradPhiNorm;
-  bool regularize;
-};
-
-// Partial specialization for StokesFO coupling
-template<typename EvalT, typename Traits, bool HasThicknessEqn>
-class HydrologyWaterDischarge<EvalT,Traits,HasThicknessEqn,true> :
-      public PHX::EvaluatorWithBaseImpl<Traits>,
-      public PHX::EvaluatorDerived<EvalT, Traits>
-{
-public:
-
-  typedef typename EvalT::ScalarT       ScalarT;
-  typedef typename EvalT::ParamScalarT  ParamScalarT;
-  typedef typename std::conditional<HasThicknessEqn,ScalarT,ParamScalarT>::type hScalarT;
-
-  HydrologyWaterDischarge (const Teuchos::ParameterList& p,
-                           const Teuchos::RCP<Albany::Layouts>& dl);
-
-  void postRegistrationSetup (typename Traits::SetupData d,
-                              PHX::FieldManager<Traits>& fm);
-
-  void evaluateFields(typename Traits::EvalData d);
-
-private:
+  void evaluateFieldsCell(typename Traits::EvalData d);
+  void evaluateFieldsSide(typename Traits::EvalData d);
 
   // Input:
-  PHX::MDField<const ScalarT,Cell,Side,QuadPoint,Dim>   gradPhi;
-  PHX::MDField<const ScalarT,Cell,Side,QuadPoint>       gradPhiNorm;
-  PHX::MDField<const hScalarT,Cell,Side,QuadPoint>      h;
+  PHX::MDField<const ScalarT>       gradPhi;
+  PHX::MDField<const ScalarT>       gradPhiNorm;
+  PHX::MDField<const hScalarT>      h;
+  PHX::MDField<const ScalarT,Dim>   regularizationParam;
 
   // Output:
-  PHX::MDField<ScalarT,Cell,Side,QuadPoint,Dim>   q;
+  PHX::MDField<ScalarT>   q;
 
   int numQPs;
   int numDim;
   std::string   sideSetName;
 
   double k_0;
-  double alpha;
-  double beta;
+
+  // These two would enable a more general case, where instead of (h^3 \grad \Phi)
+  // we would have (h^\alpha |\grad \Phi|^\beta \grad \Phi)
+  //double alpha;
+  //double beta;
 
   bool needsGradPhiNorm;
+  bool regularize;
 };
 
 } // Namespace FELIX
