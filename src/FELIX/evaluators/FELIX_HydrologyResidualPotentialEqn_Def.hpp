@@ -18,8 +18,6 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
   GradBF    (p.get<std::string> ("Gradient BF Name"), dl->node_qp_gradient),
   w_measure (p.get<std::string> ("Weighted Measure Name"), dl->qp_scalar),
   q         (p.get<std::string> ("Water Discharge Variable Name"), dl->qp_gradient),
-  N         (p.get<std::string> ("Effective Pressure Variable Name"), dl->qp_scalar),
-  m         (p.get<std::string> ("Melting Rate Variable Name"), dl->qp_scalar),
   h         (p.get<std::string> ("Water Thickness Variable Name"), dl->qp_scalar),
   omega     (p.get<std::string> ("Surface Water Input Variable Name"), dl->qp_scalar),
   u_b       (p.get<std::string> ("Sliding Velocity Variable Name"), dl->qp_scalar),
@@ -83,16 +81,19 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
   flowFactorA = PHX::MDField<const tScalarT>(p.get<std::string>("Flow Factor A Variable Name"), dl->cell_scalar2);
 
   mass_lumping = hydrology_params.isParameter("Mass Lumping") ? hydrology_params.get<bool>("Mass Lumping") : false;
+  Teuchos::RCP<PHX::DataLayout> layout;
   if (mass_lumping) {
-    h_nodal = PHX::MDField<const hScalarT>(p.get<std::string> ("Water Thickness Variable Name"), dl->node_scalar);
-    N_nodal = PHX::MDField<const ScalarT>(p.get<std::string> ("Effective Pressure Variable Name"), dl->node_scalar);
-    m_nodal = PHX::MDField<const ScalarT>(p.get<std::string> ("Melting Rate Variable Name"), dl->node_scalar);
-    this->addDependentField(N_nodal);
+    layout = dl->node_scalar;
+    h_nodal = PHX::MDField<const hScalarT>(p.get<std::string> ("Water Thickness Variable Name"), layout);
     this->addDependentField(h_nodal);
-    this->addDependentField(m_nodal);
   } else {
-    this->addDependentField(m);
+    layout = dl->qp_scalar;
   }
+
+  N = PHX::MDField<const ScalarT>(p.get<std::string> ("Effective Pressure Variable Name"), layout);
+  m = PHX::MDField<const ScalarT>(p.get<std::string> ("Melting Rate Variable Name"), layout);
+
+  this->addDependentField(m);
   this->addDependentField(N);
   this->addDependentField(h);
   this->addDependentField(BF);
@@ -101,7 +102,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
   this->addDependentField(q);
   this->addDependentField(omega);
   this->addDependentField(u_b);
-
+  this->addDependentField(flowFactorA);
 
   /*
    * Scalings, needed to account for different units: ice velocity
@@ -124,7 +125,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
    *  1) rho_combo*m                    (no scaling)
    *  2) scaling_omega*omega            scaling_omega = yr_to_day/1000
    *  3) scaling_q*dot(q,grad(v))       scaling_q     = 1e-3*yr_to_s
-   *  4) A_mod*h*N^3                    A_mod         = A/1000
+   *  4) scaling_A*A*h*N^3              scaling_A     = 1.0/1000
    *  5) (h_r-h)*|u|/l_r                (no scaling)
    *
    * where yr_to_s=365.25*24*3600 (the number of seconds in a year)
@@ -155,12 +156,9 @@ postRegistrationSetup(typename Traits::SetupData d,
     this->utils.setFieldData(metric,fm);
 
   if (mass_lumping) {
-    this->utils.setFieldData(N_nodal,fm);
     this->utils.setFieldData(h_nodal,fm);
-    this->utils.setFieldData(m_nodal,fm);
-  } else {
-    this->utils.setFieldData(m,fm);
   }
+  this->utils.setFieldData(m,fm);
   this->utils.setFieldData(N,fm);
   this->utils.setFieldData(h,fm);
 
@@ -285,7 +283,7 @@ evaluateFieldsCell (typename Traits::EvalData workset)
         }
 
         if (mass_lumping) {
-          res_node += rho_combo*m_nodal(cell,node) + (2.0/9.0)*h_nodal(cell,node)*scaling_A*flowFactorA(cell)*std::pow(N_nodal(cell,node),3);
+          res_node += rho_combo*m(cell,node) + (2.0/9.0)*h_nodal(cell,node)*scaling_A*flowFactorA(cell)*std::pow(N(cell,node),3);
         }
 
         residual (cell,node) = res_node;
