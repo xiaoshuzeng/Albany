@@ -11,9 +11,10 @@ npy = ney;  % periodic in y, so one less point
 np = npx*npy;
 
 x = linspace(0,L,npx);
+H_min = min(0.001,H/npx); % make sure there are no flat elements at the end
 
 % Geometry (ice thickness and surface height)
-func_thickness = @(x)(H*sqrt(1-x/L));
+func_thickness = @(x)(max(H_min,H*sqrt(1-x/L)));
 s = func_thickness(x);
 
 surface_height = [];
@@ -96,7 +97,7 @@ wt = interp1(x_ref,h_ref,x,"extrap");
 rm = 25;  % mm/day
 rs = 60;  % mm/(day*km)
 sm = 0.5; % km
-func_water_input = @(x)(max(0,rm-rs*(s-sm)));
+func_water_input = @(x)(max(0,rm-rs*abs(s-sm)));
 swi = func_water_input(x);
 
 surface_water_input = [];
