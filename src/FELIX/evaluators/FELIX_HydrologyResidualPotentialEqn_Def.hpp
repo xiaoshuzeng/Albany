@@ -74,13 +74,13 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
   eta_i             = physical_params.get<double>("Ice Viscosity",-1.0);
 
   rho_combo = (melting_mass ? 1.0 : 0.0) / rho_w - (melting_cav ? 1.0 : 0.0) / rho_i;
-  mu_w      = physical_params.get<double>("Water Viscosity");
   h_r       = hydrology_params.get<double>("Bed Bumps Height");
   l_r       = hydrology_params.get<double>("Bed Bumps Length");
 
   flowFactorA = PHX::MDField<const tScalarT>(p.get<std::string>("Flow Factor A Variable Name"), dl->cell_scalar2);
 
   mass_lumping = hydrology_params.isParameter("Mass Lumping") ? hydrology_params.get<bool>("Mass Lumping") : false;
+  penalization = hydrology_params.isParameter("Penalize Negative Potential") ? hydrology_params.get<bool>("Penalize Negative Potential") : false;
   Teuchos::RCP<PHX::DataLayout> layout;
   if (mass_lumping) {
     layout = dl->node_scalar;
@@ -92,6 +92,13 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
 
   N = PHX::MDField<const ScalarT>(p.get<std::string> ("Effective Pressure Variable Name"), layout);
   m = PHX::MDField<const ScalarT>(p.get<std::string> ("Melting Rate Variable Name"), layout);
+
+  if (penalization) {
+    phi = PHX::MDField<const ScalarT>(p.get<std::string> ("Hydraulic Potential Variable Name"), dl->node_scalar);
+    phi_0 = PHX::MDField<const ParamScalarT>(p.get<std::string>("Basal Gravitational Water Potential Variable Name"),dl->node_scalar);
+    this->addDependentField(phi);
+    this->addDependentField(phi_0);
+  }
 
   this->addDependentField(m);
   this->addDependentField(N);
@@ -113,12 +120,12 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
    *
    *  1) \int rho_combo*m*v*dx          [m km^2 yr^-1]
    *  2) \int omega*v*dx                [mm km^2 day^-1]
-   *  3) \int dot(q*grad(v))*dx         [1000 m^3 s^-1]
+   *  3) \int dot(q*grad(v))*dx         [m^2 s^-1 km]
    *  4) \int A*h*N^3*v*dx              [1000 m km^2 yr^-1]
    *  5) \int (h_r-h)*|u|/l_r*v*dx      [m km^2 yr^-1]
    *
-   * where q=k*h^3*gradPhi/mu_w, and v is the test function (non-dimensional).
-   * We decide to uniform all terms to have units [m km^2 s^-1].
+   * where q=k*h^3*gradPhi/(rho_w*g), and v is the test function (non-dimensional).
+   * We decide to uniform all terms to have units [m km^2 yr^-1].
    * Where possible, we do this by rescaling some constants. Otherwise,
    * we simply introduce a new scaling factor
    *
@@ -129,6 +136,7 @@ HydrologyResidualPotentialEqn (const Teuchos::ParameterList& p,
    *  5) (h_r-h)*|u|/l_r                (no scaling)
    *
    * where yr_to_s=365.25*24*3600 (the number of seconds in a year)
+   * and   yr_to_day=365.25 (the number of days in a year)
    */
   double yr_to_s = 365.25*24*3600;
   scaling_A       = 1.0/1000;
@@ -158,6 +166,11 @@ postRegistrationSetup(typename Traits::SetupData d,
   if (mass_lumping) {
     this->utils.setFieldData(h_nodal,fm);
   }
+  if (penalization) {
+    this->utils.setFieldData(phi,fm);
+    this->utils.setFieldData(phi_0,fm);
+  }
+
   this->utils.setFieldData(m,fm);
   this->utils.setFieldData(N,fm);
   this->utils.setFieldData(h,fm);
@@ -219,7 +232,12 @@ evaluateFieldsSide (typename Traits::EvalData workset)
 
         res_node += res_qp * w_measure(cell,side,qp);
       }
-      residual (cell,side,node) += res_node;
+
+      if (penalization) {
+        ScalarT over_shoot = phi(cell,side,node) - phi_0(cell,side,node);
+        res_node += std::pow(std::min(ScalarT(0.0),over_shoot),2);
+      }
+      residual (cell,side,node) = res_node;
     }
   }
 }
@@ -286,6 +304,10 @@ evaluateFieldsCell (typename Traits::EvalData workset)
           res_node += rho_combo*m(cell,node) + (2.0/9.0)*h_nodal(cell,node)*scaling_A*flowFactorA(cell)*std::pow(N(cell,node),3);
         }
 
+        if (penalization) {
+          ScalarT over_shoot = phi(cell,node) - phi_0(cell,node);
+          res_node += std::pow(std::min(ScalarT(0.0),over_shoot),2);
+        }
         residual (cell,node) = res_node;
       }
     }

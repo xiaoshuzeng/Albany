@@ -59,6 +59,8 @@ private:
   PHX::MDField<const ScalarT>       m;
   PHX::MDField<const ParamScalarT>  omega;
   PHX::MDField<const uScalarT>      u_b;
+  PHX::MDField<const ScalarT>       phi;
+  PHX::MDField<const ParamScalarT>  phi_0;
 
   PHX::MDField<const tScalarT>      flowFactorA;
 
@@ -74,7 +76,6 @@ private:
 
   double eta_i;
   double use_eff_cav;
-  double mu_w;
   double rho_combo;
   double h_r;
   double l_r;
@@ -83,6 +84,7 @@ private:
   double scaling_A;
 
   bool mass_lumping;
+  bool penalization;
 
   // Variables necessary for stokes coupling
   std::string                     sideSetName;
