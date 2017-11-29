@@ -7,9 +7,17 @@
 #include "Albany_BCUtils.hpp"
 #include "Albany_BCUtils_Def.hpp"
 
-// Initialize statics
+// Define macro for explicit template instantiation
+#define BCUTILS_INSTANTIATE_TEMPLATE_CLASS_DIRICHLET(name) \
+  template class name<Albany::DirichletTraits>;
+#define BCUTILS_INSTANTIATE_TEMPLATE_CLASS_NEUMANN(name) \
+  template class name<Albany::NeumannTraits>;
+#define BCUTILS_INSTANTIATE_TEMPLATE_CLASS_SIDE_EQ_DIRICHLET(name) \
+  template class name<Albany::SideEqDirichletTraits>;
 
-const std::string Albany::DirichletTraits::bcParamsPl = "Dirichlet BCs";
-const std::string Albany::NeumannTraits::bcParamsPl = "Neumann BCs";
+#define BCUTILS_INSTANTIATE_TEMPLATE_CLASS(name)              \
+  BCUTILS_INSTANTIATE_TEMPLATE_CLASS_DIRICHLET(name)          \
+  BCUTILS_INSTANTIATE_TEMPLATE_CLASS_NEUMANN(name)            \
+  BCUTILS_INSTANTIATE_TEMPLATE_CLASS_SIDE_EQ_DIRICHLET(name)
 
 BCUTILS_INSTANTIATE_TEMPLATE_CLASS(Albany::BCUtils)

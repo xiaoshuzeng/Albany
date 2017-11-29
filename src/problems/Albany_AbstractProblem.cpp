@@ -171,6 +171,7 @@ Albany::AbstractProblem::getGenericProblemParams(std::string listname) const
   validPL->sublist("Distributed Parameters", false, "");
   validPL->sublist("Teko", false, "");
   validPL->sublist("XFEM", false, "");
+  validPL->sublist("Side Eqn Dirichlet BCs", false, "");
   validPL->sublist("Dirichlet BCs", false, "");
   validPL->sublist("Neumann BCs", false, "");
   validPL->sublist("Adaptation", false, "");

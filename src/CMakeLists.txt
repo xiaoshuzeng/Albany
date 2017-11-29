@@ -17,6 +17,7 @@ SET(SOURCES
   PHAL_AlbanyTraits.cpp
   PHAL_Dimension.cpp
   Albany_Application.cpp
+  Albany_BCTraits.cpp
   Albany_Memory.cpp
   Albany_ModelFactory.cpp
   Albany_ModelEvaluatorT.cpp
@@ -55,6 +56,7 @@ ENDIF()
 
 SET(HEADERS
   Albany_Application.hpp
+  Albany_BCTraits.hpp
   Albany_DataTypes.hpp
   Albany_DistributedParameterLibrary.hpp
   Albany_DistributedParameterDerivativeOpT.hpp
@@ -288,8 +290,10 @@ SET(SOURCES ${SOURCES}
   evaluators/PHAL_ComputeBasisFunctionsSide.cpp
   evaluators/PHAL_Dirichlet.cpp
   evaluators/PHAL_DirichletCoordinateFunction.cpp
-  evaluators/PHAL_DirichletOffNodeSet.cpp
+  evaluators/PHAL_DirichletOffSideSets.cpp
   evaluators/PHAL_DirichletField.cpp
+  evaluators/PHAL_DirichletFieldSideEq.cpp
+  evaluators/PHAL_DirichletSideEq.cpp
   evaluators/PHAL_DOFCellToSide.cpp
   evaluators/PHAL_DOFCellToSideQP.cpp
   evaluators/PHAL_DOFInterpolation.cpp
@@ -405,8 +409,12 @@ SET(HEADERS ${HEADERS}
   evaluators/PHAL_DirichletCoordinateFunction_Def.hpp
   evaluators/PHAL_DirichletField.hpp
   evaluators/PHAL_DirichletField_Def.hpp
-  evaluators/PHAL_DirichletOffNodeSet.hpp
-  evaluators/PHAL_DirichletOffNodeSet_Def.hpp
+  evaluators/PHAL_DirichletFieldSideEq.hpp
+  evaluators/PHAL_DirichletFieldSideEq_Def.hpp
+  evaluators/PHAL_DirichletSideEq.hpp
+  evaluators/PHAL_DirichletSideEq_Def.hpp
+  evaluators/PHAL_DirichletOffSideSets.hpp
+  evaluators/PHAL_DirichletOffSideSets_Def.hpp
   evaluators/PHAL_DOFCellToSide.hpp
   evaluators/PHAL_DOFCellToSide_Def.hpp
   evaluators/PHAL_DOFCellToSideQP.hpp
