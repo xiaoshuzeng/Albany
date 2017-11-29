@@ -6,18 +6,18 @@
 
 #include "FELIX_ProblemFactory.hpp"
 
+#include "FELIX_Enthalpy.hpp"
+#include "FELIX_Hydrology.hpp"
+#include "FELIX_LaplacianSampling.hpp"
+#include "FELIX_PopulateMesh.hpp"
 #include "FELIX_SchoofFit.hpp"
 #include "FELIX_Stokes.hpp"
 #include "FELIX_StokesFO.hpp"
-#include "FELIX_StokesL1L2.hpp"
-#include "FELIX_Hydrology.hpp"
-#include "FELIX_Enthalpy.hpp"
-#include "FELIX_PopulateMesh.hpp"
+#include "FELIX_StokesFOHydrology.hpp"
 #include "FELIX_StokesFOThermoCoupled.hpp"
-#include "FELIX_LaplacianSampling.hpp"
+#include "FELIX_StokesL1L2.hpp"
 
 #ifdef ALBANY_EPETRA
-#include "FELIX_StokesFOHydrology.hpp"
 #include "FELIX_StokesFOThickness.hpp"
 #endif
 

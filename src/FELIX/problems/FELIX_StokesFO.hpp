@@ -7,8 +7,6 @@
 #ifndef FELIX_STOKES_FO_PROBLEM_HPP
 #define FELIX_STOKES_FO_PROBLEM_HPP 1
 
-#include <type_traits>
-
 #include "Shards_CellTopology.hpp"
 #include "Teuchos_RCP.hpp"
 #include "Teuchos_ParameterList.hpp"
@@ -24,38 +22,37 @@
 #include "PHAL_AlbanyTraits.hpp"
 
 #include "PHAL_AddNoise.hpp"
+#include "PHAL_FieldFrobeniusNorm.hpp"
 #include "PHAL_LoadStateField.hpp"
-#include "PHAL_SaveCellStateField.hpp"
-#include "PHAL_DOFCellToSide.hpp"
-#include "PHAL_DOFVecInterpolationSide.hpp"
 #include "PHAL_LoadSideSetStateField.hpp"
+#include "PHAL_SaveCellStateField.hpp"
 #include "PHAL_SaveSideSetStateField.hpp"
 #include "PHAL_SaveStateField.hpp"
-#include "FELIX_FlowFactorA.hpp"
-#include "FELIX_SharedParameter.hpp"
-#include "FELIX_ParamEnum.hpp"
 
-#include "FELIX_DOFDivInterpolationSide.hpp"
-#include "FELIX_EffectivePressure.hpp"
-#include "FELIX_StokesFOResid.hpp"
-#include "FELIX_StokesFOBasalResid.hpp"
-#include "FELIX_L2ProjectedBoundaryLaplacianResidual.hpp"
-#ifdef CISM_HAS_FELIX
-#include "FELIX_CismSurfaceGradFO.hpp"
-#endif
-#include "FELIX_StokesFOBodyForce.hpp"
-#include "FELIX_StokesFOStress.hpp"
-#include "FELIX_ViscosityFO.hpp"
-#include "PHAL_FieldFrobeniusNorm.hpp"
-#include "FELIX_FluxDiv.hpp"
 #include "FELIX_BasalFrictionCoefficient.hpp"
 #include "FELIX_BasalFrictionCoefficientGradient.hpp"
 #include "FELIX_BasalFrictionHeat.hpp"
+#include "FELIX_DOFDivInterpolationSide.hpp"
 #include "FELIX_Dissipation.hpp"
-#include "FELIX_UpdateZCoordinate.hpp"
+#include "FELIX_EffectivePressure.hpp"
+#include "FELIX_FlowFactorA.hpp"
+#include "FELIX_FluxDiv.hpp"
 #include "FELIX_GatherVerticallyAveragedVelocity.hpp"
+#include "FELIX_L2ProjectedBoundaryLaplacianResidual.hpp"
+#include "FELIX_ParamEnum.hpp"
 #include "FELIX_PressureCorrectedTemperature.hpp"
+#include "FELIX_SharedParameter.hpp"
+#include "FELIX_StokesFOBasalResid.hpp"
+#include "FELIX_StokesFOBodyForce.hpp"
+#include "FELIX_StokesFOResid.hpp"
+#include "FELIX_StokesFOStress.hpp"
 #include "FELIX_Time.hpp"
+#include "FELIX_UpdateZCoordinate.hpp"
+#include "FELIX_ViscosityFO.hpp"
+
+#ifdef CISM_HAS_FELIX
+#include "FELIX_CismSurfaceGradFO.hpp"
+#endif
 
 //uncomment the following line if you want debug output to be printed to screen
 //#define OUTPUT_TO_SCREEN
