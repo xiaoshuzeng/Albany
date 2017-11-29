@@ -6,6 +6,7 @@
 
 #include "Phalanx_DataLayout.hpp"
 #include "Phalanx_TypeStrings.hpp"
+#include "Teuchos_VerboseObject.hpp"
 
 namespace FELIX
 {
@@ -18,6 +19,7 @@ HydrologyWaterDischarge (const Teuchos::ParameterList& p,
   h       (p.get<std::string> ("Water Thickness Variable Name"), dl->qp_scalar),
   q       (p.get<std::string> ("Water Discharge Variable Name"), dl->qp_gradient)
 {
+
   if (IsStokes) {
     TEUCHOS_TEST_FOR_EXCEPTION (!dl->isSideLayouts, std::logic_error,
                                 "Error! For coupling with StokesFO, the Layouts structure must be that of the basal side.\n");
@@ -105,7 +107,19 @@ void HydrologyWaterDischarge<EvalT, Traits, HasThicknessEqn, IsStokes>::evaluate
   ScalarT regularization(0.0);
   if (regularize)
   {
-    regularization = std::pow(10.0,-10*regularizationParam(0));
+    regularization = regularizationParam(0);
+  }
+  Teuchos::RCP<Teuchos::FancyOStream> output(Teuchos::VerboseObjectBase::getDefaultOStream());
+  int procRank = Teuchos::GlobalMPISession::getRank();
+  int numProcs = Teuchos::GlobalMPISession::getNProc();
+  output->setProcRankAndSize (procRank, numProcs);
+  output->setOutputToRootOnly (0);
+
+  static ScalarT printedReg = -1;
+  if (printedReg!=regularization)
+  {
+    *output << "reg = " << regularization << "\n";
+    printedReg = regularization;
   }
 
 /*
@@ -133,7 +147,7 @@ void HydrologyWaterDischarge<EvalT, Traits, HasThicknessEqn, IsStokes>::evaluate
         for (int dim(0); dim<numDim; ++dim)
         {
 //          q(cell,qp,dim) = -k_0 * std::pow(h(cell,qp),alpha) * gradPhi(cell,qp,dim);
-          q(cell,qp,dim) = -k_0 * std::pow(h(cell,qp)+regularization,3) * gradPhi(cell,qp,dim);
+          q(cell,qp,dim) = -k_0 * (std::pow(h(cell,qp),3)+regularization) * gradPhi(cell,qp,dim);
         }
       }
     }
@@ -185,7 +199,7 @@ evaluateFieldsSide (typename Traits::EvalData workset)
       for (int dim(0); dim<numDim; ++dim)
       {
         //q(cell,side,qp,dim) = -k_0 * std::pow(h(cell,side,qp),alpha) * gradPhi(cell,side,qp,dim);
-        q(cell,side,qp,dim) = -k_0 * std::pow(h(cell,side,qp)+regularization,3) * gradPhi(cell,side,qp,dim);
+        q(cell,side,qp,dim) = -k_0 * (std::pow(h(cell,side,qp),3)+regularization) * gradPhi(cell,side,qp,dim);
       }
     }
   }

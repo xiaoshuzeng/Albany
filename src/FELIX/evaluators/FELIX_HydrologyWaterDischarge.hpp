@@ -17,10 +17,23 @@
 namespace FELIX
 {
 
-/** \brief Hydrology Residual Evaluator
-
-    This evaluator evaluates the residual of the Hydrology model
-*/
+/* \brief Hydrology Water Discharge Evaluator
+ *
+ *   This evaluator evaluates
+ *
+ *     q = - (k_0 * h^3)/(\rho_w * g) * grad \Phi
+ *
+ *   It is assumed that the units of each term are
+ *
+ *    1) k_0       : [m^-1 s^-1]
+ *    2) h         : [m]
+ *    3) \rho_w    : [kg m^-3]
+ *    4) g         : [m s^-2]
+ *    5) grad \Phi : [kPa km^-1]
+ *
+ *   which yields water discharge units [m^2 s^-1].
+ *
+ */
 
 template<typename EvalT, typename Traits, bool HasThicknessEqn, bool IsStokes>
 class HydrologyWaterDischarge : public PHX::EvaluatorWithBaseImpl<Traits>,
