@@ -276,6 +276,21 @@ FELIX::StokesFOHydrology::constructDirichletEvaluators(
   Albany::BCUtils<Albany::DirichletTraits> dirUtils;
   dfm = dirUtils.constructBCEvaluators(meshSpecs.nsNames, dir_names, this->params, this->paramLib, neq);
   offsets_ = dirUtils.getOffsets();
+
+  // Construct Dirichlet evaluators for equations on sidesets (hydrology)
+  std::map<std::string,std::vector<std::string>> sideNodeSetNames;
+  for (auto it : meshSpecs.sideSetMeshSpecs) {
+    sideNodeSetNames[it.first] = it.second[0]->nsNames;
+  }
+
+  Albany::BCUtils<Albany::SideEqDirichletTraits> sideDirUtils;
+  std::vector<std::string> sideDofNames;
+  std::vector<int> sideDofsOffset;
+  for (int i=0; i<hydro_neq; ++i) {
+    sideDofNames.push_back(hydro_dof_names[i]);
+    sideDofsOffset.push_back(stokes_neq+i);
+  }
+  sideDirUtils.constructBCEvaluators(dfm, meshSpecs.sideSetMeshNames, sideNodeSetNames, sideDofNames, sideDofsOffset, dl, this->params, this->paramLib);
 }
 
 // Neumann BCs
