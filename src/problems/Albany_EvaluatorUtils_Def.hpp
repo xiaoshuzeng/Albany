@@ -31,6 +31,7 @@
 #include "PHAL_NodesToCellInterpolation.hpp"
 #include "PHAL_QuadPointsToCellInterpolation.hpp"
 #include "PHAL_ScatterResidual.hpp"
+#include "PHAL_ScatterScalarNodalParameter.hpp"
 #include "PHAL_SideQuadPointsToSideInterpolation.hpp"
 
 
@@ -231,10 +232,11 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructGatherScalarNodalPara
 
     RCP<ParameterList> p = rcp(new ParameterList("Gather Parameter"));
     p->set<std::string>("Parameter Name", param_name);
-    if (field_name!="")
+    if (field_name!="") {
       p->set<std::string>("Field Name", field_name);
-    else
+    } else {
       p->set<std::string>("Field Name", param_name);
+    }
 
     return rcp(new PHAL::GatherScalarNodalParameter<EvalT,Traits>(*p,dl));
 }
@@ -253,13 +255,60 @@ Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructGatherScalarExtruded2
 
     RCP<ParameterList> p = rcp(new ParameterList("Gather Parameter"));
     p->set<std::string>("Parameter Name", param_name);
-    if (field_name!="")
+    if (field_name!="") {
       p->set<std::string>("Field Name", field_name);
-    else
+    } else {
       p->set<std::string>("Field Name", param_name);
+    }
 
-      p->set<int>("Field Level", 0);
+    p->set<int>("Field Level", 0);
     return rcp(new PHAL::GatherScalarExtruded2DNodalParameter<EvalT,Traits>(*p,dl));
+}
+
+template<typename EvalT, typename Traits, typename ScalarT>
+Teuchos::RCP< PHX::Evaluator<Traits> >
+Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructScatterScalarNodalParameter(
+       const std::string& param_name,
+       const std::string& field_name) const
+{
+    using Teuchos::RCP;
+    using Teuchos::rcp;
+    using Teuchos::ParameterList;
+    using std::string;
+
+    RCP<ParameterList> p = rcp(new ParameterList("Scatter Parameter"));
+    p->set<std::string>("Parameter Name", param_name);
+    if (field_name!="") {
+      p->set<std::string>("Field Name", field_name);
+    } else {
+      p->set<std::string>("Field Name", param_name);
+    }
+
+    return rcp(new PHAL::ScatterScalarNodalParameter<EvalT,Traits>(*p,dl));
+}
+
+
+template<typename EvalT, typename Traits, typename ScalarT>
+Teuchos::RCP< PHX::Evaluator<Traits> >
+Albany::EvaluatorUtilsBase<EvalT,Traits,ScalarT>::constructScatterScalarExtruded2DNodalParameter(
+       const std::string& param_name,
+       const std::string& field_name) const
+{
+    using Teuchos::RCP;
+    using Teuchos::rcp;
+    using Teuchos::ParameterList;
+    using std::string;
+
+    RCP<ParameterList> p = rcp(new ParameterList("Scatter Parameter"));
+    p->set<std::string>("Parameter Name", param_name);
+    if (field_name!="") {
+      p->set<std::string>("Field Name", field_name);
+    } else {
+      p->set<std::string>("Field Name", param_name);
+    }
+
+    p->set<int>("Field Level", 0);
+    return rcp(new PHAL::ScatterScalarExtruded2DNodalParameter<EvalT,Traits>(*p,dl));
 }
 
 template<typename EvalT, typename Traits, typename ScalarT>
