@@ -18,12 +18,12 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
   /*
    *  The (water) thickness equation has the following (strong) form
    *
-   *     dh/dt = m/rho_i + (h_r-h)*|u_b|/l_r - AhN^3
+   *     dh/dt = m/rho_i + (h_r-h)*|u_b|/l_r - (2.0/n^n)*A*h*N^3
    *
    *  where h is the water thickness, m the melting rate of the ice,
    *  h_r/l_r typical height/length of bed bumps, u_b the sliding
-   *  velocity of the ice, A the Glen's law flow factor, and N is
-   *  the effective pressure. Also, dh/dt denotes the *partial* tim derivative.
+   *  velocity of the ice, A the Glen's law flow factor, n as in Glen's law, and N is
+   *  the effective pressure. Also, dh/dt denotes the *partial* time derivative.
    *  NOTE: if the term m/rho_i is present, there is no proof of well posedness
    *        for the hydrology equations. Therefore, we only turn this term
    *        on upon request.
@@ -74,7 +74,7 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
    *
    *  1) \int h_t*v*dx              [m km^2 s^-1]
    *  2) \int rho_i_inv*m*v*dx      [m km^2 yr^-1]
-   *  3) \int A*h*N^3*v*dx          [1000 m km^2 yr^-1]
+   *  3) \int 2/(n^n)*A*h*N^3*v*dx          [1000 m km^2 yr^-1]
    *  4) \int (h_r-h)*|u|/l_r*v*dx  [m km^2 yr^-1]
    *
    * where q=k*h^3*gradPhi/mu_w, and v is the test function.
@@ -82,10 +82,10 @@ HydrologyResidualThicknessEqn (const Teuchos::ParameterList& p,
    * Where possible, we do this by rescaling some constants. Otherwise,
    * we simply introduce a new scaling factor
    *
-   *  1) scaling_h_t*h_t      scaling_h_t = 1/yr_to_s
-   *  2) rho_i_inv_m          (no scaling)
-   *  3) scaling_A*A*h*N^3    scaling_A = 1.0/1000
-   *  4) (h_r-h)*|u|/l_r      (no scaling)
+   *  1) scaling_h_t*h_t            scaling_h_t = 1/yr_to_s
+   *  2) rho_i_inv_m                (no scaling)
+   *  3) 2/(n^n)*scaling_A*A*h*N^3  scaling_A = 1.0/1000
+   *  4) (h_r-h)*|u|/l_r            (no scaling)
    *
    * where yr_to_s=365.25*24*3600 (the number of seconds in a year)
    */
@@ -223,14 +223,14 @@ evaluateFieldsCell (typename Traits::EvalData workset)
       if (nodal_equation) {
         res_node = rho_i_inv*m(cell,node) +
                  + (h_r - use_eff_cav*h(cell,node))*u_b(cell,node)/l_r
-                 - h(cell,node)*scaling_A*flowFactorA(cell)*std::pow(N(cell,node),3)
+                 - (2.0/9.0)*h(cell,node)*scaling_A*flowFactorA(cell)*std::pow(N(cell,node),3)
                  - (unsteady ? scaling_h_t*h_dot(cell,node) : zero);
       } else {
         for (int qp=0; qp < numQPs; ++qp)
         {
           res_qp = rho_i_inv*m(cell,qp)
                  + (h_r - use_eff_cav*h(cell,qp))*u_b(cell,qp)/l_r
-                 - h(cell,qp)*scaling_A*flowFactorA(cell)*std::pow(N(cell,qp),3)
+                 - (2.0/9.0)*h(cell,qp)*scaling_A*flowFactorA(cell)*std::pow(N(cell,qp),3)
                  - (unsteady ? scaling_h_t*h_dot(cell,qp) : zero);
 
           res_node += res_qp * BF(cell,node,qp) * w_measure(cell,qp);
