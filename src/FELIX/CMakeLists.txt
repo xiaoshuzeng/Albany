@@ -24,8 +24,10 @@
        evaluators/FELIX_FluxDiv.cpp
        evaluators/FELIX_GeoFluxHeat.cpp
        evaluators/FELIX_HydrologyDirichlet.cpp
+       evaluators/FELIX_HydrologyBasalGravitationalWaterPotential.cpp
        evaluators/FELIX_HydrologyWaterDischarge.cpp
        evaluators/FELIX_HydrologyWaterSource.cpp
+       evaluators/FELIX_HydrologyWaterThickness.cpp
        evaluators/FELIX_HydrologyMeltingRate.cpp
        evaluators/FELIX_HydrologyResidualPotentialEqn.cpp
        evaluators/FELIX_HydrologyResidualThicknessEqn.cpp
@@ -139,10 +141,14 @@ ENDIF()
        evaluators/FELIX_GeoFluxHeat_Def.hpp
        evaluators/FELIX_HydrologyDirichlet.hpp
        evaluators/FELIX_HydrologyDirichlet_Def.hpp
+       evaluators/FELIX_HydrologyBasalGravitationalWaterPotential.hpp
+       evaluators/FELIX_HydrologyBasalGravitationalWaterPotential_Def.hpp
        evaluators/FELIX_HydrologyWaterDischarge.hpp
        evaluators/FELIX_HydrologyWaterDischarge_Def.hpp
        evaluators/FELIX_HydrologyWaterSource.hpp
        evaluators/FELIX_HydrologyWaterSource_Def.hpp
+       evaluators/FELIX_HydrologyWaterThickness.hpp
+       evaluators/FELIX_HydrologyWaterThickness_Def.hpp
        evaluators/FELIX_HydrologyMeltingRate.hpp
        evaluators/FELIX_HydrologyMeltingRate_Def.hpp
        evaluators/FELIX_HydrologyResidualPotentialEqn.hpp
