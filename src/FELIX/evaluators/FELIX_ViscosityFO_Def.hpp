@@ -38,13 +38,15 @@ ViscosityFO(const Teuchos::ParameterList& p,
   arrmll (3.613e-13),     // [Pa-3 s-1]
   k4scyr (3.1536e19),     // [s y-1]
   arrmh (k4scyr*arrmlh),  // [Pa-3 yr-1]
-  arrml (k4scyr*arrmll),  // [Pa-3 yr-1]
+  arrml (k4scyr*arrmll)  // [Pa-3 yr-1]
 #else
   arrmh (6.26e22),        // [Pa-3 yr-1]
-  arrml (1.3e7),          // [Pa-3 yr-1]
+  arrml (1.3e7)          // [Pa-3 yr-1]
 #endif
-  homotopyParam("Glen's Law Homotopy Parameter", dl->shared_param)
 {
+  const std::string h_name = p.isParameter("Homotopy Parameter Name") ?
+                             p.get<std::string>("Homotopy Parameter Name") : "Glen's Law Homotopy Parameter";
+  homotopyParam = decltype(homotopyParam)(h_name, dl->shared_param);
   Teuchos::ParameterList* visc_list =
    p.get<Teuchos::ParameterList*>("Parameter List");
 
