@@ -23,11 +23,18 @@ FELIX::Hydrology::Hydrology (const Teuchos::RCP<Teuchos::ParameterList>& params,
   TEUCHOS_TEST_FOR_EXCEPTION (numDim!=1 && numDim!=2,std::logic_error,"Problem supports only 1D and 2D");
 
   has_h_equation = params->sublist("FELIX Hydrology").get<bool>("Use Water Thickness Equation",false);
+  eliminate_h = params->sublist("FELIX Hydrology").get<bool>("Eliminate Water Thickness", false);
   std::string sol_method = params->get<std::string>("Solution Method");
   if (sol_method=="Transient")
     unsteady = true;
   else
     unsteady = false;
+
+  TEUCHOS_TEST_FOR_EXCEPTION (eliminate_h && !has_h_equation, std::logic_error,
+                              "Error! Water Thickness can be eliminated only if the Water Thickness equation is used.\n");
+
+  TEUCHOS_TEST_FOR_EXCEPTION (eliminate_h && unsteady, std::logic_error,
+                              "Error! Water Thickness can be eliminated only in the steady case.\n");
 
   TEUCHOS_TEST_FOR_EXCEPTION (unsteady && !has_h_equation, std::logic_error,
                               "Error! Unsteady case require to use the water thickness equation.\n");
@@ -42,7 +49,7 @@ FELIX::Hydrology::Hydrology (const Teuchos::RCP<Teuchos::ParameterList>& params,
   }
 
   // Set the num PDEs for the null space object to pass to ML
-  if (has_h_equation)
+  if (has_h_equation && !eliminate_h)
   {
     this->setNumEquations(2);
 
@@ -131,7 +138,7 @@ void FELIX::Hydrology::constructDirichletEvaluators (const Albany::MeshSpecsStru
   // Construct Dirichlet evaluators for all nodesets and names
   std::vector<std::string> dirichletNames(neq);
   dirichletNames[0] = dof_names[0];
-  if (has_h_equation)
+  if (has_h_equation && !eliminate_h)
     dirichletNames[1] = dof_names[1];
 
   Albany::BCUtils<Albany::DirichletTraits> dirUtils;
@@ -142,11 +149,6 @@ void FELIX::Hydrology::constructDirichletEvaluators (const Albany::MeshSpecsStru
   Teuchos::Array<std::string> ns_names = hydro.get<Teuchos::Array<std::string>>("Zero Porewater Pressure On Node Sets",Teuchos::Array<std::string>());
   if (ns_names.size()>0 && dfm==Teuchos::null)
     dfm = Teuchos::rcp(new PHX::FieldManager<PHAL::AlbanyTraits>);
-
-
-  // Add the hydrology specific evaluators
-  HydrologyDirOp op(*this);
-  Sacado::mpl::for_each<PHAL::AlbanyTraits::BEvalTypes> fe(op);
 
   offsets_ = dirUtils.getOffsets();
 }
@@ -172,13 +174,13 @@ void FELIX::Hydrology::constructNeumannEvaluators (const Teuchos::RCP<Albany::Me
   offsets.resize(neq);
 
   neumannNames[0] = "Hydraulic Potential";
-  if (has_h_equation)
+  if (has_h_equation && !eliminate_h)
     neumannNames[1] = "Water Thickness";
   neumannNames[neq] = "all";
 
   offsets[0].resize(1);
   offsets[0][0] = 0;
-  if (has_h_equation)
+  if (has_h_equation && !eliminate_h)
   {
     offsets[1].resize(1);
     offsets[1][0] = 1;
