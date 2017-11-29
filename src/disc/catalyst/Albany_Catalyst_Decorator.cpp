@@ -69,7 +69,7 @@ Teuchos::RCP<const Tpetra_CrsGraph> Decorator::getJacobianGraphT() const {
   return discretization->getJacobianGraphT();
 }
 
-#ifdef ALBANY_AERAS 
+#ifdef ALBANY_AERAS
 Teuchos::RCP<const Tpetra_CrsGraph> Decorator::getImplicitJacobianGraphT() const {
   return discretization->getImplicitJacobianGraphT();
 }
@@ -85,7 +85,7 @@ Teuchos::RCP<const Tpetra_CrsGraph> Decorator::getOverlapJacobianGraphT() const 
   return discretization->getOverlapJacobianGraphT();
 }
 
-#ifdef ALBANY_AERAS 
+#ifdef ALBANY_AERAS
 Teuchos::RCP<const Tpetra_CrsGraph> Decorator::getImplicitOverlapJacobianGraphT() const {
   return discretization->getImplicitOverlapJacobianGraphT();
 }
@@ -209,6 +209,21 @@ void Decorator::printCoords() const
 
 const Decorator::SideSetDiscretizationsType& Decorator::getSideSetDiscretizations() const {
   return discretization->getSideSetDiscretizations();
+}
+
+const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>&
+Decorator::getSideSetsMapT() const {
+  return discretization->getSideSetsMapT();
+}
+
+const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>&
+Decorator::getSideSetsOverlapMapT() const{
+  return discretization->getSideSetsOverlapMapT();
+}
+
+const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>&
+Decorator::getSideSetsNodeMapT() const {
+  return discretization->getSideSetsNodeMapT();
 }
 
 const std::map<std::string,std::map<GO,GO>>& Decorator::getSideToSideSetCellMap() const {
@@ -339,7 +354,7 @@ void Decorator::setResidualFieldT(const Tpetra_Vector& residual) {
 
 #if defined(ALBANY_EPETRA)
 void Decorator::writeSolution(
-    const Epetra_Vector& solution, const Epetra_Vector& solution_dot, 
+    const Epetra_Vector& solution, const Epetra_Vector& solution_dot,
     const double time, const bool overlapped) {
   /* TODO: should react to this */
   discretization->writeSolution(solution, solution_dot, time, overlapped);
@@ -353,15 +368,15 @@ void Decorator::writeSolutionT(
 }
 
 void Decorator::writeSolutionT(
-    const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT, 
+    const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT,
     const double time, const bool overlapped) {
   /* TODO: should react to this */
   discretization->writeSolutionT(solutionT, solution_dotT, time, overlapped);
 }
 
 void Decorator::writeSolutionT(
-    const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT, 
-    const Tpetra_Vector &solution_dotdotT, 
+    const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT,
+    const Tpetra_Vector &solution_dotdotT,
     const double time, const bool overlapped) {
   /* TODO: should react to this */
   discretization->writeSolutionT(
@@ -382,7 +397,7 @@ void Decorator::writeSolutionToMeshDatabaseT(
 }
 
 void Decorator::writeSolutionToMeshDatabaseT(
-    const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT, 
+    const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT,
     const double time, const bool overlapped) {
   /* TODO: should react to this */
   discretization->writeSolutionToMeshDatabaseT(
@@ -390,8 +405,8 @@ void Decorator::writeSolutionToMeshDatabaseT(
 }
 
 void Decorator::writeSolutionToMeshDatabaseT(
-    const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT, 
-    const Tpetra_Vector &solution_dotdotT, 
+    const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT,
+    const Tpetra_Vector &solution_dotdotT,
     const double time, const bool overlapped) {
   /* TODO: should react to this */
   discretization->writeSolutionToMeshDatabaseT(

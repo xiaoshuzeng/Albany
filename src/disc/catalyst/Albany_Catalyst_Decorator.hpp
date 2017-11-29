@@ -42,7 +42,7 @@ public:
   //! Get Tpetra Jacobian graph
   Teuchos::RCP<const Tpetra_CrsGraph> getJacobianGraphT() const override;
 
-#ifdef ALBANY_AERAS 
+#ifdef ALBANY_AERAS
   //! Get implicit Tpetra Jacobian graph (for Aeras hyperviscosity)
   Teuchos::RCP<const Tpetra_CrsGraph> getImplicitJacobianGraphT() const override;
 #endif
@@ -51,7 +51,7 @@ public:
   Teuchos::RCP<const Epetra_CrsGraph> getOverlapJacobianGraph() const override;
   //! Get Tpetra overlap Jacobian graph
   Teuchos::RCP<const Tpetra_CrsGraph> getOverlapJacobianGraphT() const override;
-#ifdef ALBANY_AERAS 
+#ifdef ALBANY_AERAS
   //! Get implicit Tpetra Jacobian graph (for Aeras hyperviscosity)
   Teuchos::RCP<const Tpetra_CrsGraph> getImplicitOverlapJacobianGraphT() const override;
 #endif
@@ -74,7 +74,7 @@ public:
   //! Get overlapped Node map
   Teuchos::RCP<const Tpetra_Map> getOverlapNodeMapT() const override;
 
-  //! Returns boolean telling code whether explicit scheme is used (needed for Aeras problems only) 
+  //! Returns boolean telling code whether explicit scheme is used (needed for Aeras problems only)
   bool isExplicitScheme() const override;
 
   //! Get Field Node map
@@ -137,6 +137,11 @@ public:
   //! Get sideSet discretizations map
   const SideSetDiscretizationsType& getSideSetDiscretizations() const override;
 
+  // Restriction of maps to side sets discretizations
+  const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsMapT() const override;
+  const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsOverlapMapT() const override;
+  const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsNodeMapT() const override;
+
   //! Get the map side_id->side_set_elem_id
   const std::map<std::string,std::map<GO,GO>>& getSideToSideSetCellMap() const override;
 
@@ -192,26 +197,26 @@ public:
 
 #if defined(ALBANY_EPETRA)
   void writeSolution(const Epetra_Vector& soln, const double time, const bool overlapped = false) override;
-  void writeSolution(const Epetra_Vector& solution, const Epetra_Vector& solution_dot, 
+  void writeSolution(const Epetra_Vector& solution, const Epetra_Vector& solution_dot,
                              const double time, const bool overlapped = false) override;
 #endif
 
   //! Write the solution to the output file - Tpetra version. Calls next two together.
   void writeSolutionT(const Tpetra_Vector &solutionT, const double time, const bool overlapped = false) override;
-  void writeSolutionT(const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT, 
+  void writeSolutionT(const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT,
                               const double time, const bool overlapped = false) override;
-  void writeSolutionT(const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT, 
-                              const Tpetra_Vector &solution_dotdotT, 
+  void writeSolutionT(const Tpetra_Vector &solutionT, const Tpetra_Vector &solution_dotT,
+                              const Tpetra_Vector &solution_dotdotT,
                               const double time, const bool overlapped = false) override;
   void writeSolutionMV(const Tpetra_MultiVector &solutionT, const double time, const bool overlapped = false) override;
   //! Write the solution to the mesh database.
   void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT, const double time, const bool overlapped = false) override;
-  void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT, 
-                                            const Tpetra_Vector &solution_dotT, 
+  void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT,
+                                            const Tpetra_Vector &solution_dotT,
                                             const double time, const bool overlapped = false) override;
-  void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT, 
-                                            const Tpetra_Vector &solution_dotT, 
-                                            const Tpetra_Vector &solution_dotdotT, 
+  void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT,
+                                            const Tpetra_Vector &solution_dotT,
+                                            const Tpetra_Vector &solution_dotdotT,
                                             const double time, const bool overlapped = false) override;
   void writeSolutionMVToMeshDatabase(const Tpetra_MultiVector &solutionT, const double time, const bool overlapped = false) override;
   //! Write the solution to file. Must call writeSolutionT first.

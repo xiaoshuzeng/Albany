@@ -26,9 +26,9 @@
 #ifdef ALBANY_FELIX
 #include "Albany_ExtrudedSTKMeshStruct.hpp"
 #endif
-#ifdef ALBANY_FELIX
-#include "Albany_STKDiscretizationStokesH.hpp"
-#endif
+//#ifdef ALBANY_FELIX
+//#include "Albany_STKDiscretizationStokesH.hpp"
+//#endif
 #ifdef ALBANY_CUTR
 #include "Albany_FromCubitSTKMeshStruct.hpp"
 #endif

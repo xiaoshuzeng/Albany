@@ -126,6 +126,20 @@ class APFDiscretization : public Albany::AbstractDiscretization {
       return sideSetDiscretizations;
     }
 
+    // Restriction of maps to side sets discretizations
+    const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsMapT() const
+    {
+      return sideSetsMapT;
+    }
+    const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsOverlapMapT() const
+    {
+      return sideSetsOverlapMapT;
+    }
+    const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsNodeMapT() const
+    {
+      return sideSetsNodeMapT;
+    }
+
     //! Get the map side_id->side_set_elem_id
     const std::map<std::string,std::map<GO,GO> >& getSideToSideSetCellMap () const
     {
@@ -159,14 +173,14 @@ class APFDiscretization : public Albany::AbstractDiscretization {
     void writeAnySolutionToFile(const double time);
     void writeSolutionT(const Tpetra_Vector& soln, const double time, const bool overlapped = false);
     void writeSolutionT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot, const double time, const bool overlapped = false);
-    void writeSolutionT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot, 
+    void writeSolutionT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot,
                         const Tpetra_Vector& soln_dotdot, const double time, const bool overlapped = false);
     void writeSolutionMV(const Tpetra_MultiVector& soln, const double time, const bool overlapped = false);
     void writeSolutionToMeshDatabaseT(const Tpetra_Vector& soln, const double time, const bool overlapped = false);
-    void writeSolutionToMeshDatabaseT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot, 
+    void writeSolutionToMeshDatabaseT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot,
                                       const double time, const bool overlapped = false);
-    void writeSolutionToMeshDatabaseT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot, 
-                                      const Tpetra_Vector& soln_dotdot, 
+    void writeSolutionToMeshDatabaseT(const Tpetra_Vector& soln, const Tpetra_Vector &soln_dot,
+                                      const Tpetra_Vector& soln_dotdot,
                                       const double time, const bool overlapped = false);
     void writeSolutionMVToMeshDatabase(const Tpetra_MultiVector& soln, const double time, const bool overlapped = false);
     void writeSolutionToFileT(const Tpetra_Vector& soln, const double time, const bool overlapped = false);
@@ -468,6 +482,10 @@ class APFDiscretization : public Albany::AbstractDiscretization {
     std::map<std::string,Teuchos::RCP<Albany::AbstractDiscretization> > sideSetDiscretizations;
     std::map<std::string,std::map<GO,GO> >                              sideToSideSetCellMap;
     std::map<std::string,std::map<GO,std::vector<int> > >               sideNodeNumerationMap;
+
+    //! Restriction of maps to side set discretization (not supported but needed for getters return values)
+    std::map<std::string,Teuchos::RCP<const Tpetra_Map> >               sideSetsMapT;
+    std::map<std::string,Teuchos::RCP<const Tpetra_Map> >               sideSetsOverlapMapT;
 
     //! Connectivity array [workset, element, local-node, Eq] => LID
     Conn wsElNodeEqID;

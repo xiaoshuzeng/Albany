@@ -3218,11 +3218,11 @@ Albany::STKDiscretization::printVertexConnectivity(){
    }
 }
 
-void Albany::STKDiscretization::buildSideSetProjectors()
+void Albany::STKDiscretization::buildSideSetsMapsAndProjectors()
 {
   // Note: the Global index of a node should be the same in both this and the side discretizations
   //       since the underlying STK entities should have the same ID
-  Teuchos::RCP<const Tpetra_Map> ss_ov_mapT, ss_mapT;
+  Teuchos::RCP<const Tpetra_Map> ss_ov_mapT, ss_mapT, ss_node_mapT;
   Teuchos::RCP<Tpetra_CrsGraph> graphP, ov_graphP;
   Teuchos::RCP<Tpetra_CrsMatrix> P, ov_P;
 #ifdef ALBANY_EPETRA
@@ -3244,8 +3244,37 @@ void Albany::STKDiscretization::buildSideSetProjectors()
     const Albany::AbstractSTKMeshStruct& ss_mesh = *disc.stkMeshStruct;
 
     // Get the maps
-    ss_ov_mapT = disc.getOverlapMapT();
-    ss_mapT    = disc.getMapT();
+    ss_ov_mapT   = disc.getOverlapMapT();
+    ss_mapT      = disc.getMapT();
+    ss_node_mapT = disc.getNodeMapT();
+
+    // These maps' gids will be the same as in the volume discretization.
+    // In particular, ss_mapT_GIDs[0] may be different from ss_mapT->getGlobalElement(0).
+    const size_t ss_map_node_num_elements = ss_mapT->getNodeNumElements();
+    const size_t ss_ov_map_node_num_elements = ss_ov_mapT->getNodeNumElements();
+    const size_t ss_node_map_node_num_elements = ss_node_mapT->getNodeNumElements();
+
+    // The GIDs in the side discretization. These will be used to order the following
+    // arrays in the same way, so that the local id of the side nodes will be the same
+    // in both these two cases (e.g., for mapT):
+    //   - side_disc->getMapT()
+    //   - disc->getSideSetMapT().at(sideSetName)
+    // Of course, the Global IDs will be different though.
+    Teuchos::Array<GO> ss_mapT_LIDs(ss_map_node_num_elements);
+    Teuchos::Array<GO> ss_ov_mapT_LIDs(ss_ov_map_node_num_elements);
+    Teuchos::Array<GO> ss_node_mapT_LIDs(ss_node_map_node_num_elements);
+
+    // The GIDs in the volume discretization
+    Teuchos::Array<GO> ss_mapT_GIDs(ss_map_node_num_elements);
+    Teuchos::Array<GO> ss_ov_mapT_GIDs(ss_ov_map_node_num_elements);
+    Teuchos::Array<GO> ss_node_mapT_GIDs(ss_node_map_node_num_elements);
+
+    // We need the index base of the ss map. This HAS to match the minimum across all procs
+    // of the global ids. We start with a sure upper bound, and update it if we found (locally)
+    // something smaller. Then, we will do a global communication to find the globally smallest one.
+    GO minGID(getMapT()->getMaxGlobalIndex());
+    GO minGID_ov(getOverlapMapT()->getMaxGlobalIndex());
+    GO minGID_node(getNodeMapT()->getMaxGlobalIndex());
 
     // Extract the sides
     stk::mesh::Part& part = *stkMeshStruct->ssPartVec.find(it.first)->second;
@@ -3264,6 +3293,7 @@ void Albany::STKDiscretization::buildSideSetProjectors()
     GO node_gid, ss_node_gid, side_gid, ss_cell_gid, globalDOF, ss_globalDOF;
     std::pair<std::set<GO>::iterator,bool> check;
     stk::mesh::Entity ss_cell;
+    int k = 0;
     for (auto side : sides)
     {
       side_gid = gid(side);
@@ -3285,6 +3315,10 @@ void Albany::STKDiscretization::buildSideSetProjectors()
           for (int eq(0); eq<neq; ++eq)
           {
             cols[0] = getGlobalDOF(node_gid,eq);
+            ss_ov_mapT_LIDs[k] = disc.getOverlapMapT()->getLocalElement(disc.getGlobalDOF(ss_node_gid,eq));
+            ss_ov_mapT_GIDs[k] = cols[0];
+            ++k;
+            minGID_ov = std::min(minGID_ov,cols[0]);
             ov_graphP->insertGlobalIndices(disc.getGlobalDOF(ss_node_gid,eq),cols());
           }
         }
@@ -3301,6 +3335,8 @@ void Albany::STKDiscretization::buildSideSetProjectors()
     graphP = Teuchos::rcp(new Tpetra_CrsGraph(ss_mapT,1,Tpetra::StaticProfile));
     processed_node.clear();
     LO bad = Teuchos::OrdinalTraits<LO>::invalid();
+    k = 0;
+    int k_node=0;
     for (auto side : sides)
     {
       side_gid = gid(side);
@@ -3325,9 +3361,17 @@ void Albany::STKDiscretization::buildSideSetProjectors()
           // This node was not processed before. Let's do it.
           ss_node_gid = disc.gid(ss_cell_nodes[node_numeration_map.at(side_gid)[i]]);
 
+          minGID_node = std::min(minGID_node,node_gid);
+          ss_node_mapT_LIDs[k_node] = disc.getNodeMapT()->getLocalElement(ss_node_gid);
+          ss_node_mapT_GIDs[k_node] = node_gid;
+          ++k_node;
           for (int eq(0); eq<neq; ++eq)
           {
             cols[0] = getGlobalDOF(node_gid,eq);
+            ss_mapT_LIDs[k] = disc.getMapT()->getLocalElement(disc.getGlobalDOF(ss_node_gid,eq));
+            ss_mapT_GIDs[k] = cols[0];
+            ++k;
+            minGID = std::min(minGID,cols[0]);
             graphP->insertGlobalIndices(disc.getGlobalDOF(ss_node_gid,eq),cols());
           }
         }
@@ -3347,6 +3391,34 @@ void Albany::STKDiscretization::buildSideSetProjectors()
     P_E = Petra::TpetraCrsMatrix_To_EpetraCrsMatrix (P,comm);
     projectors[sideSetName] = P_E;
 #endif
+
+    GO indexBase;
+    Teuchos::Array<GO> indices;
+    // Order the elements in ss_ov_mapT_GIDs,ss_mapT_GIDs and ss_node_mapT_GIDs arrays according to the order
+    // specified by the corresponding *_LIDs array. This allows a code like this to work:
+    //   GO side_node_gid = get_gid_in_ss_numbering_from_some_function();  //e.g., from a nodeset
+    //   LO node_lid = disc->getSideSetDiscretizations()[side_set_name]->getNodeMapT()->getLocalElement(side_node_gid);
+    //   GO node_gid = disc->getSideSetNodeMapT()[side_set_name]->getGlobalElement(node_lid);
+    Teuchos::reduceAll(*commT, Teuchos::REDUCE_MIN, 1, &minGID_ov  , &indexBase);
+    indices.resize(ss_ov_mapT_GIDs.size(),Teuchos::OrdinalTraits<GO>::invalid());
+    for (size_t i=0; i<indices.size(); ++i) {
+      indices[ss_ov_mapT_LIDs[i]] = ss_ov_mapT_GIDs[i];
+    }
+    sideSetsOverlapMapT[sideSetName] = Teuchos::rcp(new Tpetra_Map(ss_ov_mapT->getGlobalNumElements(),indices(),indexBase,commT));
+
+    Teuchos::reduceAll(*commT, Teuchos::REDUCE_MIN, 1, &minGID     , &indexBase);
+    indices.resize(ss_mapT_GIDs.size(),Teuchos::OrdinalTraits<GO>::invalid());
+    for (size_t i=0; i<indices.size(); ++i) {
+      indices[ss_mapT_LIDs[i]] = ss_mapT_GIDs[i];
+    }
+    sideSetsMapT[sideSetName]        = Teuchos::rcp(new Tpetra_Map(ss_mapT->getGlobalNumElements(),indices(),indexBase,commT));
+
+    Teuchos::reduceAll(*commT, Teuchos::REDUCE_MIN, 1, &minGID_node, &indexBase);
+    indices.resize(ss_node_mapT_GIDs.size(),Teuchos::OrdinalTraits<GO>::invalid());
+    for (size_t i=0; i<indices.size(); ++i) {
+      indices[ss_node_mapT_LIDs[i]] = ss_node_mapT_GIDs[i];
+    }
+    sideSetsNodeMapT[sideSetName]    = Teuchos::rcp(new Tpetra_Map(ss_node_mapT->getGlobalNumElements(),indices(),indexBase,commT));
   }
 }
 
@@ -3400,7 +3472,7 @@ Albany::STKDiscretization::updateMesh()
       stkMeshStruct->buildCellSideNodeNumerationMap (it.first, sideToSideSetCellMap[it.first], sideNodeNumerationMap[it.first]);
     }
 
-    buildSideSetProjectors();
+    buildSideSetsMapsAndProjectors();
   }
 
   computeGraphs();

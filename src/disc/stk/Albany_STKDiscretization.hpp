@@ -57,19 +57,19 @@ namespace Albany {
 
     MapOfDOFsStructs mapOfDOFsStructs;
     std::map<std::string, MapOfDOFsStructs::const_iterator> fieldToMap;
-   
+
     const DOFsStruct& getDOFsStruct(const std::string& field_name) const {return fieldToMap.find(field_name)->second->second;}; //TODO handole errors
-  
-    //IKT: added the following function, which may be useful for debugging. 
+
+    //IKT: added the following function, which may be useful for debugging.
     void printFieldToMap() const {
       typedef std::map<std::string, MapOfDOFsStructs::const_iterator>::const_iterator MapIterator;
-      Teuchos::RCP<Teuchos::FancyOStream> out = Teuchos::VerboseObjectBase::getDefaultOStream(); 
+      Teuchos::RCP<Teuchos::FancyOStream> out = Teuchos::VerboseObjectBase::getDefaultOStream();
       for (MapIterator iter = fieldToMap.begin(); iter != fieldToMap.end(); iter++) {
-        std::string key = iter->first; 
+        std::string key = iter->first;
         *out << "IKT Key: " << key << "\n";
         Teuchos::RCP<const Tpetra_Map> map = getDOFsStruct(key).map;
         *out << "IKT Map \n: ";
-        map->describe(*out, Teuchos::VERB_EXTREME); 
+        map->describe(*out, Teuchos::VERB_EXTREME);
       }
     }
 
@@ -276,6 +276,21 @@ namespace Albany {
       return sideSetDiscretizations;
     }
 
+    const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsMapT() const
+    {
+      return sideSetsMapT;
+    }
+
+    const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsOverlapMapT() const
+    {
+      return sideSetsOverlapMapT;
+    }
+
+    const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsNodeMapT() const
+    {
+      return sideSetsNodeMapT;
+    }
+
     const std::map<std::string,std::map<GO,GO> >& getSideToSideSetCellMap () const
     {
       return sideToSideSetCellMap;
@@ -409,7 +424,7 @@ namespace Albany {
 
     void writeCoordsToMatrixMarket() const;
 
-    void buildSideSetProjectors ();
+    void buildSideSetsMapsAndProjectors ();
 
     double previous_time_label;
 
@@ -547,6 +562,12 @@ namespace Albany {
     std::map<std::string,Teuchos::RCP<Epetra_CrsMatrix> >               projectors;
     std::map<std::string,Teuchos::RCP<Epetra_CrsMatrix> >               ov_projectors;
 #endif
+
+    // Note: these may NOT be the same as sideSetDiscretizations[ss_name]->get(Overlap)MapT()!
+    //       the GID here are the same as in this discretization
+    std::map<std::string,Teuchos::RCP<const Tpetra_Map> >               sideSetsMapT;
+    std::map<std::string,Teuchos::RCP<const Tpetra_Map> >               sideSetsOverlapMapT;
+    std::map<std::string,Teuchos::RCP<const Tpetra_Map> >               sideSetsNodeMapT;
 
     // Used in Exodus writing capability
 #ifdef ALBANY_SEACAS

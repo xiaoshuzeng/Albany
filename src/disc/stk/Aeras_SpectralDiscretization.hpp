@@ -96,12 +96,12 @@ namespace Aeras
       std::string cub = discParams->get("Cubature Rule", "GAUSS_LOBATTO");
       //If cubature rule in input file is not GAUSS_LOBATTO, print warning and reset cubature
       //to Gauss-Lobatto.
-      if (cub != "GAUSS_LOBATTO") 
-         *out << "Setting Cubature Rule to GAUSS_LOBATTO. \n"; 
-      else 
-          *out << "Using Cubature Rule specified in input file: GAUSS_LOBATTO. \n";  
-      
-      const Intrepid2::EPolyType new_cubatureRule 
+      if (cub != "GAUSS_LOBATTO")
+         *out << "Setting Cubature Rule to GAUSS_LOBATTO. \n";
+      else
+          *out << "Using Cubature Rule specified in input file: GAUSS_LOBATTO. \n";
+
+      const Intrepid2::EPolyType new_cubatureRule
           = static_cast<Intrepid2::EPolyType>(Intrepid2::POLYTYPE_GAUSS_LOBATTO);
 
       // Create enriched MeshSpecsStruct object, to be returned.  It
@@ -368,6 +368,21 @@ namespace Aeras
       return sideSetDiscretizations;
     }
 
+    const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsMapT() const
+    {
+      return sideSetsMapT;
+    }
+
+    const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsOverlapMapT() const
+    {
+      return sideSetsOverlapMapT;
+    }
+
+    const std::map<std::string,Teuchos::RCP<const Tpetra_Map>>& getSideSetsNodeMapT() const
+    {
+      return sideSetsNodeMapT;
+    }
+
     //! Get the map side_id->side_set_elem_id
     const std::map<std::string,std::map<GO,GO>>& getSideToSideSetCellMap () const
     {
@@ -403,7 +418,7 @@ namespace Aeras
                        const double time,
                        const bool overlapped = false);
     void writeSolution(const Epetra_Vector& soln,
-                       const Epetra_Vector& soln_dot, 
+                       const Epetra_Vector& soln_dot,
                        const double time,
                        const bool overlapped = false);
 #endif
@@ -416,7 +431,7 @@ namespace Aeras
                        const Tpetra_Vector& soln_dotT,
                        const double time,
                        const bool overlapped = false);
-   
+
    void writeSolutionT(const Tpetra_Vector& solnT,
                        const Tpetra_Vector& soln_dotT,
                        const Tpetra_Vector& soln_dotdotT,
@@ -432,13 +447,13 @@ namespace Aeras
                                      const bool overlapped = false);
 
    void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT,
-                                     const Tpetra_Vector &solution_dotT, 
+                                     const Tpetra_Vector &solution_dotT,
                                      const double time,
                                      const bool overlapped = false);
 
    void writeSolutionToMeshDatabaseT(const Tpetra_Vector &solutionT,
-                                     const Tpetra_Vector &solution_dotT, 
-                                     const Tpetra_Vector &solution_dotdotT, 
+                                     const Tpetra_Vector &solution_dotT,
+                                     const Tpetra_Vector &solution_dotdotT,
                                      const double time,
                                      const bool overlapped = false);
 
@@ -599,7 +614,7 @@ namespace Aeras
     //Tpetra version of above
     void setSolutionFieldT(const Tpetra_Vector& solnT);
     void setSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT);
-    void setSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT, 
+    void setSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT,
                            const Tpetra_Vector& soln_dotdotT);
     void setSolutionFieldMV(const Tpetra_MultiVector& solnT);
 
@@ -607,7 +622,7 @@ namespace Aeras
     // Here soln is the local + neighbor (overlapped) solution
     void setOvlpSolutionFieldT(const Tpetra_Vector& solnT);
     void setOvlpSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT);
-    void setOvlpSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT, 
+    void setOvlpSolutionFieldT(const Tpetra_Vector& solnT, const Tpetra_Vector& soln_dotT,
                                const Tpetra_Vector& soln_dotdotT);
     void setOvlpSolutionFieldMV(const Tpetra_MultiVector& solnT);
 
@@ -797,6 +812,10 @@ namespace Aeras
 
     //! sideSetDisretization (never used)
     std::map<std::string,Teuchos::RCP<Albany::AbstractDiscretization> > sideSetDiscretizations;
+
+    //! Restriction of maps to side set discretization (never used)
+    std::map<std::string,Teuchos::RCP<const Tpetra_Map> >               sideSetsMapT;
+    std::map<std::string,Teuchos::RCP<const Tpetra_Map> >               sideSetsOverlapMapT;
 
     //! Number of elements on this processor
     int numOwnedNodes;
