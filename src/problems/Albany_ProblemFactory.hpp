@@ -48,6 +48,9 @@ namespace Albany {
 
   protected:
 
+    //! Top level parameter list
+    Teuchos::RCP<Teuchos::ParameterList> topLevelParams;
+
     //! Parameter list specifying what problem to create
     Teuchos::RCP<Teuchos::ParameterList> problemParams;
 

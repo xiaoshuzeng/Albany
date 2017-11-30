@@ -24,9 +24,11 @@
 namespace FELIX
 {
 
-ProblemFactory::ProblemFactory (const Teuchos::RCP<Teuchos::ParameterList>& problemParams_,
+ProblemFactory::ProblemFactory (const Teuchos::RCP<Teuchos::ParameterList>& topLevelParams_,
+                                const Teuchos::RCP<Teuchos::ParameterList>& problemParams_,
                                 const Teuchos::RCP<Teuchos::ParameterList>& discretizationParams_,
                                 const Teuchos::RCP<ParamLib>& paramLib_) :
+  topLevelParams(topLevelParams_),
   problemParams(problemParams_),
   discretizationParams(discretizationParams_),
   paramLib(paramLib_)
@@ -77,10 +79,10 @@ ProblemFactory::create() const
   }
   else if (method == "FELIX Stokes First Order 2D" || method == "FELIX Stokes FO 2D" ||
            method == "FELIX Stokes First Order 2D XZ" || method == "FELIX Stokes FO 2D XZ") {
-    problem = rcp(new FELIX::StokesFO(problemParams, discretizationParams, paramLib, 2));
+    problem = rcp(new FELIX::StokesFO(topLevelParams, problemParams, discretizationParams, paramLib, 2));
   }
   else if (method == "FELIX Stokes First Order 3D" || method == "FELIX Stokes FO 3D" ) {
-    problem = rcp(new FELIX::StokesFO(problemParams, discretizationParams, paramLib, 3));
+    problem = rcp(new FELIX::StokesFO(topLevelParams, problemParams, discretizationParams, paramLib, 3));
   }
   else if (method == "FELIX Coupled FO H 3D" ) {
 #ifdef ALBANY_EPETRA
@@ -93,7 +95,7 @@ ProblemFactory::create() const
     problem = rcp(new FELIX::StokesL1L2(problemParams, paramLib, 2));
   }
   else if (method == "FELIX Hydrology 2D") {
-    problem = rcp(new FELIX::Hydrology(problemParams, paramLib, 2));
+    problem = rcp(new FELIX::Hydrology(topLevelParams, problemParams, discretizationParams, paramLib, 2));
   }
   else if (method == "FELIX Enthalpy 3D") {
     problem = rcp(new FELIX::Enthalpy(problemParams, discretizationParams, paramLib, 3));
@@ -111,7 +113,7 @@ ProblemFactory::create() const
     problem = rcp(new FELIX::LaplacianSampling(problemParams, discretizationParams, paramLib, 2));
   }
   else if (method == "FELIX Coupled FO Hydrology 3D" ) {
-    problem = rcp(new FELIX::StokesFOHydrology(problemParams, discretizationParams, paramLib, 3));
+    problem = rcp(new FELIX::StokesFOHydrology(topLevelParams, problemParams, discretizationParams, paramLib, 3));
   }
   return problem;
 }

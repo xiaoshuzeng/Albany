@@ -48,7 +48,9 @@ class Hydrology : public Albany::AbstractProblem
 public:
 
   //! Default constructor
-  Hydrology (const Teuchos::RCP<Teuchos::ParameterList>& params,
+  Hydrology (const Teuchos::RCP<Teuchos::ParameterList>& topLevelPparams,
+             const Teuchos::RCP<Teuchos::ParameterList>& problemPparams,
+             const Teuchos::RCP<Teuchos::ParameterList>& discParams,
              const Teuchos::RCP<ParamLib>& paramLib,
              const int numDimensions);
 
@@ -100,6 +102,11 @@ protected:
   int numDim;
   std::string elementBlockName;
 
+  //! Top level parameter list
+  Teuchos::RCP<Teuchos::ParameterList> topLevelParams;
+  //! Discretization parameter list
+  Teuchos::RCP<Teuchos::ParameterList> discParams;
+
   Teuchos::ArrayRCP<std::string> dof_names;
   Teuchos::ArrayRCP<std::string> dof_names_dot;
   Teuchos::ArrayRCP<std::string> resid_names;
@@ -111,6 +118,24 @@ protected:
   Teuchos::RCP<Intrepid2::Basis<PHX::Device, RealType, RealType>> intrepidBasis;
 
   Teuchos::RCP<Intrepid2::Cubature<PHX::Device>> cubature;
+
+  static constexpr char hydraulic_potential_name[]          = "hydraulic_potential";
+  static constexpr char hydraulic_potential_gradient_name[] = "hydraulic_potential Gradient";
+  static constexpr char water_thickness_name[]              = "water_thickness";
+  static constexpr char water_thickness_dot_name[]          = "water_thickness_dot";
+
+  static constexpr char effective_pressure_name[]           = "effective_pressure";
+  static constexpr char ice_thickness_name[]                = "ice_thickness";
+  static constexpr char surface_height_name[]               = "surface_height";
+  static constexpr char beta_name[]                         = "beta";
+  static constexpr char melting_rate_name[]                 = "melting_rate";
+  static constexpr char surface_water_input_name[]          = "surface_water_input";
+  static constexpr char surface_mass_balance_name[]         = "surface_mass_balance";
+  static constexpr char geothermal_flux_name[]              = "geothermal_flux";
+  static constexpr char water_discharge_name[]              = "water_discharge";
+  static constexpr char sliding_velocity_name[]             = "sliding_velocity";
+  static constexpr char basal_velocity_name[]               = "basal_velocity";
+  static constexpr char basal_gravitational_water_potential_name[] = "basal_gravitational_water_potential";
 };
 
 // ===================================== IMPLEMENTATION ======================================= //
@@ -130,160 +155,185 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   Albany::StateStruct::MeshFieldEntity entity;
   Teuchos::RCP<PHX::Evaluator<PHAL::AlbanyTraits> > ev;
   Teuchos::RCP<Teuchos::ParameterList> p;
-  std::string param_name, state_name, field_name;
 
-  // -------------- Registering state variables --------------- //
+  // ---------------------------- Registering state variables ------------------------- //
 
-  // Surface height
-  entity = Albany::StateStruct::NodalDataToElemNode;
-  p = stateMgr.registerStateVariable("surface_height", dl->node_scalar, elementBlockName, true, &entity);
-  p->set<const std::string>("Field Name","Surface Height");
-  ev = Teuchos::rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
-  fm0.template registerEvaluator<EvalT>(ev);
+  std::string state_name, field_name, param_name;
 
-  // Basal velocity
-  entity = Albany::StateStruct::NodalDataToElemNode;
-  p = stateMgr.registerStateVariable("basal_velocity", dl->node_vector, elementBlockName, true, &entity);
-  p->set<const std::string>("Field Name","Basal Velocity");
-  ev = Teuchos::rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
-  fm0.template registerEvaluator<EvalT>(ev);
-
-  // Basal friction coefficient (given)
-  entity = Albany::StateStruct::NodalDataToElemNode;
-  p = stateMgr.registerStateVariable("basal_friction", dl->node_scalar, elementBlockName, true, &entity);
-  p->set<const std::string>("Field Name","Beta Given");
-  ev = Teuchos::rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
-  fm0.template registerEvaluator<EvalT>(ev);
-
-  // Basal friction coefficient (computed)
-  entity = Albany::StateStruct::NodalDataToElemNode;
-  p = stateMgr.registerStateVariable("beta", dl->node_scalar, elementBlockName, true, &entity);
-  p->set<std::string>("Field Name", "Beta");
-  p->set<bool>("Nodal State", true);
-  ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT,PHAL::AlbanyTraits>(*p));
-  fm0.template registerEvaluator<EvalT>(ev);
-  if (std::find(requirements.begin(), requirements.end(), "beta")!=requirements.end())
+  // Getting the names of the distributed parameters (they won't have to be loaded as states)
+  std::map<std::string,bool> is_dist_param;
+  std::map<std::string,bool> is_dist_params_optimized_upon;
+  std::map<std::string,bool> is_dist;
+  std::map<std::string,std::string> dist_params_name_to_mesh_part;
+  std::set<std::string> inputs_found;
+  if (this->params->isSublist("Distributed Parameters"))
   {
-    if (ev->evaluatedFields().size()>0)
+    Teuchos::ParameterList& dist_params_list =  this->params->sublist("Distributed Parameters");
+    Teuchos::ParameterList* param_list;
+    int numParams = dist_params_list.get<int>("Number of Parameter Vectors",0);
+    for (int p_index=0; p_index< numParams; ++p_index)
     {
-      fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
-    }
-  }
-
-  // Ice thickness
-  entity = Albany::StateStruct::NodalDataToElemNode;
-  p = stateMgr.registerStateVariable("ice_thickness", dl->node_scalar, elementBlockName, true, &entity);
-  p->set<const std::string>("Field Name","Ice Thickness");
-  ev = Teuchos::rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
-  fm0.template registerEvaluator<EvalT>(ev);
-
-  if (params->sublist("FELIX Hydrology").get<bool>("Use SMB To Approximate Water Input",false))
-  {
-    // Surface Mass Balance
-    entity = Albany::StateStruct::NodalDataToElemNode;
-    p = stateMgr.registerStateVariable("surface_mass_balance", dl->node_scalar, elementBlockName, true, &entity);
-    p->set<const std::string>("Field Name","Surface Mass Balance");
-    ev = Teuchos::rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
-    fm0.template registerEvaluator<EvalT>(ev);
-  }
-  else
-  {
-    // Surface water input
-    entity = Albany::StateStruct::NodalDataToElemNode;
-    p = stateMgr.registerStateVariable("surface_water_input", dl->node_scalar, elementBlockName, true, &entity);
-    p->set<const std::string>("Field Name","Surface Water Input");
-    ev = Teuchos::rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
-    fm0.template registerEvaluator<EvalT>(ev);
-  }
-
-  // GeothermaL flux
-  entity = Albany::StateStruct::NodalDataToElemNode;
-  p = stateMgr.registerStateVariable("geothermal_flux", dl->node_scalar, elementBlockName, true, &entity);
-  p->set<const std::string>("Field Name","Geothermal Flux");
-  ev = Teuchos::rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
-  fm0.template registerEvaluator<EvalT>(ev);
-
-  // Water discharge
-  if (std::find(this->requirements.begin(),this->requirements.end(),"water_discharge")!=this->requirements.end())
-  {
-    entity = Albany::StateStruct::ElemData;
-    p = stateMgr.registerStateVariable("water_discharge", dl->cell_vector, elementBlockName, true, &entity);
-    p->set<const std::string>("Field Name","Water Discharge");
-    p->set<bool>("Is Vector Field", true);
-    p->set<Teuchos::RCP<PHX::DataLayout>>("Dummy Data Layout",dl->dummy);
-    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT,PHAL::AlbanyTraits>(*p));
-    fm0.template registerEvaluator<EvalT>(ev);
-    if (fieldManagerChoice == Albany::BUILD_RESID_FM)
-    {
-      // Only PHAL::AlbanyTraits::Residual evaluates something
-      if (ev->evaluatedFields().size()>0)
+      std::string parameter_sublist_name = Albany::strint("Distributed Parameter", p_index);
+      if (dist_params_list.isSublist(parameter_sublist_name))
       {
-        // Require save discharge
-        fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+        // The better way to specify dist params: with sublists
+        param_list = &dist_params_list.sublist(parameter_sublist_name);
+        param_name = param_list->get<std::string>("Name");
+        dist_params_name_to_mesh_part[param_name] = param_list->get<std::string>("Mesh Part","");
       }
-    }
-
-    // We don't want to save a vector on quad points (really bad to visualize). Let's save one vector per cell
-    ev = evalUtils.constructQuadPointsToCellInterpolationEvaluator("Water Discharge",dl->qp_vector,dl->cell_vector);
-    fm0.template registerEvaluator<EvalT>(ev);
-  }
-
-  // Basal gravitational water potential
-  if (std::find(this->requirements.begin(),this->requirements.end(),"basal_gravitational_water_potential")!=this->requirements.end())
-  {
-    entity = Albany::StateStruct::NodalDataToElemNode;
-    p = stateMgr.registerStateVariable("basal_gravitational_water_potential", dl->node_scalar, elementBlockName, true, &entity);
-    p->set<bool>("Is Vector Field", false);
-    p->set<Teuchos::RCP<PHX::DataLayout>>("Dummy Data Layout",dl->dummy);
-    ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT,PHAL::AlbanyTraits>(*p));
-    fm0.template registerEvaluator<EvalT>(ev);
-    if (fieldManagerChoice == Albany::BUILD_RESID_FM)
-    {
-      // Only PHAL::AlbanyTraits::Residual evaluates something
-      if (ev->evaluatedFields().size()>0)
+      else
       {
-        // Require save potential
-        fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+        // Legacy way to specify dist params: with parameter entries. Note: no mesh part can be specified.
+        param_name = dist_params_list.get<std::string>(Albany::strint("Parameter", p_index));
+        dist_params_name_to_mesh_part[param_name] = "";
       }
+      is_dist_param[param_name] = true;
+      is_dist_params_optimized_upon[param_name] = false;
     }
   }
 
-  if (!has_h_equation || eliminate_h)
+  // Although they may not be specified in the mesh section or may be specified but only
+  // as Input or only as Output, parameters that we are optimizing upon must always be
+  // gathered/scattered. To enforce that, we first get their names.
+  // NOTE: so far we implement this check only for ROL-type analysis
+  if (topLevelParams->sublist("Piro").sublist("Analysis").isSublist("ROL"))
   {
-    entity = Albany::StateStruct::NodalDataToElemNode;
-    p = stateMgr.registerStateVariable("water_thickness", dl->node_scalar, elementBlockName, true, &entity);
-    p->set<const std::string>("Field Name","Water Thickness");
+    // Get the # of non-distributed parameters. For ROL there is no distinction, so
+    // we need to know if, say, parameter 2 is distributed.
+    auto& plist = this->params->sublist("Parameters");
+    int num_p = plist.isParameter("Number") ? plist.get<int>("Number") : plist.get<int>("Number of Parameter Vectors",0);
 
-    if (eliminate_h) {
-      // Water Thickness is not part of the solution (per se), but it is computed as a function of it. Let's save it to the mesh
-      ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT,PHAL::AlbanyTraits>(*p));
-      fm0.template registerEvaluator<EvalT>(ev);
-      // Only PHAL::AlbanyTraits::Residual evaluates something
-      if (ev->evaluatedFields().size()>0) {
-        fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+    const auto& rol_params = topLevelParams->sublist("Piro").sublist("Analysis").sublist("ROL");
+    int np = rol_params.isParameter("Number of Parameters") ? rol_params.get<int>("Number of Parameter") : 1;
+    for (int ip=0; ip<np; ++ip) {
+      // Get the idx of the ip-th parameter optimized upon.
+      const std::string key = Albany::strint("Parameter Vector Index",ip);
+      int idx = rol_params.isParameter(key) ? rol_params.get<int>(key) : ip;
+      if (idx>num_p) {
+        // Ok, we're optimizing upon a distributed parameter. Let's store its name
+        idx = idx-num_p;
+        const auto& dist_p_list = this->params->sublist("Distributed Parameters").sublist(Albany::strint("Distributed Parameter", idx) );
+        const std::string& dist_p_name = dist_p_list.get<std::string>("Name");
+        is_dist_params_optimized_upon[dist_p_name] = true;
       }
-
-    } else {
-      // Water Thickness is not part of the solution at all, so we need to register it as a state and load it
-      ev = Teuchos::rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
-      fm0.template registerEvaluator<EvalT>(ev);
     }
   }
 
-  // Effective Pressure
-  entity = Albany::StateStruct::NodalDataToElemNode;
-  p = stateMgr.registerStateVariable("effective_pressure", dl->node_scalar, elementBlockName, true, &entity);
-  p->set<const std::string>("Field Name","Effective Pressure");
-  p->set<bool>("Nodal State",true);
-  ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT, PHAL::AlbanyTraits>(*p));
-  fm0.template registerEvaluator<EvalT>(ev);
-  if (std::find(requirements.begin(),requirements.end(),"effective_pressure")!=requirements.end())
-    if (ev->evaluatedFields().size()>0)
-      fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+  // Now we can start register parameters
+  Teuchos::ParameterList& req_fields_info = discParams->sublist("Required Fields Info");
+  int num_fields = req_fields_info.get<int>("Number Of Fields",0);
+
+  std::string fieldType, fieldUsage, meshPart;
+  bool nodal_state, vector_state;
+  for (int ifield=0; ifield<num_fields; ++ifield)
+  {
+    Teuchos::ParameterList& thisFieldList = req_fields_info.sublist(Albany::strint("Field", ifield));
+
+    // Get current state specs
+    state_name  = field_name = thisFieldList.get<std::string>("Field Name");
+    fieldType  = thisFieldList.get<std::string>("Field Type");
+    fieldUsage = thisFieldList.get<std::string>("Field Usage","Input"); // WARNING: assuming Input if not specified
+
+    if (fieldUsage == "Unused")
+      continue;
+
+    bool inputField  = (fieldUsage == "Input")  || (fieldUsage == "Input-Output") || (is_dist_param[state_name] && is_dist_params_optimized_upon[state_name]);
+    bool outputField = (fieldUsage == "Output") || (fieldUsage == "Input-Output") || (is_dist_param[state_name] && is_dist_params_optimized_upon[state_name]);
+
+    inputs_found.insert(state_name);
+    meshPart = is_dist_param[state_name] ? dist_params_name_to_mesh_part[state_name] : "";
+
+    if(fieldType == "Elem Scalar") {
+      entity = Albany::StateStruct::ElemData;
+      p = stateMgr.registerStateVariable(state_name, dl->cell_scalar2, elementBlockName, true, &entity, meshPart);
+      nodal_state = false;
+      vector_state = false;
+    }
+    else if(fieldType == "Node Scalar") {
+      entity = is_dist_param[state_name] ? Albany::StateStruct::NodalDistParameter : Albany::StateStruct::NodalDataToElemNode;
+      p = stateMgr.registerStateVariable(state_name, dl->node_scalar, elementBlockName, true, &entity, meshPart);
+      nodal_state = true;
+      vector_state = false;
+    }
+    else if(fieldType == "Elem Vector") {
+      entity = Albany::StateStruct::ElemData;
+      p = stateMgr.registerStateVariable(state_name, dl->cell_vector, elementBlockName, true, &entity, meshPart);
+      nodal_state = false;
+      vector_state = true;
+    }
+    else if(fieldType == "Node Vector") {
+      entity = is_dist_param[state_name] ? Albany::StateStruct::NodalDistParameter : Albany::StateStruct::NodalDataToElemNode;
+      p = stateMgr.registerStateVariable(state_name, dl->node_vector, elementBlockName, true, &entity, meshPart);
+      nodal_state = true;
+      vector_state = true;
+    }
+
+    if (outputField)
+    {
+      if (is_dist_param[state_name])
+      {
+        // A parameter: scatter it
+        ev = evalUtils.constructScatterScalarNodalParameter(state_name,field_name);
+        fm0.template registerEvaluator<EvalT>(ev);
+
+        // Only the residual FM and EvalT=PHAL::AlbanyTraits::Residual will actually evaluate anything
+        if ( fieldManagerChoice==Albany::BUILD_RESID_FM && ev->evaluatedFields().size()>0) {
+          fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+        }
+      } else {
+        // A 'regular' field output: save it.
+        p->set<bool>("Nodal State", nodal_state);
+        ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT,PHAL::AlbanyTraits>(*p));
+        fm0.template registerEvaluator<EvalT>(ev);
+
+        // Only PHAL::AlbanyTraits::Residual evaluates something, others will have empty list of evaluated fields
+        if (ev->evaluatedFields().size()>0)
+          fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+      }
+    }
+
+    if (inputField) {
+      if (is_dist_param[state_name])
+      {
+        // A parameter: gather it
+        ev = evalUtils.constructGatherScalarNodalParameter(state_name,field_name);
+        fm0.template registerEvaluator<EvalT>(ev);
+      } else {
+        // A 'regular' field input: load it.
+        p->set<std::string>("Field Name", field_name);
+        ev = Teuchos::rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
+        fm0.template registerEvaluator<EvalT>(ev);
+      }
+    }
+  }
+
+  // If a distributed parameter that is optimized upon was not in the discretization list,
+  // we throw an execption. The user should list the distributed parameter somewhere, and
+  // set 'Field Origin' to 'Mesh'.
+  for (auto it : is_dist_params_optimized_upon) {
+    if (inputs_found.find(it.first)==inputs_found.end()) {
+      // The user has not specified this distributed parameter in the discretization list.
+      // That's ok, since we have all we need to register the state ourselve, and create
+      // and register its gather/scatter evaluators
+
+      // Get info
+      entity = Albany::StateStruct::NodalDistParameter;
+      meshPart = dist_params_name_to_mesh_part[it.first];
+
+      // Register the state
+      p = stateMgr.registerStateVariable(it.first, dl->node_scalar, elementBlockName, true, &entity, meshPart);
+
+      // Gather evaluator
+      ev = evalUtils.constructGatherScalarNodalParameter(it.first,it.first);
+      fm0.template registerEvaluator<EvalT>(ev);
+
+      // Scatter evaluator
+      ev = evalUtils.constructScatterScalarNodalParameter(it.first,it.first);
+      fm0.template registerEvaluator<EvalT>(ev);
+    }
+  }
 
   // -------------------- Interpolation and utilities ------------------------ //
-
-  //double h_lo = params->sublist("FELIX Hydrology").get<double>("Water Thickness Lower Threshold",-1.0);
 
   int offset_phi = 0;
   int offset_h = 1;
@@ -322,53 +372,49 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   fm0.template registerEvaluator<EvalT> (ev);
 
   // Interpolate Hydraulic Potential
-  ev = evalUtils.constructDOFInterpolationEvaluator("Hydraulic Potential");
-  fm0.template registerEvaluator<EvalT> (ev);
-
-  // Interpolate Beta Given (may not be needed)
-  ev = evalUtils.getPSTUtils().constructDOFInterpolationEvaluator("Beta Given");
+  ev = evalUtils.constructDOFInterpolationEvaluator(hydraulic_potential_name);
   fm0.template registerEvaluator<EvalT> (ev);
 
   // Interpolate Effective Pressure
-  ev = evalUtils.constructDOFInterpolationEvaluator("Effective Pressure");
+  ev = evalUtils.constructDOFInterpolationEvaluator(effective_pressure_name);
   fm0.template registerEvaluator<EvalT> (ev);
+
+  // In case we want to save Water Discharge
+  ev = evalUtils.constructQuadPointsToCellInterpolationEvaluator(water_discharge_name,dl->qp_vector,dl->cell_vector);
+  fm0.template registerEvaluator<EvalT>(ev);
 
   // Water Thickness
   if (has_h_equation && !eliminate_h)
   {
-    ev = evalUtils.constructDOFInterpolationEvaluator("Water Thickness");
+    ev = evalUtils.constructDOFInterpolationEvaluator(water_thickness_name);
     fm0.template registerEvaluator<EvalT> (ev);
     if (unsteady)
     {
       // Interpolate Water Thickness Time Derivative
-      ev = evalUtils.constructDOFInterpolationEvaluator("Water Thickness Dot");
+      ev = evalUtils.constructDOFInterpolationEvaluator(water_thickness_dot_name);
       fm0.template registerEvaluator<EvalT> (ev);
     }
   }
   else if (!has_h_equation)
   {
-    //if (h_lo>0.0) {
-      //ev = evalUtils.getPSTUtils().constructDOFInterpolationEvaluator("Water Thickness Reg");
-    //} else {
-      ev = evalUtils.getPSTUtils().constructDOFInterpolationEvaluator("Water Thickness");
-    //}
+    ev = evalUtils.getPSTUtils().constructDOFInterpolationEvaluator(water_thickness_name);
     fm0.template registerEvaluator<EvalT> (ev);
   }
 
   // Hydraulic Potential Gradient
-  ev = evalUtils.constructDOFGradInterpolationEvaluator("Hydraulic Potential");
+  ev = evalUtils.constructDOFGradInterpolationEvaluator(hydraulic_potential_name);
   fm0.template registerEvaluator<EvalT> (ev);
 
   // Basal Velocity
-  ev = evalUtils.getPSTUtils().constructDOFVecInterpolationEvaluator("Basal Velocity");
+  ev = evalUtils.getPSTUtils().constructDOFVecInterpolationEvaluator(basal_velocity_name);
   fm0.template registerEvaluator<EvalT> (ev);
 
   // Surface Water Input
-  ev = evalUtils.getPSTUtils().constructDOFInterpolationEvaluator("Surface Water Input");
+  ev = evalUtils.getPSTUtils().constructDOFInterpolationEvaluator(surface_water_input_name);
   fm0.template registerEvaluator<EvalT> (ev);
 
   // Geothermal Flux
-  ev = evalUtils.getPSTUtils().constructDOFInterpolationEvaluator("Geothermal Flux");
+  ev = evalUtils.getPSTUtils().constructDOFInterpolationEvaluator(geothermal_flux_name);
   fm0.template registerEvaluator<EvalT> (ev);
 
   // Lumped mass matrix diagonal
@@ -379,14 +425,19 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
 
   if (params->sublist("FELIX Hydrology").get<bool>("Use SMB To Approximate Water Input",false))
   {
+    TEUCHOS_TEST_FOR_EXCEPTION (inputs_found.find(surface_mass_balance_name)==inputs_found.end(), std::logic_error,
+                                "Error! The field '" << surface_mass_balance_name << "' is required " <<
+                                "(due to 'Use SMB To Approximate Water Input' being true), " <<
+                                "but was not found in the discretization list.\n");
+
     //--- Compute Water Input From SMB
     p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Hydrology Water Input"));
 
     // Input
-    p->set<std::string>("Surface Mass Balance Variable Name","Surface Mass Balance");
+    p->set<std::string>("Surface Mass Balance Variable Name",surface_mass_balance_name);
 
     // Output
-    p->set<std::string>("Surface Water Input Variable Name","Surface Water Input");
+    p->set<std::string>("Surface Water Input Variable Name","surface_water_input");
 
     ev = Teuchos::rcp(new FELIX::HydrologyWaterSource<EvalT,PHAL::AlbanyTraits>(*p,dl));
     fm0.template registerEvaluator<EvalT>(ev);
@@ -396,14 +447,14 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   p = Teuchos::rcp(new Teuchos::ParameterList("Hydrology Basal Gravitational Water Potential"));
 
   //Input
-  p->set<std::string> ("Surface Height Variable Name","Surface Height");
-  p->set<std::string> ("Ice Thickness Variable Name","Ice Thickness");
+  p->set<std::string> ("Surface Height Variable Name",surface_height_name);
+  p->set<std::string> ("Ice Thickness Variable Name",ice_thickness_name);
   p->set<bool> ("Is Stokes", false);
 
   p->set<Teuchos::ParameterList*> ("FELIX Physical Parameters",&params->sublist("FELIX Physical Parameters"));
 
   //Output
-  p->set<std::string> ("Basal Gravitational Water Potential Variable Name","basal_gravitational_water_potential");
+  p->set<std::string> ("Basal Gravitational Water Potential Variable Name",basal_gravitational_water_potential_name);
 
   ev = Teuchos::rcp(new FELIX::BasalGravitationalWaterPotential<EvalT,PHAL::AlbanyTraits>(*p,dl));
   fm0.template registerEvaluator<EvalT>(ev);
@@ -411,15 +462,15 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   // ------- Hydrology Water Discharge -------- //
   p = Teuchos::rcp(new Teuchos::ParameterList("Hydrology Water Discharge"));
 
-  p->set<std::string> ("Water Thickness Variable Name","Water Thickness");
-  p->set<std::string> ("Hydraulic Potential Gradient Variable Name","Hydraulic Potential Gradient");
+  p->set<std::string> ("Water Thickness Variable Name",water_thickness_name);
+  p->set<std::string> ("Hydraulic Potential Gradient Variable Name",hydraulic_potential_gradient_name);
   p->set<std::string> ("Regularization Parameter Name","Regularization");
 
   p->set<Teuchos::ParameterList*> ("FELIX Hydrology",&params->sublist("FELIX Hydrology"));
   p->set<Teuchos::ParameterList*> ("FELIX Physical Parameters",&params->sublist("FELIX Physical Parameters"));
 
   //Output
-  p->set<std::string> ("Water Discharge Variable Name","Water Discharge");
+  p->set<std::string> ("Water Discharge Variable Name",water_discharge_name);
 
   if (has_h_equation)
     ev = Teuchos::rcp(new FELIX::HydrologyWaterDischarge<EvalT,PHAL::AlbanyTraits,true,false>(*p,dl));
@@ -432,14 +483,14 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   p = Teuchos::rcp(new Teuchos::ParameterList("Hydrology Melting Rate"));
 
   //Input
-  p->set<std::string> ("Geothermal Heat Source Variable Name","Geothermal Flux");
-  p->set<std::string> ("Sliding Velocity Variable Name","Sliding Velocity");
-  p->set<std::string> ("Basal Friction Coefficient Variable Name","Beta");
+  p->set<std::string> ("Geothermal Heat Source Variable Name",geothermal_flux_name);
+  p->set<std::string> ("Sliding Velocity Variable Name",sliding_velocity_name);
+  p->set<std::string> ("Basal Friction Coefficient Variable Name",beta_name);
   p->set<Teuchos::ParameterList*> ("FELIX Hydrology",&params->sublist("FELIX Hydrology"));
   p->set<Teuchos::ParameterList*> ("FELIX Physical Parameters",&params->sublist("FELIX Physical Parameters"));
 
   //Output
-  p->set<std::string> ("Melting Rate Variable Name","Melting Rate");
+  p->set<std::string> ("Melting Rate Variable Name",melting_rate_name);
 
   ev = Teuchos::rcp(new FELIX::HydrologyMeltingRate<EvalT,PHAL::AlbanyTraits,false>(*p,dl));
   fm0.template registerEvaluator<EvalT>(ev);
@@ -469,12 +520,12 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Velocity Norm"));
 
   // Input
-  p->set<std::string>("Field Name","Basal Velocity");
+  p->set<std::string>("Field Name",basal_velocity_name);
   p->set<std::string>("Field Layout","Cell QuadPoint Vector");
   p->set<Teuchos::ParameterList*>("Parameter List", &params->sublist("FELIX Field Norm"));
 
   // Output
-  p->set<std::string>("Field Norm Name","Sliding Velocity");
+  p->set<std::string>("Field Norm Name",sliding_velocity_name);
 
   ev = Teuchos::rcp(new PHAL::FieldFrobeniusNormParam<EvalT,PHAL::AlbanyTraits>(*p,dl));
   fm0.template registerEvaluator<EvalT>(ev);
@@ -483,13 +534,13 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Effective Pressure"));
 
   // Input
-  p->set<std::string>("Surface Height Variable Name","Surface Height");
-  p->set<std::string>("Ice Thickness Variable Name", "Ice Thickness");
-  p->set<std::string>("Hydraulic Potential Variable Name", "Hydraulic Potential");
+  p->set<std::string>("Surface Height Variable Name",surface_height_name);
+  p->set<std::string>("Ice Thickness Variable Name", ice_thickness_name);
+  p->set<std::string>("Hydraulic Potential Variable Name", hydraulic_potential_name);
   p->set<Teuchos::ParameterList*>("FELIX Physical Parameters", &params->sublist("FELIX Physical Parameters"));
 
   // Output
-  p->set<std::string>("Effective Pressure Variable Name","Effective Pressure");
+  p->set<std::string>("Effective Pressure Variable Name",effective_pressure_name);
 
   ev = Teuchos::rcp(new FELIX::EffectivePressure<EvalT,PHAL::AlbanyTraits, false, false>(*p,dl));
   fm0.template registerEvaluator<EvalT>(ev);
@@ -498,15 +549,15 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Basal Friction Coefficient"));
 
   //Input
-  p->set<std::string>("Sliding Velocity Variable Name", "Sliding Velocity");
+  p->set<std::string>("Sliding Velocity Variable Name", sliding_velocity_name);
   p->set<std::string>("BF Variable Name", Albany::bf_name);
-  p->set<std::string>("Effective Pressure Variable Name", "Effective Pressure");
+  p->set<std::string>("Effective Pressure Variable Name", effective_pressure_name);
   p->set<std::string>("Flow Factor A Variable Name", "Flow Factor A");
   p->set<Teuchos::ParameterList*>("Parameter List", &params->sublist("FELIX Basal Friction Coefficient"));
   p->set<Teuchos::ParameterList*>("Stereographic Map", &params->sublist("Stereographic Map"));
 
   //Output
-  p->set<std::string>("Basal Friction Coefficient Variable Name", "Beta");
+  p->set<std::string>("Basal Friction Coefficient Variable Name", beta_name);
 
   ev = Teuchos::rcp(new FELIX::BasalFrictionCoefficient<EvalT,PHAL::AlbanyTraits,true,false,false>(*p,dl));
   fm0.template registerEvaluator<EvalT>(ev);
@@ -520,12 +571,12 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   p = Teuchos::rcp(new Teuchos::ParameterList("FELIX Velocity Norm"));
 
   // Input
-  p->set<std::string>("Field Name","Basal Velocity");
+  p->set<std::string>("Field Name",basal_velocity_name);
   p->set<std::string>("Field Layout","Cell Node Vector");
   p->set<Teuchos::ParameterList*>("Parameter List", &params->sublist("FELIX Field Norm"));
 
   // Output
-  p->set<std::string>("Field Norm Name","Sliding Velocity");
+  p->set<std::string>("Field Norm Name",sliding_velocity_name);
 
   ev = Teuchos::rcp(new PHAL::FieldFrobeniusNormParam<EvalT,PHAL::AlbanyTraits>(*p,dl));
   fm0.template registerEvaluator<EvalT>(ev);
@@ -537,14 +588,14 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   p->set<std::string> ("BF Name", Albany::bf_name);
   p->set<std::string> ("Gradient BF Name", Albany::grad_bf_name);
   p->set<std::string> ("Weighted Measure Name", Albany::weights_name);
-  p->set<std::string> ("Water Discharge Variable Name", "Water Discharge");
-  p->set<std::string> ("Effective Pressure Variable Name", "Effective Pressure");
-  p->set<std::string> ("Water Thickness Variable Name", "Water Thickness");
-  p->set<std::string> ("Melting Rate Variable Name","Melting Rate");
-  p->set<std::string> ("Surface Water Input Variable Name","Surface Water Input");
-  p->set<std::string> ("Sliding Velocity Variable Name","Sliding Velocity");
+  p->set<std::string> ("Water Discharge Variable Name", water_discharge_name);
+  p->set<std::string> ("Effective Pressure Variable Name", effective_pressure_name);
+  p->set<std::string> ("Water Thickness Variable Name", water_thickness_name);
+  p->set<std::string> ("Melting Rate Variable Name",melting_rate_name);
+  p->set<std::string> ("Surface Water Input Variable Name",surface_water_input_name);
+  p->set<std::string> ("Sliding Velocity Variable Name",sliding_velocity_name);
   p->set<std::string> ("Flow Factor A Variable Name","Flow Factor A");
-  p->set<std::string> ("Basal Gravitational Water Potential Variable Name","basal_gravitational_water_potential");
+  p->set<std::string> ("Basal Gravitational Water Potential Variable Name",basal_gravitational_water_potential_name);
 
   p->set<Teuchos::ParameterList*> ("FELIX Physical Parameters",&params->sublist("FELIX Physical Parameters"));
   p->set<Teuchos::ParameterList*> ("FELIX Hydrology Parameters",&params->sublist("FELIX Hydrology"));
@@ -566,37 +617,23 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       p = Teuchos::rcp(new Teuchos::ParameterList("Hydrology Water Thickness"));
 
       //Input
-      p->set<std::string> ("Water Thickness Variable Name","Water Thickness");
-      p->set<std::string> ("Effective Pressure Variable Name","Effective Pressure");
-      p->set<std::string> ("Melting Rate Variable Name","Melting Rate");
-      p->set<std::string> ("Sliding Velocity Variable Name","Sliding Velocity");
+      p->set<std::string> ("Water Thickness Variable Name",water_thickness_name);
+      p->set<std::string> ("Effective Pressure Variable Name",effective_pressure_name);
+      p->set<std::string> ("Melting Rate Variable Name",melting_rate_name);
+      p->set<std::string> ("Sliding Velocity Variable Name",sliding_velocity_name);
       p->set<std::string> ("Flow Factor A Variable Name","Flow Factor A");
       p->set<bool> ("Nodal", false);
       p->set<Teuchos::ParameterList*> ("FELIX Hydrology",&params->sublist("FELIX Hydrology"));
       p->set<Teuchos::ParameterList*> ("FELIX Physical Parameters",&params->sublist("FELIX Physical Parameters"));
 
       //Output
-      p->set<std::string> ("Water Thickness Variable Name", "Water Thickness");
+      p->set<std::string> ("Water Thickness Variable Name", water_thickness_name);
 
       ev = Teuchos::rcp(new FELIX::HydrologyWaterThickness<EvalT,PHAL::AlbanyTraits,false,false>(*p,dl));
       fm0.template registerEvaluator<EvalT>(ev);
 
       // -------- Hydrology Water Thickness (nodes) ------- //
-      p = Teuchos::rcp(new Teuchos::ParameterList("Hydrology Water Thickness"));
-
-      //Input
-      p->set<std::string> ("Water Thickness Variable Name","Water Thickness");
-      p->set<std::string> ("Effective Pressure Variable Name","Effective Pressure");
-      p->set<std::string> ("Melting Rate Variable Name","Melting Rate");
-      p->set<std::string> ("Sliding Velocity Variable Name","Sliding Velocity");
-      p->set<std::string> ("Flow Factor A Variable Name","Flow Factor A");
       p->set<bool> ("Nodal", true);
-      p->set<Teuchos::ParameterList*> ("FELIX Hydrology",&params->sublist("FELIX Hydrology"));
-      p->set<Teuchos::ParameterList*> ("FELIX Physical Parameters",&params->sublist("FELIX Physical Parameters"));
-
-      //Output
-      p->set<std::string> ("Water Thickness Variable Name", "Water Thickness");
-
       ev = Teuchos::rcp(new FELIX::HydrologyWaterThickness<EvalT,PHAL::AlbanyTraits,false,false>(*p,dl));
       fm0.template registerEvaluator<EvalT>(ev);
 
@@ -607,11 +644,11 @@ Hydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
       //Input
       p->set<std::string> ("BF Name", Albany::bf_name);
       p->set<std::string> ("Weighted Measure Name", Albany::weights_name);
-      p->set<std::string> ("Water Thickness Variable Name","Water Thickness");
-      p->set<std::string> ("Water Thickness Dot Variable Name","Water Thickness Dot");
-      p->set<std::string> ("Effective Pressure Variable Name","Effective Pressure");
-      p->set<std::string> ("Melting Rate Variable Name","Melting Rate");
-      p->set<std::string> ("Sliding Velocity Variable Name","Sliding Velocity");
+      p->set<std::string> ("Water Thickness Variable Name",water_thickness_name);
+      p->set<std::string> ("Water Thickness Dot Variable Name",water_thickness_dot_name);
+      p->set<std::string> ("Effective Pressure Variable Name",effective_pressure_name);
+      p->set<std::string> ("Melting Rate Variable Name",melting_rate_name);
+      p->set<std::string> ("Sliding Velocity Variable Name",sliding_velocity_name);
       p->set<std::string> ("Flow Factor A Variable Name","Flow Factor A");
       p->set<bool> ("Unsteady", unsteady);
       p->set<Teuchos::ParameterList*> ("FELIX Hydrology",&params->sublist("FELIX Hydrology"));

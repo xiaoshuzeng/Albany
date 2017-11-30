@@ -57,7 +57,8 @@ class StokesFOHydrology : public Albany::AbstractProblem
 public:
 
   //! Default constructor
-  StokesFOHydrology (const Teuchos::RCP<Teuchos::ParameterList>& params,
+  StokesFOHydrology (const Teuchos::RCP<Teuchos::ParameterList>& topLevelParams,
+                     const Teuchos::RCP<Teuchos::ParameterList>& problemParams,
                      const Teuchos::RCP<Teuchos::ParameterList>& discParams,
                      const Teuchos::RCP<ParamLib>& paramLib,
                      const int numDim_);
@@ -130,7 +131,10 @@ protected:
 
   Teuchos::RCP<Albany::Layouts> dl,dl_basal,dl_surface;
 
-  //! Discretization parameter
+  //! Top level parameter list
+  Teuchos::RCP<Teuchos::ParameterList> topLevelParams;
+
+  //! Discretization parameter list
   Teuchos::RCP<Teuchos::ParameterList> discParams;
 
   std::string basalSideName;
@@ -176,14 +180,14 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
 
   // ---------------------------- Registering state variables ------------------------- //
 
-  std::string stateName, fieldName, param_name;
+  std::string stateName, fieldName, param_name, meshPart;
 
   // Getting the names of the distributed parameters (they won't have to be loaded as states)
   std::map<std::string,bool> is_dist_param;
+  std::map<std::string,bool> is_dist_params_optimized_upon;
   std::map<std::string,bool> is_extruded_param;
   std::map<std::string,bool> save_sensitivities;
   std::map<std::string,std::string> dist_params_name_to_mesh_part;
-  // The following are used later to check that the needed fields (depending on the simulation options) are successfully loaded/gathered
   std::set<std::string> inputs_found;
   std::map<std::string,std::set<std::string>> ss_inputs_found;
   if (this->params->isSublist("Distributed Parameters"))
@@ -214,13 +218,40 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
     }
   }
 
+  // Although they may not be specified in the mesh section or may be specified but only
+  // as Input or only as Output, parameters that we are optimizing upon must always be
+  // gathered/scattered. To enforce that, we first get their names.
+  // NOTE: so far we implement this check only for ROL-type analysis
+  if (topLevelParams->sublist("Piro").sublist("Analysis").isSublist("ROL"))
+  {
+    // Get the # of non-distributed parameters. For ROL there is no distinction, so
+    // we need to know if, say, parameter 2 is distributed.
+    auto& plist = this->params->sublist("Parameters");
+    int num_p = plist.isParameter("Number") ? plist.get<int>("Number") : plist.get<int>("Number of Parameter Vectors",0);
+
+    const auto& rol_params = topLevelParams->sublist("Piro").sublist("Analysis").sublist("ROL");
+    int np = rol_params.isParameter("Number of Parameters") ? rol_params.get<int>("Number of Parameter") : 1;
+    for (int ip=0; ip<np; ++ip) {
+      // Get the idx of the ip-th parameter optimized upon.
+      const std::string key = Albany::strint("Parameter Vector Index",ip);
+      int idx = rol_params.isParameter(key) ? rol_params.get<int>(key) : ip;
+      if (idx>num_p) {
+        // Ok, we're optimizing upon a distributed parameter. Let's store its name
+        idx = idx-num_p;
+        const auto& dist_p_list = this->params->sublist("Distributed Parameters").sublist(Albany::strint("Distributed Parameter", idx) );
+        const std::string& dist_p_name = dist_p_list.get<std::string>("Name");
+        is_dist_params_optimized_upon[dist_p_name] = true;
+      }
+    }
+  }
+
   // Registering 3D states and building their load/save/gather evaluators
   if (discParams->isSublist("Required Fields Info"))
   {
     Teuchos::ParameterList& req_fields_info = discParams->sublist("Required Fields Info");
     int num_fields = req_fields_info.get<int>("Number Of Fields",0);
 
-    std::string fieldType, fieldUsage, meshPart;
+    std::string fieldType, fieldUsage;
     bool nodal_state;
     for (int ifield=0; ifield<num_fields; ++ifield)
     {
@@ -234,8 +265,8 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
       if (fieldUsage == "Unused")
         continue;
 
-      bool inputField  = (fieldUsage == "Input")  || (fieldUsage == "Input-Output");
-      bool outputField = (fieldUsage == "Output") || (fieldUsage == "Input-Output");
+      bool inputField  = (fieldUsage == "Input")  || (fieldUsage == "Input-Output") || (is_dist_param[stateName] && is_dist_params_optimized_upon[stateName]);
+      bool outputField = (fieldUsage == "Output") || (fieldUsage == "Input-Output") || (is_dist_param[stateName] && is_dist_params_optimized_upon[stateName]);
 
       inputs_found.insert(stateName);
       meshPart = is_dist_param[stateName] ? dist_params_name_to_mesh_part[stateName] : "";
@@ -252,7 +283,7 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
       }
       else if(fieldType == "Elem Vector") {
         entity = Albany::StateStruct::ElemData;
-        p = stateMgr.registerStateVariable(stateName, dl->node_vector, elementBlockName, true, &entity, meshPart);
+        p = stateMgr.registerStateVariable(stateName, dl->cell_vector, elementBlockName, true, &entity, meshPart);
         nodal_state = false;
       }
       else if(fieldType == "Node Vector") {
@@ -311,7 +342,7 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
     int num_fields = req_fields_info.get<int>("Number Of Fields",0);
     Teuchos::RCP<PHX::DataLayout> dl_temp;
     Teuchos::RCP<PHX::DataLayout> sns;
-    std::string fieldType, fieldUsage, meshPart;
+    std::string fieldType, fieldUsage;
     bool nodal_state;
     int numLayers;
 
@@ -329,11 +360,11 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
       if (fieldUsage == "Unused")
         continue;
 
-      bool inputField  = (fieldUsage == "Input")  || (fieldUsage == "Input-Output");
-      bool outputField = (fieldUsage == "Output") || (fieldUsage == "Input-Output");
+      bool inputField  = (fieldUsage == "Input")  || (fieldUsage == "Input-Output") || (is_dist_param[stateName] && is_dist_params_optimized_upon[stateName]);
+      bool outputField = (fieldUsage == "Output") || (fieldUsage == "Input-Output") || (is_dist_param[stateName] && is_dist_params_optimized_upon[stateName]);
 
+      inputs_found.insert(stateName);
       ss_inputs_found[ss_name].insert(stateName);
-      meshPart = is_dist_param[stateName] ? dist_params_name_to_mesh_part[stateName] : "";
       meshPart = ""; // Distributed parameters are defined either on the whole volume mesh or on a whole side mesh. Either way, here we want "" as part (the whole mesh).
 
       numLayers = thisFieldList.isParameter("Number Of Layers") ? thisFieldList.get<int>("Number Of Layers") : -1;
@@ -384,9 +415,6 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
                                                                                sns->dimension(3),numLayers));
         stateMgr.registerSideSetStateVariable(ss_name, stateName, fieldName, dl_temp, sideEBName, true, &entity, meshPart);
       }
-
-      if (fieldUsage == "Unused")
-        continue;
 
       if (outputField)
       {
@@ -441,6 +469,39 @@ FELIX::StokesFOHydrology::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTra
           ev = Teuchos::rcp(new PHAL::LoadSideSetStateField<EvalT,PHAL::AlbanyTraits>(*p));
           fm0.template registerEvaluator<EvalT>(ev);
         }
+      }
+    }
+  }
+
+  // If a distributed parameter that is optimized upon was not in the discretization list,
+  // we throw an execption. The user should list the distributed parameter somewhere, and
+  // set 'Field Origin' to 'Mesh'.
+  for (auto it : is_dist_params_optimized_upon) {
+    if (inputs_found.find(it.first)==inputs_found.end()) {
+      // The user has not specified this distributed parameter in the discretization list.
+      // That's ok, since we have all we need to register the state ourselve, and create
+      // and register its gather/scatter evaluators
+
+      // Get info
+      entity = Albany::StateStruct::NodalDistParameter;
+      meshPart = dist_params_name_to_mesh_part[it.first];
+
+      // Register the state
+      p = stateMgr.registerStateVariable(it.first, dl->node_scalar, elementBlockName, true, &entity, meshPart);
+
+      // Gather and scatter evaluator
+      if (is_extruded_param[it.first]) {
+        ev = evalUtils.constructGatherScalarExtruded2DNodalParameter(it.first,it.first);
+        fm0.template registerEvaluator<EvalT>(ev);
+
+        ev = evalUtils.constructScatterScalarExtruded2DNodalParameter(it.first,it.first);
+        fm0.template registerEvaluator<EvalT>(ev);
+      } else {
+        ev = evalUtils.constructGatherScalarNodalParameter(it.first,it.first);
+        fm0.template registerEvaluator<EvalT>(ev);
+
+        ev = evalUtils.constructScatterScalarNodalParameter(it.first,it.first);
+        fm0.template registerEvaluator<EvalT>(ev);
       }
     }
   }

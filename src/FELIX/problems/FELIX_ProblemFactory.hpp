@@ -24,7 +24,8 @@ class ProblemFactory {
 public:
 
   //! Default constructor
-  ProblemFactory (const Teuchos::RCP<Teuchos::ParameterList>& problemParams,
+  ProblemFactory (const Teuchos::RCP<Teuchos::ParameterList>& topLevelParams,
+                  const Teuchos::RCP<Teuchos::ParameterList>& problemParams,
                   const Teuchos::RCP<Teuchos::ParameterList>& discretizaitonParams,
                   const Teuchos::RCP<ParamLib>& paramLib_);
 
@@ -43,6 +44,9 @@ private:
   ProblemFactory& operator=(const ProblemFactory&) = delete;
 
 protected:
+
+  //! Top level parameter list
+  Teuchos::RCP<Teuchos::ParameterList> topLevelParams;
 
   //! Parameter list specifying what problem to create
   Teuchos::RCP<Teuchos::ParameterList> problemParams;

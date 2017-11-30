@@ -17,23 +17,25 @@
 #include "FELIX_StokesFO.hpp"
 
 FELIX::StokesFO::
-StokesFO( const Teuchos::RCP<Teuchos::ParameterList>& params_,
+StokesFO( const Teuchos::RCP<Teuchos::ParameterList>& topLevelParams_,
+          const Teuchos::RCP<Teuchos::ParameterList>& problemParams_,
           const Teuchos::RCP<Teuchos::ParameterList>& discParams_,
           const Teuchos::RCP<ParamLib>& paramLib_,
           const int numDim_) :
-  Albany::AbstractProblem(params_, paramLib_, numDim_),
+  Albany::AbstractProblem(problemParams_, paramLib_, numDim_),
   numDim(numDim_),
+  topLevelParams(topLevelParams_),
   discParams(discParams_)
 {
   //Set # of PDEs per node based on the Equation Set.
   //Equation Set is FELIX by default (2 dofs / node -- usual FELIX Stokes FO).
-  std::string eqnSet = params_->sublist("Equation Set").get<std::string>("Type", "FELIX");
+  std::string eqnSet = this->params->sublist("Equation Set").get<std::string>("Type", "FELIX");
   if (eqnSet == "FELIX")
     neq = 2; //FELIX FO Stokes system is a system of 2 PDEs
   else if (eqnSet == "Poisson" || eqnSet == "FELIX X-Z")
     neq = 1; //1 PDE/node for Poisson or FELIX X-Z physics
 
-  neq =  params_->sublist("Equation Set").get<int>("Num Equations", neq);
+  neq = this->params->sublist("Equation Set").get<int>("Num Equations", neq);
 
   // Set the num equations. This will set the number of PDEs for the null
   // space object to pass to ML and also set the default for equationsCouplings
@@ -42,7 +44,7 @@ StokesFO( const Teuchos::RCP<Teuchos::ParameterList>& params_,
   // the following function returns the problem information required for setting the rigid body modes (RBMs) for elasticity problems
   //written by IK, Feb. 2012
   //Check if we want to give ML RBMs (from parameterlist)
-  int numRBMs = params_->get<int>("Number RBMs for ML", 0);
+  int numRBMs = this->params->get<int>("Number RBMs for ML", 0);
   bool setRBMs = false;
   if (numRBMs > 0) {
     setRBMs = true;
@@ -55,7 +57,7 @@ StokesFO( const Teuchos::RCP<Teuchos::ParameterList>& params_,
   }
 
   // Need to allocate a fields in mesh database
-  if (params->isParameter("Required Fields"))
+  if (this->params->isParameter("Required Fields"))
   {
     // Need to allocate a fields in mesh database
     Teuchos::Array<std::string> req = params->get<Teuchos::Array<std::string> > ("Required Fields");
@@ -63,29 +65,29 @@ StokesFO( const Teuchos::RCP<Teuchos::ParameterList>& params_,
       this->requirements.push_back(req[i]);
   }
 
-  basalSideName   = params->isParameter("Basal Side Name")   ? params->get<std::string>("Basal Side Name")   : "INVALID";
-  surfaceSideName = params->isParameter("Surface Side Name") ? params->get<std::string>("Surface Side Name") : "INVALID";
+  basalSideName   = this->params->isParameter("Basal Side Name")   ? this->params->get<std::string>("Basal Side Name")   : "INVALID";
+  surfaceSideName = this->params->isParameter("Surface Side Name") ? this->params->get<std::string>("Surface Side Name") : "INVALID";
   basalEBName = "INVALID";
   surfaceEBName = "INVALID";
-  sliding = params->isSublist("FELIX Basal Friction Coefficient");
+  sliding = this->params->isSublist("FELIX Basal Friction Coefficient");
   TEUCHOS_TEST_FOR_EXCEPTION (sliding && basalSideName=="INVALID", std::logic_error,
                               "Error! With sliding, you need to provide a valid 'Basal Side Name',\n" );
 
-  if (params->isParameter("Required Basal Fields"))
+  if (this->params->isParameter("Required Basal Fields"))
   {
     TEUCHOS_TEST_FOR_EXCEPTION (basalSideName=="INVALID", std::logic_error, "Error! In order to specify basal requirements, you must also specify a valid 'Basal Side Name'.\n");
 
     // Need to allocate a fields in basal mesh database
-    Teuchos::Array<std::string> req = params->get<Teuchos::Array<std::string> > ("Required Basal Fields");
+    Teuchos::Array<std::string> req = this->params->get<Teuchos::Array<std::string> > ("Required Basal Fields");
     this->ss_requirements[basalSideName].reserve(req.size()); // Note: this is not for performance, but to guarantee
     for (int i(0); i<req.size(); ++i)                         //       that ss_requirements.at(basalSideName) does not
       this->ss_requirements[basalSideName].push_back(req[i]); //       throw, even if it's empty...
   }
-  if (params->isParameter("Required Surface Fields"))
+  if (this->params->isParameter("Required Surface Fields"))
   {
     TEUCHOS_TEST_FOR_EXCEPTION (surfaceSideName=="INVALID", std::logic_error, "Error! In order to specify surface requirements, you must also specify a valid 'Surface Side Name'.\n");
 
-    Teuchos::Array<std::string> req = params->get<Teuchos::Array<std::string> > ("Required Surface Fields");
+    Teuchos::Array<std::string> req = this->params->get<Teuchos::Array<std::string> > ("Required Surface Fields");
     this->ss_requirements[surfaceSideName].reserve(req.size()); // Note: same motivation as for the basal side
     for (int i(0); i<req.size(); ++i)
       this->ss_requirements[surfaceSideName].push_back(req[i]);

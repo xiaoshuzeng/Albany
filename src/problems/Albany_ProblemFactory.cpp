@@ -82,11 +82,12 @@
 #endif
 
 Albany::ProblemFactory::ProblemFactory(
-       const Teuchos::RCP<Teuchos::ParameterList>& topLevelParams,
+       const Teuchos::RCP<Teuchos::ParameterList>& topLevelParams_,
        const Teuchos::RCP<ParamLib>& paramLib_,
        const Teuchos::RCP<const Teuchos::Comm<int> >& commT_) :
-  problemParams(Teuchos::sublist(topLevelParams, "Problem", true)),
-  discretizationParams(Teuchos::sublist(topLevelParams, "Discretization")),
+  topLevelParams(topLevelParams_),
+  problemParams(Teuchos::sublist(topLevelParams_, "Problem", true)),
+  discretizationParams(Teuchos::sublist(topLevelParams_, "Discretization")),
   paramLib(paramLib_),
   commT(commT_)
 {
@@ -340,7 +341,7 @@ Albany::ProblemFactory::create()
 #endif
 #ifdef ALBANY_FELIX
   else if (FELIX::ProblemFactory::hasProblem(method)) {
-    FELIX::ProblemFactory felix_factory(problemParams,discretizationParams,paramLib);
+    FELIX::ProblemFactory felix_factory(topLevelParams,problemParams,discretizationParams,paramLib);
     strategy = felix_factory.create();
   }
 #endif

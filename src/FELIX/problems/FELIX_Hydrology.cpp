@@ -14,11 +14,17 @@
 #include "Albany_ProblemUtils.hpp"
 #include <string>
 
-FELIX::Hydrology::Hydrology (const Teuchos::RCP<Teuchos::ParameterList>& params,
-                             const Teuchos::RCP<ParamLib>& paramLib,
-                             const int numDimensions) :
-  Albany::AbstractProblem (params, paramLib,1),
-  numDim (numDimensions)
+namespace FELIX {
+
+Hydrology::Hydrology (const Teuchos::RCP<Teuchos::ParameterList>& topLevelParams_,
+                      const Teuchos::RCP<Teuchos::ParameterList>& problemParams_,
+                      const Teuchos::RCP<Teuchos::ParameterList>& discParams_,
+                      const Teuchos::RCP<ParamLib>& paramLib,
+                      const int numDimensions) :
+  Albany::AbstractProblem (problemParams_, paramLib,1),
+  numDim (numDimensions),
+  topLevelParams(topLevelParams_),
+  discParams(discParams_)
 {
   TEUCHOS_TEST_FOR_EXCEPTION (numDim!=1 && numDim!=2,std::logic_error,"Problem supports only 1D and 2D");
 
@@ -48,6 +54,17 @@ FELIX::Hydrology::Hydrology (const Teuchos::RCP<Teuchos::ParameterList>& params,
       this->requirements.push_back(req[i]);
   }
 
+  // Some fields that we know are FOR SURE required (if not added already)
+  if (std::find(this->requirements.begin(),this->requirements.end(),geothermal_flux_name)==this->requirements.end()) {
+    this->requirements.push_back(geothermal_flux_name);
+  }
+  if (std::find(this->requirements.begin(),this->requirements.end(),surface_height_name)==this->requirements.end()) {
+    this->requirements.push_back(surface_height_name);
+  }
+  if (std::find(this->requirements.begin(),this->requirements.end(),ice_thickness_name)==this->requirements.end()) {
+    this->requirements.push_back(ice_thickness_name);
+  }
+
   // Set the num PDEs for the null space object to pass to ML
   if (has_h_equation && !eliminate_h)
   {
@@ -56,13 +73,13 @@ FELIX::Hydrology::Hydrology (const Teuchos::RCP<Teuchos::ParameterList>& params,
     dof_names.resize(2);
     resid_names.resize(2);
 
-    dof_names[0] = "Hydraulic Potential";
-    dof_names[1] = "Water Thickness";
+    dof_names[0] = hydraulic_potential_name;
+    dof_names[1] = water_thickness_name;
 
     if (unsteady)
     {
       dof_names_dot.resize(1);
-      dof_names_dot[0] = "Water Thickness Dot";
+      dof_names_dot[0] = water_thickness_dot_name;
     }
 
     resid_names[0] = "Residual Potential Eqn";
@@ -75,18 +92,18 @@ FELIX::Hydrology::Hydrology (const Teuchos::RCP<Teuchos::ParameterList>& params,
     dof_names.resize(1);
     resid_names.resize(1);
 
-    dof_names[0] = "Hydraulic Potential";
+    dof_names[0] = hydraulic_potential_name;
 
     resid_names[0] = "Residual Potential Eqn";
   }
 }
 
-FELIX::Hydrology::~Hydrology()
+Hydrology::~Hydrology()
 {
   // Nothing to be done here
 }
 
-void FELIX::Hydrology::buildProblem (Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >  meshSpecs,
+void Hydrology::buildProblem (Teuchos::ArrayRCP<Teuchos::RCP<Albany::MeshSpecsStruct> >  meshSpecs,
                                      Albany::StateManager& stateMgr)
 {
   // Building cell basis and cubature
@@ -119,7 +136,7 @@ void FELIX::Hydrology::buildProblem (Teuchos::ArrayRCP<Teuchos::RCP<Albany::Mesh
 }
 
 Teuchos::Array< Teuchos::RCP<const PHX::FieldTag> >
-FELIX::Hydrology::buildEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
+Hydrology::buildEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
                                    const Albany::MeshSpecsStruct& meshSpecs,
                                    Albany::StateManager& stateMgr,
                                    Albany::FieldManagerChoice fmchoice,
@@ -133,7 +150,7 @@ FELIX::Hydrology::buildEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0,
   return *op.tags;
 }
 
-void FELIX::Hydrology::constructDirichletEvaluators (const Albany::MeshSpecsStruct& meshSpecs)
+void Hydrology::constructDirichletEvaluators (const Albany::MeshSpecsStruct& meshSpecs)
 {
   // Construct Dirichlet evaluators for all nodesets and names
   std::vector<std::string> dirichletNames(neq);
@@ -153,7 +170,7 @@ void FELIX::Hydrology::constructDirichletEvaluators (const Albany::MeshSpecsStru
   offsets_ = dirUtils.getOffsets();
 }
 
-void FELIX::Hydrology::constructNeumannEvaluators (const Teuchos::RCP<Albany::MeshSpecsStruct>& meshSpecs)
+void Hydrology::constructNeumannEvaluators (const Teuchos::RCP<Albany::MeshSpecsStruct>& meshSpecs)
 {
   // Note: we only enter this function if sidesets are defined in the mesh file
   // i.e. meshSpecs.ssNames.size() > 0
@@ -198,7 +215,7 @@ void FELIX::Hydrology::constructNeumannEvaluators (const Teuchos::RCP<Albany::Me
 }
 
 Teuchos::RCP<const Teuchos::ParameterList>
-FELIX::Hydrology::getValidProblemParameters () const
+Hydrology::getValidProblemParameters () const
 {
   Teuchos::RCP<Teuchos::ParameterList> validPL = this->getGenericProblemParams("ValidHydrologyProblemParams");
 
@@ -209,3 +226,23 @@ FELIX::Hydrology::getValidProblemParameters () const
 
   return validPL;
 }
+
+constexpr char Hydrology::hydraulic_potential_name[]                 ;  //= "hydraulic_potential";
+constexpr char Hydrology::hydraulic_potential_gradient_name[]        ;  //= "hydraulic_potential Gradient";
+constexpr char Hydrology::water_thickness_name[]                     ;  //= "water_thickness";
+constexpr char Hydrology::water_thickness_dot_name[]                 ;  //= "water_thickness_dot";
+
+constexpr char Hydrology::effective_pressure_name[]                  ;  //= "effective_pressure";
+constexpr char Hydrology::ice_thickness_name[]                       ;  //= "ice_thickness";
+constexpr char Hydrology::surface_height_name[]                      ;  //= "surface_height";
+constexpr char Hydrology::beta_name[]                                ;  //= "beta";
+constexpr char Hydrology::melting_rate_name[]                        ;  //= "melting_rate";
+constexpr char Hydrology::surface_water_input_name[]                 ;  //= "surface_water_input";
+constexpr char Hydrology::surface_mass_balance_name[]                ;  //= "surface_mass_balance";
+constexpr char Hydrology::geothermal_flux_name[]                     ;  //= "geothermal_flux";
+constexpr char Hydrology::water_discharge_name[]                     ;  //= "water_discharge";
+constexpr char Hydrology::sliding_velocity_name[]                    ;  //= "sliding_velocity";
+constexpr char Hydrology::basal_velocity_name[]                      ;  //= "basal_velocity";
+constexpr char Hydrology::basal_gravitational_water_potential_name[] ;  //= "basal_gravitational_water_potential";
+
+} // namespace FELIX

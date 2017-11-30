@@ -69,7 +69,8 @@ class StokesFO : public Albany::AbstractProblem
 public:
 
   //! Default constructor
-  StokesFO (const Teuchos::RCP<Teuchos::ParameterList>& params,
+  StokesFO (const Teuchos::RCP<Teuchos::ParameterList>& topLevelParams,
+            const Teuchos::RCP<Teuchos::ParameterList>& problemParams,
             const Teuchos::RCP<Teuchos::ParameterList>& discParams,
             const Teuchos::RCP<ParamLib>& paramLib,
             const int numDim_);
@@ -137,9 +138,11 @@ protected:
   int vecDimFO;
   Teuchos::RCP<Albany::Layouts> dl, dl_scalar, dl_side_scalar, dl_basal, dl_surface;
 
-  //! Discretization parameters
-  Teuchos::RCP<Teuchos::ParameterList> discParams;
+  //! Top level parameter list
+  Teuchos::RCP<Teuchos::ParameterList> topLevelParams;
 
+  //! Discretization parameter list
+  Teuchos::RCP<Teuchos::ParameterList> discParams;
 
   bool  sliding;
   std::string basalSideName;
@@ -174,14 +177,17 @@ FELIX::StokesFO::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0
 
   // ---------------------------- Registering state variables ------------------------- //
 
-  std::string stateName, fieldName, param_name;
+  std::string stateName, fieldName, param_name, meshPart;
 
   // Getting the names of the distributed parameters (they won't have to be loaded as states)
   std::map<std::string,bool> is_dist_param;
+  std::map<std::string,bool> is_dist_params_optimized_upon;
   std::map<std::string,bool> is_dist;
   std::map<std::string,bool> save_sensitivities;
   std::map<std::string,std::string> dist_params_name_to_mesh_part;
   std::map<std::string,bool> is_extruded_param;
+  std::set<std::string> inputs_found;
+  bool is_stk_mesh = false;
   if (this->params->isSublist("Distributed Parameters"))
   {
     Teuchos::ParameterList& dist_params_list =  this->params->sublist("Distributed Parameters");
@@ -211,6 +217,33 @@ FELIX::StokesFO::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0
     }
   }
 
+  // Although they may not be specified in the mesh section or may be specified but only
+  // as Input or only as Output, parameters that we are optimizing upon must always be
+  // gathered/scattered. To enforce that, we first get their names.
+  // NOTE: so far we implement this check only for ROL-type analysis
+  if (topLevelParams->sublist("Piro").sublist("Analysis").isSublist("ROL"))
+  {
+    // Get the # of non-distributed parameters. For ROL there is no distinction, so
+    // we need to know if, say, parameter 2 is distributed.
+    auto& plist = this->params->sublist("Parameters");
+    int num_p = plist.isParameter("Number") ? plist.get<int>("Number") : plist.get<int>("Number of Parameter Vectors",0);
+
+    const auto& rol_params = topLevelParams->sublist("Piro").sublist("Analysis").sublist("ROL");
+    int np = rol_params.isParameter("Number of Parameters") ? rol_params.get<int>("Number of Parameter") : 1;
+    for (int ip=0; ip<np; ++ip) {
+      // Get the idx of the ip-th parameter optimized upon.
+      const std::string key = Albany::strint("Parameter Vector Index",ip);
+      int idx = rol_params.isParameter(key) ? rol_params.get<int>(key) : ip;
+      if (idx>num_p) {
+        // Ok, we're optimizing upon a distributed parameter. Let's store its name
+        idx = idx-num_p;
+        const auto& dist_p_list = this->params->sublist("Distributed Parameters").sublist(Albany::strint("Distributed Parameter", idx) );
+        const std::string& dist_p_name = dist_p_list.get<std::string>("Name");
+        is_dist_params_optimized_upon[dist_p_name] = true;
+      }
+    }
+  }
+
   //Dirichlet fields need to be distributed but they are not necessarily parameters.
   is_dist = is_dist_param;
   if (this->params->isSublist("Dirichlet BCs")) {
@@ -223,10 +256,11 @@ FELIX::StokesFO::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0
   }
 
   if (discParams->isSublist("Required Fields Info")){
+    is_stk_mesh = true;
     Teuchos::ParameterList& req_fields_info = discParams->sublist("Required Fields Info");
     int num_fields = req_fields_info.get<int>("Number Of Fields",0);
 
-    std::string fieldType, fieldUsage, meshPart;
+    std::string fieldType, fieldUsage;
     bool nodal_state;
     for (int ifield=0; ifield<num_fields; ++ifield)
     {
@@ -234,16 +268,19 @@ FELIX::StokesFO::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0
 
       // Get current state specs
       stateName  = fieldName = thisFieldList.get<std::string>("Field Name");
-      fieldUsage = thisFieldList.get<std::string>("Field Usage","Input"); // WARNING: assuming Input if not specified
+      fieldType  = thisFieldList.get<std::string>("Field Type");
+      fieldUsage = thisFieldList.get<std::string>("Field Usage", "Input");
 
       if (fieldUsage == "Unused")
         continue;
 
-      fieldType  = thisFieldList.get<std::string>("Field Type");
+      bool inputField  = (fieldUsage == "Input")  || (fieldUsage == "Input-Output") || (is_dist_param[stateName] && is_dist_params_optimized_upon[stateName]);
+      bool outputField = (fieldUsage == "Output") || (fieldUsage == "Input-Output") || (is_dist_param[stateName] && is_dist_params_optimized_upon[stateName]);
 
       is_dist_param.insert(std::pair<std::string,bool>(stateName, false)); //gets inserted only if not there.
       is_dist.insert(std::pair<std::string,bool>(stateName, false)); //gets inserted only if not there.
 
+      inputs_found.insert(stateName);
       meshPart = is_dist_param[stateName] ? dist_params_name_to_mesh_part[stateName] : "";
 
       if(fieldType == "Elem Scalar") {
@@ -269,40 +306,42 @@ FELIX::StokesFO::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0
         nodal_state = true;
       }
 
-      // Do we need to save the state?
-      if (fieldUsage == "Output" || fieldUsage == "Input-Output")
+      if (outputField)
       {
-        // An output: save it.
-        p->set<bool>("Nodal State", nodal_state);
-        ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT,PHAL::AlbanyTraits>(*p));
-        fm0.template registerEvaluator<EvalT>(ev);
+        if (is_dist_param[stateName])
+        {
+          // A parameter: scatter it
+          ev = evalUtils.constructScatterScalarNodalParameter(stateName,fieldName);
+          fm0.template registerEvaluator<EvalT>(ev);
 
-        // Only PHAL::AlbanyTraits::Residual evaluates something, others will have empty list of evaluated fields
-        if (ev->evaluatedFields().size()>0)
-          fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+          // Only the residual FM and EvalT=PHAL::AlbanyTraits::Residual will actually evaluate anything
+          if ( fieldManagerChoice==Albany::BUILD_RESID_FM && ev->evaluatedFields().size()>0) {
+            fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+          }
+        } else {
+          // A 'regular' field output: save it.
+          p->set<bool>("Nodal State", nodal_state);
+          ev = Teuchos::rcp(new PHAL::SaveStateField<EvalT,PHAL::AlbanyTraits>(*p));
+          fm0.template registerEvaluator<EvalT>(ev);
+
+          // Only PHAL::AlbanyTraits::Residual evaluates something, others will have empty list of evaluated fields
+          if (ev->evaluatedFields().size()>0)
+            fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+        }
       }
 
-      // Do we need to load/gather the state/parameter?
-      if (is_dist_param[stateName])
-      {
-        // A parameter: gather it
-        if (is_extruded_param[stateName])
+      if (inputField) {
+        if (is_dist_param[stateName])
         {
-          ev = evalUtils.constructGatherScalarExtruded2DNodalParameter(stateName,fieldName);
-          fm0.template registerEvaluator<EvalT>(ev);
-        }
-        else
-        {
+          // A parameter: gather it
           ev = evalUtils.constructGatherScalarNodalParameter(stateName,fieldName);
           fm0.template registerEvaluator<EvalT>(ev);
+        } else {
+          // A 'regular' field input: load it.
+          p->set<std::string>("Field Name", fieldName);
+          ev = Teuchos::rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
+          fm0.template registerEvaluator<EvalT>(ev);
         }
-      }
-      else if (fieldUsage == "Input" || fieldUsage == "Input-Output")
-      {
-        // Not a parameter but still required as input: load it.
-        p->set<std::string>("Field Name", fieldName);
-        ev = Teuchos::rcp(new PHAL::LoadStateField<EvalT,PHAL::AlbanyTraits>(*p));
-        fm0.template registerEvaluator<EvalT>(ev);
       }
     }
   }
@@ -357,7 +396,7 @@ FELIX::StokesFO::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0
       int num_fields = req_fields_info.get<int>("Number Of Fields",0);
       Teuchos::RCP<PHX::DataLayout> dl_temp;
       Teuchos::RCP<PHX::DataLayout> sns;
-      std::string fieldType, fieldUsage, meshPart;
+      std::string fieldType, fieldUsage;
       bool nodal_state;
       int numLayers;
 
@@ -369,15 +408,17 @@ FELIX::StokesFO::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0
 
         // Get current state specs
         stateName  = fieldName = thisFieldList.get<std::string>("Field Name");
-        fieldUsage = thisFieldList.get<std::string>("Field Usage","Input"); // WARNING: assuming Input if not specified
+        fieldType  = thisFieldList.get<std::string>("Field Type");
+        fieldUsage = thisFieldList.get<std::string>("Field Usage", "Input");
 
         if (fieldUsage == "Unused")
           continue;
 
-        //meshPart = is_dist_param[stateName] ? dist_params_name_to_mesh_part[stateName] : "";
-        meshPart = ""; // Distributed parameters are defined either on the whole volume mesh or on a whole side mesh. Either way, here we want "" as part (the whole mesh).
+        bool inputField  = (fieldUsage == "Input")  || (fieldUsage == "Input-Output") || (is_dist_param[stateName] && is_dist_params_optimized_upon[stateName]);
+        bool outputField = (fieldUsage == "Output") || (fieldUsage == "Input-Output") || (is_dist_param[stateName] && is_dist_params_optimized_upon[stateName]);
 
-        fieldType  = thisFieldList.get<std::string>("Field Type");
+        inputs_found.insert(stateName);
+        meshPart = ""; // Distributed parameters are defined either on the whole volume mesh or on a whole side mesh. Either way, here we want "" as part (the whole mesh).
 
         // Registering the state
         if(fieldType == "Elem Scalar") {
@@ -430,40 +471,59 @@ FELIX::StokesFO::constructEvaluators (PHX::FieldManager<PHAL::AlbanyTraits>& fm0
           stateMgr.registerSideSetStateVariable(ss_name, stateName, fieldName, dl_temp, sideEBName, true, &entity, meshPart);
         }
 
-        // Creating load/save/gather evaluator(s)
-        if (fieldUsage == "Output" || fieldUsage == "Input-Output")
+        if (outputField)
         {
-          // An output: save it.
-          p->set<bool>("Nodal State", nodal_state);
-          p->set<Teuchos::RCP<shards::CellTopology>>("Cell Type", cellType);
-          ev = Teuchos::rcp(new PHAL::SaveSideSetStateField<EvalT,PHAL::AlbanyTraits>(*p,ss_dl));
-          fm0.template registerEvaluator<EvalT>(ev);
+          if (is_dist_param[stateName])
+          {
+            // A parameter: scatter it
+            if (is_extruded_param[stateName])
+            {
+              ev = evalUtils.constructScatterScalarExtruded2DNodalParameter(stateName,fieldName);
+              fm0.template registerEvaluator<EvalT>(ev);
+            }
+            else
+            {
+              ev = evalUtils.constructScatterScalarNodalParameter(stateName,fieldName);
+              fm0.template registerEvaluator<EvalT>(ev);
+            }
 
-          // Only PHAL::AlbanyTraits::Residual evaluates something, others will have empty list of evaluated fields
-          if (ev->evaluatedFields().size()>0)
-            fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+            // Only the residual FM and EvalT=PHAL::AlbanyTraits::Residual will actually evaluate anything
+            if ( fieldManagerChoice==Albany::BUILD_RESID_FM && ev->evaluatedFields().size()>0) {
+              fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+            }
+          } else {
+            // A 'regular' field output: save it.
+            p->set<bool>("Nodal State", nodal_state);
+            p->set<Teuchos::RCP<shards::CellTopology>>("Cell Type", cellType);
+            ev = Teuchos::rcp(new PHAL::SaveSideSetStateField<EvalT,PHAL::AlbanyTraits>(*p,ss_dl));
+            fm0.template registerEvaluator<EvalT>(ev);
+
+            // Only PHAL::AlbanyTraits::Residual evaluates something, others will have empty list of evaluated fields
+            if (ev->evaluatedFields().size()>0)
+              fm0.template requireField<EvalT>(*ev->evaluatedFields()[0]);
+          }
         }
 
-        if (is_dist_param[stateName])
-        {
-          // A parameter: gather it
-          if (is_extruded_param[stateName])
+        if (inputField) {
+          if (is_dist_param[stateName])
           {
-            ev = evalUtils.constructGatherScalarExtruded2DNodalParameter(stateName,fieldName);
+            // A parameter: gather it
+            if (is_extruded_param[stateName])
+            {
+              ev = evalUtils.constructGatherScalarExtruded2DNodalParameter(stateName,fieldName);
+              fm0.template registerEvaluator<EvalT>(ev);
+            }
+            else
+            {
+              ev = evalUtils.constructGatherScalarNodalParameter(stateName,fieldName);
+              fm0.template registerEvaluator<EvalT>(ev);
+            }
+          } else {
+            // A 'regular' field input: load it.
+            p->set<std::string>("Field Name", fieldName);
+            ev = Teuchos::rcp(new PHAL::LoadSideSetStateField<EvalT,PHAL::AlbanyTraits>(*p));
             fm0.template registerEvaluator<EvalT>(ev);
           }
-          else
-          {
-            ev = evalUtils.constructGatherScalarNodalParameter(stateName,fieldName);
-            fm0.template registerEvaluator<EvalT>(ev);
-          }
-        }
-        else if (fieldUsage == "Input" || fieldUsage == "Input-Output")
-        {
-          // Not a parameter but requires as input: load it.
-          p->set<std::string>("Field Name", fieldName);
-          ev = Teuchos::rcp(new PHAL::LoadSideSetStateField<EvalT,PHAL::AlbanyTraits>(*p));
-          fm0.template registerEvaluator<EvalT>(ev);
         }
       }
     }
@@ -787,6 +847,41 @@ if (basalSideName!="INVALID")
   entity = Albany::StateStruct::NodalDistParameter;
   stateMgr.registerStateVariable(stateName, dl->node_scalar, elementBlockName,true, &entity,"bottom");
 */
+  }
+
+  if (is_stk_mesh) {
+    // If a distributed parameter that is optimized upon was not in the discretization list,
+    // we throw an execption. The user should list the distributed parameter somewhere, and
+    // set 'Field Origin' to 'Mesh'.
+    for (auto it : is_dist_params_optimized_upon) {
+      if (inputs_found.find(it.first)==inputs_found.end()) {
+        // The user has not specified this distributed parameter in the discretization list.
+        // That's ok, since we have all we need to register the state ourselve, and create
+        // and register its gather/scatter evaluators
+
+        // Get info
+        entity = Albany::StateStruct::NodalDistParameter;
+        meshPart = dist_params_name_to_mesh_part[it.first];
+
+        // Register the state
+        p = stateMgr.registerStateVariable(it.first, dl->node_scalar, elementBlockName, true, &entity, meshPart);
+
+        // Gather and scatter evaluator
+        if (is_extruded_param[it.first]) {
+          ev = evalUtils.constructGatherScalarExtruded2DNodalParameter(it.first,it.first);
+          fm0.template registerEvaluator<EvalT>(ev);
+
+          ev = evalUtils.constructScatterScalarExtruded2DNodalParameter(it.first,it.first);
+          fm0.template registerEvaluator<EvalT>(ev);
+        } else {
+          ev = evalUtils.constructGatherScalarNodalParameter(it.first,it.first);
+          fm0.template registerEvaluator<EvalT>(ev);
+
+          ev = evalUtils.constructScatterScalarNodalParameter(it.first,it.first);
+          fm0.template registerEvaluator<EvalT>(ev);
+        }
+      }
+    }
   }
 
   // ----------  Define Field Names ----------- //

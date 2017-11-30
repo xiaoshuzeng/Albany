@@ -17,12 +17,14 @@
 #include "FELIX_StokesFOHydrology.hpp"
 
 FELIX::StokesFOHydrology::
-StokesFOHydrology (const Teuchos::RCP<Teuchos::ParameterList>& params_,
+StokesFOHydrology (const Teuchos::RCP<Teuchos::ParameterList>& topLevelParams_,
+                   const Teuchos::RCP<Teuchos::ParameterList>& problemParams_,
                    const Teuchos::RCP<Teuchos::ParameterList>& discParams_,
                    const Teuchos::RCP<ParamLib>& paramLib_,
                    const int numDim_) :
-  Albany::AbstractProblem(params_, paramLib_),
+  Albany::AbstractProblem(problemParams_, paramLib_),
   numDim(numDim_),
+  topLevelParams(topLevelParams_),
   discParams(discParams_)
 {
   basalSideName   = params->get<std::string>("Basal Side Name");
@@ -41,7 +43,7 @@ StokesFOHydrology (const Teuchos::RCP<Teuchos::ParameterList>& params_,
   for (int i(0); i<breq.size(); ++i)                         //       that ss_requirements.at(basalSideName) does not
     this->ss_requirements[basalSideName].push_back(breq[i]); //       throw, even if it's empty...
 
-  if (params->isParameter("Required Surface Fields"))
+  if (this->params->isParameter("Required Surface Fields"))
   {
     TEUCHOS_TEST_FOR_EXCEPTION (surfaceSideName=="INVALID", std::logic_error, "Error! In order to specify surface requirements, you must also specify a valid 'Surface Side Name'.\n");
 
