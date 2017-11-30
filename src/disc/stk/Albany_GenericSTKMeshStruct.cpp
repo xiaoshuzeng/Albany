@@ -1211,20 +1211,23 @@ void Albany::GenericSTKMeshStruct::loadRequiredInputFields (const AbstractFieldC
     ss << "Field " << ifield;
     Teuchos::ParameterList& fparams = req_fields_info->sublist(ss.str());
 
-    fname = fparams.get<std::string>("Field Name");
-    ftype = fparams.get<std::string>("Field Type","INVALID");
+    fname  = fparams.get<std::string>("Field Name");
+    ftype  = fparams.get<std::string>("Field Type","INVALID");
+    fusage = fparams.get<std::string>("Field Usage", "Input");
+    if (fusage == "Unused")
+    {
+      *out << "  - Skipping field '" << fname << "' since it's listed as unused.\n";
+      missing.erase(fname); // This field is not used, so it shouldn't be considered 'missing'
+      continue;
+    }
+
+    // Ok, this field will be used at some point, so we check that it is defined in the mesh.
     checkFieldIsInMesh(fname, ftype);
     missing.erase(fname);
 
-    fusage = fparams.get<std::string>("Field Usage", "Input");
     if (fusage == "Output")
     {
       *out << "  - Skipping field '" << fname << "' since it's listed as output. Make sure there's an evaluator set to save it!\n";
-      continue;
-    }
-    else if (fusage == "Unused")
-    {
-      *out << "  - Skipping field '" << fname << "' since it's listed as unused.\n";
       continue;
     }
     else
