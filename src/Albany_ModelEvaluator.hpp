@@ -104,6 +104,9 @@ namespace Albany {
     //! Number of parameter vectors
     int num_param_vecs;
 
+    //whether to scale nonlinear system
+    bool do_scale;
+
     //! Number of time derivatives
     int num_time_deriv;
 
@@ -114,6 +117,10 @@ namespace Albany {
 
     //! Sacado parameter vector
     mutable Teuchos::Array<ParamVec> sacado_param_vec;
+
+    mutable Teuchos::Array<ParamVec> sacado_param_vec_old;
+
+    mutable Teuchos::RCP<Epetra_Vector> scaleVec;
 
     //! Epetra map for parameter vector
     Teuchos::Array< Teuchos::RCP<Epetra_LocalMap> > epetra_param_map;

@@ -60,8 +60,9 @@
       matrix->getLocalRowCopy(row, indices(), values(), numEntriesRow);
       ST scale = 0.0; 
       for (auto j=0; j < numEntriesRow; j++) scale += std::abs(values[j]);
-      if (scale < 1.0e-16) rowSumsTpetra_nonconstView[row] = 0.0; 
-      else rowSumsTpetra_nonconstView[row] = 1.0/scale; 
+     // if (scale < 1.0e-16) rowSumsTpetra_nonconstView[row] = 0.0;
+      //else
+      rowSumsTpetra_nonconstView[row] = 1.0/scale;
     }
   }
 

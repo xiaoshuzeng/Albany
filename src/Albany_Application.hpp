@@ -480,6 +480,8 @@ public:
   //! Routines for setting a scaling to be applied to the Jacobian/resdiual
   void setScale(Teuchos::RCP<Tpetra_CrsMatrix> jacT = Teuchos::null);
   void setScaleBCDofs(PHAL::Workset &workset);
+  Teuchos::RCP<Tpetra_Vector const> getScaleVec() const {return scaleVec_;}
+
 
 #if defined(ALBANY_EPETRA)
   void setupBasicWorksetInfo(PHAL::Workset &workset, double current_time,
