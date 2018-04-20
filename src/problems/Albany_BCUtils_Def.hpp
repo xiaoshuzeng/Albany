@@ -1309,12 +1309,14 @@ Albany::BCUtils<Albany::NeumannTraits>::buildEvaluatorsList(
   {
     const string paramName = "ice_thickness";
     RCP<ParameterList> p = rcp(new ParameterList());
-    p->set<int>("Type", traits_type::typeSF);
+    p->set<int>("Type", traits_type::typeSNP);
 
     // for new way
-    p->set<RCP<DataLayout>>("State Field Layout", dl->node_scalar);
+    p->set<RCP<Albany::Layouts>>("State Field Layout", dl);
     p->set<string>("State Name", paramName);
     p->set<std::string>("Field Name", paramName);
+    p->set<std::string>("Parameter Name", paramName);
+    p->set<int>("Field Level", 0);
 
     evaluators_to_build[NeuGT] = p;
   }

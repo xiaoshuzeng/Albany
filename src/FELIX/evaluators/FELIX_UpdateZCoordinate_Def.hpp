@@ -180,7 +180,7 @@ evaluateFields(typename Traits::EvalData workset)
       MeshScalarT h = H(cell,node);
       MeshScalarT top = topSurface(cell,node);
       MeshScalarT bed = bedTopo(cell,node);
-      top = ((rho_i*h - rho_w*bed) < 0) ? h*(1.0 - rho_i/rho_w) : top; //adjust surface when floating
+      top = ((rho_i*h + rho_w*bed) < 0.0) ? h*(1.0 - rho_i/rho_w) : top; //adjust surface when floating
 
       for(std::size_t icomp=0; icomp< numDims; icomp++) {
         typename PHAL::Ref<MeshScalarT>::type val = coordVecOut(cell,node,icomp);
